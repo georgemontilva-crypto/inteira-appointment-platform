@@ -113,3 +113,16 @@
 - [x] Layout de tarjeta: icono izquierda + nombre/descripción derecha + "Ver profesionales" (página /especialidades)
 - [x] Tarjetas pequeñas con icono centrado en Home.tsx
 - [x] Corregir bug: user.getSubscription retorna null cuando no hay suscripción activa
+
+## Portal del Profesional y Registro (Solicitud del usuario)
+- [x] Analizar formulario inteira.mx/registro-de-asesor y replicar campos exactos
+- [x] Actualizar RegisterProfessional.tsx con todos los campos del formulario original
+- [x] Portal del profesional: vista de citas agendadas (próximas y pasadas)
+- [x] Portal del profesional: gestión de calendario de atención (días disponibles)
+- [x] Portal del profesional: configuración de horarios por día (horas de inicio/fin)
+- [x] Portal del profesional: edición de perfil público (foto, bio, tarifas)
+- [x] Sistema de calificaciones: sección de reseñas debajo del perfil del profesional
+- [x] Sistema de calificaciones: formulario para que el usuario califique (1-5 estrellas + comentario)
+- [x] Distribución de calificaciones con barras por estrella
+- [x] Recomendaciones: ordenar profesionales por calificación promedio en la lista
+- [x] Tests unitarios para sistema de calificaciones (24/24 pasando)

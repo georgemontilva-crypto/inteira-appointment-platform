@@ -216,19 +216,10 @@ export const appRouter = router({
       )
       .mutation(async ({ ctx, input }) => {
         if (ctx.user.role !== "professional") {
-          throw new TRPCError({
-            code: "FORBIDDEN",
-            message: "User is not a professional",
-          });
+          throw new TRPCError({ code: "FORBIDDEN", message: "User is not a professional" });
         }
-
         const professional = await db.getProfessionalByUserId(ctx.user.id);
-        if (!professional) {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "Professional profile not found",
-          });
-        }
+        if (!professional) throw new TRPCError({ code: "NOT_FOUND", message: "Professional profile not found" });
 
         await db.createProfessionalAvailability({
           professionalId: professional.id,
@@ -237,8 +228,95 @@ export const appRouter = router({
           endTime: input.endTime,
           isAvailable: input.isAvailable,
         });
+        return { success: true };
+      }),
+
+    updateProfile: protectedProcedure
+      .input(z.object({
+        bio: z.string().optional(),
+        education: z.string().optional(),
+        certifications: z.string().optional(),
+        yearsOfExperience: z.number().optional(),
+        hourlyRate: z.string().optional(),
+        languages: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "professional") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "User is not a professional" });
+        }
+        const professional = await db.getProfessionalByUserId(ctx.user.id);
+        if (!professional) throw new TRPCError({ code: "NOT_FOUND", message: "Professional profile not found" });
+
+        const dbInstance = await db.getDb();
+        if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+        const { professionals } = await import("../drizzle/schema");
+        const { eq } = await import("drizzle-orm");
+        await dbInstance.update(professionals).set({
+          ...input,
+          updatedAt: new Date(),
+        }).where(eq(professionals.id, professional.id));
 
         return { success: true };
+      }),
+
+    getPublicProfile: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        const professional = await db.getProfessionalById(input.id);
+        if (!professional) throw new TRPCError({ code: "NOT_FOUND", message: "Professional not found" });
+        const user = await db.getUserById(professional.userId);
+        const reviews = await db.getProfessionalReviews(professional.id);
+        const avgRating = reviews.length > 0
+          ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+          : 0;
+        return { ...professional, user, reviews, avgRating };
+      }),
+  }),
+
+  // Review routes
+  review: router({
+    create: protectedProcedure
+      .input(z.object({
+        professionalId: z.number(),
+        appointmentId: z.number().optional(),
+        rating: z.number().min(1).max(5),
+        comment: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const dbInstance = await db.getDb();
+        if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+        const { reviews } = await import("../drizzle/schema");
+        await dbInstance.insert(reviews).values({
+          professionalId: input.professionalId,
+          userId: ctx.user.id,
+          appointmentId: input.appointmentId ?? null,
+          rating: input.rating,
+          comment: input.comment ?? null,
+          isVerified: false,
+        });
+
+        // Update professional average rating
+        const allReviews = await db.getProfessionalReviews(input.professionalId);
+        if (allReviews.length > 0) {
+          const avg = allReviews.reduce((sum, r) => sum + r.rating, 0) / allReviews.length;
+          const { professionals } = await import("../drizzle/schema");
+          const { eq } = await import("drizzle-orm");
+          await dbInstance.update(professionals).set({
+            averageRating: avg.toFixed(2),
+            totalReviews: allReviews.length,
+            updatedAt: new Date(),
+          }).where(eq(professionals.id, input.professionalId));
+        }
+
+        return { success: true };
+      }),
+
+    getByProfessional: publicProcedure
+      .input(z.object({ professionalId: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getProfessionalReviews(input.professionalId);
       }),
   }),
 

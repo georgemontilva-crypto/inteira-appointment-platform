@@ -5,41 +5,53 @@ import { getLoginUrl } from "@/const";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import {
-  Calendar, Clock, CheckCircle2, User, Settings, Video,
-  ExternalLink, Plus, Trash2, Star,
+  Calendar, Clock, CheckCircle2, User, Video,
+  ExternalLink, Plus, Star, BarChart3, ArrowLeft, AlertCircle, XCircle,
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { Link } from "wouter";
 
 const DAYS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+const DAY_SHORT = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
 const statusColors: Record<string, string> = {
-  scheduled: "bg-blue-100 text-blue-700",
-  completed: "bg-emerald-100 text-emerald-700",
-  canceled: "bg-red-100 text-red-700",
-  "no-show": "bg-gray-100 text-gray-600",
+  scheduled: "bg-blue-100 text-blue-700 border-blue-200",
+  confirmed: "bg-green-100 text-green-700 border-green-200",
+  completed: "bg-gray-100 text-gray-600 border-gray-200",
+  cancelled: "bg-red-100 text-red-700 border-red-200",
+  no_show: "bg-orange-100 text-orange-700 border-orange-200",
 };
 
 const statusLabels: Record<string, string> = {
-  scheduled: "Programada",
+  scheduled: "Agendada",
+  confirmed: "Confirmada",
   completed: "Completada",
-  canceled: "Cancelada",
-  "no-show": "No asistió",
+  cancelled: "Cancelada",
+  no_show: "No se presentó",
 };
 
 export default function ProfessionalDashboard() {
   const { user, isAuthenticated, loading } = useAuth();
   const [activeTab, setActiveTab] = useState<"citas" | "disponibilidad" | "perfil">("citas");
   const [newSlot, setNewSlot] = useState({ dayOfWeek: 1, startTime: "09:00", endTime: "17:00" });
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    bio: "", education: "", certifications: "",
+    yearsOfExperience: "", hourlyRate: "", languages: "Español",
+  });
 
-  const { data: profile, isLoading: loadingProfile } = trpc.professional.getProfile.useQuery(
+  const { data: profile, isLoading: loadingProfile, refetch: refetchProfile } = trpc.professional.getProfile.useQuery(
     undefined,
     { enabled: isAuthenticated }
   );
 
-  const { data: appointments, isLoading: loadingAppointments } = trpc.professional.getAppointments.useQuery(
+  const { data: appointments, isLoading: loadingAppointments, refetch: refetchAppointments } = trpc.professional.getAppointments.useQuery(
     undefined,
     { enabled: isAuthenticated }
   );
@@ -57,9 +69,27 @@ export default function ProfessionalDashboard() {
     onError: () => toast.error("Error al actualizar disponibilidad"),
   });
 
-  const completeAppointmentMutation = trpc.appointment.completeAppointment.useMutation({
+  const updateProfileMutation = trpc.professional.updateProfile.useMutation({
+    onSuccess: () => {
+      toast.success("Perfil actualizado correctamente");
+      setEditingProfile(false);
+      refetchProfile();
+    },
+    onError: (err) => toast.error(err.message ?? "Error al actualizar perfil"),
+  });
+
+  const cancelMutation = trpc.appointment.cancelAppointment.useMutation({
+    onSuccess: () => {
+      toast.success("Cita cancelada");
+      refetchAppointments();
+    },
+    onError: () => toast.error("Error al cancelar la cita"),
+  });
+
+  const completeMutation = trpc.appointment.completeAppointment.useMutation({
     onSuccess: () => {
       toast.success("Cita marcada como completada");
+      refetchAppointments();
     },
     onError: () => toast.error("Error al actualizar la cita"),
   });
@@ -244,7 +274,7 @@ export default function ProfessionalDashboard() {
                               size="sm"
                               variant="outline"
                               className="h-8 text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-50"
-                              onClick={() => completeAppointmentMutation.mutate({ appointmentId: apt.id })}
+                              onClick={() => completeMutation.mutate({ appointmentId: apt.id })}
                             >
                               <CheckCircle2 className="w-3 h-3 mr-1" />
                               Completar

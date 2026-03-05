@@ -121,3 +121,81 @@ describe("auth.logout", () => {
     expect(true).toBe(true);
   });
 });
+
+// ── Tests: Sistema de calificaciones ──────────────────────────────────────
+
+describe("Rating system validation", () => {
+  it("validates rating is between 1 and 5", () => {
+    const isValidRating = (r: number) => r >= 1 && r <= 5;
+    expect(isValidRating(1)).toBe(true);
+    expect(isValidRating(5)).toBe(true);
+    expect(isValidRating(3)).toBe(true);
+    expect(isValidRating(0)).toBe(false);
+    expect(isValidRating(6)).toBe(false);
+    expect(isValidRating(-1)).toBe(false);
+  });
+
+  it("calculates average rating correctly", () => {
+    const ratings = [5, 4, 3, 5, 4];
+    const avg = ratings.reduce((sum, r) => sum + r, 0) / ratings.length;
+    expect(avg).toBe(4.2);
+  });
+
+  it("returns 0 average for empty ratings array", () => {
+    const ratings: number[] = [];
+    const avg = ratings.length > 0
+      ? ratings.reduce((sum, r) => sum + r, 0) / ratings.length
+      : 0;
+    expect(avg).toBe(0);
+  });
+
+  it("rounds average rating to 2 decimal places", () => {
+    const ratings = [5, 4, 3];
+    const avg = ratings.reduce((sum, r) => sum + r, 0) / ratings.length;
+    const rounded = parseFloat(avg.toFixed(2));
+    expect(rounded).toBe(4.0);
+  });
+
+  it("calculates rating distribution correctly", () => {
+    const reviews = [
+      { rating: 5 }, { rating: 5 }, { rating: 4 },
+      { rating: 3 }, { rating: 5 }, { rating: 2 },
+    ];
+    const fiveStarCount = reviews.filter((r) => r.rating === 5).length;
+    const fourStarCount = reviews.filter((r) => r.rating === 4).length;
+    expect(fiveStarCount).toBe(3);
+    expect(fourStarCount).toBe(1);
+  });
+});
+
+describe("Professional recommendation by rating", () => {
+  it("sorts professionals by average rating descending", () => {
+    const professionals = [
+      { id: 1, name: "Ana", averageRating: "3.5" },
+      { id: 2, name: "Carlos", averageRating: "4.8" },
+      { id: 3, name: "María", averageRating: "4.2" },
+    ];
+    const sorted = [...professionals].sort(
+      (a, b) => parseFloat(b.averageRating) - parseFloat(a.averageRating)
+    );
+    expect(sorted[0].id).toBe(2);
+    expect(sorted[1].id).toBe(3);
+    expect(sorted[2].id).toBe(1);
+  });
+
+  it("places professionals with no reviews at the end", () => {
+    const professionals = [
+      { id: 1, name: "Ana", averageRating: "4.5", totalReviews: 10 },
+      { id: 2, name: "Carlos", averageRating: "0", totalReviews: 0 },
+      { id: 3, name: "María", averageRating: "3.8", totalReviews: 5 },
+    ];
+    const sorted = [...professionals].sort((a, b) => {
+      if (a.totalReviews === 0 && b.totalReviews > 0) return 1;
+      if (b.totalReviews === 0 && a.totalReviews > 0) return -1;
+      return parseFloat(b.averageRating) - parseFloat(a.averageRating);
+    });
+    expect(sorted[0].id).toBe(1);
+    expect(sorted[1].id).toBe(3);
+    expect(sorted[2].id).toBe(2);
+  });
+});

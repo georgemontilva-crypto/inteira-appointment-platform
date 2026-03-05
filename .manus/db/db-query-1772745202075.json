@@ -1,0 +1,9 @@
+{
+  "query": "ALTER TABLE `reviews` DROP INDEX `reviews_appointmentId_unique`;\nALTER TABLE `reviews` MODIFY COLUMN `appointmentId` int;\nALTER TABLE `reviews` ADD `isVerified` boolean DEFAULT false;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4B4XEkzrJ3M4xif.root --database hvpTFzVHTUDdmneoDhwUNk --execute ALTER TABLE `reviews` DROP INDEX `reviews_appointmentId_unique`;\nALTER TABLE `reviews` MODIFY COLUMN `appointmentId` int;\nALTER TABLE `reviews` ADD `isVerified` boolean DEFAULT false;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 735
+}

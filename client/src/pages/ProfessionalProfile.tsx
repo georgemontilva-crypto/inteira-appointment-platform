@@ -1,20 +1,89 @@
+import { useState } from "react";
 import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { Link, useRoute } from "wouter";
-import { Star, Award, Clock, CheckCircle2, ArrowLeft, Calendar, Shield, GraduationCap } from "lucide-react";
+import {
+  Star, Award, Clock, CheckCircle2, ArrowLeft, Calendar,
+  Shield, GraduationCap, MessageSquare, User,
+} from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { toast } from "sonner";
+
+function StarRating({
+  value,
+  onChange,
+  readonly = false,
+  size = "md",
+}: {
+  value: number;
+  onChange?: (v: number) => void;
+  readonly?: boolean;
+  size?: "sm" | "md" | "lg";
+}) {
+  const [hovered, setHovered] = useState(0);
+  const sizeClass = size === "sm" ? "w-4 h-4" : size === "lg" ? "w-7 h-7" : "w-5 h-5";
+  const display = readonly ? value : hovered || value;
+
+  return (
+    <div className="flex items-center gap-0.5">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <button
+          key={i}
+          type="button"
+          disabled={readonly}
+          onClick={() => !readonly && onChange?.(i + 1)}
+          onMouseEnter={() => !readonly && setHovered(i + 1)}
+          onMouseLeave={() => !readonly && setHovered(0)}
+          className={readonly ? "cursor-default" : "cursor-pointer transition-transform hover:scale-110"}
+        >
+          <Star
+            className={`${sizeClass} transition-colors ${
+              i < display
+                ? "fill-[#F59E0B] text-[#F59E0B]"
+                : "text-muted-foreground/30"
+            }`}
+          />
+        </button>
+      ))}
+    </div>
+  );
+}
 
 export default function ProfessionalProfile() {
   const [, params] = useRoute("/profesional/:id");
   const professionalId = parseInt(params?.id ?? "0");
+  const { user, isAuthenticated } = useAuth();
 
-  const { data: professional, isLoading } = trpc.professional.getById.useQuery(
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewComment, setReviewComment] = useState("");
+  const [showReviewForm, setShowReviewForm] = useState(false);
+
+  const { data: professional, isLoading, refetch } = trpc.professional.getById.useQuery(
     { id: professionalId },
     { enabled: professionalId > 0 }
   );
+
+  const { data: reviews, refetch: refetchReviews } = trpc.review.getByProfessional.useQuery(
+    { professionalId },
+    { enabled: professionalId > 0 }
+  );
+
+  const createReviewMutation = trpc.review.create.useMutation({
+    onSuccess: () => {
+      toast.success("Reseña publicada correctamente");
+      setReviewRating(0);
+      setReviewComment("");
+      setShowReviewForm(false);
+      refetch();
+      refetchReviews();
+    },
+    onError: (err) => toast.error(err.message ?? "Error al publicar la reseña"),
+  });
 
   if (isLoading) {
     return (
@@ -27,22 +96,29 @@ export default function ProfessionalProfile() {
   if (!professional) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-2">Profesional no encontrado</h2>
+        <div className="text-center space-y-4">
+          <h2 className="text-2xl font-bold">Profesional no encontrado</h2>
           <Link href="/especialidades">
-            <Button className="gradient-brand text-white border-0">Ver especialidades</Button>
+            <Button className="bg-primary hover:bg-primary/90 text-white">Ver especialidades</Button>
           </Link>
         </div>
       </div>
     );
   }
 
-  const rating = parseFloat(professional.averageRating ?? "5.0");
+  const rating = parseFloat(professional.averageRating ?? "0");
+  const totalReviews = professional.totalReviews ?? 0;
+
+  // Rating distribution
+  const ratingCounts = [5, 4, 3, 2, 1].map((star) => ({
+    star,
+    count: (reviews ?? []).filter((r) => r.rating === star).length,
+  }));
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="gradient-hero text-white py-12">
+      {/* Hero header */}
+      <div className="bg-[#607562] text-white py-12">
         <div className="container">
           <Button
             variant="ghost"
@@ -55,25 +131,25 @@ export default function ProfessionalProfile() {
 
           <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
             <div className="w-24 h-24 rounded-3xl bg-white/20 flex items-center justify-center text-4xl font-bold flex-shrink-0">
-              {professional.user?.name?.charAt(0) ?? "P"}
+              {professional.user?.name?.charAt(0)?.toUpperCase() ?? "P"}
             </div>
             <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
+              <div className="flex flex-wrap items-center gap-3 mb-2">
                 <h1 className="text-3xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
                   {professional.user?.name ?? `Especialista #${professional.id}`}
                 </h1>
                 {professional.status === "approved" && (
-                  <Badge className="bg-emerald-500/20 text-emerald-200 border-emerald-400/30">
+                  <Badge className="bg-white/20 text-white border-white/30 text-xs">
                     <CheckCircle2 className="w-3 h-3 mr-1" />
                     Verificado
                   </Badge>
                 )}
               </div>
-              <div className="flex flex-wrap items-center gap-4 text-white/80">
-                <div className="flex items-center gap-1">
-                  <Star className="w-4 h-4 fill-accent text-accent" />
-                  <span className="font-medium">{rating.toFixed(1)}</span>
-                  <span className="text-sm">({professional.totalReviews ?? 0} reseñas)</span>
+              <div className="flex flex-wrap items-center gap-4 text-white/80 text-sm">
+                <div className="flex items-center gap-1.5">
+                  <StarRating value={Math.round(rating)} readonly size="sm" />
+                  <span className="font-semibold text-white">{rating > 0 ? rating.toFixed(1) : "Nuevo"}</span>
+                  <span>({totalReviews} {totalReviews === 1 ? "reseña" : "reseñas"})</span>
                 </div>
                 {professional.yearsOfExperience && (
                   <div className="flex items-center gap-1">
@@ -84,13 +160,13 @@ export default function ProfessionalProfile() {
                 {professional.hourlyRate && (
                   <div className="flex items-center gap-1">
                     <Clock className="w-4 h-4" />
-                    <span>${professional.hourlyRate} MXN / hora</span>
+                    <span>${professional.hourlyRate} MXN / sesión</span>
                   </div>
                 )}
               </div>
             </div>
             <Link href={`/agendar/${professional.id}`}>
-              <Button size="lg" className="bg-white text-primary hover:bg-white/90 font-semibold shadow-lg">
+              <Button size="lg" className="bg-white text-[#607562] hover:bg-white/90 font-semibold shadow-lg">
                 <Calendar className="w-5 h-5 mr-2" />
                 Agendar cita
               </Button>
@@ -106,8 +182,10 @@ export default function ProfessionalProfile() {
             {/* Bio */}
             {professional.bio && (
               <Card className="border-border">
-                <CardHeader>
-                  <CardTitle className="text-lg">Acerca de mí</CardTitle>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg" style={{ fontFamily: "Poppins, sans-serif" }}>
+                    Acerca de mí
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-muted-foreground leading-relaxed">{professional.bio}</p>
@@ -118,10 +196,10 @@ export default function ProfessionalProfile() {
             {/* Education */}
             {professional.education && (
               <Card className="border-border">
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg flex items-center gap-2" style={{ fontFamily: "Poppins, sans-serif" }}>
                     <GraduationCap className="w-5 h-5 text-primary" />
-                    Educación
+                    Formación académica
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -133,8 +211,8 @@ export default function ProfessionalProfile() {
             {/* Certifications */}
             {professional.certifications && (
               <Card className="border-border">
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg flex items-center gap-2" style={{ fontFamily: "Poppins, sans-serif" }}>
                     <Shield className="w-5 h-5 text-primary" />
                     Certificaciones
                   </CardTitle>
@@ -145,39 +223,149 @@ export default function ProfessionalProfile() {
               </Card>
             )}
 
-            {/* Reviews */}
+            {/* Reviews section */}
             <Card className="border-border">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Star className="w-5 h-5 text-accent" />
-                  Reseñas ({professional.reviews?.length ?? 0})
-                </CardTitle>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg flex items-center gap-2" style={{ fontFamily: "Poppins, sans-serif" }}>
+                    <MessageSquare className="w-5 h-5 text-primary" />
+                    Reseñas de usuarios ({totalReviews})
+                  </CardTitle>
+                  {isAuthenticated && !showReviewForm && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowReviewForm(true)}
+                      className="border-primary text-primary hover:bg-primary/5"
+                    >
+                      Escribir reseña
+                    </Button>
+                  )}
+                </div>
               </CardHeader>
-              <CardContent>
-                {professional.reviews?.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-6">
-                    Aún no hay reseñas. ¡Sé el primero en calificar!
-                  </p>
+              <CardContent className="space-y-6">
+                {/* Rating summary */}
+                {totalReviews > 0 && (
+                  <div className="flex items-start gap-6 p-4 bg-muted/30 rounded-xl">
+                    <div className="text-center flex-shrink-0">
+                      <div className="text-5xl font-bold text-foreground" style={{ fontFamily: "Poppins, sans-serif" }}>
+                        {rating.toFixed(1)}
+                      </div>
+                      <StarRating value={Math.round(rating)} readonly size="sm" />
+                      <p className="text-xs text-muted-foreground mt-1">{totalReviews} reseñas</p>
+                    </div>
+                    <div className="flex-1 space-y-1.5">
+                      {ratingCounts.map(({ star, count }) => (
+                        <div key={star} className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground w-4">{star}</span>
+                          <Star className="w-3 h-3 text-[#F59E0B] fill-[#F59E0B] flex-shrink-0" />
+                          <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-[#F59E0B] rounded-full transition-all"
+                              style={{ width: totalReviews > 0 ? `${(count / totalReviews) * 100}%` : "0%" }}
+                            />
+                          </div>
+                          <span className="text-xs text-muted-foreground w-4">{count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Write review form */}
+                {showReviewForm && isAuthenticated && (
+                  <div className="border border-primary/20 rounded-xl p-5 bg-primary/5 space-y-4">
+                    <h4 className="font-semibold text-sm">Tu calificación</h4>
+                    <div className="flex items-center gap-3">
+                      <StarRating value={reviewRating} onChange={setReviewRating} size="lg" />
+                      {reviewRating > 0 && (
+                        <span className="text-sm text-muted-foreground">
+                          {["", "Muy malo", "Malo", "Regular", "Bueno", "Excelente"][reviewRating]}
+                        </span>
+                      )}
+                    </div>
+                    <Textarea
+                      placeholder="Comparte tu experiencia con este profesional (opcional)..."
+                      value={reviewComment}
+                      onChange={(e) => setReviewComment(e.target.value)}
+                      rows={3}
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => {
+                          if (reviewRating === 0) {
+                            toast.error("Selecciona una calificación antes de publicar");
+                            return;
+                          }
+                          createReviewMutation.mutate({
+                            professionalId,
+                            rating: reviewRating,
+                            comment: reviewComment || undefined,
+                          });
+                        }}
+                        disabled={createReviewMutation.isPending || reviewRating === 0}
+                        className="bg-primary hover:bg-primary/90 text-white"
+                      >
+                        {createReviewMutation.isPending ? "Publicando..." : "Publicar reseña"}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        onClick={() => {
+                          setShowReviewForm(false);
+                          setReviewRating(0);
+                          setReviewComment("");
+                        }}
+                      >
+                        Cancelar
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {!isAuthenticated && (
+                  <div className="text-center py-4 border border-dashed border-border rounded-xl">
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Inicia sesión para dejar una reseña
+                    </p>
+                  </div>
+                )}
+
+                {/* Reviews list */}
+                {(reviews ?? []).length === 0 ? (
+                  <div className="text-center py-8">
+                    <Star className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
+                    <p className="text-muted-foreground text-sm">
+                      Aún no hay reseñas. Sé el primero en calificar a este profesional.
+                    </p>
+                  </div>
                 ) : (
                   <div className="space-y-4">
-                    {professional.reviews?.map((review) => (
-                      <div key={review.id} className="border-b border-border pb-4 last:border-0 last:pb-0">
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="flex items-center gap-0.5">
-                            {Array.from({ length: 5 }).map((_, i) => (
-                              <Star
-                                key={i}
-                                className={`w-4 h-4 ${i < review.rating ? "fill-accent text-accent" : "text-muted-foreground/30"}`}
-                              />
-                            ))}
+                    {(reviews ?? []).map((review) => (
+                      <div key={review.id} className="border-b border-border/50 pb-4 last:border-0 last:pb-0">
+                        <div className="flex items-start gap-3">
+                          <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                            <User className="w-4 h-4 text-primary" />
                           </div>
-                          <span className="text-xs text-muted-foreground">
-                            {format(new Date(review.createdAt), "d MMM yyyy", { locale: es })}
-                          </span>
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between gap-2 mb-1">
+                              <div className="flex items-center gap-2">
+                                <StarRating value={review.rating} readonly size="sm" />
+                                {review.isVerified && (
+                                  <Badge className="bg-green-100 text-green-700 border-green-200 text-xs px-1.5 py-0">
+                                    <CheckCircle2 className="w-2.5 h-2.5 mr-1" />
+                                    Verificada
+                                  </Badge>
+                                )}
+                              </div>
+                              <span className="text-xs text-muted-foreground">
+                                {format(new Date(review.createdAt), "d MMM yyyy", { locale: es })}
+                              </span>
+                            </div>
+                            {review.comment && (
+                              <p className="text-sm text-foreground/80 leading-relaxed">{review.comment}</p>
+                            )}
+                          </div>
                         </div>
-                        {review.comment && (
-                          <p className="text-sm text-muted-foreground">{review.comment}</p>
-                        )}
                       </div>
                     ))}
                   </div>
@@ -188,23 +376,22 @@ export default function ProfessionalProfile() {
 
           {/* Sidebar */}
           <div className="space-y-4">
-            {/* Quick info */}
-            <Card className="border-border">
-              <CardContent className="p-6 space-y-4">
-                <div className="text-center">
-                  <div className="text-4xl font-bold text-primary mb-1">{rating.toFixed(1)}</div>
-                  <div className="flex items-center justify-center gap-0.5 mb-1">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Star
-                        key={i}
-                        className={`w-5 h-5 ${i < Math.round(rating) ? "fill-accent text-accent" : "text-muted-foreground/30"}`}
-                      />
-                    ))}
+            {/* Quick info card */}
+            <Card className="border-border sticky top-4">
+              <CardContent className="p-6 space-y-5">
+                {/* Rating display */}
+                <div className="text-center pb-4 border-b border-border">
+                  <div className="text-4xl font-bold text-foreground mb-1" style={{ fontFamily: "Poppins, sans-serif" }}>
+                    {rating > 0 ? rating.toFixed(1) : "Nuevo"}
                   </div>
-                  <p className="text-sm text-muted-foreground">{professional.totalReviews ?? 0} reseñas</p>
+                  <StarRating value={Math.round(rating)} readonly size="md" />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {totalReviews} {totalReviews === 1 ? "reseña" : "reseñas"}
+                  </p>
                 </div>
 
-                <div className="border-t border-border pt-4 space-y-3">
+                {/* Details */}
+                <div className="space-y-3">
                   {professional.yearsOfExperience && (
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Experiencia</span>
@@ -214,19 +401,27 @@ export default function ProfessionalProfile() {
                   {professional.hourlyRate && (
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Tarifa</span>
-                      <span className="font-medium">${professional.hourlyRate} MXN/hr</span>
+                      <span className="font-medium text-primary">${professional.hourlyRate} MXN</span>
                     </div>
                   )}
+
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Estado</span>
-                    <Badge className={`border-0 text-xs ${professional.isAvailable ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-600"}`}>
+                    <span className="text-muted-foreground">Disponibilidad</span>
+                    <Badge
+                      className={`border text-xs ${
+                        professional.isAvailable
+                          ? "bg-green-100 text-green-700 border-green-200"
+                          : "bg-gray-100 text-gray-600 border-gray-200"
+                      }`}
+                      variant="outline"
+                    >
                       {professional.isAvailable ? "Disponible" : "No disponible"}
                     </Badge>
                   </div>
                 </div>
 
                 <Link href={`/agendar/${professional.id}`}>
-                  <Button className="w-full gradient-brand text-white border-0 shadow-md shadow-primary/30">
+                  <Button className="w-full bg-primary hover:bg-primary/90 text-white shadow-md">
                     <Calendar className="w-4 h-4 mr-2" />
                     Agendar cita
                   </Button>
@@ -235,17 +430,21 @@ export default function ProfessionalProfile() {
             </Card>
 
             {/* License */}
-            <Card className="border-border">
-              <CardContent className="p-5">
-                <div className="flex items-center gap-3">
-                  <Shield className="w-5 h-5 text-primary" />
-                  <div>
-                    <p className="text-sm font-medium">Cédula profesional</p>
-                    <p className="text-xs text-muted-foreground">{professional.licenseNumber}</p>
+            {professional.licenseNumber && (
+              <Card className="border-border">
+                <CardContent className="p-5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <Shield className="w-4 h-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">Cédula profesional</p>
+                      <p className="text-xs text-muted-foreground">{professional.licenseNumber}</p>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </div>

@@ -167,11 +167,12 @@ export type InsertAppointment = typeof appointments.$inferInsert;
  */
 export const reviews = mysqlTable("reviews", {
   id: int("id").autoincrement().primaryKey(),
-  appointmentId: int("appointmentId").notNull().unique(),
+  appointmentId: int("appointmentId"),
   userId: int("userId").notNull(),
   professionalId: int("professionalId").notNull(),
   rating: int("rating").notNull(), // 1-5
   comment: longtext("comment"),
+  isVerified: boolean("isVerified").default(false),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
