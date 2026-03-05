@@ -274,10 +274,13 @@ class SDKServer {
     if (!user) {
       try {
         const userInfo = await this.getUserInfoWithJwt(sessionCookie ?? "");
+        if (!userInfo.email) {
+          throw ForbiddenError("User email is required");
+        }
         await db.upsertUser({
           openId: userInfo.openId,
+          email: userInfo.email,
           name: userInfo.name || null,
-          email: userInfo.email ?? null,
           loginMethod: userInfo.loginMethod ?? userInfo.platform ?? null,
           lastSignedIn: signedInAt,
         });
@@ -294,6 +297,7 @@ class SDKServer {
 
     await db.upsertUser({
       openId: user.openId,
+      email: user.email,
       lastSignedIn: signedInAt,
     });
 
