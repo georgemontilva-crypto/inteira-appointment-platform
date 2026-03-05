@@ -146,3 +146,21 @@
 
 ## Bugs Reportados
 - [x] Error al hacer clic en "Ver planes disponibles" en el dashboard del usuario (ruta /planes faltaba en App.tsx, creada la página Plans.tsx con todos los planes y FAQ)
+
+## Mejoras de Experiencia Móvil (Solicitud del usuario)
+- [x] Navegación inferior fija tipo app nativa (MobileNav.tsx) con 5 ítems: Inicio, Explorar, CTA central, Mis citas, Perfil
+- [x] Home.tsx: hero compacto con saludo personalizado, strip de estadísticas superpuesto
+- [x] Home.tsx: carrusel horizontal de especialidades deslizable sin scrollbar visible
+- [x] Home.tsx: carrusel horizontal de testimonios en móvil
+- [x] Home.tsx: tarjetas de planes con layout compacto y feedback táctil (active:scale)
+- [x] Home.tsx: footer compacto en 3 columnas para móvil
+- [x] Home.tsx: navbar reducida a h-14 en móvil con botón "Entrar" compacto
+- [x] Plans.tsx: FAQ con acordeón interactivo (expandir/colapsar)
+- [x] Plans.tsx: tarjetas de planes con layout compacto para móvil
+- [x] UserDashboard.tsx: header app-style con avatar, saludo y botón logout
+- [x] UserDashboard.tsx: strip de estadísticas superpuesto al header
+- [x] UserDashboard.tsx: acciones rápidas en grid 3 columnas (solo móvil)
+- [x] UserDashboard.tsx: tarjetas de citas con feedback táctil
+- [x] Specialties.tsx: tarjetas de lista compactas con flecha de navegación en móvil
+- [x] index.css: clase .scrollbar-none para carruseles sin scrollbar
+- [x] index.css: clase .mobile-safe-bottom para padding de nav inferior

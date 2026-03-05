@@ -23,16 +23,17 @@ import {
   Mic2,
   Sparkles,
   Compass,
+  Bell,
 } from "lucide-react";
 
 const homeSpecialtyIcon: Record<string, React.ReactNode> = {
-  Psicología: <Brain className="w-6 h-6 text-white" />,
-  Legal: <Scale className="w-6 h-6 text-white" />,
-  Emprendimiento: <TrendingUp className="w-6 h-6 text-white" />,
-  Finanzas: <DollarSign className="w-6 h-6 text-white" />,
-  Idiomas: <Mic2 className="w-6 h-6 text-white" />,
-  "Imagen Personal": <Sparkles className="w-6 h-6 text-white" />,
-  Vocación: <Compass className="w-6 h-6 text-white" />,
+  Psicología: <Brain className="w-5 h-5 text-white" />,
+  Legal: <Scale className="w-5 h-5 text-white" />,
+  Emprendimiento: <TrendingUp className="w-5 h-5 text-white" />,
+  Finanzas: <DollarSign className="w-5 h-5 text-white" />,
+  Idiomas: <Mic2 className="w-5 h-5 text-white" />,
+  "Imagen Personal": <Sparkles className="w-5 h-5 text-white" />,
+  Vocación: <Compass className="w-5 h-5 text-white" />,
 };
 
 const homeSpecialtyBg: Record<string, string> = {
@@ -47,36 +48,32 @@ const homeSpecialtyBg: Record<string, string> = {
 
 const steps = [
   {
-    number: "01",
-    icon: <Users className="w-6 h-6" />,
+    icon: <Users className="w-5 h-5" />,
     title: "Regístrate gratis",
-    description: "Crea tu cuenta en minutos. Elige el plan que mejor se adapte a tus necesidades.",
+    description: "Crea tu cuenta en minutos.",
   },
   {
-    number: "02",
-    icon: <Award className="w-6 h-6" />,
+    icon: <Award className="w-5 h-5" />,
     title: "Elige tu especialista",
-    description: "Explora perfiles verificados, lee reseñas y selecciona al profesional ideal para ti.",
+    description: "Perfiles verificados con reseñas reales.",
   },
   {
-    number: "03",
-    icon: <Calendar className="w-6 h-6" />,
+    icon: <Calendar className="w-5 h-5" />,
     title: "Agenda tu cita",
-    description: "Selecciona fecha y hora disponible. Recibirás confirmación inmediata por email.",
+    description: "Confirmación inmediata por email.",
   },
   {
-    number: "04",
-    icon: <Video className="w-6 h-6" />,
+    icon: <Video className="w-5 h-5" />,
     title: "Conéctate en línea",
-    description: "Únete a tu consulta por Zoom o Google Meet desde cualquier dispositivo.",
+    description: "Zoom o Google Meet desde cualquier dispositivo.",
   },
 ];
 
 const stats = [
-  { value: "500+", label: "Especialistas verificados" },
-  { value: "10,000+", label: "Consultas realizadas" },
-  { value: "4.9", label: "Calificación promedio" },
-  { value: "7", label: "Especialidades disponibles" },
+  { value: "500+", label: "Especialistas" },
+  { value: "10k+", label: "Consultas" },
+  { value: "4.9", label: "Calificación" },
+  { value: "7", label: "Áreas" },
 ];
 
 const testimonials = [
@@ -84,48 +81,62 @@ const testimonials = [
     name: "María González",
     role: "Emprendedora",
     rating: 5,
-    comment: "La plataforma me permitió encontrar un asesor legal de confianza en minutos. Excelente experiencia.",
+    comment: "Encontré un asesor legal de confianza en minutos. Excelente experiencia.",
     specialty: "Legal",
   },
   {
     name: "Carlos Ramírez",
     role: "Profesional independiente",
     rating: 5,
-    comment: "Las sesiones de psicología en línea son igual de efectivas que en persona. Muy recomendado.",
+    comment: "Las sesiones de psicología en línea son igual de efectivas que en persona.",
     specialty: "Psicología",
   },
   {
     name: "Ana Martínez",
     role: "Directora de empresa",
     rating: 5,
-    comment: "El asesor financiero me ayudó a estructurar mi negocio. El proceso de agendar fue muy sencillo.",
+    comment: "El asesor financiero me ayudó a estructurar mi negocio. Proceso muy sencillo.",
     specialty: "Finanzas",
   },
 ];
+
+const defaultSpecialties = [
+  { id: 1, name: "Psicología" },
+  { id: 2, name: "Emprendimiento" },
+  { id: 3, name: "Finanzas" },
+  { id: 4, name: "Idiomas" },
+  { id: 5, name: "Imagen Personal" },
+  { id: 6, name: "Legal" },
+  { id: 7, name: "Vocación" },
+] as Array<{ id: number; name: string }>;
 
 export default function Home() {
   const { user, isAuthenticated } = useAuth();
   const { data: specialties } = trpc.specialty.getAll.useQuery();
   const { data: plans } = trpc.subscriptionPlan.getAll.useQuery();
 
+  const displaySpecialties = specialties ?? defaultSpecialties;
+
   return (
-    <div className="min-h-screen bg-background">
-      {/* ── Navbar ── */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md border-b border-border shadow-sm">
+    <div className="min-h-screen bg-background pb-20 md:pb-0">
+      {/* ══════════════════════════════════════════
+          NAVBAR — desktop visible, mobile minimal
+          ══════════════════════════════════════════ */}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-border shadow-sm">
         <div className="container">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex items-center justify-between h-14 md:h-16">
             {/* Logo */}
             <Link href="/">
               <div className="flex items-center cursor-pointer">
                 <img
                   src="https://d2xsxph8kpxj0f.cloudfront.net/310519663083109800/hvpTFzVHTUDdmneoDhwUNk/logo-verde_8475ff2a.webp"
                   alt="Inteira"
-                  className="h-9 w-auto object-contain"
+                  className="h-8 md:h-9 w-auto object-contain"
                 />
               </div>
             </Link>
 
-            {/* Nav links */}
+            {/* Desktop nav links */}
             <div className="hidden md:flex items-center gap-8">
               <a href="#especialidades" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
                 Especialidades
@@ -136,7 +147,7 @@ export default function Home() {
               <a href="#planes" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
                 Planes
               </a>
-              <Link href="/profesionales">
+              <Link href="/especialidades">
                 <span className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors cursor-pointer">
                   Especialistas
                 </span>
@@ -144,21 +155,28 @@ export default function Home() {
             </div>
 
             {/* Auth buttons */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 md:gap-3">
               {isAuthenticated ? (
                 <Link href="/dashboard">
-                  <Button size="sm" className="gradient-brand text-white border-0">
+                  <Button size="sm" className="gradient-brand text-white border-0 text-xs md:text-sm">
                     Mi Dashboard
                   </Button>
                 </Link>
               ) : (
                 <>
-                  <a href={getLoginUrl()}>
+                  {/* Mobile: solo icono de notificación/login */}
+                  <a href={getLoginUrl()} className="md:hidden">
+                    <Button size="sm" className="gradient-brand text-white border-0 text-xs px-3">
+                      Entrar
+                    </Button>
+                  </a>
+                  {/* Desktop: botones completos */}
+                  <a href={getLoginUrl()} className="hidden md:block">
                     <Button variant="ghost" size="sm" className="text-primary hover:text-primary">
                       Iniciar sesión
                     </Button>
                   </a>
-                  <a href={getLoginUrl()}>
+                  <a href={getLoginUrl()} className="hidden md:block">
                     <Button size="sm" className="gradient-brand text-white border-0 shadow-md shadow-primary/30">
                       Comenzar gratis
                     </Button>
@@ -170,91 +188,142 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* ── Hero Section ── */}
-      <section className="relative pt-24 pb-20 overflow-hidden">
-        {/* Background gradient */}
-        <div className="absolute inset-0 gradient-hero opacity-5 pointer-events-none" />
-        <div className="absolute top-20 right-0 w-96 h-96 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-accent/10 rounded-full blur-3xl pointer-events-none" />
+      {/* ══════════════════════════════════════════
+          HERO — Mobile: app-style greeting card
+                 Desktop: split layout
+          ══════════════════════════════════════════ */}
+      <section className="relative pt-14 md:pt-24 overflow-hidden">
+        {/* Desktop background blobs */}
+        <div className="hidden md:block absolute top-20 right-0 w-96 h-96 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="hidden md:block absolute bottom-0 left-0 w-64 h-64 bg-accent/10 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="container relative">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            {/* Left content */}
-            <div className="space-y-8">
-              <Badge className="bg-primary/10 text-primary border-primary/20 px-4 py-1.5 text-sm font-medium">
-                Plataforma de consultas en línea
-              </Badge>
-
-              <h1 className="text-5xl lg:text-6xl font-bold leading-tight" style={{ fontFamily: "Poppins, sans-serif" }}>
-                Conecta con{" "}
-                <span className="gradient-brand-text">especialistas</span>{" "}
-                desde cualquier lugar
-              </h1>
-
-              <p className="text-lg text-muted-foreground leading-relaxed max-w-lg">
-                Accede a consultas profesionales en psicología, legal, finanzas, emprendimiento y más.
-                Todo desde la comodidad de tu hogar, con videollamadas en tiempo real.
+        {/* ── Mobile Hero ── */}
+        <div className="md:hidden">
+          {/* Gradient header card */}
+          <div className="gradient-hero px-5 pt-8 pb-16 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
+            <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
+            <div className="relative z-10">
+              <p className="text-white/70 text-sm font-medium mb-1">
+                {isAuthenticated ? `Hola, ${user?.name?.split(" ")[0] ?? ""}` : "Bienvenido a"}
               </p>
-
-              <div className="flex flex-col sm:flex-row gap-4">
-                <a href={getLoginUrl()}>
-                  <Button size="lg" className="gradient-brand text-white border-0 shadow-lg shadow-primary/30 px-8 text-base">
-                    Comenzar ahora
-                    <ArrowRight className="ml-2 w-4 h-4" />
-                  </Button>
-                </a>
-                <Link href="/profesionales">
-                  <Button size="lg" variant="outline" className="border-primary/30 text-primary hover:bg-primary/5 px-8 text-base">
-                    Ver especialistas
-                  </Button>
-                </Link>
-              </div>
-
-              {/* Trust badges */}
-              <div className="flex items-center gap-6 pt-2">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Shield className="w-4 h-4 text-primary" />
-                  <span>Profesionales verificados</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Video className="w-4 h-4 text-primary" />
-                  <span>Zoom & Google Meet</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Clock className="w-4 h-4 text-primary" />
-                  <span>Agenda flexible</span>
-                </div>
-              </div>
+              <h1 className="text-3xl font-bold text-white leading-tight mb-3" style={{ fontFamily: "Poppins, sans-serif" }}>
+                {isAuthenticated ? "¿Con quién quieres hablar hoy?" : "Inteira"}
+              </h1>
+              {!isAuthenticated && (
+                <p className="text-white/80 text-sm leading-relaxed mb-5">
+                  Consultas con especialistas en psicología, finanzas, legal y más. Todo en línea.
+                </p>
+              )}
+              <a href={getLoginUrl()}>
+                <Button className="bg-white text-primary font-semibold px-6 shadow-lg active:scale-95 transition-transform">
+                  {isAuthenticated ? "Ver especialistas" : "Comenzar gratis"}
+                  <ArrowRight className="ml-2 w-4 h-4" />
+                </Button>
+              </a>
             </div>
+          </div>
 
-            {/* Right: Stats cards */}
-            <div className="relative hidden lg:block">
-              <div className="grid grid-cols-2 gap-4">
-                {stats.map((stat, i) => (
-                  <Card key={i} className={`border-border shadow-sm ${i === 0 ? "col-span-1 row-span-1" : ""}`}>
-                    <CardContent className="p-6">
-                      <div className="text-3xl font-bold text-primary mb-1" style={{ fontFamily: "Poppins, sans-serif" }}>
-                        {stat.value}
-                      </div>
-                      <div className="text-sm text-muted-foreground">{stat.label}</div>
-                    </CardContent>
-                  </Card>
-                ))}
+          {/* Stats strip — overlapping the hero */}
+          <div className="mx-4 -mt-8 relative z-10">
+            <div className="bg-white rounded-2xl shadow-xl border border-border/50 grid grid-cols-4 divide-x divide-border">
+              {stats.map((s, i) => (
+                <div key={i} className="flex flex-col items-center py-4 px-1">
+                  <span className="text-lg font-bold text-primary" style={{ fontFamily: "Poppins, sans-serif" }}>{s.value}</span>
+                  <span className="text-[10px] text-muted-foreground text-center leading-tight mt-0.5">{s.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Trust badges */}
+          <div className="flex items-center justify-center gap-4 px-5 mt-5 mb-2">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Shield className="w-3.5 h-3.5 text-primary" />
+              <span>Verificados</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Video className="w-3.5 h-3.5 text-primary" />
+              <span>Zoom & Meet</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Clock className="w-3.5 h-3.5 text-primary" />
+              <span>Agenda flexible</span>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Desktop Hero ── */}
+        <div className="hidden md:block pb-20">
+          <div className="container relative">
+            <div className="grid lg:grid-cols-2 gap-12 items-center">
+              <div className="space-y-8">
+                <Badge className="bg-primary/10 text-primary border-primary/20 px-4 py-1.5 text-sm font-medium">
+                  Plataforma de consultas en línea
+                </Badge>
+                <h1 className="text-5xl lg:text-6xl font-bold leading-tight" style={{ fontFamily: "Poppins, sans-serif" }}>
+                  Conecta con{" "}
+                  <span className="text-primary">especialistas</span>{" "}
+                  desde cualquier lugar
+                </h1>
+                <p className="text-lg text-muted-foreground leading-relaxed max-w-lg">
+                  Accede a consultas profesionales en psicología, legal, finanzas, emprendimiento y más.
+                  Todo desde la comodidad de tu hogar, con videollamadas en tiempo real.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <a href={getLoginUrl()}>
+                    <Button size="lg" className="gradient-brand text-white border-0 shadow-lg shadow-primary/30 px-8 text-base">
+                      Comenzar ahora
+                      <ArrowRight className="ml-2 w-4 h-4" />
+                    </Button>
+                  </a>
+                  <Link href="/especialidades">
+                    <Button size="lg" variant="outline" className="border-primary/30 text-primary hover:bg-primary/5 px-8 text-base">
+                      Ver especialistas
+                    </Button>
+                  </Link>
+                </div>
+                <div className="flex items-center gap-6 pt-2">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Shield className="w-4 h-4 text-primary" />
+                    <span>Profesionales verificados</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Video className="w-4 h-4 text-primary" />
+                    <span>Zoom & Google Meet</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Clock className="w-4 h-4 text-primary" />
+                    <span>Agenda flexible</span>
+                  </div>
+                </div>
               </div>
-
-              {/* Floating appointment card */}
-              <div className="absolute -bottom-4 -left-8 bg-white rounded-2xl shadow-xl border border-border p-4 max-w-xs">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full gradient-brand flex items-center justify-center flex-shrink-0">
-                    <Video className="w-5 h-5 text-white" />
+              <div className="relative hidden lg:block">
+                <div className="grid grid-cols-2 gap-4">
+                  {stats.map((stat, i) => (
+                    <Card key={i} className="border-border shadow-sm">
+                      <CardContent className="p-6">
+                        <div className="text-3xl font-bold text-primary mb-1" style={{ fontFamily: "Poppins, sans-serif" }}>
+                          {stat.value}
+                        </div>
+                        <div className="text-sm text-muted-foreground">{stat.label}</div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+                <div className="absolute -bottom-4 -left-8 bg-white rounded-2xl shadow-xl border border-border p-4 max-w-xs">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full gradient-brand flex items-center justify-center flex-shrink-0">
+                      <Video className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">Cita confirmada</p>
+                      <p className="text-xs text-muted-foreground">Psicología · Hoy 4:00 PM</p>
+                    </div>
+                    <Badge className="bg-primary/15 text-primary border-0 text-xs ml-auto">
+                      Activa
+                    </Badge>
                   </div>
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">Cita confirmada</p>
-                    <p className="text-xs text-muted-foreground">Psicología · Hoy 4:00 PM</p>
-                  </div>
-                  <Badge className="bg-primary/15 text-primary border-0 text-xs ml-auto">
-                    ✓ Activa
-                  </Badge>
                 </div>
               </div>
             </div>
@@ -262,31 +331,48 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── Specialties Section ── */}
-      <section id="especialidades" className="py-20 bg-secondary/30">
-        <div className="container">
-          <div className="text-center mb-12">
-            <Badge className="bg-primary/10 text-primary border-primary/20 mb-4">
+      {/* ══════════════════════════════════════════
+          SPECIALTIES — Mobile: horizontal scroll
+                        Desktop: grid
+          ══════════════════════════════════════════ */}
+      <section id="especialidades" className="py-8 md:py-20 bg-secondary/20 md:bg-secondary/30">
+        <div className="md:container">
+          {/* Section header */}
+          <div className="px-5 md:px-0 mb-5 md:mb-12 md:text-center">
+            <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-1 md:mb-4">
               Especialidades
-            </Badge>
-            <h2 className="text-4xl font-bold mb-4" style={{ fontFamily: "Poppins, sans-serif" }}>
+            </p>
+            <h2 className="text-xl md:text-4xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
               Encuentra al experto que necesitas
             </h2>
-            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+            <p className="hidden md:block text-muted-foreground text-lg max-w-2xl mx-auto mt-3">
               Contamos con profesionales certificados en múltiples áreas para atender todas tus necesidades.
             </p>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-            {(specialties ?? [
-              { id: 1, name: "Psicología" },
-              { id: 2, name: "Emprendimiento" },
-              { id: 3, name: "Finanzas" },
-              { id: 4, name: "Idiomas" },
-              { id: 5, name: "Imagen Personal" },
-              { id: 6, name: "Legal" },
-              { id: 7, name: "Vocación" },
-            ] as Array<{id: number; name: string}>).map((specialty) => (
+          {/* Mobile: horizontal scroll carousel */}
+          <div className="md:hidden overflow-x-auto scrollbar-none pb-2">
+            <div className="flex gap-3 px-5" style={{ width: "max-content" }}>
+              {displaySpecialties.map((specialty) => (
+                <Link key={specialty.id} href={`/especialidades/${specialty.id}`}>
+                  <div className="flex flex-col items-center gap-2 w-20 active:scale-95 transition-transform">
+                    <div
+                      className={`w-14 h-14 rounded-2xl ${homeSpecialtyBg[specialty.name] ?? "bg-[#607562]"} flex items-center justify-center shadow-md`}
+                    >
+                      {homeSpecialtyIcon[specialty.name] ?? <Compass className="w-5 h-5 text-white" />}
+                    </div>
+                    <span className="text-[11px] font-semibold text-center text-foreground leading-tight">
+                      {specialty.name}
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* Desktop: grid */}
+          <div className="hidden md:grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 container">
+            {displaySpecialties.map((specialty) => (
               <Link key={specialty.id} href={`/especialidades/${specialty.id}`}>
                 <Card className="group cursor-pointer border-border hover:border-primary/30 hover:shadow-md transition-all duration-200 hover:-translate-y-0.5">
                   <CardContent className="p-4 flex flex-col items-center text-center gap-3">
@@ -304,9 +390,9 @@ export default function Home() {
             ))}
           </div>
 
-          <div className="text-center mt-8">
+          <div className="text-center mt-5 md:mt-8 px-5 md:px-0">
             <Link href="/especialidades">
-              <Button variant="outline" className="border-primary/30 text-primary hover:bg-primary/5">
+              <Button variant="outline" className="w-full md:w-auto border-primary/30 text-primary hover:bg-primary/5">
                 Ver todos los especialistas
                 <ChevronRight className="ml-1 w-4 h-4" />
               </Button>
@@ -315,22 +401,48 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── How it works ── */}
-      <section id="como-funciona" className="py-20">
+      {/* ══════════════════════════════════════════
+          HOW IT WORKS — Mobile: vertical steps
+                          Desktop: horizontal
+          ══════════════════════════════════════════ */}
+      <section id="como-funciona" className="py-8 md:py-20">
         <div className="container">
-          <div className="text-center mb-12">
-            <Badge className="bg-accent/10 text-accent border-accent/20 mb-4">
+          <div className="mb-6 md:mb-12 md:text-center">
+            <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-1 md:mb-4">
               Proceso simple
-            </Badge>
-            <h2 className="text-4xl font-bold mb-4" style={{ fontFamily: "Poppins, sans-serif" }}>
+            </p>
+            <h2 className="text-xl md:text-4xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
               ¿Cómo funciona Inteira?
             </h2>
-            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              En 4 pasos sencillos puedes tener tu primera consulta con un especialista.
-            </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+          {/* Mobile: vertical timeline */}
+          <div className="md:hidden space-y-4">
+            {steps.map((step, i) => (
+              <div key={i} className="flex items-start gap-4">
+                <div className="flex flex-col items-center">
+                  <div className="w-10 h-10 rounded-xl gradient-brand flex items-center justify-center text-white shadow-md flex-shrink-0">
+                    {step.icon}
+                  </div>
+                  {i < steps.length - 1 && (
+                    <div className="w-0.5 h-8 bg-primary/20 mt-2" />
+                  )}
+                </div>
+                <div className="pt-1.5">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="text-[10px] font-bold text-primary/60 uppercase tracking-widest">
+                      Paso {i + 1}
+                    </span>
+                  </div>
+                  <h3 className="text-sm font-semibold text-foreground">{step.title}</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{step.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop: horizontal */}
+          <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {steps.map((step, i) => (
               <div key={i} className="relative">
                 {i < steps.length - 1 && (
@@ -354,77 +466,86 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── Plans Section ── */}
-      <section id="planes" className="py-20 bg-secondary/30">
+      {/* ══════════════════════════════════════════
+          PLANS — Mobile: stacked cards app-style
+                  Desktop: grid
+          ══════════════════════════════════════════ */}
+      <section id="planes" className="py-8 md:py-20 bg-secondary/20 md:bg-secondary/30">
         <div className="container">
-          <div className="text-center mb-12">
-            <Badge className="bg-primary/10 text-primary border-primary/20 mb-4">
+          <div className="mb-6 md:mb-12 md:text-center">
+            <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-1 md:mb-4">
               Planes y precios
-            </Badge>
-            <h2 className="text-4xl font-bold mb-4" style={{ fontFamily: "Poppins, sans-serif" }}>
+            </p>
+            <h2 className="text-xl md:text-4xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
               Elige el plan perfecto para ti
             </h2>
-            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+            <p className="hidden md:block text-muted-foreground text-lg max-w-2xl mx-auto mt-3">
               Suscripciones mensuales o compra individual. Sin contratos, cancela cuando quieras.
             </p>
           </div>
 
           {/* Suscripciones */}
-          <div className="mb-6">
-            <h3 className="text-center text-lg font-semibold text-muted-foreground mb-6 uppercase tracking-wider text-sm">Suscripciones Mensuales</h3>
-            <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto">
+          <div className="mb-4 md:mb-6">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3 md:text-center">
+              Suscripciones Mensuales
+            </p>
+            <div className="grid md:grid-cols-2 gap-3 md:gap-8 md:max-w-3xl md:mx-auto">
               {/* Plan Básico */}
-              <Card className="relative border-2 border-border hover:border-primary/30 transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
-                <CardContent className="p-8">
-                  <div className="mb-2">
-                    <h3 className="text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>Plan Básico</h3>
-                    <div className="flex items-baseline gap-1 mt-2">
-                      <span className="text-4xl font-bold text-primary" style={{ fontFamily: "Poppins, sans-serif" }}>$980</span>
-                      <span className="text-muted-foreground text-sm">MXN/mes</span>
+              <Card className="border border-border active:scale-[0.99] transition-transform md:hover:border-primary/30 md:hover:shadow-xl md:hover:-translate-y-1">
+                <CardContent className="p-5 md:p-8">
+                  <div className="flex items-start justify-between md:block">
+                    <div>
+                      <h3 className="text-base md:text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>Plan Básico</h3>
+                      <div className="flex items-baseline gap-1 mt-1">
+                        <span className="text-2xl md:text-4xl font-bold text-primary" style={{ fontFamily: "Poppins, sans-serif" }}>$980</span>
+                        <span className="text-muted-foreground text-xs md:text-sm">MXN/mes</span>
+                      </div>
                     </div>
-                    <p className="text-xs text-primary font-medium mt-1">Ahorra 30% vs compra individual</p>
+                    <Badge className="bg-primary/10 text-primary border-0 text-[10px] md:hidden mt-1">4 asesorías</Badge>
                   </div>
-                  <ul className="space-y-3 my-6">
-                    {["980 créditos mensuales", "Equivalente a 4 asesorías básicas", "Vigencia de 60 días", "Acceso a todas las especialidades", "Soporte por email"].map((f, j) => (
-                      <li key={j} className="flex items-center gap-2 text-sm">
-                        <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
+                  <ul className="space-y-2 my-4 md:my-6">
+                    {["980 créditos mensuales", "4 asesorías básicas", "Vigencia 60 días", "Todas las especialidades"].map((f, j) => (
+                      <li key={j} className="flex items-center gap-2 text-xs md:text-sm">
+                        <CheckCircle2 className="w-3.5 h-3.5 md:w-4 md:h-4 text-primary flex-shrink-0" />
                         <span>{f}</span>
                       </li>
                     ))}
                   </ul>
                   <a href={getLoginUrl()}>
-                    <Button variant="outline" className="w-full border-primary/30 text-primary hover:bg-primary/5">
-                      Comenzar con Plan Básico
+                    <Button variant="outline" className="w-full border-primary/30 text-primary hover:bg-primary/5 text-sm active:scale-95 transition-transform">
+                      Elegir Plan Básico
                     </Button>
                   </a>
                 </CardContent>
               </Card>
 
               {/* Plan Pro */}
-              <Card className="relative border-2 border-primary shadow-lg shadow-primary/20 scale-105 transition-all duration-300 hover:shadow-xl">
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                  <Badge className="gradient-brand text-white border-0 px-4 py-1 shadow-md">Mas popular</Badge>
+              <Card className="relative border-2 border-primary shadow-lg shadow-primary/20 active:scale-[0.99] transition-transform">
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                  <Badge className="gradient-brand text-white border-0 px-3 py-0.5 text-xs shadow-md">Mas popular</Badge>
                 </div>
-                <CardContent className="p-8">
-                  <div className="mb-2">
-                    <h3 className="text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>Plan Pro</h3>
-                    <div className="flex items-baseline gap-1 mt-2">
-                      <span className="text-4xl font-bold text-primary" style={{ fontFamily: "Poppins, sans-serif" }}>$2,500</span>
-                      <span className="text-muted-foreground text-sm">MXN/mes</span>
+                <CardContent className="p-5 md:p-8">
+                  <div className="flex items-start justify-between md:block">
+                    <div>
+                      <h3 className="text-base md:text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>Plan Pro</h3>
+                      <div className="flex items-baseline gap-1 mt-1">
+                        <span className="text-2xl md:text-4xl font-bold text-primary" style={{ fontFamily: "Poppins, sans-serif" }}>$2,500</span>
+                        <span className="text-muted-foreground text-xs md:text-sm">MXN/mes</span>
+                      </div>
                     </div>
-                    <p className="text-xs text-primary font-medium mt-1">Ahorra 52% vs compra individual</p>
+                    <Badge className="gradient-brand text-white border-0 text-[10px] md:hidden mt-1">Premium</Badge>
                   </div>
-                  <ul className="space-y-3 my-6">
-                    {["2,500 créditos mensuales", "Equivalente a 2 asesorías premium", "Vigencia de 60 días", "Acceso prioritario a expertos", "Soporte 24/7 prioritario", "Acceso a comunidad exclusiva"].map((f, j) => (
-                      <li key={j} className="flex items-center gap-2 text-sm">
-                        <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
+                  <ul className="space-y-2 my-4 md:my-6">
+                    {["2,500 créditos mensuales", "2 asesorías premium", "Vigencia 60 días", "Acceso prioritario", "Soporte 24/7"].map((f, j) => (
+                      <li key={j} className="flex items-center gap-2 text-xs md:text-sm">
+                        <CheckCircle2 className="w-3.5 h-3.5 md:w-4 md:h-4 text-primary flex-shrink-0" />
                         <span>{f}</span>
                       </li>
                     ))}
                   </ul>
                   <a href={getLoginUrl()}>
-                    <Button className="w-full gradient-brand text-white border-0 shadow-md shadow-primary/30">
-                      Comenzar con Plan Pro
+                    <Button className="w-full gradient-brand text-white border-0 shadow-md shadow-primary/30 text-sm active:scale-95 transition-transform">
+                      Elegir Plan Pro
                     </Button>
                   </a>
                 </CardContent>
@@ -433,51 +554,98 @@ export default function Home() {
           </div>
 
           {/* Compra Individual */}
-          <div className="mt-12">
-            <h3 className="text-center text-lg font-semibold text-muted-foreground mb-6 uppercase tracking-wider text-sm">Compra Individual</h3>
-            <div className="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto">
-              <Card className="border border-border hover:border-primary/30 transition-all hover:shadow-md">
-                <CardContent className="p-6 flex items-center justify-between">
-                  <div>
-                    <h4 className="font-semibold">Sesión Básica</h4>
-                    <p className="text-sm text-muted-foreground mt-1">1 sesión · 60 min · Zoom o Meet</p>
+          <div className="mt-6 md:mt-12">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3 md:text-center">
+              Compra Individual
+            </p>
+            <div className="grid grid-cols-2 md:grid-cols-2 gap-3 md:gap-6 md:max-w-2xl md:mx-auto">
+              <Card className="border border-border active:scale-[0.99] transition-transform">
+                <CardContent className="p-4 md:p-6">
+                  <h4 className="font-semibold text-sm md:text-base">Sesión Básica</h4>
+                  <p className="text-xs text-muted-foreground mt-1">60 min · Zoom o Meet</p>
+                  <div className="mt-3">
+                    <span className="text-xl md:text-2xl font-bold text-primary" style={{ fontFamily: "Poppins, sans-serif" }}>$350</span>
+                    <span className="text-xs text-muted-foreground ml-1">MXN</span>
                   </div>
-                  <div className="text-right">
-                    <div className="text-2xl font-bold text-primary" style={{ fontFamily: "Poppins, sans-serif" }}>$350</div>
-                    <div className="text-xs text-muted-foreground">MXN</div>
-                  </div>
+                  <a href={getLoginUrl()}>
+                    <Button variant="outline" size="sm" className="w-full mt-3 border-primary/30 text-primary text-xs active:scale-95 transition-transform">
+                      Comprar
+                    </Button>
+                  </a>
                 </CardContent>
               </Card>
-              <Card className="border border-border hover:border-primary/30 transition-all hover:shadow-md">
-                <CardContent className="p-6 flex items-center justify-between">
-                  <div>
-                    <h4 className="font-semibold">Sesión Premium</h4>
-                    <p className="text-sm text-muted-foreground mt-1">1 sesión · 90 min · Experto de alto nivel</p>
+              <Card className="border border-border active:scale-[0.99] transition-transform">
+                <CardContent className="p-4 md:p-6">
+                  <h4 className="font-semibold text-sm md:text-base">Sesión Premium</h4>
+                  <p className="text-xs text-muted-foreground mt-1">90 min · Experto top</p>
+                  <div className="mt-3">
+                    <span className="text-xl md:text-2xl font-bold text-primary" style={{ fontFamily: "Poppins, sans-serif" }}>$1,250</span>
+                    <span className="text-xs text-muted-foreground ml-1">MXN</span>
                   </div>
-                  <div className="text-right">
-                    <div className="text-2xl font-bold text-primary" style={{ fontFamily: "Poppins, sans-serif" }}>$1,250</div>
-                    <div className="text-xs text-muted-foreground">MXN</div>
-                  </div>
+                  <a href={getLoginUrl()}>
+                    <Button variant="outline" size="sm" className="w-full mt-3 border-primary/30 text-primary text-xs active:scale-95 transition-transform">
+                      Comprar
+                    </Button>
+                  </a>
                 </CardContent>
               </Card>
             </div>
           </div>
+
+          <div className="text-center mt-5 md:mt-8">
+            <Link href="/planes">
+              <Button variant="ghost" className="text-primary text-sm">
+                Ver todos los planes y detalles
+                <ChevronRight className="ml-1 w-4 h-4" />
+              </Button>
+            </Link>
+          </div>
         </div>
       </section>
 
-      {/* ── Testimonials ── */}
-      <section className="py-20">
-        <div className="container">
-          <div className="text-center mb-12">
-            <Badge className="bg-primary/10 text-primary border-primary/20 mb-4">
+      {/* ══════════════════════════════════════════
+          TESTIMONIALS — Mobile: horizontal scroll
+          ══════════════════════════════════════════ */}
+      <section className="py-8 md:py-20">
+        <div className="md:container">
+          <div className="px-5 md:px-0 mb-5 md:mb-12 md:text-center">
+            <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-1 md:mb-4">
               Testimonios
-            </Badge>
-            <h2 className="text-4xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
+            </p>
+            <h2 className="text-xl md:text-4xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
               Lo que dicen nuestros usuarios
             </h2>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6">
+          {/* Mobile: horizontal scroll */}
+          <div className="md:hidden overflow-x-auto scrollbar-none pb-2">
+            <div className="flex gap-3 px-5" style={{ width: "max-content" }}>
+              {testimonials.map((t, i) => (
+                <div key={i} className="w-72 bg-white rounded-2xl border border-border p-5 shadow-sm flex-shrink-0">
+                  <div className="flex items-center gap-1 mb-3">
+                    {Array.from({ length: t.rating }).map((_, j) => (
+                      <Star key={j} className="w-3.5 h-3.5 fill-accent text-accent" />
+                    ))}
+                  </div>
+                  <p className="text-sm text-muted-foreground leading-relaxed mb-4">
+                    "{t.comment}"
+                  </p>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-full gradient-brand flex items-center justify-center text-white font-semibold text-xs flex-shrink-0">
+                      {t.name.charAt(0)}
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold">{t.name}</p>
+                      <p className="text-[10px] text-muted-foreground">{t.role} · {t.specialty}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Desktop: grid */}
+          <div className="hidden md:grid md:grid-cols-3 gap-6 container">
             {testimonials.map((t, i) => (
               <Card key={i} className="border-border hover:shadow-md transition-shadow">
                 <CardContent className="p-6">
@@ -505,23 +673,25 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── CTA Section ── */}
-      <section className="py-20">
+      {/* ══════════════════════════════════════════
+          CTA — Mobile: full-width app banner
+          ══════════════════════════════════════════ */}
+      <section className="py-8 md:py-20">
         <div className="container">
-          <div className="gradient-hero rounded-3xl p-12 text-center text-white relative overflow-hidden">
-            <div className="absolute inset-0 opacity-10">
+          <div className="gradient-hero rounded-2xl md:rounded-3xl p-8 md:p-12 text-center text-white relative overflow-hidden">
+            <div className="absolute inset-0 opacity-10 pointer-events-none">
               <div className="absolute top-0 right-0 w-64 h-64 bg-white rounded-full blur-3xl" />
               <div className="absolute bottom-0 left-0 w-48 h-48 bg-accent rounded-full blur-3xl" />
             </div>
             <div className="relative z-10">
-              <h2 className="text-4xl font-bold mb-4" style={{ fontFamily: "Poppins, sans-serif" }}>
+              <h2 className="text-2xl md:text-4xl font-bold mb-3 md:mb-4" style={{ fontFamily: "Poppins, sans-serif" }}>
                 ¿Listo para tu primera consulta?
               </h2>
-              <p className="text-white/80 text-lg mb-8 max-w-xl mx-auto">
+              <p className="text-white/80 text-sm md:text-lg mb-6 md:mb-8 max-w-xl mx-auto">
                 Únete a miles de personas que ya confían en Inteira para conectar con especialistas de calidad.
               </p>
               <a href={getLoginUrl()}>
-                <Button size="lg" className="bg-white text-primary hover:bg-white/90 font-semibold px-10 shadow-lg">
+                <Button size="lg" className="bg-white text-primary hover:bg-white/90 font-semibold px-8 md:px-10 shadow-lg active:scale-95 transition-transform">
                   Comenzar gratis hoy
                   <ArrowRight className="ml-2 w-4 h-4" />
                 </Button>
@@ -531,10 +701,13 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── Footer ── */}
-      <footer className="py-12" style={{backgroundColor: '#607562'}}>
+      {/* ══════════════════════════════════════════
+          FOOTER — Mobile: compact, Desktop: full
+          ══════════════════════════════════════════ */}
+      <footer className="py-8 md:py-12" style={{ backgroundColor: "#607562" }}>
         <div className="container">
-          <div className="grid md:grid-cols-4 gap-8 mb-8">
+          {/* Desktop footer grid */}
+          <div className="hidden md:grid md:grid-cols-4 gap-8 mb-8">
             <div>
               <div className="mb-4">
                 <img
@@ -573,11 +746,52 @@ export default function Home() {
               </ul>
             </div>
           </div>
-          <div className="border-t border-white/20 pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-sm text-white/70">
+
+          {/* Mobile footer: compact logo + links */}
+          <div className="md:hidden">
+            <div className="flex items-center justify-between mb-5">
+              <img
+                src="https://d2xsxph8kpxj0f.cloudfront.net/310519663083109800/hvpTFzVHTUDdmneoDhwUNk/logo-blanco_886f1d65.webp"
+                alt="Inteira"
+                className="h-7 w-auto object-contain"
+              />
+              <a href="https://inteira.mx" className="text-xs text-white/70 hover:text-white transition-colors">
+                inteira.mx
+              </a>
+            </div>
+            <div className="grid grid-cols-3 gap-4 mb-5">
+              <div>
+                <p className="text-[10px] font-semibold text-white/50 uppercase tracking-widest mb-2">Áreas</p>
+                <ul className="space-y-1.5 text-xs text-white/75">
+                  <li><a href="#" className="hover:text-white">Psicología</a></li>
+                  <li><a href="#" className="hover:text-white">Legal</a></li>
+                  <li><a href="#" className="hover:text-white">Finanzas</a></li>
+                </ul>
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold text-white/50 uppercase tracking-widest mb-2">App</p>
+                <ul className="space-y-1.5 text-xs text-white/75">
+                  <li><a href="#como-funciona" className="hover:text-white">Cómo funciona</a></li>
+                  <li><Link href="/planes"><span className="hover:text-white cursor-pointer">Planes</span></Link></li>
+                  <li><Link href="/registro-profesional"><span className="hover:text-white cursor-pointer">Profesionales</span></Link></li>
+                </ul>
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold text-white/50 uppercase tracking-widest mb-2">Legal</p>
+                <ul className="space-y-1.5 text-xs text-white/75">
+                  <li><a href="#" className="hover:text-white">Términos</a></li>
+                  <li><a href="#" className="hover:text-white">Privacidad</a></li>
+                  <li><a href="mailto:soporte@inteira.mx" className="hover:text-white">Contacto</a></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t border-white/20 pt-5 flex flex-col md:flex-row items-center justify-between gap-3">
+            <p className="text-xs md:text-sm text-white/70">
               © 2025 Inteira. Todos los derechos reservados.
             </p>
-            <p className="text-sm text-white/70">
+            <p className="hidden md:block text-sm text-white/70">
               <a href="https://inteira.mx" className="hover:text-white transition-colors">inteira.mx</a>
             </p>
           </div>

@@ -16,6 +16,7 @@ import {
   AlertCircle,
   ExternalLink,
   User,
+  LogOut,
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -72,9 +73,60 @@ export default function UserDashboard() {
   const pastAppointments: Apt[] = appointments?.filter((a) => a.status !== "scheduled") ?? [];
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="gradient-hero text-white py-8">
+    <div className="min-h-screen bg-background pb-24 md:pb-8">
+
+      {/* ── Mobile Header (app-style greeting) ── */}
+      <div className="md:hidden gradient-hero text-white">
+        <div className="px-5 pt-14 pb-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-2xl bg-white/20 flex items-center justify-center text-xl font-bold">
+                {user?.name?.charAt(0) ?? "U"}
+              </div>
+              <div>
+                <p className="text-white/70 text-xs">Bienvenido</p>
+                <h1 className="text-lg font-bold leading-tight" style={{ fontFamily: "Poppins, sans-serif" }}>
+                  {user?.name?.split(" ")[0] ?? "Usuario"}
+                </h1>
+              </div>
+            </div>
+            <button
+              onClick={logout}
+              className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center active:scale-95 transition-transform"
+              aria-label="Cerrar sesión"
+            >
+              <LogOut className="w-4 h-4 text-white" />
+            </button>
+          </div>
+        </div>
+
+        {/* Stats strip */}
+        <div className="mx-4 mb-0 relative z-10">
+          <div className="bg-white rounded-2xl shadow-xl border border-border/50 grid grid-cols-3 divide-x divide-border -mb-5">
+            <div className="flex flex-col items-center py-3.5">
+              <span className="text-xl font-bold text-primary">{upcomingAppointments.length}</span>
+              <span className="text-[10px] text-muted-foreground mt-0.5">Próximas</span>
+            </div>
+            <div className="flex flex-col items-center py-3.5">
+              <span className="text-xl font-bold text-emerald-600">
+                {(appointments as Apt[] | undefined)?.filter((a) => a.status === "completed").length ?? 0}
+              </span>
+              <span className="text-[10px] text-muted-foreground mt-0.5">Completadas</span>
+            </div>
+            <div className="flex flex-col items-center py-3.5">
+              <span className="text-xl font-bold text-primary">
+                {subscription?.appointmentsUsedThisMonth ?? 0}
+              </span>
+              <span className="text-[10px] text-muted-foreground mt-0.5">Este mes</span>
+            </div>
+          </div>
+        </div>
+        {/* Spacer for the overlapping card */}
+        <div className="h-5" />
+      </div>
+
+      {/* ── Desktop Header ── */}
+      <div className="hidden md:block gradient-hero text-white py-8">
         <div className="container">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -88,19 +140,60 @@ export default function UserDashboard() {
                 </h1>
               </div>
             </div>
-            <Link href="/especialidades">
-              <Button className="bg-white text-primary hover:bg-white/90 font-semibold">
-                <Plus className="w-4 h-4 mr-2" />
-                Nueva cita
+            <div className="flex items-center gap-3">
+              <Link href="/especialidades">
+                <Button className="bg-white text-primary hover:bg-white/90 font-semibold">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Nueva cita
+                </Button>
+              </Link>
+              <Button
+                variant="ghost"
+                onClick={logout}
+                className="text-white/80 hover:text-white hover:bg-white/10"
+              >
+                <LogOut className="w-4 h-4" />
               </Button>
-            </Link>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="container py-8 space-y-8">
-        {/* Stats row */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {/* ── Mobile: Quick Actions ── */}
+      <div className="md:hidden px-5 pt-8 pb-2">
+        <div className="grid grid-cols-3 gap-2">
+          <Link href="/especialidades">
+            <div className="flex flex-col items-center gap-1.5 p-3 bg-primary/8 rounded-2xl active:scale-95 transition-transform border border-primary/15">
+              <div className="w-9 h-9 rounded-xl gradient-brand flex items-center justify-center">
+                <Plus className="w-4 h-4 text-white" />
+              </div>
+              <span className="text-[10px] font-semibold text-primary text-center leading-tight">Nueva cita</span>
+            </div>
+          </Link>
+          <Link href="/especialidades">
+            <div className="flex flex-col items-center gap-1.5 p-3 bg-muted rounded-2xl active:scale-95 transition-transform">
+              <div className="w-9 h-9 rounded-xl bg-secondary/50 flex items-center justify-center">
+                <Calendar className="w-4 h-4 text-primary" />
+              </div>
+              <span className="text-[10px] font-semibold text-muted-foreground text-center leading-tight">Mis citas</span>
+            </div>
+          </Link>
+          <Link href="/planes">
+            <div className="flex flex-col items-center gap-1.5 p-3 bg-muted rounded-2xl active:scale-95 transition-transform">
+              <div className="w-9 h-9 rounded-xl bg-secondary/50 flex items-center justify-center">
+                <CreditCard className="w-4 h-4 text-primary" />
+              </div>
+              <span className="text-[10px] font-semibold text-muted-foreground text-center leading-tight">Mis planes</span>
+            </div>
+          </Link>
+        </div>
+      </div>
+
+      {/* ── Main content ── */}
+      <div className="container py-4 md:py-8 space-y-4 md:space-y-8">
+
+        {/* Desktop stats */}
+        <div className="hidden md:grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card className="border-border">
             <CardContent className="p-5">
               <div className="flex items-center gap-3">
@@ -161,34 +254,32 @@ export default function UserDashboard() {
           </Card>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-6">
+        <div className="grid lg:grid-cols-3 gap-4 md:gap-6">
           {/* Upcoming appointments */}
-          <div className="lg:col-span-2 space-y-4">
+          <div className="lg:col-span-2 space-y-3 md:space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
+              <h2 className="text-base md:text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
                 Próximas citas
               </h2>
-              <Link href="/mis-citas">
-                <Button variant="ghost" size="sm" className="text-primary">
-                  Ver todas <ChevronRight className="w-4 h-4 ml-1" />
-                </Button>
-              </Link>
+              <Button variant="ghost" size="sm" className="text-primary text-xs md:text-sm">
+                Ver todas <ChevronRight className="w-3.5 h-3.5 ml-1" />
+              </Button>
             </div>
 
             {loadingAppointments ? (
               <div className="space-y-3">
                 {[1, 2].map((i) => (
                   <Card key={i} className="border-border animate-pulse">
-                    <CardContent className="p-5 h-20" />
+                    <CardContent className="p-4 h-16" />
                   </Card>
                 ))}
               </div>
             ) : upcomingAppointments.length === 0 ? (
               <Card className="border-border border-dashed">
-                <CardContent className="p-8 text-center">
-                  <Calendar className="w-12 h-12 text-muted-foreground/50 mx-auto mb-3" />
-                  <p className="text-muted-foreground font-medium">No tienes citas próximas</p>
-                  <p className="text-sm text-muted-foreground mt-1">Agenda tu primera consulta con un especialista</p>
+                <CardContent className="p-6 md:p-8 text-center">
+                  <Calendar className="w-10 h-10 md:w-12 md:h-12 text-muted-foreground/50 mx-auto mb-3" />
+                  <p className="text-muted-foreground font-medium text-sm md:text-base">No tienes citas próximas</p>
+                  <p className="text-xs md:text-sm text-muted-foreground mt-1">Agenda tu primera consulta con un especialista</p>
                   <Link href="/especialidades">
                     <Button className="mt-4 gradient-brand text-white border-0" size="sm">
                       <Plus className="w-4 h-4 mr-2" />
@@ -198,36 +289,34 @@ export default function UserDashboard() {
                 </CardContent>
               </Card>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2 md:space-y-3">
                 {upcomingAppointments.slice(0, 3).map((apt) => (
-                  <Card key={apt.id} className="border-border hover:shadow-md transition-shadow">
-                    <CardContent className="p-5">
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 rounded-xl gradient-brand flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+                  <Card key={apt.id} className="border-border active:scale-[0.99] md:hover:shadow-md transition-all">
+                    <CardContent className="p-4 md:p-5">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl gradient-brand flex items-center justify-center text-white font-bold flex-shrink-0">
                             P
                           </div>
                           <div>
                             <p className="font-semibold text-sm">Especialista #{apt.professionalId}</p>
-                            <p className="text-xs text-muted-foreground">Especialidad #{apt.specialtyId}</p>
-                            <div className="flex items-center gap-2 mt-1">
+                            <div className="flex items-center gap-1.5 mt-0.5">
                               <Clock className="w-3 h-3 text-muted-foreground" />
                               <span className="text-xs text-muted-foreground">
-                                {format(new Date(apt.appointmentDate), "d MMM yyyy 'a las' HH:mm", { locale: es })}
+                                {format(new Date(apt.appointmentDate), "d MMM 'a las' HH:mm", { locale: es })}
                               </span>
                             </div>
                           </div>
                         </div>
-                        <div className="flex flex-col items-end gap-2">
-                          <Badge className={statusColors[apt.status] + " border-0 text-xs"}>
+                        <div className="flex flex-col items-end gap-1.5">
+                          <Badge className={statusColors[apt.status] + " border-0 text-[10px] md:text-xs"}>
                             {statusLabels[apt.status]}
                           </Badge>
                           {apt.videoCallLink && (
                             <a href={apt.videoCallLink} target="_blank" rel="noopener noreferrer">
-                              <Button size="sm" className="gradient-brand text-white border-0 h-7 text-xs px-3">
+                              <Button size="sm" className="gradient-brand text-white border-0 h-6 md:h-7 text-[10px] md:text-xs px-2 md:px-3">
                                 <Video className="w-3 h-3 mr-1" />
                                 Unirse
-                                <ExternalLink className="w-3 h-3 ml-1" />
                               </Button>
                             </a>
                           )}
@@ -242,16 +331,16 @@ export default function UserDashboard() {
             {/* Past appointments */}
             {pastAppointments.length > 0 && (
               <>
-                <h2 className="text-xl font-bold pt-4" style={{ fontFamily: "Poppins, sans-serif" }}>
-                  Historial de citas
+                <h2 className="text-base md:text-xl font-bold pt-2 md:pt-4" style={{ fontFamily: "Poppins, sans-serif" }}>
+                  Historial
                 </h2>
-                <div className="space-y-3">
+                <div className="space-y-2 md:space-y-3">
                   {pastAppointments.slice(0, 3).map((apt) => (
                     <Card key={apt.id} className="border-border opacity-80">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between gap-4">
+                      <CardContent className="p-3.5 md:p-4">
+                        <div className="flex items-center justify-between gap-3">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center text-muted-foreground font-bold text-sm flex-shrink-0">
+                            <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-muted flex items-center justify-center text-muted-foreground font-bold text-sm flex-shrink-0">
                               P
                             </div>
                             <div>
@@ -261,7 +350,7 @@ export default function UserDashboard() {
                               </p>
                             </div>
                           </div>
-                          <Badge className={statusColors[apt.status] + " border-0 text-xs"}>
+                          <Badge className={statusColors[apt.status] + " border-0 text-[10px] md:text-xs"}>
                             {statusLabels[apt.status]}
                           </Badge>
                         </div>
@@ -274,37 +363,35 @@ export default function UserDashboard() {
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-4">
+          <div className="space-y-3 md:space-y-4">
             {/* Subscription card */}
             <Card className="border-border">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
+              <CardHeader className="pb-2 md:pb-3">
+                <CardTitle className="text-sm md:text-base flex items-center gap-2">
                   <CreditCard className="w-4 h-4 text-primary" />
                   Mi suscripción
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3 md:space-y-4">
                 {loadingSubscription ? (
-                  <div className="animate-pulse h-20 bg-muted rounded-lg" />
+                  <div className="animate-pulse h-16 bg-muted rounded-lg" />
                 ) : subscription ? (
                   <>
                     <div className="p-4 rounded-xl gradient-brand text-white">
                       <p className="text-white/70 text-xs mb-1">Plan activo</p>
-                      <p className="text-xl font-bold">Plan #{subscription.planId}</p>
+                      <p className="text-lg md:text-xl font-bold">Plan #{subscription.planId}</p>
                       <p className="text-white/70 text-xs mt-1">
                         Vence: {subscription.endDate
                           ? format(new Date(subscription.endDate), "d MMM yyyy", { locale: es })
                           : "Sin vencimiento"}
                       </p>
                     </div>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Citas usadas este mes</span>
-                        <span className="font-medium">{subscription.appointmentsUsedThisMonth ?? 0}</span>
-                      </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground text-xs">Citas usadas este mes</span>
+                      <span className="font-medium text-xs">{subscription.appointmentsUsedThisMonth ?? 0}</span>
                     </div>
                     <Link href="/suscripcion">
-                      <Button variant="outline" size="sm" className="w-full border-primary/30 text-primary hover:bg-primary/5">
+                      <Button variant="outline" size="sm" className="w-full border-primary/30 text-primary hover:bg-primary/5 text-xs active:scale-95 transition-transform">
                         Gestionar plan
                       </Button>
                     </Link>
@@ -312,12 +399,12 @@ export default function UserDashboard() {
                 ) : (
                   <>
                     <div className="p-4 rounded-xl bg-muted text-center">
-                      <AlertCircle className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                      <AlertCircle className="w-7 h-7 text-muted-foreground mx-auto mb-2" />
                       <p className="text-sm font-medium">Sin plan activo</p>
                       <p className="text-xs text-muted-foreground mt-1">Elige un plan para agendar citas</p>
                     </div>
                     <Link href="/planes">
-                      <Button className="w-full gradient-brand text-white border-0" size="sm">
+                      <Button className="w-full gradient-brand text-white border-0 text-sm active:scale-95 transition-transform" size="sm">
                         Ver planes disponibles
                       </Button>
                     </Link>
@@ -326,8 +413,8 @@ export default function UserDashboard() {
               </CardContent>
             </Card>
 
-            {/* Quick actions */}
-            <Card className="border-border">
+            {/* Quick actions — desktop only */}
+            <Card className="border-border hidden md:block">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base">Acciones rápidas</CardTitle>
               </CardHeader>
@@ -338,7 +425,7 @@ export default function UserDashboard() {
                     Agendar nueva cita
                   </Button>
                 </Link>
-                <Link href="/mis-citas">
+                <Link href="/especialidades">
                   <Button variant="ghost" className="w-full justify-start text-sm h-9 hover:bg-primary/5 hover:text-primary">
                     <Calendar className="w-4 h-4 mr-2" />
                     Ver mis citas

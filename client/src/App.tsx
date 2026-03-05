@@ -14,6 +14,7 @@ import ProfessionalProfile from "./pages/ProfessionalProfile";
 import BookAppointment from "./pages/BookAppointment";
 import RegisterProfessional from "./pages/RegisterProfessional";
 import Plans from "./pages/Plans";
+import MobileNav from "./components/MobileNav";
 
 function Router() {
   return (
@@ -52,6 +53,7 @@ function App() {
         <TooltipProvider>
           <Toaster richColors position="top-right" />
           <Router />
+          <MobileNav />
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>

@@ -257,6 +257,20 @@
     font-weight: 500;
   }
 
+  /* Padding inferior para móvil: espacio para la nav inferior fija */
+  .mobile-safe-bottom {
+    padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Ocultar scrollbar en carruseles móviles */
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
   /* Scrollbar con verde inteira */
   ::-webkit-scrollbar {
     width: 6px;

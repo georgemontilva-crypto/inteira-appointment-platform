@@ -1,12 +1,12 @@
-import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, ArrowLeft } from "lucide-react";
+import { CheckCircle2, ArrowLeft, ChevronDown, ChevronUp } from "lucide-react";
 import { Link } from "wouter";
 import { getLoginUrl } from "@/const";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { toast } from "sonner";
+import { useState } from "react";
 
 const PLANS = [
   {
@@ -55,6 +55,47 @@ const INDIVIDUAL = [
   },
 ];
 
+const FAQ = [
+  {
+    q: "¿Qué son los créditos?",
+    a: "Los créditos son la moneda interna de Inteira. Cada sesión consume créditos según su tipo: una sesión básica cuesta 245 créditos y una premium cuesta 1,250 créditos.",
+  },
+  {
+    q: "¿Qué pasa si no uso todos mis créditos?",
+    a: "Los créditos tienen una vigencia de 60 días desde la fecha de compra del plan. Los créditos no utilizados dentro de ese período no se acumulan para el siguiente mes.",
+  },
+  {
+    q: "¿Puedo cancelar mi suscripción en cualquier momento?",
+    a: "Sí. Puedes cancelar tu suscripción en cualquier momento desde tu panel de usuario. El plan permanecerá activo hasta el final del período pagado.",
+  },
+  {
+    q: "¿Cómo se realizan las sesiones?",
+    a: "Las sesiones se realizan por videollamada a través de Zoom o Google Meet. Al confirmar tu cita, recibirás el enlace de acceso directamente en la plataforma.",
+  },
+];
+
+function FaqItem({ q, a }: { q: string; a: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <button
+      onClick={() => setOpen((v) => !v)}
+      className="w-full text-left border border-border rounded-xl p-4 md:p-5 active:scale-[0.99] transition-transform"
+    >
+      <div className="flex items-center justify-between gap-3">
+        <h4 className="font-semibold text-sm">{q}</h4>
+        {open ? (
+          <ChevronUp className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+        ) : (
+          <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+        )}
+      </div>
+      {open && (
+        <p className="text-sm text-muted-foreground mt-3 leading-relaxed">{a}</p>
+      )}
+    </button>
+  );
+}
+
 export default function Plans() {
   const { isAuthenticated } = useAuth();
 
@@ -63,74 +104,74 @@ export default function Plans() {
       window.location.href = getLoginUrl();
       return;
     }
-    // Stripe se integrará aquí cuando se configuren las claves
     toast.info(`Seleccionaste el ${planName}. La integración de pago estará disponible próximamente.`);
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="gradient-hero text-white py-12">
-        <div className="container">
-          <Link href="/dashboard">
-            <Button variant="ghost" className="text-white/80 hover:text-white hover:bg-white/10 mb-4 -ml-2">
+    <div className="min-h-screen bg-background pb-24 md:pb-0">
+      {/* ── Header ── */}
+      <div className="gradient-hero text-white pt-safe">
+        <div className="container py-8 md:py-12">
+          <Link href="/">
+            <Button variant="ghost" className="text-white/80 hover:text-white hover:bg-white/10 mb-4 -ml-2 active:scale-95 transition-transform">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Volver al dashboard
+              <span className="text-sm">Volver</span>
             </Button>
           </Link>
-          <h1 className="text-3xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
+          <h1 className="text-2xl md:text-3xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
             Planes y precios
           </h1>
-          <p className="text-white/80 mt-2">
-            Suscripciones mensuales o compra individual. Sin contratos, cancela cuando quieras.
+          <p className="text-white/80 mt-1.5 text-sm md:text-base">
+            Sin contratos. Cancela cuando quieras.
           </p>
         </div>
       </div>
 
-      <div className="container py-12 space-y-12">
-        {/* Suscripciones */}
+      <div className="container py-6 md:py-12 space-y-8 md:space-y-12">
+
+        {/* ── Suscripciones ── */}
         <div>
-          <h2 className="text-center text-sm font-semibold text-muted-foreground uppercase tracking-widest mb-8">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-4 md:text-center md:mb-8">
             Suscripciones Mensuales
-          </h2>
-          <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto">
+          </p>
+          <div className="grid md:grid-cols-2 gap-4 md:gap-8 md:max-w-3xl md:mx-auto">
             {PLANS.map((plan) => (
               <Card
                 key={plan.id}
-                className={`relative border-2 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ${
+                className={`relative border-2 transition-all active:scale-[0.99] ${
                   plan.popular
-                    ? "border-primary shadow-lg shadow-primary/20 scale-105"
-                    : "border-border hover:border-primary/30"
+                    ? "border-primary shadow-lg shadow-primary/20 md:scale-105"
+                    : "border-border md:hover:border-primary/30 md:hover:shadow-xl md:hover:-translate-y-1"
                 }`}
               >
                 {plan.popular && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                    <Badge className="gradient-brand text-white border-0 px-4 py-1 shadow-md">
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                    <Badge className="gradient-brand text-white border-0 px-3 py-0.5 text-xs shadow-md">
                       Mas popular
                     </Badge>
                   </div>
                 )}
-                <CardContent className="p-8">
-                  <div className="mb-2">
-                    <h3 className="text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
-                      {plan.name}
-                    </h3>
-                    <div className="flex items-baseline gap-1 mt-2">
-                      <span
-                        className="text-4xl font-bold text-primary"
-                        style={{ fontFamily: "Poppins, sans-serif" }}
-                      >
-                        {plan.price}
-                      </span>
-                      <span className="text-muted-foreground text-sm">{plan.period}</span>
+                <CardContent className="p-5 md:p-8">
+                  {/* Price row */}
+                  <div className="flex items-start justify-between md:block mb-4">
+                    <div>
+                      <h3 className="text-base md:text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
+                        {plan.name}
+                      </h3>
+                      <div className="flex items-baseline gap-1 mt-1">
+                        <span className="text-2xl md:text-4xl font-bold text-primary" style={{ fontFamily: "Poppins, sans-serif" }}>
+                          {plan.price}
+                        </span>
+                        <span className="text-muted-foreground text-xs md:text-sm">{plan.period}</span>
+                      </div>
+                      <p className="text-xs text-primary font-medium mt-0.5">{plan.savings}</p>
                     </div>
-                    <p className="text-xs text-primary font-medium mt-1">{plan.savings}</p>
                   </div>
 
-                  <ul className="space-y-3 my-6">
+                  <ul className="space-y-2 md:space-y-3 mb-5">
                     {plan.features.map((feature, j) => (
-                      <li key={j} className="flex items-center gap-2 text-sm">
-                        <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
+                      <li key={j} className="flex items-center gap-2 text-xs md:text-sm">
+                        <CheckCircle2 className="w-3.5 h-3.5 md:w-4 md:h-4 text-primary flex-shrink-0" />
                         <span>{feature}</span>
                       </li>
                     ))}
@@ -138,7 +179,7 @@ export default function Plans() {
 
                   <Button
                     onClick={() => handleSelectPlan(plan.name)}
-                    className={`w-full ${
+                    className={`w-full text-sm active:scale-95 transition-transform ${
                       plan.popular
                         ? "gradient-brand text-white border-0 shadow-md shadow-primary/30"
                         : "border-primary/30 text-primary hover:bg-primary/5"
@@ -153,37 +194,30 @@ export default function Plans() {
           </div>
         </div>
 
-        {/* Compra Individual */}
+        {/* ── Compra Individual ── */}
         <div>
-          <h2 className="text-center text-sm font-semibold text-muted-foreground uppercase tracking-widest mb-8">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-4 md:text-center md:mb-8">
             Compra Individual
-          </h2>
-          <div className="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto">
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-2 gap-3 md:gap-6 md:max-w-2xl md:mx-auto">
             {INDIVIDUAL.map((item) => (
               <Card
                 key={item.name}
-                className="border border-border hover:border-primary/30 transition-all hover:shadow-md"
+                className="border border-border active:scale-[0.99] transition-transform md:hover:border-primary/30 md:hover:shadow-md"
               >
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h4 className="font-semibold">{item.name}</h4>
-                      <p className="text-sm text-muted-foreground mt-1">{item.description}</p>
-                    </div>
-                    <div className="text-right ml-4">
-                      <div
-                        className="text-2xl font-bold text-primary"
-                        style={{ fontFamily: "Poppins, sans-serif" }}
-                      >
-                        {item.price}
-                      </div>
-                      <div className="text-xs text-muted-foreground">MXN</div>
-                    </div>
+                <CardContent className="p-4 md:p-6">
+                  <h4 className="font-semibold text-sm md:text-base">{item.name}</h4>
+                  <p className="text-xs text-muted-foreground mt-1">{item.description}</p>
+                  <div className="mt-3 mb-4">
+                    <span className="text-xl md:text-2xl font-bold text-primary" style={{ fontFamily: "Poppins, sans-serif" }}>
+                      {item.price}
+                    </span>
+                    <span className="text-xs text-muted-foreground ml-1">MXN</span>
                   </div>
                   <Button
                     onClick={() => handleSelectPlan(item.name)}
                     variant="outline"
-                    className="w-full border-primary/30 text-primary hover:bg-primary/5"
+                    className="w-full border-primary/30 text-primary hover:bg-primary/5 text-xs active:scale-95 transition-transform"
                     size="sm"
                   >
                     Comprar sesión
@@ -194,34 +228,14 @@ export default function Plans() {
           </div>
         </div>
 
-        {/* FAQ */}
-        <div className="max-w-2xl mx-auto">
-          <h2 className="text-center text-sm font-semibold text-muted-foreground uppercase tracking-widest mb-8">
+        {/* ── FAQ ── */}
+        <div className="md:max-w-2xl md:mx-auto">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-4 md:text-center md:mb-8">
             Preguntas frecuentes
-          </h2>
-          <div className="space-y-4">
-            {[
-              {
-                q: "¿Qué son los créditos?",
-                a: "Los créditos son la moneda interna de Inteira. Cada sesión consume créditos según su tipo: una sesión básica cuesta 245 créditos y una premium cuesta 1,250 créditos.",
-              },
-              {
-                q: "¿Qué pasa si no uso todos mis créditos?",
-                a: "Los créditos tienen una vigencia de 60 días desde la fecha de compra del plan. Los créditos no utilizados dentro de ese período no se acumulan para el siguiente mes.",
-              },
-              {
-                q: "¿Puedo cancelar mi suscripción en cualquier momento?",
-                a: "Sí. Puedes cancelar tu suscripción en cualquier momento desde tu panel de usuario. El plan permanecerá activo hasta el final del período pagado.",
-              },
-              {
-                q: "¿Cómo se realizan las sesiones?",
-                a: "Las sesiones se realizan por videollamada a través de Zoom o Google Meet. Al confirmar tu cita, recibirás el enlace de acceso directamente en la plataforma.",
-              },
-            ].map((item, i) => (
-              <div key={i} className="border border-border rounded-xl p-5">
-                <h4 className="font-semibold text-sm mb-2">{item.q}</h4>
-                <p className="text-sm text-muted-foreground">{item.a}</p>
-              </div>
+          </p>
+          <div className="space-y-2 md:space-y-4">
+            {FAQ.map((item, i) => (
+              <FaqItem key={i} q={item.q} a={item.a} />
             ))}
           </div>
         </div>
