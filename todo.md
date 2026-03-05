@@ -87,3 +87,13 @@
 - [ ] Zoom: credenciales de API para links reales de reunión
 - [ ] Google Meet: credenciales OAuth para links reales
 - [ ] Email SMTP: proveedor de email para envíos reales
+
+## Cambio de Colores (Solicitud del usuario)
+- [x] Aplicar paleta exacta de inteira.mx: verde salvia #607562 como primario
+- [x] Verde claro #93A295 como acento/secundario
+- [x] Fondo blanco #FFFFFF
+- [x] Texto oscuro #333333
+- [x] Texto gris #666666
+- [x] Footer verde salvia #607562 con texto blanco
+- [x] Botones e iconos en verde #607562
+- [x] Tarjetas de especialidades con gradientes verdes de inteira.mx

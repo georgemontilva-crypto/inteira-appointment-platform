@@ -34,12 +34,12 @@ const specialtyIcons: Record<string, React.ReactNode> = {
 };
 
 const specialtyColors: Record<string, string> = {
-  Psicología: "from-violet-500 to-purple-600",
-  Legal: "from-blue-500 to-indigo-600",
-  Emprendimiento: "from-orange-400 to-orange-600",
-  Finanzas: "from-emerald-500 to-teal-600",
-  "Medicina General": "from-sky-500 to-blue-600",
-  Nutrición: "from-green-500 to-emerald-600",
+  Psicología: "from-[#607562] to-[#4a5c4c]",
+  Legal: "from-[#607562] to-[#3d4e3f]",
+  Emprendimiento: "from-[#93A295] to-[#607562]",
+  Finanzas: "from-[#4a5c4c] to-[#607562]",
+  "Medicina General": "from-[#607562] to-[#7d9080]",
+  Nutrición: "from-[#93A295] to-[#7d9080]",
 };
 
 const steps = [
@@ -250,7 +250,7 @@ export default function Home() {
                     <p className="text-sm font-semibold text-foreground">Cita confirmada</p>
                     <p className="text-xs text-muted-foreground">Psicología · Hoy 4:00 PM</p>
                   </div>
-                  <Badge className="bg-emerald-100 text-emerald-700 border-0 text-xs ml-auto">
+                  <Badge className="bg-primary/15 text-primary border-0 text-xs ml-auto">
                     ✓ Activa
                   </Badge>
                 </div>
@@ -489,54 +489,54 @@ export default function Home() {
       </section>
 
       {/* ── Footer ── */}
-      <footer className="bg-foreground/5 border-t border-border py-12">
+      <footer className="py-12" style={{backgroundColor: '#607562'}}>
         <div className="container">
           <div className="grid md:grid-cols-4 gap-8 mb-8">
             <div>
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-7 h-7 rounded-lg gradient-brand flex items-center justify-center">
+                <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center">
                   <span className="text-white font-bold text-xs">i</span>
                 </div>
-                <span className="text-lg font-bold text-primary" style={{ fontFamily: "Poppins, sans-serif" }}>
+                <span className="text-lg font-bold text-white" style={{ fontFamily: "Poppins, sans-serif" }}>
                   inteira
                 </span>
               </div>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-white/75">
                 Plataforma de consultas con especialistas en línea. Conectamos personas con profesionales de confianza.
               </p>
             </div>
             <div>
-              <h4 className="font-semibold mb-3 text-sm">Especialidades</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="#" className="hover:text-primary transition-colors">Psicología</a></li>
-                <li><a href="#" className="hover:text-primary transition-colors">Legal</a></li>
-                <li><a href="#" className="hover:text-primary transition-colors">Finanzas</a></li>
-                <li><a href="#" className="hover:text-primary transition-colors">Emprendimiento</a></li>
+              <h4 className="font-semibold mb-3 text-sm text-white">Especialidades</h4>
+              <ul className="space-y-2 text-sm text-white/75">
+                <li><a href="#" className="hover:text-white transition-colors">Psicología</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Legal</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Finanzas</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Emprendimiento</a></li>
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold mb-3 text-sm">Plataforma</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="#como-funciona" className="hover:text-primary transition-colors">Cómo funciona</a></li>
-                <li><a href="#planes" className="hover:text-primary transition-colors">Planes</a></li>
-                <li><Link href="/registro-profesional"><span className="hover:text-primary transition-colors cursor-pointer">Soy profesional</span></Link></li>
+              <h4 className="font-semibold mb-3 text-sm text-white">Plataforma</h4>
+              <ul className="space-y-2 text-sm text-white/75">
+                <li><a href="#como-funciona" className="hover:text-white transition-colors">Cómo funciona</a></li>
+                <li><a href="#planes" className="hover:text-white transition-colors">Planes</a></li>
+                <li><Link href="/registro-profesional"><span className="hover:text-white transition-colors cursor-pointer">Soy profesional</span></Link></li>
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold mb-3 text-sm">Legal</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="#" className="hover:text-primary transition-colors">Términos de uso</a></li>
-                <li><a href="#" className="hover:text-primary transition-colors">Privacidad</a></li>
-                <li><a href="mailto:soporte@inteira.mx" className="hover:text-primary transition-colors">Contacto</a></li>
+              <h4 className="font-semibold mb-3 text-sm text-white">Legal</h4>
+              <ul className="space-y-2 text-sm text-white/75">
+                <li><a href="#" className="hover:text-white transition-colors">Términos de uso</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Privacidad</a></li>
+                <li><a href="mailto:soporte@inteira.mx" className="hover:text-white transition-colors">Contacto</a></li>
               </ul>
             </div>
           </div>
-          <div className="border-t border-border pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-sm text-muted-foreground">
+          <div className="border-t border-white/20 pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
+            <p className="text-sm text-white/70">
               © 2025 Inteira. Todos los derechos reservados.
             </p>
-            <p className="text-sm text-muted-foreground">
-              <a href="https://inteira.mx" className="hover:text-primary transition-colors">inteira.mx</a>
+            <p className="text-sm text-white/70">
+              <a href="https://inteira.mx" className="hover:text-white transition-colors">inteira.mx</a>
             </p>
           </div>
         </div>

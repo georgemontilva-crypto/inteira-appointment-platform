@@ -42,76 +42,113 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/*
+  ============================================================
+  PALETA EXACTA DE INTEIRA.MX
+  Extraída directamente del sitio web oficial inteira.mx
+
+  Verde Salvia (Primary):  rgb(96, 117, 98)   → #607562
+  Verde Claro (Secondary): rgb(147, 162, 149)  → #93A295
+  Fondo Sección Clara:     rgb(247, 250, 252)  → #F7FAFC
+  Fondo Blanco:            rgb(255, 255, 255)  → #FFFFFF
+  Texto Oscuro:            rgb(51, 51, 51)     → #333333
+  Texto Gris:              rgb(102, 102, 102)  → #666666
+  ============================================================
+*/
+
 :root {
-  /* Inteira brand: purple primary, blue secondary, orange accent */
+  /* Inteira brand: verde salvia como primario, verde claro como acento */
   --radius: 0.75rem;
-  --background: oklch(0.99 0.003 290);
-  --foreground: oklch(0.15 0.02 290);
-  --card: oklch(1.00 0 0);
-  --card-foreground: oklch(0.15 0.02 290);
+
+  /* Fondos */
+  --background: oklch(1.00 0 0);           /* #FFFFFF blanco puro */
+  --foreground: oklch(0.25 0.01 145);      /* #333333 texto oscuro */
+
+  /* Tarjetas */
+  --card: oklch(1.00 0 0);                 /* #FFFFFF */
+  --card-foreground: oklch(0.25 0.01 145); /* #333333 */
+
+  /* Popover */
   --popover: oklch(1.00 0 0);
-  --popover-foreground: oklch(0.15 0.02 290);
-  --primary: oklch(0.45 0.22 290);
-  --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.95 0.03 290);
-  --secondary-foreground: oklch(0.35 0.15 290);
-  --muted: oklch(0.96 0.01 290);
-  --muted-foreground: oklch(0.55 0.05 290);
-  --accent: oklch(0.68 0.20 45);
-  --accent-foreground: oklch(0.99 0 0);
+  --popover-foreground: oklch(0.25 0.01 145);
+
+  /* PRIMARY: Verde Salvia #607562 → rgb(96, 117, 98) */
+  --primary: oklch(0.47 0.06 145);
+  --primary-foreground: oklch(1.00 0 0);   /* blanco sobre verde */
+
+  /* SECONDARY: Verde Claro #93A295 → rgb(147, 162, 149) */
+  --secondary: oklch(0.65 0.04 145);
+  --secondary-foreground: oklch(1.00 0 0);
+
+  /* Muted: fondo sección clara #F7FAFC */
+  --muted: oklch(0.98 0.005 145);
+  --muted-foreground: oklch(0.45 0.02 145); /* #666666 texto gris */
+
+  /* Accent: verde claro para highlights */
+  --accent: oklch(0.65 0.04 145);
+  --accent-foreground: oklch(1.00 0 0);
+
+  /* Destructivo: rojo estándar */
   --destructive: oklch(0.55 0.22 25);
-  --destructive-foreground: oklch(0.99 0 0);
-  --border: oklch(0.90 0.02 290);
-  --input: oklch(0.90 0.02 290);
-  --ring: oklch(0.45 0.22 290);
-  --chart-1: oklch(0.45 0.22 290);
-  --chart-2: oklch(0.50 0.22 250);
-  --chart-3: oklch(0.68 0.20 45);
-  --chart-4: oklch(0.55 0.18 170);
-  --chart-5: oklch(0.60 0.20 320);
-  --sidebar: oklch(0.97 0.01 290);
-  --sidebar-foreground: oklch(0.15 0.02 290);
-  --sidebar-primary: oklch(0.45 0.22 290);
-  --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-accent: oklch(0.92 0.04 290);
-  --sidebar-accent-foreground: oklch(0.35 0.15 290);
-  --sidebar-border: oklch(0.88 0.03 290);
-  --sidebar-ring: oklch(0.45 0.22 290);
+  --destructive-foreground: oklch(1.00 0 0);
+
+  /* Bordes e inputs */
+  --border: oklch(0.88 0.02 145);
+  --input: oklch(0.88 0.02 145);
+  --ring: oklch(0.47 0.06 145);
+
+  /* Charts */
+  --chart-1: oklch(0.47 0.06 145);   /* verde salvia */
+  --chart-2: oklch(0.65 0.04 145);   /* verde claro */
+  --chart-3: oklch(0.55 0.12 145);   /* verde medio */
+  --chart-4: oklch(0.72 0.08 145);   /* verde muy claro */
+  --chart-5: oklch(0.35 0.06 145);   /* verde oscuro */
+
+  /* Sidebar */
+  --sidebar: oklch(0.98 0.005 145);
+  --sidebar-foreground: oklch(0.25 0.01 145);
+  --sidebar-primary: oklch(0.47 0.06 145);
+  --sidebar-primary-foreground: oklch(1.00 0 0);
+  --sidebar-accent: oklch(0.92 0.03 145);
+  --sidebar-accent-foreground: oklch(0.35 0.04 145);
+  --sidebar-border: oklch(0.88 0.02 145);
+  --sidebar-ring: oklch(0.47 0.06 145);
 }
 
 .dark {
-  --background: oklch(0.12 0.02 290);
-  --foreground: oklch(0.95 0.01 290);
-  --card: oklch(0.16 0.03 290);
-  --card-foreground: oklch(0.95 0.01 290);
-  --popover: oklch(0.16 0.03 290);
-  --popover-foreground: oklch(0.95 0.01 290);
-  --primary: oklch(0.65 0.20 290);
-  --primary-foreground: oklch(0.10 0.02 290);
-  --secondary: oklch(0.22 0.04 290);
-  --secondary-foreground: oklch(0.85 0.05 290);
-  --muted: oklch(0.20 0.03 290);
-  --muted-foreground: oklch(0.65 0.05 290);
-  --accent: oklch(0.68 0.20 45);
-  --accent-foreground: oklch(0.10 0.02 290);
+  /* Modo oscuro con tonos verdes oscuros */
+  --background: oklch(0.15 0.02 145);
+  --foreground: oklch(0.95 0.01 145);
+  --card: oklch(0.20 0.03 145);
+  --card-foreground: oklch(0.95 0.01 145);
+  --popover: oklch(0.20 0.03 145);
+  --popover-foreground: oklch(0.95 0.01 145);
+  --primary: oklch(0.65 0.06 145);
+  --primary-foreground: oklch(0.10 0.02 145);
+  --secondary: oklch(0.28 0.04 145);
+  --secondary-foreground: oklch(0.85 0.04 145);
+  --muted: oklch(0.22 0.03 145);
+  --muted-foreground: oklch(0.65 0.04 145);
+  --accent: oklch(0.65 0.06 145);
+  --accent-foreground: oklch(0.10 0.02 145);
   --destructive: oklch(0.65 0.22 25);
-  --destructive-foreground: oklch(0.99 0 0);
-  --border: oklch(0.25 0.04 290);
-  --input: oklch(0.25 0.04 290);
-  --ring: oklch(0.65 0.20 290);
-  --chart-1: oklch(0.65 0.20 290);
-  --chart-2: oklch(0.60 0.20 250);
-  --chart-3: oklch(0.70 0.18 45);
-  --chart-4: oklch(0.60 0.18 170);
-  --chart-5: oklch(0.65 0.18 320);
-  --sidebar: oklch(0.14 0.02 290);
-  --sidebar-foreground: oklch(0.90 0.01 290);
-  --sidebar-primary: oklch(0.65 0.20 290);
-  --sidebar-primary-foreground: oklch(0.10 0.02 290);
-  --sidebar-accent: oklch(0.20 0.04 290);
-  --sidebar-accent-foreground: oklch(0.85 0.05 290);
-  --sidebar-border: oklch(0.22 0.04 290);
-  --sidebar-ring: oklch(0.65 0.20 290);
+  --destructive-foreground: oklch(1.00 0 0);
+  --border: oklch(0.28 0.04 145);
+  --input: oklch(0.28 0.04 145);
+  --ring: oklch(0.65 0.06 145);
+  --chart-1: oklch(0.65 0.06 145);
+  --chart-2: oklch(0.72 0.05 145);
+  --chart-3: oklch(0.55 0.08 145);
+  --chart-4: oklch(0.75 0.04 145);
+  --chart-5: oklch(0.45 0.06 145);
+  --sidebar: oklch(0.18 0.02 145);
+  --sidebar-foreground: oklch(0.90 0.01 145);
+  --sidebar-primary: oklch(0.65 0.06 145);
+  --sidebar-primary-foreground: oklch(0.10 0.02 145);
+  --sidebar-accent: oklch(0.25 0.04 145);
+  --sidebar-accent-foreground: oklch(0.85 0.04 145);
+  --sidebar-border: oklch(0.25 0.04 145);
+  --sidebar-ring: oklch(0.65 0.06 145);
 }
 
 @layer base {
@@ -121,10 +158,12 @@
   body {
     @apply bg-background text-foreground;
     font-family: 'Inter', 'Poppins', sans-serif;
+    color: #666666; /* rgb(102,102,102) - color base de inteira.mx */
   }
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Poppins', 'Inter', sans-serif;
     font-weight: 600;
+    color: #333333; /* rgb(51,51,51) - headings de inteira.mx */
   }
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),
@@ -140,24 +179,11 @@
 }
 
 @layer components {
-  /**
-   * Custom container utility that centers content and adds responsive padding.
-   *
-   * This overrides Tailwind's default container behavior to:
-   * - Auto-center content (mx-auto)
-   * - Add responsive horizontal padding
-   * - Set max-width for large screens
-   *
-   * Usage: <div className="container">...</div>
-   *
-   * For custom widths, use max-w-* utilities directly:
-   * <div className="max-w-6xl mx-auto px-4">...</div>
-   */
   .container {
     width: 100%;
     margin-left: auto;
     margin-right: auto;
-    padding-left: 1rem; /* 16px - mobile padding */
+    padding-left: 1rem;
     padding-right: 1rem;
   }
 
@@ -168,62 +194,82 @@
 
   @media (min-width: 640px) {
     .container {
-      padding-left: 1.5rem; /* 24px - tablet padding */
+      padding-left: 1.5rem;
       padding-right: 1.5rem;
     }
   }
 
   @media (min-width: 1024px) {
     .container {
-      padding-left: 2rem; /* 32px - desktop padding */
+      padding-left: 2rem;
       padding-right: 2rem;
-      max-width: 1280px; /* Standard content width */
+      max-width: 1280px;
     }
   }
 
-  /* Inteira brand gradient utilities */
+  /* ============================================================
+     INTEIRA BRAND UTILITIES
+     Basados en los colores exactos de inteira.mx
+     Verde Salvia: #607562 | Verde Claro: #93A295
+     ============================================================ */
+
+  /* Gradiente principal: verde salvia oscuro → verde salvia */
   .gradient-brand {
-    background: linear-gradient(135deg, oklch(0.45 0.22 290) 0%, oklch(0.50 0.22 250) 100%);
+    background: linear-gradient(135deg, #4a5c4c 0%, #607562 100%);
   }
 
+  /* Gradiente hero: verde oscuro para headers */
   .gradient-hero {
-    background: linear-gradient(135deg, oklch(0.30 0.22 290) 0%, oklch(0.38 0.22 265) 50%, oklch(0.42 0.22 250) 100%);
+    background: linear-gradient(135deg, #3d4e3f 0%, #4d6050 50%, #607562 100%);
   }
 
+  /* Gradiente acento: verde claro */
   .gradient-accent {
-    background: linear-gradient(135deg, oklch(0.68 0.20 45) 0%, oklch(0.72 0.18 35) 100%);
+    background: linear-gradient(135deg, #93A295 0%, #7d9080 100%);
   }
 
+  /* Fondo de sección clara (como inteira.mx usa #F7FAFC) */
   .gradient-card {
-    background: linear-gradient(135deg, oklch(0.99 0.003 290) 0%, oklch(0.97 0.01 290) 100%);
+    background: linear-gradient(135deg, #f7fafc 0%, #f0f5f1 100%);
   }
 
-  /* Soft shadow for cards */
+  /* Sombra con tono verde */
   .shadow-brand {
-    box-shadow: 0 4px 24px oklch(0.45 0.22 290 / 0.15);
+    box-shadow: 0 4px 24px rgba(96, 117, 98, 0.18);
   }
 
-  /* Animated gradient text */
+  /* Texto con gradiente verde */
   .text-gradient {
-    background: linear-gradient(135deg, oklch(0.45 0.22 290), oklch(0.50 0.22 250), oklch(0.68 0.20 45));
+    background: linear-gradient(135deg, #607562, #93A295);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
 
-  /* Scrollbar styling */
+  /* Badge/chip de especialidad */
+  .badge-specialty {
+    background-color: rgba(96, 117, 98, 0.10);
+    color: #607562;
+    border: 1px solid rgba(96, 117, 98, 0.25);
+    border-radius: 9999px;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+
+  /* Scrollbar con verde inteira */
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
   }
   ::-webkit-scrollbar-track {
-    background: oklch(0.96 0.01 290);
+    background: #f7fafc;
   }
   ::-webkit-scrollbar-thumb {
-    background: oklch(0.75 0.10 290);
+    background: #93A295;
     border-radius: 3px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: oklch(0.55 0.18 290);
+    background: #607562;
   }
 }
