@@ -299,7 +299,7 @@ export async function createSubscriptionPlan(data: Partial<SubscriptionPlan>) {
 // User Subscription functions
 export async function getUserSubscription(userId: number) {
   const db = await getDb();
-  if (!db) return undefined;
+  if (!db) return null;
 
   const result = await db
     .select()
@@ -307,7 +307,7 @@ export async function getUserSubscription(userId: number) {
     .where(eq(userSubscriptions.userId, userId))
     .limit(1);
 
-  return result.length > 0 ? result[0] : undefined;
+  return result.length > 0 ? result[0] : null;
 }
 
 export async function createUserSubscription(

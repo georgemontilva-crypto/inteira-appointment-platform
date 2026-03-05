@@ -16,16 +16,33 @@ import {
   Clock,
   Award,
   ChevronRight,
+  Brain,
+  Scale,
+  TrendingUp,
+  DollarSign,
+  Mic2,
+  Sparkles,
+  Compass,
 } from "lucide-react";
 
-const specialtyImages: Record<string, string> = {
-  Psicología: "https://inteira.mx/wp-content/uploads/2025/03/asesorias_Psicologia.png",
-  Emprendimiento: "https://inteira.mx/wp-content/uploads/2025/03/asesorias_Emprendimiento.png",
-  Finanzas: "https://inteira.mx/wp-content/uploads/2025/03/asesorias_Finanzas.png",
-  Idiomas: "https://inteira.mx/wp-content/uploads/2025/03/asesorias_Idiomas.png",
-  "Imagen Personal": "https://inteira.mx/wp-content/uploads/2025/03/asesorias_Imagen-Personal.png",
-  Legal: "https://inteira.mx/wp-content/uploads/2025/03/asesorias_Legal.png",
-  Vocación: "https://inteira.mx/wp-content/uploads/2025/03/asesorias_Vocacion.png",
+const homeSpecialtyIcon: Record<string, React.ReactNode> = {
+  Psicología: <Brain className="w-6 h-6 text-white" />,
+  Legal: <Scale className="w-6 h-6 text-white" />,
+  Emprendimiento: <TrendingUp className="w-6 h-6 text-white" />,
+  Finanzas: <DollarSign className="w-6 h-6 text-white" />,
+  Idiomas: <Mic2 className="w-6 h-6 text-white" />,
+  "Imagen Personal": <Sparkles className="w-6 h-6 text-white" />,
+  Vocación: <Compass className="w-6 h-6 text-white" />,
+};
+
+const homeSpecialtyBg: Record<string, string> = {
+  Psicología: "bg-[#607562]",
+  Legal: "bg-[#4a5c4c]",
+  Emprendimiento: "bg-[#607562]",
+  Finanzas: "bg-[#4f6651]",
+  Idiomas: "bg-[#556e57]",
+  "Imagen Personal": "bg-[#607562]",
+  Vocación: "bg-[#4a5c4c]",
 };
 
 const steps = [
@@ -261,37 +278,27 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
             {(specialties ?? [
-              { id: 1, name: "Psicología", imageUrl: specialtyImages["Psicología"] },
-              { id: 2, name: "Emprendimiento", imageUrl: specialtyImages["Emprendimiento"] },
-              { id: 3, name: "Finanzas", imageUrl: specialtyImages["Finanzas"] },
-              { id: 4, name: "Idiomas", imageUrl: specialtyImages["Idiomas"] },
-              { id: 5, name: "Imagen Personal", imageUrl: specialtyImages["Imagen Personal"] },
-              { id: 6, name: "Legal", imageUrl: specialtyImages["Legal"] },
-              { id: 7, name: "Vocación", imageUrl: specialtyImages["Vocación"] },
-            ] as Array<{id: number; name: string; imageUrl?: string | null}>).map((specialty) => (
+              { id: 1, name: "Psicología" },
+              { id: 2, name: "Emprendimiento" },
+              { id: 3, name: "Finanzas" },
+              { id: 4, name: "Idiomas" },
+              { id: 5, name: "Imagen Personal" },
+              { id: 6, name: "Legal" },
+              { id: 7, name: "Vocación" },
+            ] as Array<{id: number; name: string}>).map((specialty) => (
               <Link key={specialty.id} href={`/especialidades/${specialty.id}`}>
-                <Card className="group cursor-pointer border-border hover:border-primary/30 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 overflow-hidden">
-                  <CardContent className="p-0 flex flex-col items-center text-center">
-                    <div className="w-full h-28 overflow-hidden relative">
-                      {(specialty.imageUrl ?? specialtyImages[specialty.name]) ? (
-                        <img
-                          src={specialty.imageUrl ?? specialtyImages[specialty.name]}
-                          alt={specialty.name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-primary/10 flex items-center justify-center">
-                          <span className="text-primary font-bold text-xl">{specialty.name.charAt(0)}</span>
-                        </div>
-                      )}
+                <Card className="group cursor-pointer border-border hover:border-primary/30 hover:shadow-md transition-all duration-200 hover:-translate-y-0.5">
+                  <CardContent className="p-4 flex flex-col items-center text-center gap-3">
+                    <div
+                      className={`w-12 h-12 rounded-2xl ${homeSpecialtyBg[specialty.name] ?? "bg-[#607562]"} flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform duration-200`}
+                    >
+                      {homeSpecialtyIcon[specialty.name] ?? <Compass className="w-6 h-6 text-white" />}
                     </div>
-                    <div className="py-3 px-2">
-                      <span className="text-sm font-semibold text-foreground leading-tight">
-                        {specialty.name}
-                      </span>
-                    </div>
+                    <span className="text-xs font-semibold text-foreground leading-tight">
+                      {specialty.name}
+                    </span>
                   </CardContent>
                 </Card>
               </Link>

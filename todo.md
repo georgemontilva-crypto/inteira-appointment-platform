@@ -104,3 +104,12 @@
 - [x] Referenciar imágenes directamente desde inteira.mx en las tarjetas
 - [x] Eliminar todos los emojis de la interfaz
 - [x] Actualizar tarjetas de especialidades con imágenes reales de inteira.mx
+
+## Bugs (Reportados por usuario)
+- [x] user.getSubscription retorna undefined cuando no hay suscripción activa (corregido: retorna null)
+
+## Rediseño de tarjetas de especialidades
+- [x] Iconos minimalistas lucide-react en verde de la marca sobre fondo redondeado
+- [x] Layout de tarjeta: icono izquierda + nombre/descripción derecha + "Ver profesionales" (página /especialidades)
+- [x] Tarjetas pequeñas con icono centrado en Home.tsx
+- [x] Corregir bug: user.getSubscription retorna null cuando no hay suscripción activa
