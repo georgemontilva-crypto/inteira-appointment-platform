@@ -13,6 +13,7 @@ import ProfessionalsList from "./pages/ProfessionalsList";
 import ProfessionalProfile from "./pages/ProfessionalProfile";
 import BookAppointment from "./pages/BookAppointment";
 import RegisterProfessional from "./pages/RegisterProfessional";
+import Plans from "./pages/Plans";
 
 function Router() {
   return (
@@ -28,6 +29,9 @@ function Router() {
 
       {/* Registration */}
       <Route path="/registro-profesional" component={RegisterProfessional} />
+
+      {/* Plans */}
+      <Route path="/planes" component={Plans} />
 
       {/* Protected dashboards */}
       <Route path="/dashboard" component={UserDashboard} />

@@ -143,3 +143,6 @@
 - [x] Aplicar logo verde en navbar principal (fondo blanco)
 - [x] Aplicar logo blanco en footer (fondo verde)
 - [x] Actualizar sección de planes en landing page con precios MXN correctos
+
+## Bugs Reportados
+- [x] Error al hacer clic en "Ver planes disponibles" en el dashboard del usuario (ruta /planes faltaba en App.tsx, creada la página Plans.tsx con todos los planes y FAQ)
