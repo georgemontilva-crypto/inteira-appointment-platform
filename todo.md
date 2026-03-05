@@ -126,3 +126,20 @@
 - [x] Distribución de calificaciones con barras por estrella
 - [x] Recomendaciones: ordenar profesionales por calificación promedio en la lista
 - [x] Tests unitarios para sistema de calificaciones (24/24 pasando)
+
+## Actualización de Planes (Definidos por el cliente)
+- [ ] Actualizar BD: Plan Básico $980 MXN/mes (980 créditos, 60 días, todas las especialidades, soporte email)
+- [ ] Actualizar BD: Plan Pro $2,500 MXN/mes (2500 créditos, 60 días, acceso prioritario, soporte 24/7, comunidad exclusiva)
+- [ ] Agregar BD: Sesión Básica $350 MXN (compra individual, 1 sesión)
+- [ ] Agregar BD: Sesión Premium $1,250 MXN (compra individual, 1 sesión premium)
+- [ ] Actualizar sección de planes en landing page con precios y beneficios exactos
+- [ ] Mostrar badge "Más popular" en Plan Pro
+- [ ] Configurar restricciones de acceso según plan activo del usuario
+- [ ] Mostrar créditos disponibles en el dashboard del usuario
+
+## Logos Oficiales (Solicitud del usuario)
+- [x] Subir logo blanco (sobre fondo verde) al CDN
+- [x] Subir logo verde (sobre fondo blanco) al CDN
+- [x] Aplicar logo verde en navbar principal (fondo blanco)
+- [x] Aplicar logo blanco en footer (fondo verde)
+- [x] Actualizar sección de planes en landing page con precios MXN correctos

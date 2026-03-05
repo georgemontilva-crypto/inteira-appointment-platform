@@ -116,13 +116,12 @@ export default function Home() {
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <Link href="/">
-              <div className="flex items-center gap-2 cursor-pointer">
-                <div className="w-8 h-8 rounded-lg gradient-brand flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">i</span>
-                </div>
-                <span className="text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
-                  <span className="text-primary">inteira</span>
-                </span>
+              <div className="flex items-center cursor-pointer">
+                <img
+                  src="https://d2xsxph8kpxj0f.cloudfront.net/310519663083109800/hvpTFzVHTUDdmneoDhwUNk/logo-verde_8475ff2a.webp"
+                  alt="Inteira"
+                  className="h-9 w-auto object-contain"
+                />
               </div>
             </Link>
 
@@ -366,64 +365,102 @@ export default function Home() {
               Elige el plan perfecto para ti
             </h2>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              Planes flexibles que se adaptan a tus necesidades. Sin contratos, cancela cuando quieras.
+              Suscripciones mensuales o compra individual. Sin contratos, cancela cuando quieras.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {(plans ?? [
-              { id: 1, name: "Básico", price: "99.00", billingPeriod: "monthly", maxAppointmentsPerMonth: 2, features: ["2 citas al mes", "30 min por cita", "Zoom o Google Meet", "Soporte básico"] },
-              { id: 2, name: "Premium", price: "199.00", billingPeriod: "monthly", maxAppointmentsPerMonth: 5, features: ["5 citas al mes", "60 min por cita", "Zoom o Google Meet", "Soporte prioritario", "Acceso a todas las especialidades"] },
-              { id: 3, name: "Pro", price: "399.00", billingPeriod: "monthly", maxAppointmentsPerMonth: null, features: ["Citas ilimitadas", "90 min por cita", "Zoom o Google Meet", "Soporte 24/7", "Acceso a todas las especialidades", "Historial completo"] },
-            ]).map((plan, i) => (
-              <Card
-                key={plan.id}
-                className={`relative border-2 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ${
-                  i === 1
-                    ? "border-primary shadow-lg shadow-primary/20 scale-105"
-                    : "border-border hover:border-primary/30"
-                }`}
-              >
-                {i === 1 && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                    <Badge className="gradient-brand text-white border-0 px-4 py-1 shadow-md">
-                      Más popular
-                    </Badge>
-                  </div>
-                )}
+          {/* Suscripciones */}
+          <div className="mb-6">
+            <h3 className="text-center text-lg font-semibold text-muted-foreground mb-6 uppercase tracking-wider text-sm">Suscripciones Mensuales</h3>
+            <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto">
+              {/* Plan Básico */}
+              <Card className="relative border-2 border-border hover:border-primary/30 transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
                 <CardContent className="p-8">
-                  <div className="mb-6">
-                    <h3 className="text-xl font-bold mb-1">{plan.name}</h3>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-4xl font-bold text-primary" style={{ fontFamily: "Poppins, sans-serif" }}>
-                        ${plan.price}
-                      </span>
-                      <span className="text-muted-foreground text-sm">
-                        MXN/{plan.billingPeriod === "monthly" ? "mes" : "año"}
-                      </span>
+                  <div className="mb-2">
+                    <h3 className="text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>Plan Básico</h3>
+                    <div className="flex items-baseline gap-1 mt-2">
+                      <span className="text-4xl font-bold text-primary" style={{ fontFamily: "Poppins, sans-serif" }}>$980</span>
+                      <span className="text-muted-foreground text-sm">MXN/mes</span>
                     </div>
+                    <p className="text-xs text-primary font-medium mt-1">Ahorra 30% vs compra individual</p>
                   </div>
-
-                  <ul className="space-y-3 mb-8">
-                    {(Array.isArray(plan.features) ? plan.features : []).map((feature: string, j: number) => (
+                  <ul className="space-y-3 my-6">
+                    {["980 créditos mensuales", "Equivalente a 4 asesorías básicas", "Vigencia de 60 días", "Acceso a todas las especialidades", "Soporte por email"].map((f, j) => (
                       <li key={j} className="flex items-center gap-2 text-sm">
                         <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
-                        <span>{feature}</span>
+                        <span>{f}</span>
                       </li>
                     ))}
                   </ul>
-
                   <a href={getLoginUrl()}>
-                    <Button
-                      className={`w-full ${i === 1 ? "gradient-brand text-white border-0 shadow-md shadow-primary/30" : "border-primary/30 text-primary hover:bg-primary/5"}`}
-                      variant={i === 1 ? "default" : "outline"}
-                    >
-                      Comenzar con {plan.name}
+                    <Button variant="outline" className="w-full border-primary/30 text-primary hover:bg-primary/5">
+                      Comenzar con Plan Básico
                     </Button>
                   </a>
                 </CardContent>
               </Card>
-            ))}
+
+              {/* Plan Pro */}
+              <Card className="relative border-2 border-primary shadow-lg shadow-primary/20 scale-105 transition-all duration-300 hover:shadow-xl">
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                  <Badge className="gradient-brand text-white border-0 px-4 py-1 shadow-md">Mas popular</Badge>
+                </div>
+                <CardContent className="p-8">
+                  <div className="mb-2">
+                    <h3 className="text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>Plan Pro</h3>
+                    <div className="flex items-baseline gap-1 mt-2">
+                      <span className="text-4xl font-bold text-primary" style={{ fontFamily: "Poppins, sans-serif" }}>$2,500</span>
+                      <span className="text-muted-foreground text-sm">MXN/mes</span>
+                    </div>
+                    <p className="text-xs text-primary font-medium mt-1">Ahorra 52% vs compra individual</p>
+                  </div>
+                  <ul className="space-y-3 my-6">
+                    {["2,500 créditos mensuales", "Equivalente a 2 asesorías premium", "Vigencia de 60 días", "Acceso prioritario a expertos", "Soporte 24/7 prioritario", "Acceso a comunidad exclusiva"].map((f, j) => (
+                      <li key={j} className="flex items-center gap-2 text-sm">
+                        <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
+                        <span>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <a href={getLoginUrl()}>
+                    <Button className="w-full gradient-brand text-white border-0 shadow-md shadow-primary/30">
+                      Comenzar con Plan Pro
+                    </Button>
+                  </a>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+
+          {/* Compra Individual */}
+          <div className="mt-12">
+            <h3 className="text-center text-lg font-semibold text-muted-foreground mb-6 uppercase tracking-wider text-sm">Compra Individual</h3>
+            <div className="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto">
+              <Card className="border border-border hover:border-primary/30 transition-all hover:shadow-md">
+                <CardContent className="p-6 flex items-center justify-between">
+                  <div>
+                    <h4 className="font-semibold">Sesión Básica</h4>
+                    <p className="text-sm text-muted-foreground mt-1">1 sesión · 60 min · Zoom o Meet</p>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-2xl font-bold text-primary" style={{ fontFamily: "Poppins, sans-serif" }}>$350</div>
+                    <div className="text-xs text-muted-foreground">MXN</div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="border border-border hover:border-primary/30 transition-all hover:shadow-md">
+                <CardContent className="p-6 flex items-center justify-between">
+                  <div>
+                    <h4 className="font-semibold">Sesión Premium</h4>
+                    <p className="text-sm text-muted-foreground mt-1">1 sesión · 90 min · Experto de alto nivel</p>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-2xl font-bold text-primary" style={{ fontFamily: "Poppins, sans-serif" }}>$1,250</div>
+                    <div className="text-xs text-muted-foreground">MXN</div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
       </section>
@@ -499,13 +536,12 @@ export default function Home() {
         <div className="container">
           <div className="grid md:grid-cols-4 gap-8 mb-8">
             <div>
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center">
-                  <span className="text-white font-bold text-xs">i</span>
-                </div>
-                <span className="text-lg font-bold text-white" style={{ fontFamily: "Poppins, sans-serif" }}>
-                  inteira
-                </span>
+              <div className="mb-4">
+                <img
+                  src="https://d2xsxph8kpxj0f.cloudfront.net/310519663083109800/hvpTFzVHTUDdmneoDhwUNk/logo-blanco_886f1d65.webp"
+                  alt="Inteira"
+                  className="h-8 w-auto object-contain"
+                />
               </div>
               <p className="text-sm text-white/75">
                 Plataforma de consultas con especialistas en línea. Conectamos personas con profesionales de confianza.
