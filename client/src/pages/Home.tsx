@@ -6,12 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "wouter";
 import {
-  Brain,
-  Scale,
-  TrendingUp,
-  DollarSign,
-  Stethoscope,
-  Apple,
   Star,
   CheckCircle2,
   Video,
@@ -24,22 +18,14 @@ import {
   ChevronRight,
 } from "lucide-react";
 
-const specialtyIcons: Record<string, React.ReactNode> = {
-  Psicología: <Brain className="w-7 h-7" />,
-  Legal: <Scale className="w-7 h-7" />,
-  Emprendimiento: <TrendingUp className="w-7 h-7" />,
-  Finanzas: <DollarSign className="w-7 h-7" />,
-  "Medicina General": <Stethoscope className="w-7 h-7" />,
-  Nutrición: <Apple className="w-7 h-7" />,
-};
-
-const specialtyColors: Record<string, string> = {
-  Psicología: "from-[#607562] to-[#4a5c4c]",
-  Legal: "from-[#607562] to-[#3d4e3f]",
-  Emprendimiento: "from-[#93A295] to-[#607562]",
-  Finanzas: "from-[#4a5c4c] to-[#607562]",
-  "Medicina General": "from-[#607562] to-[#7d9080]",
-  Nutrición: "from-[#93A295] to-[#7d9080]",
+const specialtyImages: Record<string, string> = {
+  Psicología: "https://inteira.mx/wp-content/uploads/2025/03/asesorias_Psicologia.png",
+  Emprendimiento: "https://inteira.mx/wp-content/uploads/2025/03/asesorias_Emprendimiento.png",
+  Finanzas: "https://inteira.mx/wp-content/uploads/2025/03/asesorias_Finanzas.png",
+  Idiomas: "https://inteira.mx/wp-content/uploads/2025/03/asesorias_Idiomas.png",
+  "Imagen Personal": "https://inteira.mx/wp-content/uploads/2025/03/asesorias_Imagen-Personal.png",
+  Legal: "https://inteira.mx/wp-content/uploads/2025/03/asesorias_Legal.png",
+  Vocación: "https://inteira.mx/wp-content/uploads/2025/03/asesorias_Vocacion.png",
 };
 
 const steps = [
@@ -72,8 +58,8 @@ const steps = [
 const stats = [
   { value: "500+", label: "Especialistas verificados" },
   { value: "10,000+", label: "Consultas realizadas" },
-  { value: "4.9★", label: "Calificación promedio" },
-  { value: "6", label: "Especialidades disponibles" },
+  { value: "4.9", label: "Calificación promedio" },
+  { value: "7", label: "Especialidades disponibles" },
 ];
 
 const testimonials = [
@@ -180,7 +166,7 @@ export default function Home() {
             {/* Left content */}
             <div className="space-y-8">
               <Badge className="bg-primary/10 text-primary border-primary/20 px-4 py-1.5 text-sm font-medium">
-                🎯 Plataforma de consultas en línea
+                Plataforma de consultas en línea
               </Badge>
 
               <h1 className="text-5xl lg:text-6xl font-bold leading-tight" style={{ fontFamily: "Poppins, sans-serif" }}>
@@ -275,24 +261,37 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
             {(specialties ?? [
-              { id: 1, name: "Psicología" },
-              { id: 2, name: "Legal" },
-              { id: 3, name: "Emprendimiento" },
-              { id: 4, name: "Finanzas" },
-              { id: 5, name: "Medicina General" },
-              { id: 6, name: "Nutrición" },
-            ]).map((specialty) => (
+              { id: 1, name: "Psicología", imageUrl: specialtyImages["Psicología"] },
+              { id: 2, name: "Emprendimiento", imageUrl: specialtyImages["Emprendimiento"] },
+              { id: 3, name: "Finanzas", imageUrl: specialtyImages["Finanzas"] },
+              { id: 4, name: "Idiomas", imageUrl: specialtyImages["Idiomas"] },
+              { id: 5, name: "Imagen Personal", imageUrl: specialtyImages["Imagen Personal"] },
+              { id: 6, name: "Legal", imageUrl: specialtyImages["Legal"] },
+              { id: 7, name: "Vocación", imageUrl: specialtyImages["Vocación"] },
+            ] as Array<{id: number; name: string; imageUrl?: string | null}>).map((specialty) => (
               <Link key={specialty.id} href={`/especialidades/${specialty.id}`}>
-                <Card className="group cursor-pointer border-border hover:border-primary/30 hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-                  <CardContent className="p-6 flex flex-col items-center text-center gap-3">
-                    <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${specialtyColors[specialty.name] ?? "from-primary to-primary/70"} flex items-center justify-center text-white shadow-md group-hover:scale-110 transition-transform duration-300`}>
-                      {specialtyIcons[specialty.name] ?? <Stethoscope className="w-7 h-7" />}
+                <Card className="group cursor-pointer border-border hover:border-primary/30 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 overflow-hidden">
+                  <CardContent className="p-0 flex flex-col items-center text-center">
+                    <div className="w-full h-28 overflow-hidden relative">
+                      {(specialty.imageUrl ?? specialtyImages[specialty.name]) ? (
+                        <img
+                          src={specialty.imageUrl ?? specialtyImages[specialty.name]}
+                          alt={specialty.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-primary/10 flex items-center justify-center">
+                          <span className="text-primary font-bold text-xl">{specialty.name.charAt(0)}</span>
+                        </div>
+                      )}
                     </div>
-                    <span className="text-sm font-semibold text-foreground leading-tight">
-                      {specialty.name}
-                    </span>
+                    <div className="py-3 px-2">
+                      <span className="text-sm font-semibold text-foreground leading-tight">
+                        {specialty.name}
+                      </span>
+                    </div>
                   </CardContent>
                 </Card>
               </Link>

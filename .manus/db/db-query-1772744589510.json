@@ -1,0 +1,9 @@
+{
+  "query": "ALTER TABLE `specialties` ADD `imageUrl` text;\nALTER TABLE `specialties` ADD `isActive` boolean DEFAULT true;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4B4XEkzrJ3M4xif.root --database hvpTFzVHTUDdmneoDhwUNk --execute ALTER TABLE `specialties` ADD `imageUrl` text;\nALTER TABLE `specialties` ADD `isActive` boolean DEFAULT true;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 634
+}

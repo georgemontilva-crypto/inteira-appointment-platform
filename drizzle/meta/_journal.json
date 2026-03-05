@@ -15,6 +15,13 @@
       "when": 1772740367745,
       "tag": "0001_loose_cargill",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1772744581384,
+      "tag": "0002_late_kitty_pryde",
+      "breakpoints": true
     }
   ]
 }

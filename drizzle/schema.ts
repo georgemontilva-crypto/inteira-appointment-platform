@@ -42,7 +42,9 @@ export const specialties = mysqlTable("specialties", {
   name: varchar("name", { length: 255 }).notNull().unique(),
   description: longtext("description"),
   icon: text("icon"),
+  imageUrl: text("imageUrl"),
   color: varchar("color", { length: 7 }),
+  isActive: boolean("isActive").default(true),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

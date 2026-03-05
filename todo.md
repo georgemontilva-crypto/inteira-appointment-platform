@@ -97,3 +97,10 @@
 - [x] Footer verde salvia #607562 con texto blanco
 - [x] Botones e iconos en verde #607562
 - [x] Tarjetas de especialidades con gradientes verdes de inteira.mx
+
+## Actualización de Especialidades e Imágenes (Solicitud del usuario)
+- [x] Actualizar BD: 7 categorías correctas (Psicología, Emprendimiento, Finanzas, Idiomas, Imagen Personal, Legal, Vocación)
+- [x] Obtener imágenes de inteira.mx para cada categoría
+- [x] Referenciar imágenes directamente desde inteira.mx en las tarjetas
+- [x] Eliminar todos los emojis de la interfaz
+- [x] Actualizar tarjetas de especialidades con imágenes reales de inteira.mx
