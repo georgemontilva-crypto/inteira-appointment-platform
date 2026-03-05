@@ -8,6 +8,11 @@ import {
   isTimeWithinAvailability,
   calculateEndTime,
 } from "./appointment-utils";
+import { generateVideoCallLink } from "./videocall";
+import {
+  sendAppointmentConfirmation,
+  sendAppointmentCancellation,
+} from "./email";
 
 export const appointmentRouter = router({
   // Get available slots for a professional on a specific date
@@ -15,8 +20,8 @@ export const appointmentRouter = router({
     .input(
       z.object({
         professionalId: z.number(),
-        date: z.date(),
-        durationMinutes: z.number(),
+        date: z.string(), // ISO date string yyyy-MM-dd
+        durationMinutes: z.number().optional().default(60),
       })
     )
     .query(async ({ input }) => {
@@ -39,12 +44,15 @@ export const appointmentRouter = router({
         .filter((apt) => apt.status === "scheduled")
         .map((apt) => apt.appointmentDate);
 
-      return getAvailableSlots(
-        input.date,
+      const dateObj = new Date(input.date + "T12:00:00");
+      const slots = getAvailableSlots(
+        dateObj,
         availability,
         input.durationMinutes,
         bookedTimes
       );
+      // Return simple time strings like "09:00", "10:00"
+      return slots.map((s) => s.startTime);
     }),
 
   // Schedule an appointment
@@ -52,15 +60,18 @@ export const appointmentRouter = router({
     .input(
       z.object({
         professionalId: z.number(),
-        appointmentDate: z.date(),
-        durationMinutes: z.number(),
-        videoCallType: z.enum(["zoom", "google_meet"]),
+        appointmentDate: z.string(), // ISO string from frontend
+        durationMinutes: z.number().optional().default(60),
+        videoCallType: z.enum(["zoom", "google_meet"]).optional().default("zoom"),
+        videoProvider: z.enum(["zoom", "google_meet"]).optional(),
         notes: z.string().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
+      const appointmentDateObj = new Date(input.appointmentDate);
+      const videoCallType = input.videoProvider ?? input.videoCallType;
       // Validate appointment can be scheduled
-      if (!canScheduleAppointment(input.appointmentDate)) {
+      if (!canScheduleAppointment(appointmentDateObj)) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Appointments must be scheduled at least 4 hours in advance",
@@ -82,7 +93,7 @@ export const appointmentRouter = router({
       );
       if (
         !isTimeWithinAvailability(
-          input.appointmentDate,
+          appointmentDateObj,
           input.durationMinutes,
           availability
         )
@@ -131,28 +142,54 @@ export const appointmentRouter = router({
         });
       }
 
-      // Create appointment
+      // Create video call link
       const appointmentEndDate = calculateEndTime(
-        input.appointmentDate,
+        appointmentDateObj,
         input.durationMinutes
       );
 
+      const professionalUser = await db.getUserById(professional.userId);
+      const userRecord = await db.getUserById(ctx.user.id);
+      const specialty = await db.getSpecialtyById(professional.specialtyId);
+
+      const videoCall = await generateVideoCallLink(
+        videoCallType,
+        `Consulta de ${specialty?.name ?? "especialidad"} - Inteira`,
+        appointmentDateObj,
+        appointmentEndDate,
+        professionalUser?.email ?? "",
+        userRecord?.email ?? ""
+      );
+
+      // Create appointment with video call link
       await db.createAppointment({
         userId: ctx.user.id,
         professionalId: input.professionalId,
         specialtyId: professional.specialtyId,
-        appointmentDate: input.appointmentDate,
+        appointmentDate: appointmentDateObj,
         durationMinutes: input.durationMinutes,
-        videoCallType: input.videoCallType,
+        videoCallType: videoCallType,
+        videoCallLink: videoCall.joinUrl,
+        videoCallId: videoCall.meetingId,
         notes: input.notes,
         status: "scheduled",
       });
 
-      // TODO: Create video call link (Zoom/Google Meet)
-      // TODO: Send confirmation email
-      // TODO: Schedule reminder emails
+      // Send confirmation email
+      if (userRecord?.email) {
+        await sendAppointmentConfirmation({
+          userEmail: userRecord.email,
+          userName: userRecord.name ?? "Usuario",
+          professionalName: professionalUser?.name ?? "Especialista",
+          specialty: specialty?.name ?? "Especialidad",
+          appointmentDate: appointmentDateObj,
+          durationMinutes: input.durationMinutes,
+          videoCallType: videoCallType,
+          videoCallLink: videoCall.joinUrl,
+        });
+      }
 
-      return { success: true };
+      return { success: true, videoCallLink: videoCall.joinUrl };
     }),
 
   // Cancel appointment

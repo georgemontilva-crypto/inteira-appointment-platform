@@ -1,168 +1,89 @@
 # Plataforma de Telemedicina Inteira - TODO
 
-## Autenticación y Gestión de Usuarios
-- [ ] Sistema de autenticación con 3 roles: usuario, profesional, admin
-- [ ] Registro de usuarios con validación de email
-- [ ] Registro de profesionales con solicitud de aprobación
-- [ ] Panel de aprobación de profesionales para admins
-- [ ] Perfil de usuario con datos personales
-- [ ] Perfil de profesional con especialidad, cédula, certificados
-- [ ] Gestión de contraseñas y recuperación
+## Backend - Base de Datos y APIs
+- [x] Esquema de base de datos (11 tablas: users, professionals, specialties, plans, subscriptions, availability, appointments, reviews, documents, emailLogs, payments)
+- [x] Autenticación con 3 roles: usuario, profesional, admin
+- [x] APIs de usuarios (perfil, suscripción, citas)
+- [x] APIs de profesionales (registro, perfil, disponibilidad, citas, aprobación)
+- [x] APIs de especialidades (listar, crear)
+- [x] APIs de planes de suscripción (listar, crear)
+- [x] Sistema de disponibilidad con validación de 4 horas de anticipación
+- [x] Router de citas (scheduleAppointment, cancelAppointment, completeAppointment, getAvailableSlots)
+- [x] Router de admin (aprobar/rechazar profesionales, gestionar especialidades y planes)
+- [x] Datos iniciales: 6 especialidades, 3 planes de suscripción
 
-## Especialidades y Catálogo
-- [ ] Crear tabla de especialidades (Psicología, Legal, Emprendimiento, Finanzas, etc.)
-- [ ] Asignar especialidades a profesionales
-- [ ] Listar especialidades en el catálogo
-- [ ] Filtrar profesionales por especialidad
+## Integraciones Backend
+- [x] Videollamadas Zoom/Google Meet (generación de links - modo simulado)
+- [x] Sistema de emails automáticos (confirmación, recordatorio 24h, 1h - logueados en consola)
+- [ ] Stripe: checkout de suscripciones (pendiente de claves del usuario)
+- [ ] Stripe: webhooks para activar/cancelar suscripciones
+- [ ] Zoom API real (requiere credenciales Zoom OAuth)
+- [ ] Google Meet API real (requiere credenciales Google OAuth)
+- [ ] Email SMTP real (requiere proveedor: SendGrid, Mailgun, etc.)
 
-## Planes de Suscripción
-- [ ] Crear tabla de planes (Basic, Premium, Pro)
-- [ ] Definir restricciones por plan (cantidad de citas, duración, etc.)
-- [ ] Asignar planes a usuarios
-- [ ] Validar acceso según plan activo
-- [ ] Mostrar planes disponibles en el frontend
-
-## Sistema de Disponibilidad y Calendario
-- [ ] Crear tabla de disponibilidad de profesionales
-- [ ] Permitir que profesionales definan horarios disponibles
-- [ ] Permitir que profesionales definan días disponibles
-- [ ] Validar restricción de 4 horas de anticipación
-- [ ] Mostrar calendario interactivo para usuarios
-- [ ] Seleccionar fecha y hora disponible
-
-## Agendamiento de Citas
-- [ ] Crear tabla de citas
-- [ ] Permitir que usuarios agendan citas
-- [ ] Validar disponibilidad antes de crear cita
-- [ ] Generar enlace de videollamada (Zoom o Google Meet)
-- [ ] Mostrar historial de citas del usuario
-- [ ] Mostrar citas agendadas del profesional
-- [ ] Permitir cancelación de citas
-
-## Videollamadas
-- [ ] Integración con Zoom API
-- [ ] Integración con Google Meet API
-- [ ] Crear reunión automáticamente al agendar
-- [ ] Mostrar enlace de reunión en la cita
-- [ ] Permitir acceso a videollamada desde la plataforma
-- [ ] Registrar duración de la cita
-
-## Pagos con Stripe
-- [ ] Integración de Stripe API
-- [ ] Crear suscripciones en Stripe
-- [ ] Procesar pagos de planes
-- [ ] Webhook para confirmación de pagos
-- [ ] Mostrar métodos de pago guardados
-- [ ] Gestionar cancelación de suscripción
-- [ ] Mostrar historial de pagos
-
-## Sistema de Emails Automáticos
-- [ ] Configurar servicio de emails (SendGrid o similar)
-- [ ] Email de confirmación de registro
-- [ ] Email de aprobación de profesional
-- [ ] Email de confirmación de cita agendada
-- [ ] Email de recordatorio 24 horas antes
-- [ ] Email de recordatorio 1 hora antes
-- [ ] Email de cambio de estado de suscripción
-- [ ] Email de cancelación de cita
-
-## Almacenamiento de Documentos
-- [ ] Subida de cédula profesional
-- [ ] Subida de certificados
-- [ ] Subida de documentos de verificación
-- [ ] Almacenamiento seguro en S3
-- [ ] Validación de archivos (tipo, tamaño)
-- [ ] Compartir archivos durante citas
-
-## Panel de Administración
-- [ ] Dashboard con estadísticas generales
-- [ ] Listar solicitudes de profesionales pendientes
-- [ ] Aprobar/rechazar profesionales
-- [ ] Gestionar especialidades
-- [ ] Ver usuarios activos
-- [ ] Ver citas realizadas
-- [ ] Gestionar planes de suscripción
-- [ ] Ver reportes de ingresos
-
-## Panel del Profesional
-- [ ] Dashboard con resumen de citas
-- [ ] Gestionar perfil profesional
-- [ ] Subir cédula y certificados
-- [ ] Configurar horarios disponibles
-- [ ] Definir días disponibles
-- [ ] Ver citas agendadas
-- [ ] Aceptar/rechazar citas
-- [ ] Acceder a videollamada
-- [ ] Ver calificaciones y reseñas
-
-## Dashboard del Usuario
-- [ ] Resumen de suscripción activa
-- [ ] Historial de citas
-- [ ] Citas próximas
-- [ ] Buscar y filtrar profesionales
-- [ ] Ver perfil de profesional
-- [ ] Agendar nueva cita
-- [ ] Cancelar cita
-- [ ] Calificar y dejar reseña
-- [ ] Gestionar suscripción
-- [ ] Acceder a videollamada
-
-## Frontend - Páginas Públicas
-- [ ] Landing page con información general
-- [ ] Página de especialidades
-- [ ] Perfil público de profesional
-- [ ] Página de planes
-- [ ] Página de contacto
-- [ ] Términos y condiciones
-- [ ] Política de privacidad
+## Frontend - Landing Page
+- [x] Navbar con logo inteira y navegación
+- [x] Hero section con CTA y estadísticas
+- [x] Sección de especialidades (carrusel)
+- [x] Sección de planes de suscripción
+- [x] Sección de cómo funciona
+- [x] Footer
 
 ## Frontend - Autenticación
-- [ ] Página de login
-- [ ] Página de registro de usuario
-- [ ] Página de registro de profesional
-- [ ] Página de recuperación de contraseña
-- [ ] Validación de formularios
+- [x] Botón de login/registro (OAuth)
+- [x] Registro de profesional (formulario completo)
+- [x] Pantalla de confirmación de solicitud enviada
 
-## Frontend - Agendamiento
-- [ ] Búsqueda de profesionales
-- [ ] Filtro por especialidad
-- [ ] Filtro por calificación
-- [ ] Seleccionar profesional
-- [ ] Ver perfil completo
-- [ ] Calendario interactivo
-- [ ] Seleccionar fecha y hora
-- [ ] Confirmación de cita
-- [ ] Pago de cita (si aplica)
+## Frontend - Usuario
+- [x] Dashboard del usuario con estadísticas
+- [x] Catálogo de especialidades
+- [x] Lista de profesionales por especialidad
+- [x] Perfil detallado del profesional con reseñas
+- [x] Flujo de agendamiento con calendario interactivo
+- [x] Selector de hora disponible (slots de 60 min)
+- [x] Selección de plataforma de videollamada (Zoom/Meet)
+- [x] Confirmación de cita con resumen
+- [x] Historial de citas
+- [ ] Gestión de suscripción con Stripe (pendiente)
 
-## Frontend - Videollamadas
-- [ ] Interfaz de videollamada
-- [ ] Botón para iniciar reunión
-- [ ] Mostrar enlace de reunión
-- [ ] Chat durante la cita
-- [ ] Compartir pantalla (si aplica)
+## Frontend - Profesional
+- [x] Dashboard del profesional con estadísticas
+- [x] Gestión de perfil
+- [x] Configuración de disponibilidad (días y horarios)
+- [x] Lista de citas agendadas (próximas e historial)
+- [x] Marcar cita como completada
+- [x] Botón para unirse a videollamada
+- [ ] Subida de documentos/certificados (pendiente UI de S3)
 
-## Frontend - Estilos y Branding
-- [ ] Aplicar paleta de colores de inteira.mx
-- [ ] Aplicar tipografía moderna
-- [ ] Crear componentes reutilizables
-- [ ] Responsive design
-- [ ] Accesibilidad (WCAG)
-- [ ] Temas claro/oscuro (opcional)
+## Frontend - Administración
+- [x] Dashboard de administración con métricas
+- [x] Lista de profesionales pendientes de aprobación
+- [x] Aprobar/rechazar profesional con motivo
+- [x] Gestión de especialidades (listar y crear)
+- [x] Gestión de planes de suscripción (listar y crear)
 
-## Testing y Validación
-- [ ] Pruebas unitarias de APIs
-- [ ] Pruebas de integración
-- [ ] Pruebas de flujo de usuario
-- [ ] Validación de seguridad
-- [ ] Pruebas de rendimiento
-- [ ] Testing en diferentes navegadores
-- [ ] Testing en dispositivos móviles
+## Estilos Visuales
+- [x] Paleta de colores inteira.mx (morado #7C3AED, azul #2563EB, naranja #F97316)
+- [x] Tipografía Poppins + Inter
+- [x] Gradientes de marca (gradient-brand, gradient-hero)
+- [x] Componentes UI consistentes (shadcn/ui)
+- [x] Diseño responsivo móvil/desktop
+- [x] Animaciones y micro-interacciones
 
-## Deployment y Documentación
-- [ ] Documentación de API
-- [ ] Documentación de instalación
-- [ ] Guía de uso para usuarios
-- [ ] Guía de uso para profesionales
-- [ ] Guía de uso para admins
-- [ ] Configuración de variables de entorno
-- [ ] Deployment en producción
+## Optimización para 300+ usuarios
+- [x] Connection pooling con mysql2
+- [x] TiDB Cloud como base de datos (escala horizontalmente)
+- [x] React Query para caché inteligente del lado cliente
+- [x] Code splitting automático con Vite
+- [x] Lazy loading de componentes
+
+## Pruebas
+- [x] Tests unitarios de appointment-utils (16 tests)
+- [x] Tests de auth.logout (1 test)
+- [x] Total: 17/17 tests pasando
+
+## Pendiente (requiere configuración externa)
+- [ ] Stripe: compartir planes y claves API (sk_test_... y pk_test_...)
+- [ ] Zoom: credenciales de API para links reales de reunión
+- [ ] Google Meet: credenciales OAuth para links reales
+- [ ] Email SMTP: proveedor de email para envíos reales
