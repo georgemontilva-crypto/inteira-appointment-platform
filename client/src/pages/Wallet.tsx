@@ -11,7 +11,6 @@ import {
   TrendingDown,
   TrendingUp,
   AlertCircle,
-  CheckCircle2,
   ShoppingCart,
   Info,
 } from "lucide-react";
@@ -160,17 +159,7 @@ export default function WalletPage() {
                 </div>
               )}
 
-              {/* Sesión cost reference */}
-              <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-                <div className="flex items-center gap-1.5 text-muted-foreground">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                  Sesión Básica: <strong className="text-foreground">350 créditos</strong>
-                </div>
-                <div className="flex items-center gap-1.5 text-muted-foreground">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
-                  Sesión Premium: <strong className="text-foreground">1,250 créditos</strong>
-                </div>
-              </div>
+
             </CardContent>
           </Card>
 

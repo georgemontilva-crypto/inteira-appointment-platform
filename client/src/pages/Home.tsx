@@ -23,8 +23,19 @@ import {
   Mic2,
   Sparkles,
   Compass,
-  Bell,
+  LayoutDashboard,
+  Wallet,
+  LogOut,
+  ChevronDown,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useLocation } from "wouter";
 
 const homeSpecialtyIcon: Record<string, React.ReactNode> = {
   Psicología: <Brain className="w-5 h-5 text-white" />,
@@ -112,8 +123,16 @@ const defaultSpecialties = [
 
 export default function Home() {
   const { user, isAuthenticated } = useAuth();
+  const [, navigate] = useLocation();
   const { data: specialties } = trpc.specialty.getAll.useQuery();
   const { data: plans } = trpc.subscriptionPlan.getAll.useQuery();
+  const logout = trpc.auth.logout.useMutation({
+    onSuccess: () => window.location.reload(),
+  });
+
+  const initials = user?.name
+    ? user.name.split(" ").map((n: string) => n[0]).slice(0, 2).join("").toUpperCase()
+    : "?";
 
   const displaySpecialties = specialties ?? defaultSpecialties;
 
@@ -157,20 +176,53 @@ export default function Home() {
             {/* Auth buttons */}
             <div className="flex items-center gap-2 md:gap-3">
               {isAuthenticated ? (
-                <Link href="/dashboard">
-                  <Button size="sm" className="gradient-brand text-white border-0 text-xs md:text-sm">
-                    Mi Dashboard
-                  </Button>
-                </Link>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="flex items-center gap-2 rounded-full pl-1 pr-2 py-1 hover:bg-muted transition-colors active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                      {/* Avatar circle */}
+                      <div className="w-8 h-8 rounded-full gradient-brand flex items-center justify-center text-white text-xs font-bold flex-shrink-0 shadow-sm">
+                        {initials}
+                      </div>
+                      {/* Name — desktop only */}
+                      <span className="hidden md:block text-sm font-medium text-foreground max-w-[100px] truncate">
+                        {user?.name?.split(" ")[0] ?? "Mi cuenta"}
+                      </span>
+                      <ChevronDown className="hidden md:block w-3.5 h-3.5 text-muted-foreground" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48 rounded-xl shadow-lg border-border">
+                    <div className="px-3 py-2">
+                      <p className="text-xs font-semibold text-foreground truncate">{user?.name ?? "Usuario"}</p>
+                      <p className="text-[10px] text-muted-foreground truncate">{user?.email ?? ""}</p>
+                    </div>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => navigate("/dashboard")} className="cursor-pointer gap-2 text-sm">
+                      <LayoutDashboard className="w-4 h-4 text-primary" />
+                      Dashboard
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate("/wallet")} className="cursor-pointer gap-2 text-sm">
+                      <Wallet className="w-4 h-4 text-primary" />
+                      Mi Wallet
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => logout.mutate()}
+                      className="cursor-pointer gap-2 text-sm text-red-500 focus:text-red-500"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Cerrar sesión
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               ) : (
                 <>
-                  {/* Mobile: solo icono de notificación/login */}
+                  {/* Mobile */}
                   <a href={getLoginUrl()} className="md:hidden">
-                    <Button size="sm" className="gradient-brand text-white border-0 text-xs px-3">
+                    <Button size="sm" variant="outline" className="text-primary border-primary/40 hover:bg-primary/5 text-xs px-3 rounded-full">
                       Entrar
                     </Button>
                   </a>
-                  {/* Desktop: botones completos */}
+                  {/* Desktop */}
                   <a href={getLoginUrl()} className="hidden md:block">
                     <Button variant="ghost" size="sm" className="text-primary hover:text-primary">
                       Iniciar sesión
