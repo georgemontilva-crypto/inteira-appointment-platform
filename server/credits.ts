@@ -244,3 +244,54 @@ export async function getCreditTransactions(userId: number) {
     .orderBy(sql`${creditTransactions.createdAt} DESC`)
     .limit(50);
 }
+
+/**
+ * Expire all batches that have passed their expiresAt date.
+ * Called by the server cron job every hour.
+ * Returns the number of batches expired.
+ */
+export async function expireTimedOutBatches(): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+
+  // Find all batches where expiresAt < now AND remaining > 0 AND not already expired early
+  const expiredBatches = await db
+    .select({
+      id: creditBatches.id,
+      userId: creditBatches.userId,
+      remaining: creditBatches.remaining,
+    })
+    .from(creditBatches)
+    .where(
+      and(
+        gt(creditBatches.remaining, 0),
+        eq(creditBatches.expiredEarly, false)
+      )
+    );
+
+  // Filter in JS since Drizzle ORM lt() with Date can vary by driver
+  const now = new Date();
+  const toExpire = expiredBatches.filter(
+    (b) => new Date((b as any).expiresAt ?? 0) < now
+  );
+
+  if (toExpire.length === 0) return 0;
+
+  for (const batch of toExpire) {
+    await db
+      .update(creditBatches)
+      .set({ remaining: 0, expiredEarly: false, updatedAt: new Date() })
+      .where(eq(creditBatches.id, batch.id));
+
+    await db.insert(creditTransactions).values({
+      userId: batch.userId,
+      batchId: batch.id,
+      delta: -batch.remaining,
+      reason: "expire",
+      description: `Créditos expirados automáticamente (60 días)`,
+    });
+  }
+
+  console.log(`[Credits] Expired ${toExpire.length} batch(es) automatically.`);
+  return toExpire.length;
+}

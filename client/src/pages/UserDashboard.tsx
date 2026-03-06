@@ -338,7 +338,7 @@ export default function UserDashboard() {
                             P
                           </div>
                           <div>
-                            <p className="font-semibold text-sm">Especialista #{apt.professionalId}</p>
+                            <p className="font-semibold text-sm">{(apt as any).professionalName ?? `Especialista #${apt.professionalId}`}</p>
                             <div className="flex items-center gap-1.5 mt-0.5">
                               <Clock className="w-3 h-3 text-muted-foreground" />
                               <span className="text-xs text-muted-foreground">
@@ -437,7 +437,7 @@ export default function UserDashboard() {
                                 P
                               </div>
                               <div>
-                                <p className="font-medium text-sm">Especialista #{apt.professionalId}</p>
+                                <p className="font-medium text-sm">{(apt as any).professionalName ?? `Especialista #${apt.professionalId}`}</p>
                                 <p className="text-xs text-muted-foreground">
                                   {format(new Date(apt.appointmentDate), "d MMM yyyy", { locale: es })}
                                 </p>

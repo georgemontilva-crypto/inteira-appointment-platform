@@ -1,0 +1,21 @@
+{
+  "name": "Inteira - Agenda de Citas",
+  "short_name": "Inteira",
+  "description": "Plataforma de bienestar integral. Agenda citas con especialistas en salud mental, nutrición, coaching y más.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3d7a5e",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["health", "lifestyle", "medical"],
+  "lang": "es-MX",
+  "dir": "ltr"
+}

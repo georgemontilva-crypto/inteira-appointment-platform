@@ -7,6 +7,7 @@ import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
+import { expireTimedOutBatches } from "../credits";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -63,3 +64,18 @@ async function startServer() {
 }
 
 startServer().catch(console.error);
+
+// ─── Cron: expire timed-out credit batches every hour ─────────────────────────
+const ONE_HOUR_MS = 60 * 60 * 1000;
+setInterval(async () => {
+  try {
+    const count = await expireTimedOutBatches();
+    if (count > 0) console.log(`[Cron] Expired ${count} credit batch(es).`);
+  } catch (err) {
+    console.error("[Cron] Error expiring credit batches:", err);
+  }
+}, ONE_HOUR_MS);
+// Run once on startup to catch any batches that expired while server was down
+expireTimedOutBatches().catch((err) =>
+  console.error("[Cron] Startup expiry check failed:", err)
+);

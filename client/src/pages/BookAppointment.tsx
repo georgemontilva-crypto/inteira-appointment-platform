@@ -10,7 +10,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { toast } from "sonner";
 import {
   ArrowLeft, Clock, Video, CheckCircle2, Calendar as CalendarIcon,
-  AlertCircle, Star,
+  AlertCircle, Star, Wallet,
 } from "lucide-react";
 import { format, addHours, isBefore, startOfDay } from "date-fns";
 import { es } from "date-fns/locale";
@@ -31,6 +31,11 @@ export default function BookAppointment() {
   const [videoProvider, setVideoProvider] = useState<"zoom" | "google_meet">("zoom");
   const [notes, setNotes] = useState("");
   const [step, setStep] = useState<"date" | "time" | "confirm" | "done">("date");
+
+  // Wallet query for credit balance indicator
+  const { data: wallet } = trpc.user.getWallet.useQuery(undefined, { enabled: isAuthenticated });
+  const SESSION_COST = 350;
+  const hasEnoughCredits = (wallet?.balance ?? 0) >= SESSION_COST;
 
   const { data: professional } = trpc.professional.getById.useQuery(
     { id: professionalId },
@@ -377,6 +382,35 @@ export default function BookAppointment() {
                         <Video className="w-4 h-4 text-primary" />
                         <span>{videoProvider === "zoom" ? "Zoom" : "Google Meet"}</span>
                       </div>
+                    </div>
+                  )}
+
+                  {/* Wallet / credit balance indicator */}
+                  {isAuthenticated && (
+                    <div className={`rounded-xl p-3 border ${
+                      hasEnoughCredits
+                        ? "bg-emerald-50 border-emerald-200"
+                        : "bg-red-50 border-red-200"
+                    }`}>
+                      <div className="flex items-center gap-2 mb-1">
+                        <Wallet className={`w-4 h-4 ${hasEnoughCredits ? "text-emerald-600" : "text-red-500"}`} />
+                        <span className={`text-xs font-semibold ${hasEnoughCredits ? "text-emerald-700" : "text-red-600"}`}>
+                          Tu saldo
+                        </span>
+                      </div>
+                      <p className={`text-lg font-bold ${hasEnoughCredits ? "text-emerald-700" : "text-red-600"}`}>
+                        {(wallet?.balance ?? 0).toLocaleString("es-MX")} créditos
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Costo de sesión: <span className="font-semibold">{SESSION_COST} créditos</span>
+                      </p>
+                      {!hasEnoughCredits && (
+                        <Link href="/planes">
+                          <p className="text-xs text-red-600 font-semibold mt-1 underline cursor-pointer">
+                            Comprar créditos
+                          </p>
+                        </Link>
+                      )}
                     </div>
                   )}
 

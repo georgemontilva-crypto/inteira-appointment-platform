@@ -17,6 +17,8 @@ import Plans from "./pages/Plans";
 import WalletPage from "./pages/Wallet";
 import TermsOfService from "./pages/TermsOfService";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
+import UserProfile from "./pages/UserProfile";
+import Subscription from "./pages/Subscription";
 import MobileNav from "./components/MobileNav";
 
 function Router() {
@@ -39,6 +41,10 @@ function Router() {
 
       {/* Wallet */}
       <Route path="/wallet" component={WalletPage} />
+
+      {/* Profile & Subscription */}
+      <Route path="/perfil" component={UserProfile} />
+      <Route path="/suscripcion" component={Subscription} />
 
       {/* Legal */}
       <Route path="/terminos" component={TermsOfService} />

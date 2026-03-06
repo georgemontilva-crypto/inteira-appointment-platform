@@ -1,7 +1,7 @@
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
-import { Home, Search, Calendar, Wallet, LayoutDashboard } from "lucide-react";
+import { Home, Search, Calendar, Wallet, LayoutDashboard, User } from "lucide-react";
 
 const leftItems = [
   { label: "Inicio", href: "/", icon: Home, authRequired: false },
@@ -9,8 +9,8 @@ const leftItems = [
 ];
 
 const rightItems = [
-  { label: "Wallet", href: "/wallet", icon: Wallet, authRequired: true },
-  { label: "Mis citas", href: "/dashboard", icon: Calendar, authRequired: true },
+  { label: "Citas", href: "/dashboard", icon: Calendar, authRequired: true },
+  { label: "Perfil", href: "/perfil", icon: User, authRequired: true },
 ];
 
 export default function MobileNav() {
