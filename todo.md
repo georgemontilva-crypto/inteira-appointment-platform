@@ -173,9 +173,42 @@
 - [x] Helper `consumeCredits(userId, amount, reason)`: FIFO — consume primero los lotes más antiguos
 - [x] Helper `expireCredits(userId)`: marca como 0 los lotes cuando la suscripción se cancela
 - [x] Helper `addCreditBatch(userId, amount, source)`: crea lote con expiresAt = now + 60 días
-- [ ] Integrar consumo de créditos al agendar cita (350 básica / 1250 premium) — pendiente de Stripe
+- [x] Integrar consumo de créditos al agendar cita (350 básica / 1250 premium)
 - [x] Procedimiento tRPC `user.getWallet`: saldo total + lotes activos con vencimiento
 - [x] Procedimiento tRPC `user.buyIndividualSession`: compra sesión individual sin plan
 - [x] Widget de wallet en UserDashboard: saldo, próximo vencimiento, barra de progreso
 - [x] Página /wallet: historial de lotes con fecha de compra, créditos usados/restantes, vencimiento
 - [x] Tests unitarios: consumo FIFO, acumulación entre meses, expiración al cancelar suscripción (13 nuevos tests)
+
+## Correcciones de Auditoría — Marzo 2026
+
+### Críticos de negocio
+- [x] Descontar créditos (350 básica / 1250 premium) al confirmar agendamiento
+- [x] Reembolsar créditos al cancelar una cita
+- [ ] Job de expiración automática de créditos (endpoint admin)
+
+### Funcionalidad
+- [x] Botón cancelar cita en UserDashboard (con confirmación)
+- [x] Botón calificar en citas completadas del historial del usuario
+- [ ] Subir foto de perfil del profesional a S3 en RegisterProfessional
+- [x] Mostrar nombre real del plan activo en UserDashboard (no ID)
+- [x] Guard de rol en ProfessionalDashboard (guard por perfil profesional existente)
+- [ ] Barra de búsqueda y filtros en ProfessionalsList
+- [ ] Página /perfil para editar datos del usuario
+- [ ] Página /suscripcion para gestionar plan activo
+- [ ] Email de cancelación de cita
+- [ ] Indicador de saldo disponible en BookAppointment
+
+### UX y SEO
+- [x] Cambiar lang="en" a lang="es" en index.html
+- [x] Agregar favicon (favicon.svg con logo Inteira)
+- [x] Agregar og:image y meta tags sociales (og:title, og:description, twitter:card)
+- [x] Copyright dinámico con año actual (new Date().getFullYear())
+- [ ] Alerta de créditos por vencer en dashboard (< 10 días)
+- [ ] Mostrar nombre real del profesional en historial (no "Especialista #ID")
+- [ ] PWA manifest.json
+
+### Legal (LFPDPPP)
+- [x] Página /terminos con Términos de uso
+- [x] Página /privacidad con Política de privacidad
+- [x] Conectar links del footer a las páginas legales

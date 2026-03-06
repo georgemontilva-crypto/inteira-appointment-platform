@@ -95,7 +95,10 @@ export const appRouter = router({
       }),
 
     getSubscription: protectedProcedure.query(async ({ ctx }) => {
-      return await db.getUserSubscription(ctx.user.id);
+      const subscription = await db.getUserSubscription(ctx.user.id);
+      if (!subscription) return null;
+      const plan = await db.getSubscriptionPlanById(subscription.planId);
+      return { ...subscription, planName: plan?.name ?? null };
     }),
 
     getAppointments: protectedProcedure.query(async ({ ctx }) => {

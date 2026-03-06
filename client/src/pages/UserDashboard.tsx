@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
+import { toast } from "sonner";
 import {
   Calendar,
   Video,
@@ -14,10 +16,11 @@ import {
   CreditCard,
   CheckCircle2,
   AlertCircle,
-  ExternalLink,
   User,
   LogOut,
   Wallet,
+  X,
+  ThumbsUp,
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -39,6 +42,13 @@ const statusLabels: Record<string, string> = {
 
 export default function UserDashboard() {
   const { user, isAuthenticated, loading, logout } = useAuth();
+  const utils = trpc.useUtils();
+
+  const [cancelingId, setCancelingId] = useState<number | null>(null);
+  const [ratingId, setRatingId] = useState<number | null>(null);
+  const [rating, setRating] = useState(5);
+  const [ratingComment, setRatingComment] = useState("");
+
   const { data: appointments, isLoading: loadingAppointments } = trpc.user.getAppointments.useQuery(
     undefined,
     { enabled: isAuthenticated }
@@ -48,6 +58,34 @@ export default function UserDashboard() {
     { enabled: isAuthenticated }
   );
   const { data: wallet } = trpc.user.getWallet.useQuery(undefined, { enabled: isAuthenticated });
+
+  // Cancel appointment mutation
+  const cancelMutation = trpc.appointment.cancelAppointment.useMutation({
+    onSuccess: () => {
+      toast.success("Cita cancelada", { description: "Tus créditos han sido reembolsados." });
+      setCancelingId(null);
+      utils.user.getAppointments.invalidate();
+      utils.user.getWallet.invalidate();
+    },
+    onError: (err) => {
+      toast.error("Error al cancelar", { description: err.message });
+      setCancelingId(null);
+    },
+  });
+
+  // Submit review mutation
+  const reviewMutation = trpc.review.create.useMutation({
+    onSuccess: () => {
+      toast.success("¡Gracias por tu reseña!", { description: "Tu calificación fue enviada." });
+      setRatingId(null);
+      setRating(5);
+      setRatingComment("");
+      utils.user.getAppointments.invalidate();
+    },
+    onError: (err) => {
+      toast.error("Error al enviar reseña", { description: err.message });
+    },
+  });
 
   if (loading) {
     return (
@@ -73,11 +111,26 @@ export default function UserDashboard() {
   type Apt = NonNullable<typeof appointments>[number];
   const upcomingAppointments: Apt[] = appointments?.filter((a) => a.status === "scheduled") ?? [];
   const pastAppointments: Apt[] = appointments?.filter((a) => a.status !== "scheduled") ?? [];
+  const completedCount = (appointments as Apt[] | undefined)?.filter((a) => a.status === "completed").length ?? 0;
+
+  const handleCancel = (aptId: number) => {
+    setCancelingId(aptId);
+    cancelMutation.mutate({ appointmentId: aptId, reason: "Cancelado por el usuario" });
+  };
+
+  const handleSubmitReview = (apt: Apt) => {
+    reviewMutation.mutate({
+      professionalId: apt.professionalId,
+      appointmentId: apt.id,
+      rating,
+      comment: ratingComment,
+    });
+  };
 
   return (
     <div className="min-h-screen bg-background pb-24 md:pb-8">
 
-      {/* ── Mobile Header (app-style greeting) ── */}
+      {/* ── Mobile Header ── */}
       <div className="md:hidden gradient-hero text-white">
         <div className="px-5 pt-14 pb-6">
           <div className="flex items-center justify-between">
@@ -101,7 +154,6 @@ export default function UserDashboard() {
             </button>
           </div>
         </div>
-
         {/* Stats strip */}
         <div className="mx-4 mb-0 relative z-10">
           <div className="bg-white rounded-2xl shadow-xl border border-border/50 grid grid-cols-3 divide-x divide-border -mb-5">
@@ -110,20 +162,15 @@ export default function UserDashboard() {
               <span className="text-[10px] text-muted-foreground mt-0.5">Próximas</span>
             </div>
             <div className="flex flex-col items-center py-3.5">
-              <span className="text-xl font-bold text-emerald-600">
-                {(appointments as Apt[] | undefined)?.filter((a) => a.status === "completed").length ?? 0}
-              </span>
+              <span className="text-xl font-bold text-emerald-600">{completedCount}</span>
               <span className="text-[10px] text-muted-foreground mt-0.5">Completadas</span>
             </div>
             <div className="flex flex-col items-center py-3.5">
-              <span className="text-xl font-bold text-primary">
-                {subscription?.appointmentsUsedThisMonth ?? 0}
-              </span>
-              <span className="text-[10px] text-muted-foreground mt-0.5">Este mes</span>
+              <span className="text-xl font-bold text-primary">{(wallet?.balance ?? 0).toLocaleString("es-MX")}</span>
+              <span className="text-[10px] text-muted-foreground mt-0.5">Créditos</span>
             </div>
           </div>
         </div>
-        {/* Spacer for the overlapping card */}
         <div className="h-5" />
       </div>
 
@@ -149,11 +196,7 @@ export default function UserDashboard() {
                   Nueva cita
                 </Button>
               </Link>
-              <Button
-                variant="ghost"
-                onClick={logout}
-                className="text-white/80 hover:text-white hover:bg-white/10"
-              >
+              <Button variant="ghost" onClick={logout} className="text-white/80 hover:text-white hover:bg-white/10">
                 <LogOut className="w-4 h-4" />
               </Button>
             </div>
@@ -161,7 +204,7 @@ export default function UserDashboard() {
         </div>
       </div>
 
-      {/* ── Mobile: Quick Actions ── */}
+      {/* ── Mobile Quick Actions ── */}
       <div className="md:hidden px-5 pt-8 pb-2">
         <div className="grid grid-cols-3 gap-2">
           <Link href="/especialidades">
@@ -172,12 +215,12 @@ export default function UserDashboard() {
               <span className="text-[10px] font-semibold text-primary text-center leading-tight">Nueva cita</span>
             </div>
           </Link>
-          <Link href="/especialidades">
+          <Link href="/wallet">
             <div className="flex flex-col items-center gap-1.5 p-3 bg-muted rounded-2xl active:scale-95 transition-transform">
               <div className="w-9 h-9 rounded-xl bg-secondary/50 flex items-center justify-center">
-                <Calendar className="w-4 h-4 text-primary" />
+                <Wallet className="w-4 h-4 text-primary" />
               </div>
-              <span className="text-[10px] font-semibold text-muted-foreground text-center leading-tight">Mis citas</span>
+              <span className="text-[10px] font-semibold text-muted-foreground text-center leading-tight">Mi wallet</span>
             </div>
           </Link>
           <Link href="/planes">
@@ -216,9 +259,7 @@ export default function UserDashboard() {
                   <CheckCircle2 className="w-5 h-5 text-emerald-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-emerald-600">
-                    {(appointments as Apt[] | undefined)?.filter((a) => a.status === "completed").length ?? 0}
-                  </p>
+                  <p className="text-2xl font-bold text-emerald-600">{completedCount}</p>
                   <p className="text-xs text-muted-foreground">Completadas</p>
                 </div>
               </div>
@@ -227,14 +268,12 @@ export default function UserDashboard() {
           <Card className="border-border">
             <CardContent className="p-5">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
-                  <CreditCard className="w-5 h-5 text-accent" />
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <Wallet className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-accent">
-                    {subscription ? `Plan #${subscription.planId}` : "Sin plan"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">Plan activo</p>
+                  <p className="text-2xl font-bold text-primary">{(wallet?.balance ?? 0).toLocaleString("es-MX")}</p>
+                  <p className="text-xs text-muted-foreground">Créditos disponibles</p>
                 </div>
               </div>
             </CardContent>
@@ -246,9 +285,7 @@ export default function UserDashboard() {
                   <Star className="w-5 h-5 text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-blue-600">
-                    {subscription?.appointmentsUsedThisMonth ?? 0}
-                  </p>
+                  <p className="text-2xl font-bold text-blue-600">{subscription?.appointmentsUsedThisMonth ?? 0}</p>
                   <p className="text-xs text-muted-foreground">Citas este mes</p>
                 </div>
               </div>
@@ -257,7 +294,7 @@ export default function UserDashboard() {
         </div>
 
         <div className="grid lg:grid-cols-3 gap-4 md:gap-6">
-          {/* Upcoming appointments */}
+          {/* Appointments column */}
           <div className="lg:col-span-2 space-y-3 md:space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-base md:text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
@@ -292,10 +329,10 @@ export default function UserDashboard() {
               </Card>
             ) : (
               <div className="space-y-2 md:space-y-3">
-                {upcomingAppointments.slice(0, 3).map((apt) => (
+                {upcomingAppointments.slice(0, 5).map((apt) => (
                   <Card key={apt.id} className="border-border active:scale-[0.99] md:hover:shadow-md transition-all">
                     <CardContent className="p-4 md:p-5">
-                      <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl gradient-brand flex items-center justify-center text-white font-bold flex-shrink-0">
                             P
@@ -314,14 +351,32 @@ export default function UserDashboard() {
                           <Badge className={statusColors[apt.status] + " border-0 text-[10px] md:text-xs"}>
                             {statusLabels[apt.status]}
                           </Badge>
-                          {apt.videoCallLink && (
-                            <a href={apt.videoCallLink} target="_blank" rel="noopener noreferrer">
-                              <Button size="sm" className="gradient-brand text-white border-0 h-6 md:h-7 text-[10px] md:text-xs px-2 md:px-3">
-                                <Video className="w-3 h-3 mr-1" />
-                                Unirse
-                              </Button>
-                            </a>
-                          )}
+                          <div className="flex gap-1.5">
+                            {apt.videoCallLink && (
+                              <a href={apt.videoCallLink} target="_blank" rel="noopener noreferrer">
+                                <Button size="sm" className="gradient-brand text-white border-0 h-6 md:h-7 text-[10px] md:text-xs px-2 md:px-3">
+                                  <Video className="w-3 h-3 mr-1" />
+                                  Unirse
+                                </Button>
+                              </a>
+                            )}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-6 md:h-7 text-[10px] md:text-xs px-2 border-red-200 text-red-500 hover:bg-red-50 hover:border-red-300"
+                              disabled={cancelingId === apt.id}
+                              onClick={() => handleCancel(apt.id)}
+                            >
+                              {cancelingId === apt.id ? (
+                                <span className="animate-spin w-3 h-3 border-2 border-red-400 border-t-transparent rounded-full" />
+                              ) : (
+                                <>
+                                  <X className="w-3 h-3 mr-1" />
+                                  Cancelar
+                                </>
+                              )}
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </CardContent>
@@ -337,25 +392,75 @@ export default function UserDashboard() {
                   Historial
                 </h2>
                 <div className="space-y-2 md:space-y-3">
-                  {pastAppointments.slice(0, 3).map((apt) => (
-                    <Card key={apt.id} className="border-border opacity-80">
+                  {pastAppointments.slice(0, 5).map((apt) => (
+                    <Card key={apt.id} className="border-border opacity-90">
                       <CardContent className="p-3.5 md:p-4">
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-muted flex items-center justify-center text-muted-foreground font-bold text-sm flex-shrink-0">
-                              P
+                        {/* Rating form inline */}
+                        {ratingId === apt.id ? (
+                          <div className="space-y-3">
+                            <p className="text-sm font-semibold">Califica tu sesión</p>
+                            <div className="flex gap-1">
+                              {[1, 2, 3, 4, 5].map((s) => (
+                                <button key={s} onClick={() => setRating(s)} className="focus:outline-none">
+                                  <Star
+                                    className={`w-6 h-6 transition-colors ${s <= rating ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground"}`}
+                                  />
+                                </button>
+                              ))}
                             </div>
-                            <div>
-                              <p className="font-medium text-sm">Especialista #{apt.professionalId}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {format(new Date(apt.appointmentDate), "d MMM yyyy", { locale: es })}
-                              </p>
+                            <textarea
+                              value={ratingComment}
+                              onChange={(e) => setRatingComment(e.target.value)}
+                              placeholder="Comentario opcional..."
+                              rows={2}
+                              className="w-full text-sm border border-border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 bg-background"
+                            />
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                className="gradient-brand text-white border-0 text-xs"
+                                disabled={reviewMutation.isPending}
+                                onClick={() => handleSubmitReview(apt)}
+                              >
+                                <ThumbsUp className="w-3 h-3 mr-1" />
+                                Enviar
+                              </Button>
+                              <Button size="sm" variant="ghost" className="text-xs" onClick={() => setRatingId(null)}>
+                                Cancelar
+                              </Button>
                             </div>
                           </div>
-                          <Badge className={statusColors[apt.status] + " border-0 text-[10px] md:text-xs"}>
-                            {statusLabels[apt.status]}
-                          </Badge>
-                        </div>
+                        ) : (
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-muted flex items-center justify-center text-muted-foreground font-bold text-sm flex-shrink-0">
+                                P
+                              </div>
+                              <div>
+                                <p className="font-medium text-sm">Especialista #{apt.professionalId}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {format(new Date(apt.appointmentDate), "d MMM yyyy", { locale: es })}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <Badge className={statusColors[apt.status] + " border-0 text-[10px] md:text-xs"}>
+                                {statusLabels[apt.status]}
+                              </Badge>
+                              {apt.status === "completed" && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-6 text-[10px] px-2 border-yellow-200 text-yellow-600 hover:bg-yellow-50"
+                                  onClick={() => setRatingId(apt.id)}
+                                >
+                                  <Star className="w-3 h-3 mr-1" />
+                                  Calificar
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
                   ))}
@@ -381,7 +486,9 @@ export default function UserDashboard() {
                   <>
                     <div className="p-4 rounded-xl gradient-brand text-white">
                       <p className="text-white/70 text-xs mb-1">Plan activo</p>
-                      <p className="text-lg md:text-xl font-bold">Plan #{subscription.planId}</p>
+                      <p className="text-lg md:text-xl font-bold">
+                        {(subscription as any).planName ?? `Plan #${subscription.planId}`}
+                      </p>
                       <p className="text-white/70 text-xs mt-1">
                         Vence: {subscription.endDate
                           ? format(new Date(subscription.endDate), "d MMM yyyy", { locale: es })
@@ -433,6 +540,11 @@ export default function UserDashboard() {
                   <p className="text-xs text-muted-foreground mt-0.5">
                     ≈ ${(wallet?.balance ?? 0).toLocaleString("es-MX")} MXN
                   </p>
+                  {wallet?.nextExpiry && (
+                    <p className="text-[10px] text-amber-600 mt-1 font-medium">
+                      ⚠ Créditos por vencer: {format(new Date(wallet.nextExpiry), "d MMM yyyy", { locale: es })}
+                    </p>
+                  )}
                 </div>
                 <Link href="/wallet">
                   <Button variant="outline" size="sm" className="w-full border-primary/30 text-primary hover:bg-primary/5 text-xs active:scale-95 transition-transform">
@@ -454,10 +566,10 @@ export default function UserDashboard() {
                     Agendar nueva cita
                   </Button>
                 </Link>
-                <Link href="/especialidades">
+                <Link href="/wallet">
                   <Button variant="ghost" className="w-full justify-start text-sm h-9 hover:bg-primary/5 hover:text-primary">
-                    <Calendar className="w-4 h-4 mr-2" />
-                    Ver mis citas
+                    <Wallet className="w-4 h-4 mr-2" />
+                    Ver mi wallet
                   </Button>
                 </Link>
                 <Link href="/perfil">

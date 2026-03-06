@@ -792,8 +792,8 @@ export default function Home() {
             <div>
               <h4 className="font-semibold mb-3 text-sm text-white">Legal</h4>
               <ul className="space-y-2 text-sm text-white/75">
-                <li><a href="#" className="hover:text-white transition-colors">Términos de uso</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Privacidad</a></li>
+                <li><Link href="/terminos"><span className="hover:text-white transition-colors cursor-pointer">Términos de uso</span></Link></li>
+                <li><Link href="/privacidad"><span className="hover:text-white transition-colors cursor-pointer">Privacidad</span></Link></li>
                 <li><a href="mailto:soporte@inteira.mx" className="hover:text-white transition-colors">Contacto</a></li>
               </ul>
             </div>
@@ -831,8 +831,8 @@ export default function Home() {
               <div>
                 <p className="text-[10px] font-semibold text-white/50 uppercase tracking-widest mb-2">Legal</p>
                 <ul className="space-y-1.5 text-xs text-white/75">
-                  <li><a href="#" className="hover:text-white">Términos</a></li>
-                  <li><a href="#" className="hover:text-white">Privacidad</a></li>
+                  <li><Link href="/terminos"><span className="hover:text-white cursor-pointer">Términos</span></Link></li>
+                  <li><Link href="/privacidad"><span className="hover:text-white cursor-pointer">Privacidad</span></Link></li>
                   <li><a href="mailto:soporte@inteira.mx" className="hover:text-white">Contacto</a></li>
                 </ul>
               </div>
@@ -841,7 +841,7 @@ export default function Home() {
 
           <div className="border-t border-white/20 pt-5 flex flex-col md:flex-row items-center justify-between gap-3">
             <p className="text-xs md:text-sm text-white/70">
-              © 2025 Inteira. Todos los derechos reservados.
+              © {new Date().getFullYear()} Inteira. Todos los derechos reservados.
             </p>
             <p className="hidden md:block text-sm text-white/70">
               <a href="https://inteira.mx" className="hover:text-white transition-colors">inteira.mx</a>

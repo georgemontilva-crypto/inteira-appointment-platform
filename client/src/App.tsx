@@ -15,6 +15,8 @@ import BookAppointment from "./pages/BookAppointment";
 import RegisterProfessional from "./pages/RegisterProfessional";
 import Plans from "./pages/Plans";
 import WalletPage from "./pages/Wallet";
+import TermsOfService from "./pages/TermsOfService";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 import MobileNav from "./components/MobileNav";
 
 function Router() {
@@ -37,6 +39,10 @@ function Router() {
 
       {/* Wallet */}
       <Route path="/wallet" component={WalletPage} />
+
+      {/* Legal */}
+      <Route path="/terminos" component={TermsOfService} />
+      <Route path="/privacidad" component={PrivacyPolicy} />
 
       {/* Protected dashboards */}
       <Route path="/dashboard" component={UserDashboard} />

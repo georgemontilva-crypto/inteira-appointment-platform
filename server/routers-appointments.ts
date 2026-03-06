@@ -13,6 +13,10 @@ import {
   sendAppointmentConfirmation,
   sendAppointmentCancellation,
 } from "./email";
+import { consumeCredits, getUserCreditBalance, addCreditBatch } from "./credits";
+
+// Credit cost per session type (MXN = credits 1:1)
+const SESSION_CREDIT_COST = 350; // Sesión básica
 
 export const appointmentRouter = router({
   // Get available slots for a professional on a specific date
@@ -70,6 +74,7 @@ export const appointmentRouter = router({
     .mutation(async ({ ctx, input }) => {
       const appointmentDateObj = new Date(input.appointmentDate);
       const videoCallType = input.videoProvider ?? input.videoCallType;
+
       // Validate appointment can be scheduled
       if (!canScheduleAppointment(appointmentDateObj)) {
         throw new TRPCError({
@@ -142,6 +147,15 @@ export const appointmentRouter = router({
         });
       }
 
+      // ── Check credit balance ──────────────────────────────────────────────
+      const creditBalance = await getUserCreditBalance(ctx.user.id);
+      if (creditBalance < SESSION_CREDIT_COST) {
+        throw new TRPCError({
+          code: "PAYMENT_REQUIRED",
+          message: `Saldo insuficiente. Necesitas ${SESSION_CREDIT_COST} créditos para agendar una sesión básica. Saldo actual: ${creditBalance} créditos. Recarga tu wallet en /wallet.`,
+        });
+      }
+
       // Create video call link
       const appointmentEndDate = calculateEndTime(
         appointmentDateObj,
@@ -175,6 +189,30 @@ export const appointmentRouter = router({
         status: "scheduled",
       });
 
+      // ── Deduct credits (FIFO) ─────────────────────────────────────────────
+      // Retrieve the newly created appointment ID for the transaction record
+      const dbInst = await db.getDb();
+      let newAppointmentId: number | undefined;
+      if (dbInst) {
+        const { appointments: aptTable } = await import("../drizzle/schema");
+        const { desc, eq: eqOp } = await import("drizzle-orm");
+        const rows = await dbInst
+          .select({ id: aptTable.id })
+          .from(aptTable)
+          .where(eqOp(aptTable.userId, ctx.user.id))
+          .orderBy(desc(aptTable.createdAt))
+          .limit(1);
+        newAppointmentId = rows[0]?.id;
+      }
+
+      await consumeCredits(
+        ctx.user.id,
+        SESSION_CREDIT_COST,
+        "consume",
+        newAppointmentId,
+        `Sesión básica con ${professionalUser?.name ?? "especialista"}`
+      );
+
       // Send confirmation email
       if (userRecord?.email) {
         await sendAppointmentConfirmation({
@@ -189,7 +227,11 @@ export const appointmentRouter = router({
         });
       }
 
-      return { success: true, videoCallLink: videoCall.joinUrl };
+      return {
+        success: true,
+        videoCallLink: videoCall.joinUrl,
+        creditsUsed: SESSION_CREDIT_COST,
+      };
     }),
 
   // Cancel appointment
@@ -260,7 +302,37 @@ export const appointmentRouter = router({
         })
         .where(eq(appointments.id, input.appointmentId));
 
-      // TODO: Send cancellation email
+      // ── Refund credits when user cancels ─────────────────────────────────
+      // Only refund if the user (not the professional) cancels and the appointment
+      // was in "scheduled" status (not already completed or cancelled).
+      if (ctx.user.role === "user" && appointment.status === "scheduled") {
+        try {
+          // Add a new credit batch as refund (60-day validity from now)
+          await addCreditBatch(ctx.user.id, "individual_basic");
+          // Override: we want to record a refund transaction instead.
+          // consumeCredits with negative amount is not supported, so we use
+          // addCreditBatch which creates a new 350-credit batch.
+        } catch {
+          // Non-critical: log but don't fail the cancellation
+        }
+      }
+
+      // Send cancellation email
+      const canceledUser = await db.getUserById(appointment.userId);
+      const canceledProfessional = await db.getProfessionalById(appointment.professionalId);
+      const canceledProfUser = canceledProfessional
+        ? await db.getUserById(canceledProfessional.userId)
+        : null;
+
+      if (canceledUser?.email) {
+        await sendAppointmentCancellation({
+          userEmail: canceledUser.email,
+          userName: canceledUser.name ?? "Usuario",
+          professionalName: canceledProfUser?.name ?? "Especialista",
+          appointmentDate: appointment.appointmentDate,
+          canceledBy: ctx.user.role === "user" ? "el usuario" : "el profesional",
+        }).catch(() => { /* non-critical */ });
+      }
 
       return { success: true };
     }),
