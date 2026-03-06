@@ -247,3 +247,39 @@ export const payments = mysqlTable("payments", {
 
 export type Payment = typeof payments.$inferSelect;
 export type InsertPayment = typeof payments.$inferInsert;
+
+/**
+ * Credit batches table — each purchase (plan or individual) creates a batch
+ * with a 60-day expiration. FIFO consumption: oldest batch first.
+ */
+export const creditBatches = mysqlTable("creditBatches", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  amount: int("amount").notNull(),       // original credits in this batch
+  remaining: int("remaining").notNull(), // credits still available
+  source: mysqlEnum("source", ["plan_basic", "plan_pro", "individual_basic", "individual_premium"]).notNull(),
+  expiresAt: timestamp("expiresAt").notNull(), // now + 60 days
+  expiredEarly: boolean("expiredEarly").default(false), // true if cancelled subscription
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type CreditBatch = typeof creditBatches.$inferSelect;
+export type InsertCreditBatch = typeof creditBatches.$inferInsert;
+
+/**
+ * Credit transactions table — audit trail for every credit movement
+ */
+export const creditTransactions = mysqlTable("creditTransactions", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  batchId: int("batchId"),  // which batch was affected (null for summary ops)
+  delta: int("delta").notNull(), // positive = added, negative = consumed/expired
+  reason: mysqlEnum("reason", ["purchase", "consume", "expire", "refund"]).notNull(),
+  appointmentId: int("appointmentId"),
+  description: varchar("description", { length: 255 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type CreditTransaction = typeof creditTransactions.$inferSelect;
+export type InsertCreditTransaction = typeof creditTransactions.$inferInsert;

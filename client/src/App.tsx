@@ -14,6 +14,7 @@ import ProfessionalProfile from "./pages/ProfessionalProfile";
 import BookAppointment from "./pages/BookAppointment";
 import RegisterProfessional from "./pages/RegisterProfessional";
 import Plans from "./pages/Plans";
+import WalletPage from "./pages/Wallet";
 import MobileNav from "./components/MobileNav";
 
 function Router() {
@@ -33,6 +34,9 @@ function Router() {
 
       {/* Plans */}
       <Route path="/planes" component={Plans} />
+
+      {/* Wallet */}
+      <Route path="/wallet" component={WalletPage} />
 
       {/* Protected dashboards */}
       <Route path="/dashboard" component={UserDashboard} />

@@ -8,6 +8,16 @@ import { users } from "../drizzle/schema";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { appointmentRouter } from "./routers-appointments";
+import {
+  getUserCreditBalance,
+  getAllBatches,
+  getActiveBatches,
+  getNextExpirationDate,
+  getCreditTransactions,
+  addCreditBatch,
+  CREDIT_COSTS,
+  type CreditSource,
+} from "./credits";
 
 // Validation schemas
 const specialtySchema = z.object({
@@ -91,6 +101,49 @@ export const appRouter = router({
     getAppointments: protectedProcedure.query(async ({ ctx }) => {
       return await db.getUserAppointments(ctx.user.id);
     }),
+    // ── Wallet ──────────────────────────────────────────────────────────
+    getWallet: protectedProcedure.query(async ({ ctx }) => {
+      const [balance, batches, nextExpiry, transactions] = await Promise.all([
+        getUserCreditBalance(ctx.user.id),
+        getAllBatches(ctx.user.id),
+        getNextExpirationDate(ctx.user.id),
+        getCreditTransactions(ctx.user.id),
+      ]);
+      return { balance, batches, nextExpiry, transactions };
+    }),
+    buyIndividualSession: protectedProcedure
+      .input(
+        z.object({
+          sessionType: z.enum(["individual_basic", "individual_premium"]),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        // Stripe will handle actual payment; for now we simulate a successful purchase
+        const source = input.sessionType as CreditSource;
+        const batchId = await addCreditBatch(ctx.user.id, source);
+        return {
+          success: true,
+          batchId,
+          creditsAdded: CREDIT_COSTS[source],
+          message: `Se agregaron ${CREDIT_COSTS[source]} créditos a tu wallet. Válidos por 60 días.`,
+        };
+      }),
+    buyPlan: protectedProcedure
+      .input(
+        z.object({
+          planType: z.enum(["plan_basic", "plan_pro"]),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const source = input.planType as CreditSource;
+        const batchId = await addCreditBatch(ctx.user.id, source);
+        return {
+          success: true,
+          batchId,
+          creditsAdded: CREDIT_COSTS[source],
+          message: `Se agregaron ${CREDIT_COSTS[source]} créditos a tu wallet. Válidos por 60 días.`,
+        };
+      }),
   }),
 
   // Professional routes

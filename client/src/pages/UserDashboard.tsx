@@ -17,6 +17,7 @@ import {
   ExternalLink,
   User,
   LogOut,
+  Wallet,
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -46,6 +47,7 @@ export default function UserDashboard() {
     undefined,
     { enabled: isAuthenticated }
   );
+  const { data: wallet } = trpc.user.getWallet.useQuery(undefined, { enabled: isAuthenticated });
 
   if (loading) {
     return (
@@ -410,6 +412,33 @@ export default function UserDashboard() {
                     </Link>
                   </>
                 )}
+              </CardContent>
+            </Card>
+
+            {/* Wallet widget */}
+            <Card className="border-border">
+              <CardHeader className="pb-2 md:pb-3">
+                <CardTitle className="text-sm md:text-base flex items-center gap-2">
+                  <Wallet className="w-4 h-4 text-primary" />
+                  Mi Wallet
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="p-3 rounded-xl bg-primary/5 border border-primary/15">
+                  <p className="text-xs text-muted-foreground">Saldo disponible</p>
+                  <p className="text-2xl font-bold text-primary" style={{ fontFamily: "Poppins, sans-serif" }}>
+                    {(wallet?.balance ?? 0).toLocaleString("es-MX")}
+                    <span className="text-sm font-normal text-muted-foreground ml-1">créditos</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    ≈ ${(wallet?.balance ?? 0).toLocaleString("es-MX")} MXN
+                  </p>
+                </div>
+                <Link href="/wallet">
+                  <Button variant="outline" size="sm" className="w-full border-primary/30 text-primary hover:bg-primary/5 text-xs active:scale-95 transition-transform">
+                    Ver historial de créditos
+                  </Button>
+                </Link>
               </CardContent>
             </Card>
 

@@ -164,3 +164,18 @@
 - [x] Specialties.tsx: tarjetas de lista compactas con flecha de navegación en móvil
 - [x] index.css: clase .scrollbar-none para carruseles sin scrollbar
 - [x] index.css: clase .mobile-safe-bottom para padding de nav inferior
+
+## Sistema de Wallet de Créditos (Política FIFO 60 días)
+- [x] Tabla `credit_batches`: id, userId, amount, remaining, source (plan/individual), expiresAt (60 días), createdAt
+- [x] Tabla `credit_transactions`: id, userId, batchId, delta, reason (purchase/consume/expire), createdAt
+- [x] Migrar esquema y aplicar SQL
+- [x] Helper `getUserCreditBalance(userId)`: suma remaining de lotes no expirados y con suscripción activa
+- [x] Helper `consumeCredits(userId, amount, reason)`: FIFO — consume primero los lotes más antiguos
+- [x] Helper `expireCredits(userId)`: marca como 0 los lotes cuando la suscripción se cancela
+- [x] Helper `addCreditBatch(userId, amount, source)`: crea lote con expiresAt = now + 60 días
+- [ ] Integrar consumo de créditos al agendar cita (350 básica / 1250 premium) — pendiente de Stripe
+- [x] Procedimiento tRPC `user.getWallet`: saldo total + lotes activos con vencimiento
+- [x] Procedimiento tRPC `user.buyIndividualSession`: compra sesión individual sin plan
+- [x] Widget de wallet en UserDashboard: saldo, próximo vencimiento, barra de progreso
+- [x] Página /wallet: historial de lotes con fecha de compra, créditos usados/restantes, vencimiento
+- [x] Tests unitarios: consumo FIFO, acumulación entre meses, expiración al cancelar suscripción (13 nuevos tests)
