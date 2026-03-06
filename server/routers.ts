@@ -388,6 +388,36 @@ export const appRouter = router({
 
   // Admin routes
   admin: router({
+    getMetrics: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "User is not an admin" });
+      }
+      return await db.getAdminMetrics();
+    }),
+    getAppointmentsByDay: protectedProcedure
+      .input(z.object({ days: z.number().optional().default(30) }))
+      .query(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "User is not an admin" });
+        }
+        return await db.getAppointmentsByDay(input.days);
+      }),
+    getRecentAppointments: protectedProcedure
+      .input(z.object({ limit: z.number().optional().default(10) }))
+      .query(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "User is not an admin" });
+        }
+        return await db.getRecentAppointments(input.limit);
+      }),
+    getTopProfessionals: protectedProcedure
+      .input(z.object({ limit: z.number().optional().default(5) }))
+      .query(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "User is not an admin" });
+        }
+        return await db.getTopProfessionals(input.limit);
+      }),
     getPendingProfessionals: protectedProcedure.query(async ({ ctx }) => {
       if (ctx.user.role !== "admin") {
         throw new TRPCError({

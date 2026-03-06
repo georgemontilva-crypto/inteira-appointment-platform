@@ -467,3 +467,136 @@ export async function getUserPayments(userId: number) {
 
   return await db.select().from(payments).where(eq(payments.userId, userId));
 }
+
+// ─── Admin Metrics helpers ────────────────────────────────────────────────────
+export async function getAdminMetrics() {
+  const db = await getDb();
+  if (!db) return null;
+
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  // Total users
+  const [{ totalUsers }] = await db
+    .select({ totalUsers: sql<number>`COUNT(*)` })
+    .from(users);
+
+  // New users this month
+  const [{ newUsersMonth }] = await db
+    .select({ newUsersMonth: sql<number>`COUNT(*)` })
+    .from(users)
+    .where(sql`createdAt >= ${monthStart}`);
+
+  // Active professionals (approved)
+  const [{ activeProfessionals }] = await db
+    .select({ activeProfessionals: sql<number>`COUNT(*)` })
+    .from(professionals)
+    .where(sql`approvalStatus = 'approved'`);
+
+  // Appointments today
+  const [{ appointmentsToday }] = await db
+    .select({ appointmentsToday: sql<number>`COUNT(*)` })
+    .from(appointments)
+    .where(sql`appointmentDate >= ${todayStart} AND status != 'canceled'`);
+
+  // Appointments this month
+  const [{ appointmentsMonth }] = await db
+    .select({ appointmentsMonth: sql<number>`COUNT(*)` })
+    .from(appointments)
+    .where(sql`appointmentDate >= ${monthStart} AND status != 'canceled'`);
+
+  // Completed appointments this month (revenue proxy: each = avg 800 credits)
+  const [{ completedMonth }] = await db
+    .select({ completedMonth: sql<number>`COUNT(*)` })
+    .from(appointments)
+    .where(sql`appointmentDate >= ${monthStart} AND status = 'completed'`);
+
+  // Active subscriptions
+  const [{ activeSubscriptions }] = await db
+    .select({ activeSubscriptions: sql<number>`COUNT(*)` })
+    .from(userSubscriptions)
+    .where(sql`status = 'active'`);
+
+  return {
+    totalUsers: Number(totalUsers),
+    newUsersMonth: Number(newUsersMonth),
+    activeProfessionals: Number(activeProfessionals),
+    appointmentsToday: Number(appointmentsToday),
+    appointmentsMonth: Number(appointmentsMonth),
+    completedMonth: Number(completedMonth),
+    activeSubscriptions: Number(activeSubscriptions),
+  };
+}
+
+export async function getAppointmentsByDay(days = 30) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const since = new Date();
+  since.setDate(since.getDate() - days);
+
+  const rows = await db
+    .select({
+      day: sql<string>`DATE(appointmentDate)`,
+      total: sql<number>`COUNT(*)`,
+      completed: sql<number>`SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END)`,
+      canceled: sql<number>`SUM(CASE WHEN status = 'canceled' THEN 1 ELSE 0 END)`,
+    })
+    .from(appointments)
+    .where(sql`appointmentDate >= ${since}`)
+    .groupBy(sql`DATE(appointmentDate)`)
+    .orderBy(sql`DATE(appointmentDate) ASC`);
+
+  return rows.map((r) => ({
+    day: r.day,
+    total: Number(r.total),
+    completed: Number(r.completed),
+    canceled: Number(r.canceled),
+  }));
+}
+
+export async function getRecentAppointments(limit = 10) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db
+    .select({
+      id: appointments.id,
+      appointmentDate: appointments.appointmentDate,
+      status: appointments.status,
+      videoCallType: appointments.videoCallType,
+      userId: appointments.userId,
+      professionalId: appointments.professionalId,
+      specialtyId: appointments.specialtyId,
+    })
+    .from(appointments)
+    .orderBy(sql`appointmentDate DESC`)
+    .limit(limit);
+}
+
+export async function getTopProfessionals(limit = 5) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const rows = await db
+    .select({
+      professionalId: reviews.professionalId,
+      avgRating: sql<number>`AVG(rating)`,
+      totalReviews: sql<number>`COUNT(*)`,
+      name: users.name,
+    })
+    .from(reviews)
+    .innerJoin(professionals, eq(professionals.id, reviews.professionalId))
+    .innerJoin(users, eq(users.id, professionals.userId))
+    .groupBy(reviews.professionalId, users.name)
+    .orderBy(sql`AVG(rating) DESC`)
+    .limit(limit);
+
+  return rows.map((r) => ({
+    professionalId: r.professionalId,
+    name: r.name,
+    avgRating: Number(r.avgRating).toFixed(1),
+    totalReviews: Number(r.totalReviews),
+  }));
+}

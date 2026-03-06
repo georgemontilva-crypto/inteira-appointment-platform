@@ -6,14 +6,59 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 import {
   Users, CheckCircle2, XCircle, Clock, Shield, Plus,
-  Settings, BarChart3, Award,
+  Settings, BarChart3, Award, TrendingUp, Calendar,
+  Star, Activity, CreditCard, UserCheck,
 } from "lucide-react";
+
+// ─── Simple bar chart ────────────────────────────────────────────────────────
+function MiniBarChart({ data }: { data: { day: string; total: number; completed: number; canceled: number }[] }) {
+  if (!data || data.length === 0) {
+    return (
+      <div className="h-32 flex items-center justify-center text-muted-foreground text-sm">
+        Sin datos en los últimos 30 días
+      </div>
+    );
+  }
+  const maxVal = Math.max(...data.map((d) => d.total), 1);
+  const visible = data.slice(-14);
+  return (
+    <div className="flex items-end gap-1 h-32 w-full">
+      {visible.map((d) => {
+        const heightPct = Math.round((d.total / maxVal) * 100);
+        const completedPct = d.total > 0 ? Math.round((d.completed / d.total) * 100) : 0;
+        return (
+          <div key={d.day} className="flex-1 flex flex-col items-center gap-1 group relative">
+            <div
+              className="w-full rounded-t-sm bg-primary/20 overflow-hidden flex flex-col justify-end"
+              style={{ height: `${Math.max(heightPct, 4)}%` }}
+              title={`${d.day}: ${d.total} citas`}
+            >
+              <div className="w-full bg-primary rounded-t-sm" style={{ height: `${completedPct}%` }} />
+            </div>
+            <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-popover text-popover-foreground text-[10px] rounded px-1.5 py-0.5 shadow whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none z-10">
+              {format(new Date(d.day), "d MMM", { locale: es })}: {d.total}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+const STATUS_MAP: Record<string, { label: string; cls: string }> = {
+  scheduled:  { label: "Agendada",   cls: "bg-blue-100 text-blue-700" },
+  completed:  { label: "Completada", cls: "bg-emerald-100 text-emerald-700" },
+  canceled:   { label: "Cancelada",  cls: "bg-red-100 text-red-700" },
+  "no-show":  { label: "No asistió", cls: "bg-gray-100 text-gray-600" },
+};
 
 export default function AdminDashboard() {
   const { user, isAuthenticated, loading } = useAuth();
-  const [activeTab, setActiveTab] = useState<"profesionales" | "especialidades" | "planes">("profesionales");
+  const [activeTab, setActiveTab] = useState<"overview" | "profesionales" | "especialidades" | "planes">("overview");
   const [rejectReason, setRejectReason] = useState<Record<number, string>>({});
   const [newSpecialty, setNewSpecialty] = useState({ name: "", description: "" });
   const [newPlan, setNewPlan] = useState({
@@ -24,9 +69,12 @@ export default function AdminDashboard() {
 
   const { data: pendingProfessionals, refetch: refetchPending, isLoading: loadingPending } =
     trpc.admin.getPendingProfessionals.useQuery(undefined, { enabled: isAuthenticated });
-
   const { data: specialties, refetch: refetchSpecialties } = trpc.specialty.getAll.useQuery();
   const { data: plans, refetch: refetchPlans } = trpc.subscriptionPlan.getAll.useQuery();
+  const { data: metrics } = trpc.admin.getMetrics.useQuery(undefined, { enabled: isAuthenticated });
+  const { data: chartData } = trpc.admin.getAppointmentsByDay.useQuery({ days: 30 }, { enabled: isAuthenticated });
+  const { data: recentAppointments } = trpc.admin.getRecentAppointments.useQuery({ limit: 8 }, { enabled: isAuthenticated });
+  const { data: topProfessionals } = trpc.admin.getTopProfessionals.useQuery({ limit: 5 }, { enabled: isAuthenticated });
 
   const approveMutation = trpc.admin.approveProfessional.useMutation({
     onSuccess: () => {
@@ -116,37 +164,26 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="border-b border-border bg-background">
+      {/* KPI strip */}
+      <div className="border-b border-border bg-card">
         <div className="container py-4">
-          <div className="grid grid-cols-3 gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-yellow-100 flex items-center justify-center">
-                <Clock className="w-5 h-5 text-yellow-600" />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {[
+              { icon: <Users className="w-4 h-4 text-blue-600" />, bg: "bg-blue-100", value: metrics?.totalUsers ?? "—", label: "Usuarios totales" },
+              { icon: <UserCheck className="w-4 h-4 text-primary" />, bg: "bg-primary/10", value: metrics?.activeProfessionals ?? "—", label: "Profesionales activos" },
+              { icon: <Calendar className="w-4 h-4 text-emerald-600" />, bg: "bg-emerald-100", value: metrics?.appointmentsToday ?? "—", label: "Citas hoy" },
+              { icon: <CreditCard className="w-4 h-4 text-purple-600" />, bg: "bg-purple-100", value: metrics?.activeSubscriptions ?? "—", label: "Suscripciones activas" },
+            ].map((kpi, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <div className={`w-9 h-9 rounded-xl ${kpi.bg} flex items-center justify-center flex-shrink-0`}>
+                  {kpi.icon}
+                </div>
+                <div>
+                  <p className="text-lg font-bold leading-tight">{kpi.value}</p>
+                  <p className="text-[11px] text-muted-foreground">{kpi.label}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-xl font-bold text-yellow-600">{pendingProfessionals?.length ?? 0}</p>
-                <p className="text-xs text-muted-foreground">Pendientes de aprobación</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                <Award className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-xl font-bold text-primary">{specialties?.length ?? 0}</p>
-                <p className="text-xs text-muted-foreground">Especialidades</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center">
-                <BarChart3 className="w-5 h-5 text-emerald-600" />
-              </div>
-              <div>
-                <p className="text-xl font-bold text-emerald-600">{plans?.length ?? 0}</p>
-                <p className="text-xs text-muted-foreground">Planes activos</p>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </div>
@@ -154,16 +191,17 @@ export default function AdminDashboard() {
       {/* Tabs */}
       <div className="border-b border-border bg-background sticky top-0 z-10">
         <div className="container">
-          <div className="flex gap-1">
-            {[
-              { key: "profesionales", label: "Profesionales", icon: <Users className="w-4 h-4" /> },
-              { key: "especialidades", label: "Especialidades", icon: <Award className="w-4 h-4" /> },
-              { key: "planes", label: "Planes", icon: <Settings className="w-4 h-4" /> },
-            ].map((tab) => (
+          <div className="flex gap-1 overflow-x-auto scrollbar-none">
+            {([
+              { key: "overview",        label: "Resumen",        icon: <BarChart3 className="w-4 h-4" /> },
+              { key: "profesionales",   label: "Profesionales",  icon: <Users className="w-4 h-4" /> },
+              { key: "especialidades",  label: "Especialidades", icon: <Award className="w-4 h-4" /> },
+              { key: "planes",          label: "Planes",         icon: <Settings className="w-4 h-4" /> },
+            ] as const).map((tab) => (
               <button
                 key={tab.key}
-                onClick={() => setActiveTab(tab.key as typeof activeTab)}
-                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                onClick={() => setActiveTab(tab.key)}
+                className={`flex items-center gap-1.5 px-3 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${
                   activeTab === tab.key
                     ? "border-primary text-primary"
                     : "border-transparent text-muted-foreground hover:text-foreground"
@@ -172,8 +210,8 @@ export default function AdminDashboard() {
                 {tab.icon}
                 {tab.label}
                 {tab.key === "profesionales" && (pendingProfessionals?.length ?? 0) > 0 && (
-                  <Badge className="gradient-brand text-white border-0 text-xs px-1.5 py-0 h-5">
-                    {pendingProfessionals?.length}
+                  <Badge className="bg-yellow-500 text-white border-0 text-[10px] h-4 px-1 ml-0.5">
+                    {pendingProfessionals!.length}
                   </Badge>
                 )}
               </button>
@@ -182,8 +220,129 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      <div className="container py-8">
-        {/* Tab: Profesionales */}
+      <div className="container py-6 space-y-6">
+
+        {/* ══ TAB: OVERVIEW ══════════════════════════════════════════════════ */}
+        {activeTab === "overview" && (
+          <div className="space-y-6">
+            <div className="grid md:grid-cols-3 gap-4">
+              <Card className="border-border">
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Citas este mes</p>
+                    <TrendingUp className="w-4 h-4 text-primary" />
+                  </div>
+                  <p className="text-3xl font-bold text-primary" style={{ fontFamily: "Poppins" }}>
+                    {metrics?.appointmentsMonth ?? "—"}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">{metrics?.completedMonth ?? 0} completadas</p>
+                </CardContent>
+              </Card>
+              <Card className="border-border">
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Nuevos usuarios</p>
+                    <Activity className="w-4 h-4 text-blue-500" />
+                  </div>
+                  <p className="text-3xl font-bold text-blue-600" style={{ fontFamily: "Poppins" }}>
+                    {metrics?.newUsersMonth ?? "—"}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">Este mes</p>
+                </CardContent>
+              </Card>
+              <Card className="border-border">
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Pendientes aprobación</p>
+                    <Clock className="w-4 h-4 text-yellow-500" />
+                  </div>
+                  <p className="text-3xl font-bold text-yellow-600" style={{ fontFamily: "Poppins" }}>
+                    {pendingProfessionals?.length ?? "—"}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">Profesionales en revisión</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              <Card className="border-border">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <BarChart3 className="w-4 h-4 text-primary" />
+                    Citas por día — últimos 30 días
+                  </CardTitle>
+                  <p className="text-[11px] text-muted-foreground">Verde oscuro = completadas · Verde claro = total</p>
+                </CardHeader>
+                <CardContent className="px-4 pb-4">
+                  <MiniBarChart data={chartData ?? []} />
+                </CardContent>
+              </Card>
+
+              <Card className="border-border">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Star className="w-4 h-4 text-yellow-500" />
+                    Top profesionales por calificación
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 pb-4">
+                  {(topProfessionals ?? []).length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">Sin calificaciones aún</p>
+                  ) : (
+                    (topProfessionals ?? []).map((p, i) => (
+                      <div key={p.professionalId} className="flex items-center gap-3">
+                        <span className="w-5 text-xs text-muted-foreground font-mono text-right">{i + 1}.</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{p.name ?? `Profesional #${p.professionalId}`}</p>
+                          <p className="text-[11px] text-muted-foreground">{p.totalReviews} reseñas</p>
+                        </div>
+                        <div className="flex items-center gap-1 text-yellow-500">
+                          <Star className="w-3.5 h-3.5 fill-yellow-400" />
+                          <span className="text-sm font-bold">{p.avgRating}</span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card className="border-border">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-primary" />
+                  Citas recientes
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pb-4">
+                {(recentAppointments ?? []).length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">Sin citas registradas</p>
+                ) : (
+                  <div className="space-y-2">
+                    {(recentAppointments ?? []).map((apt) => {
+                      const s = STATUS_MAP[apt.status] ?? { label: apt.status, cls: "bg-muted text-muted-foreground" };
+                      return (
+                        <div key={apt.id} className="flex items-center gap-3 py-2 border-b border-border last:border-0">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium">
+                              Cita #{apt.id} · Usuario #{apt.userId} → Profesional #{apt.professionalId}
+                            </p>
+                            <p className="text-[11px] text-muted-foreground">
+                              {format(new Date(apt.appointmentDate), "d MMM yyyy, HH:mm", { locale: es })}
+                            </p>
+                          </div>
+                          <Badge className={`${s.cls} border-0 text-[10px]`}>{s.label}</Badge>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* ══ TAB: PROFESIONALES ═════════════════════════════════════════════ */}
         {activeTab === "profesionales" && (
           <div className="space-y-4">
             <h2 className="text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>

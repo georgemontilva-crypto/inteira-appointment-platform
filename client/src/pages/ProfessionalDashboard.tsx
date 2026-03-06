@@ -191,6 +191,41 @@ export default function ProfessionalDashboard() {
         </div>
       </div>
 
+      {/* ── Banner: próxima cita con videollamada ── */}
+      {(() => {
+        const nextWithVideo = upcomingAppointments.find((a) => (a as any).videoCallLink && a.status === "scheduled");
+        if (!nextWithVideo) return null;
+        const msUntil = new Date(nextWithVideo.appointmentDate).getTime() - Date.now();
+        const isToday = new Date(nextWithVideo.appointmentDate).toDateString() === new Date().toDateString();
+        const isSoon = msUntil > 0 && msUntil < 60 * 60 * 1000;
+        if (!isToday && !isSoon) return null;
+        return (
+          <div className="container pt-5">
+            <div className="rounded-2xl overflow-hidden border border-primary/30 bg-gradient-to-r from-primary/10 to-emerald-50">
+              <div className="flex items-center gap-3 px-4 py-3.5">
+                <div className="w-10 h-10 rounded-xl gradient-brand flex items-center justify-center flex-shrink-0">
+                  <Video className="w-5 h-5 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-primary">
+                    {isSoon ? "¡Tu próxima cita comienza pronto!" : "Tienes una cita hoy"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {format(new Date(nextWithVideo.appointmentDate), "HH:mm", { locale: es })} · {nextWithVideo.durationMinutes} min
+                  </p>
+                </div>
+                <a href={(nextWithVideo as any).videoCallLink} target="_blank" rel="noopener noreferrer">
+                  <Button size="sm" className="gradient-brand text-white border-0 text-xs h-8 px-3 flex-shrink-0 font-semibold">
+                    <Video className="w-3 h-3 mr-1" />
+                    Iniciar sesión
+                  </Button>
+                </a>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       <div className="container py-8">
         {/* Tab: Citas */}
         {activeTab === "citas" && (

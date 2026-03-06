@@ -221,3 +221,15 @@
 - [ ] Mostrar foto en tarjetas de ProfessionalsList y ProfessionalDashboard
 - [ ] Banner de alerta en UserDashboard cuando créditos vencen en menos de 10 días
 - [ ] Alerta visual en Wallet.tsx para lotes próximos a vencer
+
+## Admin Dashboard con Métricas Reales y Videollamadas — Marzo 2026
+
+- [ ] Helpers de métricas en db.ts: citas del día, del mes, ingresos, profesionales activos, usuarios nuevos
+- [ ] Procedimientos tRPC admin: getMetrics, getRecentAppointments, getTopProfessionals, getAppointmentsByDay
+- [ ] AdminDashboard con KPIs reales: citas hoy, ingresos del mes, profesionales activos, usuarios totales
+- [ ] Gráfica de citas por día (últimos 30 días) en AdminDashboard
+- [ ] Lista de citas recientes con estado en AdminDashboard
+- [ ] Top 5 profesionales por calificación en AdminDashboard
+- [ ] Generación automática de enlace Jitsi al confirmar una cita
+- [ ] Botón "Unirse a videollamada" en UserDashboard para citas confirmadas
+- [ ] Botón "Unirse a videollamada" en ProfessionalDashboard para citas confirmadas
