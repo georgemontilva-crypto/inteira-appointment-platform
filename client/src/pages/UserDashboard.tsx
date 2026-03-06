@@ -234,6 +234,34 @@ export default function UserDashboard() {
         </div>
       </div>
 
+      {/* ── Banner: créditos por vencer ── */}
+      {wallet && wallet.nextExpiry && (() => {
+        const daysLeft = Math.ceil((new Date(wallet.nextExpiry).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+        if (daysLeft > 10 || wallet.balance === 0) return null;
+        return (
+          <div className="container pt-4 md:pt-6">
+            <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3.5 text-amber-800">
+              <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold">
+                  {daysLeft <= 0
+                    ? "Tienes créditos que vencen hoy"
+                    : `Tienes créditos que vencen en ${daysLeft} día${daysLeft === 1 ? "" : "s"}`}
+                </p>
+                <p className="text-xs text-amber-700 mt-0.5">
+                  Úsalos antes del {new Date(wallet.nextExpiry).toLocaleDateString("es-MX", { day: "numeric", month: "long" })} para no perderlos.
+                </p>
+              </div>
+              <Link href="/especialidades">
+                <Button size="sm" className="bg-amber-500 hover:bg-amber-600 text-white border-0 text-xs h-8 px-3 flex-shrink-0">
+                  Agendar ahora
+                </Button>
+              </Link>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ── Main content ── */}
       <div className="container py-4 md:py-8 space-y-4 md:space-y-8">
 

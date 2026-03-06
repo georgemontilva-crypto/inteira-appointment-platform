@@ -46,6 +46,7 @@ const professionalRegistrationSchema = z.object({
   certifications: z.string().optional(),
   bio: z.string().optional(),
   hourlyRate: z.string().optional(),
+  profilePhoto: z.string().url().optional(),
 });
 
 const userProfileUpdateSchema = z.object({
@@ -169,11 +170,12 @@ export const appRouter = router({
           input.specialtyId,
           input.licenseNumber,
           {
-            yearsOfExperience: input.yearsOfExperience,
-            education: input.education,
-            certifications: input.certifications,
-            bio: input.bio,
-            hourlyRate: input.hourlyRate ? input.hourlyRate : undefined,
+          yearsOfExperience: input.yearsOfExperience,
+          education: input.education,
+          certifications: input.certifications,
+          bio: input.bio,
+          hourlyRate: input.hourlyRate ? input.hourlyRate : undefined,
+          profilePhoto: input.profilePhoto ?? null,
           }
         );
 
@@ -220,7 +222,15 @@ export const appRouter = router({
     getBySpecialty: publicProcedure
       .input(z.object({ specialtyId: z.number() }))
       .query(async ({ input }) => {
-        return await db.getProfessionalsBySpecialty(input.specialtyId);
+        const profs = await db.getProfessionalsBySpecialty(input.specialtyId);
+        // Enrich with user name for display
+        const enriched = await Promise.all(
+          profs.map(async (p) => {
+            const user = await db.getUserById(p.userId);
+            return { ...p, professionalName: user?.name ?? null };
+          })
+        );
+        return enriched;
       }),
 
     getAppointments: protectedProcedure.query(async ({ ctx }) => {

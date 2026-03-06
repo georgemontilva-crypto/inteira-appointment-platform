@@ -65,6 +65,7 @@ export const professionals = mysqlTable("professionals", {
   education: longtext("education"),
   certifications: longtext("certifications"),
   bio: longtext("bio"),
+  profilePhoto: text("profilePhoto"),
   hourlyRate: decimal("hourlyRate", { precision: 10, scale: 2 }),
   status: mysqlEnum("status", ["pending", "approved", "rejected"]).default("pending").notNull(),
   rejectionReason: longtext("rejectionReason"),

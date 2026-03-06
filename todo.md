@@ -212,3 +212,12 @@
 - [x] Página /terminos con Términos de uso
 - [x] Página /privacidad con Política de privacidad
 - [x] Conectar links del footer a las páginas legales
+
+## Foto de Perfil Profesional y Notificaciones — Marzo 2026
+
+- [ ] Endpoint POST /api/upload/professional-photo para subir imagen a S3
+- [ ] Procedimiento registerProfessional acepta profilePhotoUrl
+- [ ] Campo de foto en RegisterProfessional.tsx con preview y subida a S3
+- [ ] Mostrar foto en tarjetas de ProfessionalsList y ProfessionalDashboard
+- [ ] Banner de alerta en UserDashboard cuando créditos vencen en menos de 10 días
+- [ ] Alerta visual en Wallet.tsx para lotes próximos a vencer

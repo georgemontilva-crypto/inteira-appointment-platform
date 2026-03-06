@@ -115,11 +115,25 @@ export default function RegisterProfessional() {
     },
   });
 
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+
+  const handlePhotoChange = (file: File | null) => {
+    setProfilePhoto(file);
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => setPhotoPreview(e.target?.result as string);
+      reader.readAsDataURL(file);
+    } else {
+      setPhotoPreview(null);
+    }
+  };
+
   const handleChange = (field: string, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.campo) {
       toast.error("Selecciona tu campo de especialidad");
@@ -132,6 +146,42 @@ export default function RegisterProfessional() {
     if (!form.licenseNumber) {
       toast.error("El número de cédula profesional es obligatorio");
       return;
+    }
+
+    // Upload profile photo to S3 if provided
+    let profilePhotoUrl: string | undefined;
+    if (profilePhoto) {
+      try {
+        setUploadingPhoto(true);
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const result = reader.result as string;
+            resolve(result.split(",")[1]);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(profilePhoto);
+        });
+        const res = await fetch("/api/upload/professional-photo", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ base64, mimeType: profilePhoto.type, fileName: profilePhoto.name }),
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error ?? "Error al subir la foto");
+        }
+        const data = await res.json();
+        profilePhotoUrl = data.url;
+        toast.success("Foto subida correctamente");
+      } catch (err: unknown) {
+        toast.error((err as Error).message ?? "Error al subir la foto de perfil");
+        setUploadingPhoto(false);
+        return;
+      } finally {
+        setUploadingPhoto(false);
+      }
     }
 
     // Find the specialty ID from the selected campo
@@ -147,6 +197,7 @@ export default function RegisterProfessional() {
       certifications: certifications?.name || undefined,
       yearsOfExperience: form.yearsOfExperience ? parseInt(form.yearsOfExperience) : undefined,
       hourlyRate: form.hourlyRate || undefined,
+      profilePhoto: profilePhotoUrl,
     });
   };
 
@@ -422,14 +473,44 @@ export default function RegisterProfessional() {
                   </div>
                 </div>
 
-                <FileUploadField
-                  label="Foto de perfil"
-                  description="JPG, PNG o WEBP — máximo 5 MB"
-                  icon={<Camera className="w-5 h-5" />}
-                  accept="image/*"
-                  file={profilePhoto}
-                  onChange={setProfilePhoto}
-                />
+                {/* Profile photo with preview */}
+                <div className="space-y-3">
+                  <Label className="text-sm font-semibold text-foreground">
+                    Foto de perfil
+                  </Label>
+                  <div className="flex items-center gap-5">
+                    {/* Avatar preview */}
+                    <div className="relative flex-shrink-0">
+                      <div className="w-20 h-20 rounded-full overflow-hidden bg-primary/10 border-2 border-dashed border-primary/30 flex items-center justify-center">
+                        {photoPreview ? (
+                          <img src={photoPreview} alt="Vista previa" className="w-full h-full object-cover" />
+                        ) : (
+                          <Camera className="w-7 h-7 text-primary/50" />
+                        )}
+                      </div>
+                      {photoPreview && (
+                        <button
+                          type="button"
+                          onClick={() => handlePhotoChange(null)}
+                          className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-destructive text-white text-xs flex items-center justify-center hover:bg-destructive/80"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
+                    {/* Upload button */}
+                    <div className="flex-1">
+                      <FileUploadField
+                        label=""
+                        description="JPG, PNG o WEBP — máximo 5 MB"
+                        icon={<Upload className="w-5 h-5" />}
+                        accept="image/jpeg,image/png,image/webp"
+                        file={profilePhoto}
+                        onChange={handlePhotoChange}
+                      />
+                    </div>
+                  </div>
+                </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="licenseNumber">
@@ -468,10 +549,15 @@ export default function RegisterProfessional() {
             <div className="pb-8">
               <Button
                 type="submit"
-                disabled={registerMutation.isPending}
+                disabled={registerMutation.isPending || uploadingPhoto}
                 className="w-full bg-primary hover:bg-primary/90 text-white h-12 text-base font-semibold rounded-xl"
               >
-                {registerMutation.isPending ? (
+                {uploadingPhoto ? (
+                  <span className="flex items-center gap-2">
+                    <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+                    Subiendo foto...
+                  </span>
+                ) : registerMutation.isPending ? (
                   <span className="flex items-center gap-2">
                     <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
                     Enviando solicitud...

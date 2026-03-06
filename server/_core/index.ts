@@ -8,6 +8,8 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { expireTimedOutBatches } from "../credits";
+import { storagePut } from "../storage";
+import { sdk } from "./sdk";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -36,6 +38,44 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
+
+  // ─── File upload: professional profile photo ─────────────────────────────────
+  app.post("/api/upload/professional-photo", async (req, res) => {
+    try {
+      let user = null;
+      try { user = await sdk.authenticateRequest(req); } catch { user = null; }
+      if (!user) return res.status(401).json({ error: "Unauthorized" });
+
+      const { base64, mimeType, fileName } = req.body as {
+        base64: string;
+        mimeType: string;
+        fileName: string;
+      };
+
+      if (!base64 || !mimeType || !fileName) {
+        return res.status(400).json({ error: "base64, mimeType and fileName are required" });
+      }
+
+      const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+      if (!allowedTypes.includes(mimeType)) {
+        return res.status(400).json({ error: "Only JPEG, PNG and WebP images are allowed" });
+      }
+
+      const buffer = Buffer.from(base64, "base64");
+      if (buffer.length > 5 * 1024 * 1024) {
+        return res.status(400).json({ error: "Image must be under 5 MB" });
+      }
+
+      const ext = mimeType.split("/")[1] ?? "jpg";
+      const key = `professional-photos/${user.id}-${Date.now()}.${ext}`;
+      const { url } = await storagePut(key, buffer, mimeType);
+
+      return res.json({ url });
+    } catch (err) {
+      console.error("[Upload] Error uploading professional photo:", err);
+      return res.status(500).json({ error: "Upload failed" });
+    }
+  });
   // tRPC API
   app.use(
     "/api/trpc",

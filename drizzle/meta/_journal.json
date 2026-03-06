@@ -36,6 +36,13 @@
       "when": 1772768528371,
       "tag": "0004_curious_northstar",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1772779458122,
+      "tag": "0005_careful_stephen_strange",
+      "breakpoints": true
     }
   ]
 }

@@ -142,8 +142,14 @@ export default function ProfessionalDashboard() {
         <div className="container">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center text-2xl font-bold">
-                {user?.name?.charAt(0) ?? "P"}
+              <div className="w-14 h-14 rounded-2xl overflow-hidden flex-shrink-0">
+                {profile.profilePhoto ? (
+                  <img src={profile.profilePhoto} alt={user?.name ?? "Profesional"} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-white/20 flex items-center justify-center text-2xl font-bold">
+                    {user?.name?.charAt(0) ?? "P"}
+                  </div>
+                )}
               </div>
               <div>
                 <p className="text-white/70 text-sm">Panel del profesional</p>

@@ -149,15 +149,38 @@ export default function WalletPage() {
                 </div>
               </div>
 
-              {nextExpiry && (
-                <div className="mt-4 flex items-center gap-2 text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
-                  <Clock className="w-3.5 h-3.5 flex-shrink-0" />
-                  <span>
-                    Próximo vencimiento: <strong>{format(nextExpiry, "d 'de' MMMM yyyy", { locale: es })}</strong>
-                    {" "}({differenceInDays(nextExpiry, new Date())} días restantes)
-                  </span>
-                </div>
-              )}
+              {nextExpiry && (() => {
+                const daysLeft = differenceInDays(nextExpiry, new Date());
+                const isUrgent = daysLeft <= 10 && balance > 0;
+                return (
+                  <div className={`mt-4 flex items-center gap-2 text-xs rounded-xl px-3 py-2.5 ${
+                    isUrgent
+                      ? "bg-amber-50 border border-amber-200 text-amber-700"
+                      : "bg-muted text-muted-foreground"
+                  }`}>
+                    {isUrgent
+                      ? <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 text-amber-500" />
+                      : <Clock className="w-3.5 h-3.5 flex-shrink-0" />
+                    }
+                    <span className="flex-1">
+                      {isUrgent ? (
+                        <><strong>¡Atención!</strong> Créditos que vencen el{" "}
+                        <strong>{format(nextExpiry, "d 'de' MMMM", { locale: es })}</strong>
+                        {" "}({daysLeft <= 0 ? "hoy" : `${daysLeft} día${daysLeft === 1 ? "" : "s"}`}). Úsalos antes de que expiren.</>
+                      ) : (
+                        <>Próximo vencimiento: <strong>{format(nextExpiry, "d 'de' MMMM yyyy", { locale: es })}</strong>{" "}({daysLeft} días restantes)</>
+                      )}
+                    </span>
+                    {isUrgent && (
+                      <Link href="/especialidades">
+                        <Button size="sm" className="bg-amber-500 hover:bg-amber-600 text-white border-0 text-xs h-7 px-2.5 flex-shrink-0">
+                          Agendar
+                        </Button>
+                      </Link>
+                    )}
+                  </div>
+                );
+              })()}
 
 
             </CardContent>
