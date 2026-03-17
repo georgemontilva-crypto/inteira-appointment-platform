@@ -13,9 +13,22 @@ import {
   Users,
   ChevronRight,
   ArrowLeft,
+  Heart,
+  Leaf,
+  Apple,
+  GraduationCap,
+  HeartHandshake,
+  HandHeart,
+  Sun,
+  Smile,
+  BookOpen,
+  Briefcase,
+  Globe,
+  Activity,
 } from "lucide-react";
 
 const specialtyIcon: Record<string, React.ReactNode> = {
+  // Especialidades originales
   Psicología: <Brain className="w-6 h-6 text-white" />,
   Legal: <Scale className="w-6 h-6 text-white" />,
   Emprendimiento: <TrendingUp className="w-6 h-6 text-white" />,
@@ -23,6 +36,21 @@ const specialtyIcon: Record<string, React.ReactNode> = {
   Idiomas: <Mic2 className="w-6 h-6 text-white" />,
   "Imagen Personal": <Sparkles className="w-6 h-6 text-white" />,
   Vocación: <Compass className="w-6 h-6 text-white" />,
+  // Nuevas especialidades
+  "Coaching de vida": <Sun className="w-6 h-6 text-white" />,
+  "Mindfulness y meditación": <Leaf className="w-6 h-6 text-white" />,
+  "Nutrición": <Apple className="w-6 h-6 text-white" />,
+  "Orientación vocacional": <GraduationCap className="w-6 h-6 text-white" />,
+  "Terapia de pareja": <HeartHandshake className="w-6 h-6 text-white" />,
+  "Trabajo social": <HandHeart className="w-6 h-6 text-white" />,
+  "Salud mental": <Brain className="w-6 h-6 text-white" />,
+  "Desarrollo personal": <Smile className="w-6 h-6 text-white" />,
+  "Educación": <BookOpen className="w-6 h-6 text-white" />,
+  "Negocios": <Briefcase className="w-6 h-6 text-white" />,
+  "Idiomas y cultura": <Globe className="w-6 h-6 text-white" />,
+  "Bienestar": <Activity className="w-6 h-6 text-white" />,
+  "Familia": <Heart className="w-6 h-6 text-white" />,
+  "Recursos Humanos": <Users className="w-6 h-6 text-white" />,
 };
 
 const specialtyBg: Record<string, string> = {
@@ -33,6 +61,20 @@ const specialtyBg: Record<string, string> = {
   Idiomas: "bg-[#556e57]",
   "Imagen Personal": "bg-[#607562]",
   Vocación: "bg-[#4a5c4c]",
+  "Coaching de vida": "bg-[#607562]",
+  "Mindfulness y meditación": "bg-[#4f6651]",
+  "Nutrición": "bg-[#556e57]",
+  "Orientación vocacional": "bg-[#4a5c4c]",
+  "Terapia de pareja": "bg-[#607562]",
+  "Trabajo social": "bg-[#4f6651]",
+  "Salud mental": "bg-[#607562]",
+  "Desarrollo personal": "bg-[#556e57]",
+  "Educación": "bg-[#4a5c4c]",
+  "Negocios": "bg-[#607562]",
+  "Idiomas y cultura": "bg-[#4f6651]",
+  "Bienestar": "bg-[#556e57]",
+  "Familia": "bg-[#607562]",
+  "Recursos Humanos": "bg-[#4a5c4c]",
 };
 
 const specialtyDescriptions: Record<string, string> = {
