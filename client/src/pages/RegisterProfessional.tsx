@@ -411,36 +411,20 @@ export default function RegisterProfessional() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="yearsOfExperience">
-                      <Clock className="w-4 h-4 inline mr-1 text-primary" />
-                      Años de experiencia
-                    </Label>
-                    <Input
-                      id="yearsOfExperience"
-                      type="number"
-                      min="0"
-                      max="60"
-                      placeholder="Ej: 5"
-                      value={form.yearsOfExperience}
-                      onChange={(e) => handleChange("yearsOfExperience", e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="hourlyRate">
-                      <DollarSign className="w-4 h-4 inline mr-1 text-primary" />
-                      Tarifa por sesión (MXN)
-                    </Label>
-                    <Input
-                      id="hourlyRate"
-                      type="number"
-                      min="0"
-                      placeholder="Ej: 800"
-                      value={form.hourlyRate}
-                      onChange={(e) => handleChange("hourlyRate", e.target.value)}
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="yearsOfExperience">
+                    <Clock className="w-4 h-4 inline mr-1 text-primary" />
+                    Años de experiencia
+                  </Label>
+                  <Input
+                    id="yearsOfExperience"
+                    type="number"
+                    min="0"
+                    max="60"
+                    placeholder="Ej: 5"
+                    value={form.yearsOfExperience}
+                    onChange={(e) => handleChange("yearsOfExperience", e.target.value)}
+                  />
                 </div>
 
                 <div className="space-y-2">
