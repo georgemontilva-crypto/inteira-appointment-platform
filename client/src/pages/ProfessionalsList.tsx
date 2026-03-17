@@ -22,7 +22,23 @@ export default function ProfessionalsList() {
     { specialtyId },
     { enabled: specialtyId > 0 }
   );
-  const { data: specialties } = trpc.specialty.getAll.useQuery();
+
+  // Static specialties — shown instantly without waiting for DB
+  const _now = new Date(0);
+  const STATIC_SPECIALTIES = [
+    { id: 1, name: "Psicología", description: "Bienestar mental y emocional con psicólogos certificados.", imageUrl: null, icon: null, color: null, isActive: true, createdAt: _now, updatedAt: _now },
+    { id: 2, name: "Emprendimiento", description: "Asesoría para emprendedores y startups en crecimiento.", imageUrl: null, icon: null, color: null, isActive: true, createdAt: _now, updatedAt: _now },
+    { id: 3, name: "Finanzas", description: "Consultoría financiera personal y empresarial.", imageUrl: null, icon: null, color: null, isActive: true, createdAt: _now, updatedAt: _now },
+    { id: 4, name: "Idiomas", description: "Clases con profesores nativos y certificados.", imageUrl: null, icon: null, color: null, isActive: true, createdAt: _now, updatedAt: _now },
+    { id: 5, name: "Imagen Personal", description: "Consultoría de imagen, estilo y presencia personal.", imageUrl: null, icon: null, color: null, isActive: true, createdAt: _now, updatedAt: _now },
+    { id: 6, name: "Legal", description: "Asesoría legal en diversas áreas del derecho.", imageUrl: null, icon: null, color: null, isActive: true, createdAt: _now, updatedAt: _now },
+    { id: 7, name: "Vocación", description: "Orientación vocacional y desarrollo profesional.", imageUrl: null, icon: null, color: null, isActive: true, createdAt: _now, updatedAt: _now },
+  ];
+
+  const { data: specialties } = trpc.specialty.getAll.useQuery(undefined, {
+    initialData: STATIC_SPECIALTIES,
+    staleTime: 5 * 60 * 1000,
+  });
   const specialty = specialties?.find((s) => s.id === specialtyId);
 
   const filtered = useMemo(() => {

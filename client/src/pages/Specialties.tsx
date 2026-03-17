@@ -45,20 +45,26 @@ const specialtyDescriptions: Record<string, string> = {
   Vocación: "Orientación vocacional y desarrollo profesional.",
 };
 
+// Static fallback — shown instantly, no DB round-trip needed
+const _now = new Date(0);
+const STATIC_SPECIALTIES = [
+  { id: 1, name: "Psicología", description: "Bienestar mental y emocional con psicólogos certificados.", imageUrl: null, icon: null, color: null, isActive: true, createdAt: _now, updatedAt: _now },
+  { id: 2, name: "Emprendimiento", description: "Asesoría para emprendedores y startups en crecimiento.", imageUrl: null, icon: null, color: null, isActive: true, createdAt: _now, updatedAt: _now },
+  { id: 3, name: "Finanzas", description: "Consultoría financiera personal y empresarial.", imageUrl: null, icon: null, color: null, isActive: true, createdAt: _now, updatedAt: _now },
+  { id: 4, name: "Idiomas", description: "Clases con profesores nativos y certificados.", imageUrl: null, icon: null, color: null, isActive: true, createdAt: _now, updatedAt: _now },
+  { id: 5, name: "Imagen Personal", description: "Consultoría de imagen, estilo y presencia personal.", imageUrl: null, icon: null, color: null, isActive: true, createdAt: _now, updatedAt: _now },
+  { id: 6, name: "Legal", description: "Asesoría legal en diversas áreas del derecho.", imageUrl: null, icon: null, color: null, isActive: true, createdAt: _now, updatedAt: _now },
+  { id: 7, name: "Vocación", description: "Orientación vocacional y desarrollo profesional.", imageUrl: null, icon: null, color: null, isActive: true, createdAt: _now, updatedAt: _now },
+];
+
 export default function Specialties() {
-  const { data: specialties, isLoading } = trpc.specialty.getAll.useQuery();
+  // initialData = show static data immediately, update silently when DB responds
+  const { data: specialties } = trpc.specialty.getAll.useQuery(undefined, {
+    initialData: STATIC_SPECIALTIES,
+    staleTime: 5 * 60 * 1000, // 5 min cache
+  });
 
-  const fallback = [
-    { id: 1, name: "Psicología", description: null, imageUrl: null },
-    { id: 2, name: "Emprendimiento", description: null, imageUrl: null },
-    { id: 3, name: "Finanzas", description: null, imageUrl: null },
-    { id: 4, name: "Idiomas", description: null, imageUrl: null },
-    { id: 5, name: "Imagen Personal", description: null, imageUrl: null },
-    { id: 6, name: "Legal", description: null, imageUrl: null },
-    { id: 7, name: "Vocación", description: null, imageUrl: null },
-  ];
-
-  const items = specialties ?? fallback;
+  const items = specialties;
 
   return (
     <div className="min-h-screen bg-background pb-24 md:pb-0">
@@ -84,59 +90,49 @@ export default function Specialties() {
       </div>
 
       <div className="container py-5 md:py-12">
-        {isLoading ? (
-          <div className="grid md:grid-cols-2 gap-3 md:gap-4">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <Card key={i} className="animate-pulse border-border">
-                <CardContent className="p-5 h-24 md:h-28" />
+        <div className="grid md:grid-cols-2 gap-3 md:gap-4">
+          {items.map((specialty) => (
+            <Link key={specialty.id} href={`/especialidades/${specialty.id}`}>
+              <Card className="group cursor-pointer border-border active:scale-[0.99] md:hover:border-primary/40 md:hover:shadow-md transition-all duration-200">
+                <CardContent className="p-4 md:p-5">
+                  <div className="flex items-center gap-3.5 md:gap-4">
+                    {/* Icon */}
+                    <div
+                      className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl ${specialtyBg[specialty.name] ?? "bg-[#607562]"} flex items-center justify-center flex-shrink-0 shadow-sm group-hover:scale-105 transition-transform duration-200`}
+                    >
+                      {specialtyIcon[specialty.name] ?? <Compass className="w-6 h-6 text-white" />}
+                    </div>
+
+                    {/* Text */}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-sm md:text-base font-bold text-foreground mb-0.5" style={{ fontFamily: "Poppins, sans-serif" }}>
+                        {specialty.name}
+                      </h3>
+                      <p className="text-xs md:text-sm text-muted-foreground leading-relaxed line-clamp-2">
+                        {specialty.description ?? specialtyDescriptions[specialty.name] ?? "Consultas especializadas con profesionales certificados."}
+                      </p>
+                    </div>
+
+                    {/* Arrow */}
+                    <ChevronRight className="w-4 h-4 text-muted-foreground/50 flex-shrink-0 md:hidden" />
+                  </div>
+
+                  {/* Desktop bottom row */}
+                  <div className="hidden md:flex items-center justify-between mt-4 pt-3 border-t border-border">
+                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                      <Users className="w-4 h-4 text-primary" />
+                      <span>Especialistas disponibles</span>
+                    </div>
+                    <span className="flex items-center gap-1 text-sm font-medium text-primary group-hover:underline">
+                      Ver profesionales
+                      <ChevronRight className="w-4 h-4" />
+                    </span>
+                  </div>
+                </CardContent>
               </Card>
-            ))}
-          </div>
-        ) : (
-          <div className="grid md:grid-cols-2 gap-3 md:gap-4">
-            {items.map((specialty) => (
-              <Link key={specialty.id} href={`/especialidades/${specialty.id}`}>
-                <Card className="group cursor-pointer border-border active:scale-[0.99] md:hover:border-primary/40 md:hover:shadow-md transition-all duration-200">
-                  <CardContent className="p-4 md:p-5">
-                    <div className="flex items-center gap-3.5 md:gap-4">
-                      {/* Icon */}
-                      <div
-                        className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl ${specialtyBg[specialty.name] ?? "bg-[#607562]"} flex items-center justify-center flex-shrink-0 shadow-sm group-hover:scale-105 transition-transform duration-200`}
-                      >
-                        {specialtyIcon[specialty.name] ?? <Compass className="w-6 h-6 text-white" />}
-                      </div>
-
-                      {/* Text */}
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-sm md:text-base font-bold text-foreground mb-0.5" style={{ fontFamily: "Poppins, sans-serif" }}>
-                          {specialty.name}
-                        </h3>
-                        <p className="text-xs md:text-sm text-muted-foreground leading-relaxed line-clamp-2">
-                          {specialty.description ?? specialtyDescriptions[specialty.name] ?? "Consultas especializadas con profesionales certificados."}
-                        </p>
-                      </div>
-
-                      {/* Arrow */}
-                      <ChevronRight className="w-4 h-4 text-muted-foreground/50 flex-shrink-0 md:hidden" />
-                    </div>
-
-                    {/* Desktop bottom row */}
-                    <div className="hidden md:flex items-center justify-between mt-4 pt-3 border-t border-border">
-                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                        <Users className="w-4 h-4 text-primary" />
-                        <span>Especialistas disponibles</span>
-                      </div>
-                      <span className="flex items-center gap-1 text-sm font-medium text-primary group-hover:underline">
-                        Ver profesionales
-                        <ChevronRight className="w-4 h-4" />
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
-        )}
+            </Link>
+          ))}
+        </div>
       </div>
     </div>
   );
