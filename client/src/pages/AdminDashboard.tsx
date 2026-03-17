@@ -11,7 +11,7 @@ import { es } from "date-fns/locale";
 import {
   Users, CheckCircle2, XCircle, Clock, Shield, Plus,
   Settings, BarChart3, Award, TrendingUp, Calendar,
-  Star, Activity, CreditCard, UserCheck,
+  Star, Activity, CreditCard, UserCheck, RefreshCw, Wrench,
 } from "lucide-react";
 
 // ─── Simple bar chart ────────────────────────────────────────────────────────
@@ -58,7 +58,7 @@ const STATUS_MAP: Record<string, { label: string; cls: string }> = {
 
 export default function AdminDashboard() {
   const { user, isAuthenticated, loading } = useAuth();
-  const [activeTab, setActiveTab] = useState<"overview" | "profesionales" | "especialidades" | "planes">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "profesionales" | "especialidades" | "planes" | "herramientas">("overview");
   const [rejectReason, setRejectReason] = useState<Record<number, string>>({});
   const [newSpecialty, setNewSpecialty] = useState({ name: "", description: "" });
   const [newPlan, setNewPlan] = useState({
@@ -99,6 +99,11 @@ export default function AdminDashboard() {
       toast.success("Especialidad creada");
     },
     onError: () => toast.error("Error al crear la especialidad"),
+  });
+
+  const cronMutation = trpc.admin.runCronJobs.useMutation({
+    onSuccess: (data) => toast.success(data.message),
+    onError: () => toast.error("Error al ejecutar cron jobs"),
   });
 
   const createPlanMutation = trpc.subscriptionPlan.create.useMutation({
@@ -197,6 +202,7 @@ export default function AdminDashboard() {
               { key: "profesionales",   label: "Profesionales",  icon: <Users className="w-4 h-4" /> },
               { key: "especialidades",  label: "Especialidades", icon: <Award className="w-4 h-4" /> },
               { key: "planes",          label: "Planes",         icon: <Settings className="w-4 h-4" /> },
+      { key: "herramientas",    label: "Herramientas",   icon: <Wrench className="w-4 h-4" /> },
             ] as const).map((tab) => (
               <button
                 key={tab.key}
@@ -511,6 +517,63 @@ export default function AdminDashboard() {
                   <Plus className="w-4 h-4 mr-2" />
                   Crear especialidad
                 </Button>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Tab: Herramientas */}
+        {activeTab === "herramientas" && (
+          <div className="space-y-6 max-w-2xl">
+            <h2 className="text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
+              Herramientas del sistema
+            </h2>
+
+            {/* Cron Jobs */}
+            <Card className="border-border">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <RefreshCw className="w-4 h-4 text-primary" />
+                  Cron Jobs manuales
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-start gap-4 p-4 bg-muted/40 rounded-xl">
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <CreditCard className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-sm">Expirar créditos vencidos</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Ejecuta el proceso de expiración de lotes de créditos que han superado su vigencia de 60 días.
+                      Este proceso corre automáticamente cada hora, pero puedes ejecutarlo manualmente si es necesario.
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    className="gradient-brand text-white border-0 flex-shrink-0"
+                    onClick={() => cronMutation.mutate()}
+                    disabled={cronMutation.isPending}
+                  >
+                    {cronMutation.isPending ? (
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <>
+                        <RefreshCw className="w-4 h-4 mr-1" />
+                        Ejecutar
+                      </>
+                    )}
+                  </Button>
+                </div>
+                {cronMutation.data && (
+                  <div className="flex items-center gap-2 text-sm text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-xl p-3">
+                    <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                    <span>{cronMutation.data.message}</span>
+                    <span className="text-xs text-muted-foreground ml-auto">
+                      {new Date(cronMutation.data.executedAt).toLocaleTimeString("es-MX")}
+                    </span>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

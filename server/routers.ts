@@ -15,6 +15,7 @@ import {
   getNextExpirationDate,
   getCreditTransactions,
   addCreditBatch,
+  expireTimedOutBatches,
   CREDIT_COSTS,
   type CreditSource,
 } from "./credits";
@@ -418,6 +419,21 @@ export const appRouter = router({
         }
         return await db.getTopProfessionals(input.limit);
       }),
+
+    // ── Cron Jobs ─────────────────────────────────────────────────────────
+    runCronJobs: protectedProcedure.mutation(async ({ ctx }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "User is not an admin" });
+      }
+      const expiredBatches = await expireTimedOutBatches();
+      return {
+        success: true,
+        expiredBatches,
+        message: `Cron ejecutado correctamente. Lotes expirados: ${expiredBatches}.`,
+        executedAt: new Date().toISOString(),
+      };
+    }),
+
     getPendingProfessionals: protectedProcedure.query(async ({ ctx }) => {
       if (ctx.user.role !== "admin") {
         throw new TRPCError({
