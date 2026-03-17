@@ -10,6 +10,7 @@ import {
   Clock, Zap,
 } from "lucide-react";
 import { format } from "date-fns";
+import { toast } from "sonner";
 import { es } from "date-fns/locale";
 
 export default function Subscription() {
@@ -165,7 +166,7 @@ export default function Subscription() {
                   className="border-red-200 text-red-500 hover:bg-red-50"
                   onClick={() => {
                     // Placeholder — se activará con Stripe
-                    import("sonner").then(({ toast }) => toast.info("La cancelación estará disponible cuando se active Stripe."));
+                    toast.info("La cancelación estará disponible cuando se active Stripe.");
                   }}
                 >
                   Cancelar suscripción
@@ -250,9 +251,7 @@ export default function Subscription() {
                         disabled={isActive}
                         onClick={() => {
                           if (!isActive) {
-                            import("sonner").then(({ toast }) =>
-                              toast.info("Los pagos estarán disponibles cuando se active Stripe.")
-                            );
+                            toast.info("Los pagos estarán disponibles cuando se active Stripe.");
                           }
                         }}
                       >
