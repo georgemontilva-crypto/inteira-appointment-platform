@@ -35,8 +35,8 @@ export default function Login() {
       {/* Header */}
       <header className="px-6 py-5 flex items-center">
         <a href="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl gradient-brand flex items-center justify-center">
-            <span className="text-white font-bold text-sm">I</span>
+          <div className="w-8 h-8 rounded-xl gradient-brand flex items-center justify-center overflow-hidden">
+            <img src="/favicon.png" alt="Inteira" className="w-6 h-6 object-contain" />
           </div>
           <span className="font-bold text-lg" style={{ fontFamily: "Poppins, sans-serif" }}>
             inteira
@@ -51,8 +51,8 @@ export default function Login() {
           <div className="bg-card border border-border rounded-3xl shadow-xl p-8 space-y-6">
             {/* Logo & título */}
             <div className="text-center space-y-2">
-              <div className="w-16 h-16 rounded-2xl gradient-brand flex items-center justify-center mx-auto shadow-lg shadow-primary/30">
-                <span className="text-white font-bold text-2xl" style={{ fontFamily: "Poppins, sans-serif" }}>i</span>
+              <div className="w-16 h-16 rounded-2xl gradient-brand flex items-center justify-center mx-auto shadow-lg shadow-primary/30 overflow-hidden">
+                <img src="/favicon.png" alt="Inteira" className="w-12 h-12 object-contain" />
               </div>
               <h1 className="text-2xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
                 Bienvenido a Inteira
