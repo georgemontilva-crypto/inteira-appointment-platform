@@ -24,9 +24,11 @@ export function getSessionCookieOptions(
   return {
     httpOnly: true,
     path: "/",
-    // sameSite "lax" funciona en HTTP (desarrollo) y HTTPS (producción)
-    // sameSite "none" requiere secure=true obligatoriamente
-    sameSite: secure ? "none" : "lax",
+    // "lax" allows cookies to be sent on top-level navigations (OAuth redirects).
+    // "none" requires secure=true AND causes issues with OAuth redirect flows in
+    // some browsers (Chrome, Safari) because the cookie is set in a cross-site
+    // redirect context and then immediately lost on the next same-site request.
+    sameSite: "lax",
     secure,
   };
 }

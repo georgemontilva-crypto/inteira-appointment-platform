@@ -122,7 +122,22 @@ export function registerOAuthRoutes(app: Express) {
       const cookieOptions = getSessionCookieOptions(req);
       res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
 
-      return res.redirect(302, returnTo);
+      // Use an HTML page with meta-refresh instead of a direct 302 redirect.
+      // This ensures the browser persists the Set-Cookie header before navigating,
+      // which some browsers (Safari, Chrome) drop when following a cross-origin redirect.
+      const safeReturnTo = returnTo.startsWith("/") ? returnTo : "/dashboard";
+      return res.send(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="refresh" content="0;url=${safeReturnTo}">
+  <title>Redirigiendo...</title>
+</head>
+<body>
+  <script>window.location.replace(${JSON.stringify(safeReturnTo)});</script>
+  <p>Redirigiendo...</p>
+</body>
+</html>`);
     } catch (err) {
       console.error("[Google OAuth] Callback failed:", err);
       return res.redirect("/?error=auth_failed");
