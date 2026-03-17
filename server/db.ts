@@ -53,48 +53,35 @@ export async function upsertUser(user: InsertUser): Promise<void> {
   }
 
   try {
-    const values: InsertUser = {
-      openId: user.openId,
-      email: user.email,
-    };
-    const updateSet: Record<string, unknown> = {};
+    // Use raw SQL to avoid Drizzle including columns that may not exist in production DB yet.
+    // Only use the core columns that are guaranteed to exist.
+    const now = new Date().toISOString().slice(0, 19).replace("T", " ");
+    const name = user.name ?? null;
+    const lastSignedIn = user.lastSignedIn
+      ? new Date(user.lastSignedIn).toISOString().slice(0, 19).replace("T", " ")
+      : now;
 
-    const textFields = ["name", "loginMethod"] as const;
-    type TextField = (typeof textFields)[number];
+    // Determine role: admin if owner, else default 'user'
+    const role = user.role ?? (user.openId === ENV.ownerOpenId ? "admin" : "user");
 
-    const assignNullable = (field: TextField) => {
-      const value = user[field];
-      if (value === undefined) return;
-      const normalized = value ?? null;
-      values[field] = normalized;
-      updateSet[field] = normalized;
-    };
+    // Escape single quotes in string values
+    const esc = (v: string | null) => v === null ? "NULL" : `'${String(v).replace(/'/g, "''")}'`;
 
-    textFields.forEach(assignNullable);
+    const insertSQL = [
+      "INSERT INTO `users` (`openId`, `email`, `name`, `lastSignedIn`, `createdAt`, `updatedAt`)",
+      `VALUES (${esc(user.openId)}, ${esc(user.email)}, ${esc(name)}, '${lastSignedIn}', '${now}', '${now}')`,
+      "ON DUPLICATE KEY UPDATE",
+      `\`name\` = ${esc(name)}, \`lastSignedIn\` = '${lastSignedIn}', \`updatedAt\` = '${now}'`,
+    ].join(" ");
 
-    if (user.lastSignedIn !== undefined) {
-      values.lastSignedIn = user.lastSignedIn;
-      updateSet.lastSignedIn = user.lastSignedIn;
+    await db.execute(insertSQL);
+
+    // Try to update role separately (column may or may not exist)
+    try {
+      await db.execute(`UPDATE \`users\` SET \`role\` = '${role}' WHERE \`openId\` = ${esc(user.openId)} AND \`role\` = 'user'`);
+    } catch {
+      // role column may not exist yet, ignore
     }
-    if (user.role !== undefined) {
-      values.role = user.role;
-      updateSet.role = user.role;
-    } else if (user.openId === ENV.ownerOpenId) {
-      values.role = "admin";
-      updateSet.role = "admin";
-    }
-
-    if (!values.lastSignedIn) {
-      values.lastSignedIn = new Date();
-    }
-
-    if (Object.keys(updateSet).length === 0) {
-      updateSet.lastSignedIn = new Date();
-    }
-
-    await db.insert(users).values(values).onDuplicateKeyUpdate({
-      set: updateSet,
-    });
   } catch (error) {
     console.error("[Database] Failed to upsert user:", error);
     throw error;
