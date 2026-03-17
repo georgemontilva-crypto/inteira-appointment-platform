@@ -1,5 +1,6 @@
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -61,19 +62,55 @@ function BatchStatusBadge({ batch }: { batch: { remaining: number; expiresAt: st
   return <Badge className="bg-emerald-100 text-emerald-700 border-0 text-[10px]">Activo</Badge>;
 }
 
+async function redirectToStripeCheckout(productType: string, userId: number) {
+  try {
+    const res = await fetch("/api/stripe/create-checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ productType, userId }),
+    });
+    const data = await res.json();
+    if (data.url) {
+      window.location.href = data.url;
+    } else {
+      throw new Error(data.error ?? "Error desconocido");
+    }
+  } catch (err) {
+    toast.error("Error al iniciar el pago. Intenta de nuevo.");
+    console.error("[Stripe] Error:", err);
+  }
+}
+
 export default function WalletPage() {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, user } = useAuth();
+  const [checkingPayment, setCheckingPayment] = useState(false);
   const { data: wallet, isLoading, refetch } = trpc.user.getWallet.useQuery(undefined, {
     enabled: isAuthenticated,
   });
 
-  const buySession = trpc.user.buyIndividualSession.useMutation({
-    onSuccess: (data) => {
-      toast.success(data.message);
-      refetch();
-    },
-    onError: () => toast.error("Error al procesar la compra. Intenta de nuevo."),
-  });
+  // Detectar retorno de Stripe con pago exitoso
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("payment") === "success") {
+      toast.success("¡Pago exitoso! Tus créditos serán acreditados en breve.");
+      // Limpiar el parámetro de la URL
+      window.history.replaceState({}, "", window.location.pathname);
+      // Refrescar wallet después de un momento
+      setTimeout(() => refetch(), 2000);
+    } else if (params.get("payment") === "cancelled") {
+      toast.info("Pago cancelado.");
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
+
+  const [buyingSession, setBuyingSession] = useState<string | null>(null);
+
+  const handleBuySession = async (sessionType: string) => {
+    if (!user?.id) return;
+    setBuyingSession(sessionType);
+    await redirectToStripeCheckout(sessionType, user.id);
+    setBuyingSession(null);
+  };
 
   if (loading || isLoading) {
     return (
@@ -196,23 +233,23 @@ export default function WalletPage() {
             </CardHeader>
             <CardContent className="space-y-2">
               <Button
-                onClick={() => buySession.mutate({ sessionType: "individual_basic" })}
-                disabled={buySession.isPending}
+                onClick={() => handleBuySession("individual_basic")}
+                disabled={buyingSession !== null}
                 variant="outline"
                 className="w-full justify-between border-emerald-200 text-emerald-700 hover:bg-emerald-50 text-xs active:scale-95 transition-transform"
                 size="sm"
               >
-                <span>Sesión Básica</span>
+                <span>{buyingSession === "individual_basic" ? "Redirigiendo..." : "Sesión Básica"}</span>
                 <span className="font-bold">$350 MXN</span>
               </Button>
               <Button
-                onClick={() => buySession.mutate({ sessionType: "individual_premium" })}
-                disabled={buySession.isPending}
+                onClick={() => handleBuySession("individual_premium")}
+                disabled={buyingSession !== null}
                 variant="outline"
                 className="w-full justify-between border-primary/30 text-primary hover:bg-primary/5 text-xs active:scale-95 transition-transform"
                 size="sm"
               >
-                <span>Sesión Premium</span>
+                <span>{buyingSession === "individual_premium" ? "Redirigiendo..." : "Sesión Premium"}</span>
                 <span className="font-bold">$1,250 MXN</span>
               </Button>
               <Link href="/planes">
@@ -220,8 +257,9 @@ export default function WalletPage() {
                   Ver planes mensuales
                 </Button>
               </Link>
-              <p className="text-[10px] text-muted-foreground text-center pt-1">
-                Pago con Stripe disponible próximamente
+              <p className="text-[10px] text-muted-foreground text-center pt-1 flex items-center justify-center gap-1">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm-1-7v2h2v-2h-2zm0-8v6h2V7h-2z" fill="currentColor"/></svg>
+                Pago seguro con Stripe
               </p>
             </CardContent>
           </Card>

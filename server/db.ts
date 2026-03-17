@@ -454,6 +454,38 @@ export async function createEmailLog(data: Partial<EmailLog>) {
 }
 
 // Payment functions
+export async function getPaymentByStripeId(stripePaymentId: string) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const results = await db
+    .select()
+    .from(payments)
+    .where(eq(payments.stripePaymentId, stripePaymentId))
+    .limit(1);
+  return results[0] ?? null;
+}
+
+export async function recordStripePayment(data: {
+  userId: number;
+  stripePaymentId: string;
+  amount: string;
+  currency: string;
+  productType: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.insert(payments).values({
+    userId: data.userId,
+    stripePaymentId: data.stripePaymentId,
+    amount: data.amount,
+    currency: data.currency,
+    status: "succeeded",
+    paymentType: "subscription",
+  } as any);
+}
+
 export async function createPayment(data: Partial<Payment>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");

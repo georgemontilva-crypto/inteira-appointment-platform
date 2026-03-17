@@ -9,6 +9,7 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { expireTimedOutBatches } from "../credits";
 import { storagePut } from "../storage";
+import { registerStripeRoutes } from "../stripe";
 import { sdk } from "./sdk";
 
 function isPortAvailable(port: number): Promise<boolean> {
@@ -38,6 +39,9 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
+
+  // Stripe payment routes
+  registerStripeRoutes(app);
 
   // ─── File upload: professional profile photo ─────────────────────────────────
   app.post("/api/upload/professional-photo", async (req, res) => {
