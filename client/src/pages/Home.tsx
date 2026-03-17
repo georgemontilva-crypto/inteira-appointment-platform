@@ -412,7 +412,7 @@ export default function Home() {
                     </Card>
                   ))}
                 </div>
-                <div className="absolute bottom-4 left-4 bg-white rounded-2xl shadow-xl border border-border p-4 max-w-xs">
+                <div className="absolute -bottom-6 left-4 bg-white rounded-2xl shadow-xl border border-border p-4 max-w-xs">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full gradient-brand flex items-center justify-center flex-shrink-0">
                       <Video className="w-5 h-5 text-white" />
