@@ -50,7 +50,7 @@ async function getUsersColumns(db: ReturnType<typeof drizzle>): Promise<Set<stri
     const [rows] = await db.execute("DESCRIBE `users`") as any;
     const cols = Array.isArray(rows) ? rows : [rows];
     _usersColumns = new Set(cols.map((r: any) => r.Field ?? r.field ?? Object.values(r)[0]));
-    console.log("[Database] users columns:", [..._usersColumns].join(", "));
+    console.log("[Database] users columns:", Array.from(_usersColumns).join(", "));
   } catch {
     // Fallback: assume only the most basic columns exist
     _usersColumns = new Set(["id", "openId", "email", "name"]);
