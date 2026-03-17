@@ -140,33 +140,42 @@ export async function getUserByOpenId(openId: string) {
     return undefined;
   }
 
-  const result = await db
-    .select()
-    .from(users)
-    .where(eq(users.openId, openId))
-    .limit(1);
-
-  return result.length > 0 ? result[0] : undefined;
+  try {
+    const esc = (v: string) => `'${v.replace(/'/g, "''")}'`;
+    const [rows] = await db.execute(`SELECT * FROM \`users\` WHERE \`openId\` = ${esc(openId)} LIMIT 1`) as any;
+    const arr = Array.isArray(rows) ? rows : [];
+    return arr.length > 0 ? arr[0] : undefined;
+  } catch (error) {
+    console.error("[Database] getUserByOpenId error:", error);
+    return undefined;
+  }
 }
 
 export async function getUserById(id: number) {
   const db = await getDb();
   if (!db) return undefined;
-
-  const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
-  return result.length > 0 ? result[0] : undefined;
+  try {
+    const [rows] = await db.execute(`SELECT * FROM \`users\` WHERE \`id\` = ${Number(id)} LIMIT 1`) as any;
+    const arr = Array.isArray(rows) ? rows : [];
+    return arr.length > 0 ? arr[0] : undefined;
+  } catch (error) {
+    console.error("[Database] getUserById error:", error);
+    return undefined;
+  }
 }
 
 export async function getUserByEmail(email: string) {
   const db = await getDb();
   if (!db) return undefined;
-
-  const result = await db
-    .select()
-    .from(users)
-    .where(eq(users.email, email))
-    .limit(1);
-  return result.length > 0 ? result[0] : undefined;
+  try {
+    const esc = (v: string) => `'${v.replace(/'/g, "''")}'`;
+    const [rows] = await db.execute(`SELECT * FROM \`users\` WHERE \`email\` = ${esc(email)} LIMIT 1`) as any;
+    const arr = Array.isArray(rows) ? rows : [];
+    return arr.length > 0 ? arr[0] : undefined;
+  } catch (error) {
+    console.error("[Database] getUserByEmail error:", error);
+    return undefined;
+  }
 }
 
 // Professional functions
@@ -273,21 +282,27 @@ export async function rejectProfessional(
 export async function getAllSpecialties() {
   const db = await getDb();
   if (!db) return [];
-
-  return await db.select().from(specialties);
+  try {
+    // Use SELECT * to avoid errors when columns in schema don't match production DB
+    const [rows] = await db.execute("SELECT * FROM `specialties` ORDER BY `name` ASC") as any;
+    return Array.isArray(rows) ? rows : [];
+  } catch (error) {
+    console.error("[Database] getAllSpecialties error:", error);
+    return [];
+  }
 }
 
 export async function getSpecialtyById(id: number) {
   const db = await getDb();
   if (!db) return undefined;
-
-  const result = await db
-    .select()
-    .from(specialties)
-    .where(eq(specialties.id, id))
-    .limit(1);
-
-  return result.length > 0 ? result[0] : undefined;
+  try {
+    const [rows] = await db.execute(`SELECT * FROM \`specialties\` WHERE \`id\` = ${Number(id)} LIMIT 1`) as any;
+    const arr = Array.isArray(rows) ? rows : [];
+    return arr.length > 0 ? arr[0] : undefined;
+  } catch (error) {
+    console.error("[Database] getSpecialtyById error:", error);
+    return undefined;
+  }
 }
 
 export async function createSpecialty(data: Partial<Specialty>) {
@@ -301,11 +316,19 @@ export async function createSpecialty(data: Partial<Specialty>) {
 export async function getAllSubscriptionPlans() {
   const db = await getDb();
   if (!db) return [];
-
-  return await db
-    .select()
-    .from(subscriptionPlans)
-    .where(eq(subscriptionPlans.isActive, true));
+  try {
+    const [rows] = await db.execute("SELECT * FROM `subscriptionPlans` WHERE `isActive` = 1") as any;
+    return Array.isArray(rows) ? rows : [];
+  } catch (error) {
+    // Try without isActive filter if column doesn't exist
+    try {
+      const [rows] = await db.execute("SELECT * FROM `subscriptionPlans`") as any;
+      return Array.isArray(rows) ? rows : [];
+    } catch {
+      console.error("[Database] getAllSubscriptionPlans error:", error);
+      return [];
+    }
+  }
 }
 
 export async function getSubscriptionPlanById(id: number) {

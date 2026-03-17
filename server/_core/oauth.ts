@@ -120,7 +120,10 @@ export function registerOAuthRoutes(app: Express) {
       });
 
       const cookieOptions = getSessionCookieOptions(req);
+      console.log("[Google OAuth] Setting cookie:", COOKIE_NAME, "options:", JSON.stringify(cookieOptions));
       res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+      console.log("[Google OAuth] Cookie set, redirecting to:", returnTo);
+      console.log("[Google OAuth] Response headers:", JSON.stringify(res.getHeaders()));
 
       // Use an HTML page with meta-refresh instead of a direct 302 redirect.
       // This ensures the browser persists the Set-Cookie header before navigating,
