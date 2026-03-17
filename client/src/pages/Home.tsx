@@ -388,9 +388,9 @@ export default function Home() {
                         Desktop: grid
           ══════════════════════════════════════════ */}
       <section id="especialidades" className="py-8 md:py-20 bg-secondary/20 md:bg-secondary/30">
-        <div className="md:container">
+        <div className="container">
           {/* Section header */}
-          <div className="px-5 md:px-0 mb-5 md:mb-12 md:text-center">
+          <div className="mb-5 md:mb-12 text-center">
             <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-1 md:mb-4">
               Especialidades
             </p>
@@ -423,7 +423,7 @@ export default function Home() {
           </div>
 
           {/* Desktop: grid */}
-          <div className="hidden md:grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 container">
+          <div className="hidden md:grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
             {displaySpecialties.map((specialty) => (
               <Link key={specialty.id} href={`/especialidades/${specialty.id}`}>
                 <Card className="group cursor-pointer border-border hover:border-primary/30 hover:shadow-md transition-all duration-200 hover:-translate-y-0.5">
@@ -442,7 +442,7 @@ export default function Home() {
             ))}
           </div>
 
-          <div className="text-center mt-5 md:mt-8 px-5 md:px-0">
+          <div className="text-center mt-5 md:mt-8">
             <Link href="/especialidades">
               <Button variant="outline" className="w-full md:w-auto border-primary/30 text-primary hover:bg-primary/5">
                 Ver todos los especialistas
@@ -459,7 +459,7 @@ export default function Home() {
           ══════════════════════════════════════════ */}
       <section id="como-funciona" className="py-8 md:py-20">
         <div className="container">
-          <div className="mb-6 md:mb-12 md:text-center">
+          <div className="mb-6 md:mb-12 text-center">
             <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-1 md:mb-4">
               Proceso simple
             </p>
@@ -524,7 +524,7 @@ export default function Home() {
           ══════════════════════════════════════════ */}
       <section id="planes" className="py-8 md:py-20 bg-secondary/20 md:bg-secondary/30">
         <div className="container">
-          <div className="mb-6 md:mb-12 md:text-center">
+          <div className="mb-6 md:mb-12 text-center">
             <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-1 md:mb-4">
               Planes y precios
             </p>
@@ -659,8 +659,8 @@ export default function Home() {
           TESTIMONIALS — Mobile: horizontal scroll
           ══════════════════════════════════════════ */}
       <section className="py-8 md:py-20">
-        <div className="md:container">
-          <div className="px-5 md:px-0 mb-5 md:mb-12 md:text-center">
+        <div className="container">
+          <div className="mb-5 md:mb-12 text-center">
             <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-1 md:mb-4">
               Testimonios
             </p>
@@ -697,7 +697,7 @@ export default function Home() {
           </div>
 
           {/* Desktop: grid */}
-          <div className="hidden md:grid md:grid-cols-3 gap-6 container">
+          <div className="hidden md:grid md:grid-cols-3 gap-6">
             {testimonials.map((t, i) => (
               <Card key={i} className="border-border hover:shadow-md transition-shadow">
                 <CardContent className="p-6">
@@ -736,10 +736,10 @@ export default function Home() {
               <div className="absolute bottom-0 left-0 w-48 h-48 bg-accent rounded-full blur-3xl" />
             </div>
             <div className="relative z-10">
-              <h2 className="text-2xl md:text-4xl font-bold mb-3 md:mb-4" style={{ fontFamily: "Poppins, sans-serif" }}>
+              <h2 className="text-2xl md:text-4xl font-bold mb-3 md:mb-4 text-[#F5F0E8]" style={{ fontFamily: "Poppins, sans-serif" }}>
                 ¿Listo para tu primera consulta?
               </h2>
-              <p className="text-white/80 text-sm md:text-lg mb-6 md:mb-8 max-w-xl mx-auto">
+              <p className="text-[#F5F0E8]/80 text-sm md:text-lg mb-6 md:mb-8 max-w-xl mx-auto">
                 Únete a miles de personas que ya confían en Inteira para conectar con especialistas de calidad.
               </p>
               <a href={getLoginUrl()}>
