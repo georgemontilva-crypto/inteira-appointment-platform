@@ -20,6 +20,7 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import UserProfile from "./pages/UserProfile";
 import Subscription from "./pages/Subscription";
 import MobileNav from "./components/MobileNav";
+import Login from "./pages/Login";
 
 function Router() {
   return (
@@ -54,6 +55,9 @@ function Router() {
       <Route path="/dashboard" component={UserDashboard} />
       <Route path="/panel-profesional" component={ProfessionalDashboard} />
       <Route path="/admin" component={AdminDashboard} />
+
+      {/* Auth */}
+      <Route path="/login" component={Login} />
 
       {/* Fallback */}
       <Route path="/404" component={NotFound} />
