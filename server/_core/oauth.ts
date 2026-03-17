@@ -111,6 +111,7 @@ export function registerOAuthRoutes(app: Express) {
         name: userInfo.name ?? null,
         loginMethod: "google",
         lastSignedIn: new Date(),
+        profileImage: userInfo.picture ?? null,
       });
 
       // 4. Crear sesión JWT

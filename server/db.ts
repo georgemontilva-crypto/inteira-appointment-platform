@@ -106,6 +106,18 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       insertCols.push("loginMethod"); insertVals.push(esc(user.loginMethod ?? null));
       updateParts.push(`\`loginMethod\` = ${esc(user.loginMethod ?? null)}`);
     }
+    // Support both profileImage and avatarUrl column names (schema drift)
+    const profileImageVal = (user as any).profileImage ?? null;
+    if (profileImageVal !== null) {
+      if (cols.has("profileImage")) {
+        insertCols.push("profileImage"); insertVals.push(esc(profileImageVal));
+        updateParts.push(`\`profileImage\` = ${esc(profileImageVal)}`);
+      }
+      if (cols.has("avatarUrl")) {
+        insertCols.push("avatarUrl"); insertVals.push(esc(profileImageVal));
+        updateParts.push(`\`avatarUrl\` = ${esc(profileImageVal)}`);
+      }
+    }
 
     if (updateParts.length === 0) {
       updateParts.push(`\`email\` = ${esc(user.email)}`);

@@ -222,9 +222,14 @@ export default function ProfessionalDashboard() {
             <div className="flex items-center gap-4">
               {/* Foto de perfil con botón de cambio */}
               <div className="relative group">
-                <div className="w-14 h-14 rounded-2xl overflow-hidden flex-shrink-0">
-                  {profile.profilePhoto ? (
-                    <img src={profile.profilePhoto} alt={user?.name ?? "Profesional"} className="w-full h-full object-cover" />
+<div className="w-14 h-14 rounded-2xl overflow-hidden flex-shrink-0">
+                  {profile.profilePhoto || (user as any)?.avatarUrl || (user as any)?.profileImage ? (
+                    <img
+                      src={profile.profilePhoto ?? (user as any)?.avatarUrl ?? (user as any)?.profileImage}
+                      alt={user?.name ?? "Profesional"}
+                      className="w-full h-full object-cover"
+                      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                    />
                   ) : (
                     <div className="w-full h-full bg-white/20 flex items-center justify-center text-2xl font-bold">
                       {user?.name?.charAt(0) ?? "P"}

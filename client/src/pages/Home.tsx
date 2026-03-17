@@ -180,9 +180,18 @@ export default function Home() {
                   <DropdownMenuTrigger asChild>
                     <button className="flex items-center gap-2 rounded-full pl-1 pr-2 py-1 hover:bg-muted transition-colors active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary">
                       {/* Avatar circle */}
-                      <div className="w-8 h-8 rounded-full gradient-brand flex items-center justify-center text-white text-xs font-bold flex-shrink-0 shadow-sm">
-                        {initials}
-                      </div>
+                      {(user as any)?.avatarUrl || (user as any)?.profileImage ? (
+                        <img
+                          src={(user as any).avatarUrl ?? (user as any).profileImage}
+                          alt={user?.name ?? "Avatar"}
+                          className="w-8 h-8 rounded-full object-cover flex-shrink-0 shadow-sm"
+                          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                        />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full gradient-brand flex items-center justify-center text-white text-xs font-bold flex-shrink-0 shadow-sm">
+                          {initials}
+                        </div>
+                      )}
                       {/* Name — desktop only */}
                       <span className="hidden md:block text-sm font-medium text-foreground max-w-[100px] truncate">
                         {user?.name?.split(" ")[0] ?? "Mi cuenta"}
