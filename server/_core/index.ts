@@ -36,6 +36,7 @@ async function runStartupMigrations() {
     const { getDb } = await import("../db");
     const db = await getDb();
     if (!db) return;
+
     // Ensure blockedDays table exists (migration 0007)
     const createBlockedDaysSQL = [
       "CREATE TABLE IF NOT EXISTS `blockedDays` (",
@@ -49,6 +50,26 @@ async function runStartupMigrations() {
     ].join(" ");
     await db.execute(createBlockedDaysSQL);
     console.log("[Migration] blockedDays table ready");
+
+    // Ensure users table has all required columns (ALTER TABLE IF NOT EXISTS column)
+    const userColumnMigrations = [
+      "ALTER TABLE `users` ADD COLUMN IF NOT EXISTS `loginMethod` varchar(64) NULL",
+      "ALTER TABLE `users` ADD COLUMN IF NOT EXISTS `phone` varchar(20) NULL",
+      "ALTER TABLE `users` ADD COLUMN IF NOT EXISTS `profileImage` text NULL",
+      "ALTER TABLE `users` ADD COLUMN IF NOT EXISTS `bio` longtext NULL",
+      "ALTER TABLE `users` ADD COLUMN IF NOT EXISTS `role` enum('user','professional','admin') NOT NULL DEFAULT 'user'",
+    ];
+    for (const sql of userColumnMigrations) {
+      try {
+        await db.execute(sql);
+      } catch (colErr: any) {
+        // Ignore duplicate column errors (MySQL 8 may not support IF NOT EXISTS on some versions)
+        if (!String(colErr?.message).includes("Duplicate column")) {
+          console.warn("[Migration] Column migration warning:", colErr?.message);
+        }
+      }
+    }
+    console.log("[Migration] users table columns ready");
   } catch (err) {
     console.error("[Migration] Startup migration failed:", err);
   }
