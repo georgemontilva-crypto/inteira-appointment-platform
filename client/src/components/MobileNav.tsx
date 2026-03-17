@@ -9,13 +9,16 @@ const leftItems = [
 ];
 
 const rightItems = [
-  { label: "Citas", href: "/dashboard", icon: Calendar, authRequired: true },
-  { label: "Perfil", href: "/perfil", icon: User, authRequired: true },
+  { label: "Citas", href: "/dashboard", icon: Calendar, authRequired: false },
+  { label: "Perfil", href: "/perfil", icon: User, authRequired: false },
 ];
 
 export default function MobileNav() {
   const [location, navigate] = useLocation();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
+
+  // No mostrar el menú si no hay sesión activa
+  if (loading || !isAuthenticated) return null;
 
   const isActive = (href: string) => {
     if (href === "/") return location === "/";
