@@ -803,6 +803,55 @@ export default function Home() {
       </section>
 
       {/* ══════════════════════════════════════════
+          CTA PROFESIONALES
+          ══════════════════════════════════════════ */}
+      <section className="py-8 md:py-20 bg-secondary/20 md:bg-secondary/30">
+        <div className="container">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-8 md:gap-12">
+            {/* Texto izquierda */}
+            <div className="text-center md:text-left max-w-xl">
+              <span className="text-xs font-semibold tracking-widest text-primary uppercase mb-3 block">Para profesionales</span>
+              <h2 className="text-2xl md:text-4xl font-bold text-foreground mb-3 md:mb-4" style={{ fontFamily: "Poppins, sans-serif" }}>
+                ¿Eres especialista? <br className="hidden md:block" />
+                <span className="text-primary">Únete a Inteira</span>
+              </h2>
+              <p className="text-muted-foreground text-sm md:text-base mb-6 md:mb-8">
+                Comparte tu conocimiento, amplía tu cartera de clientes y gestiona tus citas desde un solo lugar.
+                Más de <strong>500 profesionales</strong> ya confían en nuestra plataforma.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center md:justify-start">
+                <Link href="/registro-profesional">
+                  <Button size="lg" className="bg-primary text-white hover:bg-primary/90 font-semibold px-8 shadow-md active:scale-95 transition-transform w-full sm:w-auto">
+                    Registrarme como profesional
+                    <ArrowRight className="ml-2 w-4 h-4" />
+                  </Button>
+                </Link>
+              </div>
+            </div>
+            {/* Beneficios derecha */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full md:max-w-sm">
+              {[
+                { icon: <Calendar className="w-5 h-5 text-primary" />, title: "Gestión de agenda", desc: "Controla tu disponibilidad y citas fácilmente" },
+                { icon: <Users className="w-5 h-5 text-primary" />, title: "Más clientes", desc: "Accede a miles de usuarios que buscan tu especialidad" },
+                { icon: <Shield className="w-5 h-5 text-primary" />, title: "Perfil verificado", desc: "Genera confianza con tu credencial profesional" },
+                { icon: <Award className="w-5 h-5 text-primary" />, title: "Reseñas reales", desc: "Construye tu reputación con opiniones verificadas" },
+              ].map((item, i) => (
+                <div key={i} className="bg-white rounded-xl p-4 shadow-sm border border-border/50 flex gap-3 items-start">
+                  <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    {item.icon}
+                  </div>
+                  <div>
+                    <p className="font-semibold text-sm text-foreground">{item.title}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{item.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════
           FOOTER — Mobile: compact, Desktop: full
           ══════════════════════════════════════════ */}
       <footer className="py-8 md:py-12" style={{ backgroundColor: "#607562" }}>
