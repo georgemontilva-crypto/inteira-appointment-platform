@@ -51,24 +51,46 @@ async function runStartupMigrations() {
     await db.execute(createBlockedDaysSQL);
     console.log("[Migration] blockedDays table ready");
 
-    // Ensure users table has all required columns (ALTER TABLE IF NOT EXISTS column)
-    const userColumnMigrations = [
-      "ALTER TABLE `users` ADD COLUMN IF NOT EXISTS `loginMethod` varchar(64) NULL",
-      "ALTER TABLE `users` ADD COLUMN IF NOT EXISTS `phone` varchar(20) NULL",
-      "ALTER TABLE `users` ADD COLUMN IF NOT EXISTS `profileImage` text NULL",
-      "ALTER TABLE `users` ADD COLUMN IF NOT EXISTS `bio` longtext NULL",
-      "ALTER TABLE `users` ADD COLUMN IF NOT EXISTS `role` enum('user','professional','admin') NOT NULL DEFAULT 'user'",
+    // Ensure users table has all required columns
+    // Use INFORMATION_SCHEMA to check before adding (MySQL 5.x doesn't support IF NOT EXISTS)
+    const columnsToAdd: Array<{ name: string; definition: string }> = [
+      { name: "loginMethod", definition: "varchar(64) NULL" },
+      { name: "phone",       definition: "varchar(20) NULL" },
+      { name: "profileImage",definition: "text NULL" },
+      { name: "bio",         definition: "longtext NULL" },
     ];
-    for (const sql of userColumnMigrations) {
+
+    // Get database name from connection
+    const [dbNameRows] = await db.execute("SELECT DATABASE() as dbName") as any;
+    const dbName = Array.isArray(dbNameRows) ? dbNameRows[0]?.dbName : dbNameRows?.dbName;
+
+    for (const col of columnsToAdd) {
       try {
-        await db.execute(sql);
-      } catch (colErr: any) {
-        // Ignore duplicate column errors (MySQL 8 may not support IF NOT EXISTS on some versions)
-        if (!String(colErr?.message).includes("Duplicate column")) {
-          console.warn("[Migration] Column migration warning:", colErr?.message);
+        const checkSQL = `SELECT COUNT(*) as cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = '${dbName}' AND TABLE_NAME = 'users' AND COLUMN_NAME = '${col.name}'`;
+        const [rows] = await db.execute(checkSQL) as any;
+        const count = Array.isArray(rows) ? rows[0]?.cnt : rows?.cnt;
+        if (!count || Number(count) === 0) {
+          await db.execute(`ALTER TABLE \`users\` ADD COLUMN \`${col.name}\` ${col.definition}`);
+          console.log(`[Migration] Added column users.${col.name}`);
         }
+      } catch (colErr: any) {
+        console.warn(`[Migration] Could not add column ${col.name}:`, colErr?.message);
       }
     }
+
+    // Ensure role column exists with correct enum
+    try {
+      const checkRoleSQL = `SELECT COUNT(*) as cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = '${dbName}' AND TABLE_NAME = 'users' AND COLUMN_NAME = 'role'`;
+      const [roleRows] = await db.execute(checkRoleSQL) as any;
+      const roleCount = Array.isArray(roleRows) ? roleRows[0]?.cnt : roleRows?.cnt;
+      if (!roleCount || Number(roleCount) === 0) {
+        await db.execute("ALTER TABLE `users` ADD COLUMN `role` enum('user','professional','admin') NOT NULL DEFAULT 'user'");
+        console.log("[Migration] Added column users.role");
+      }
+    } catch (roleErr: any) {
+      console.warn("[Migration] Could not add role column:", roleErr?.message);
+    }
+
     console.log("[Migration] users table columns ready");
   } catch (err) {
     console.error("[Migration] Startup migration failed:", err);
