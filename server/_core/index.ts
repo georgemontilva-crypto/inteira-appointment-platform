@@ -31,12 +31,37 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
   throw new Error(`No available port found starting from ${startPort}`);
 }
 
+async function runStartupMigrations() {
+  try {
+    const { getDb } = await import("../db");
+    const db = await getDb();
+    if (!db) return;
+    // Ensure blockedDays table exists (migration 0007)
+    const createBlockedDaysSQL = [
+      "CREATE TABLE IF NOT EXISTS `blockedDays` (",
+      "  `id` int AUTO_INCREMENT NOT NULL,",
+      "  `professionalId` int NOT NULL,",
+      "  `blockedDate` varchar(10) NOT NULL,",
+      "  `reason` varchar(255),",
+      "  `createdAt` timestamp NOT NULL DEFAULT (now()),",
+      "  CONSTRAINT `blockedDays_id` PRIMARY KEY(`id`)",
+      ")",
+    ].join(" ");
+    await db.execute(createBlockedDaysSQL);
+    console.log("[Migration] blockedDays table ready");
+  } catch (err) {
+    console.error("[Migration] Startup migration failed:", err);
+  }
+}
+
 async function startServer() {
   const app = express();
   const server = createServer(app);
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
+  // Run startup migrations
+  await runStartupMigrations();
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
 

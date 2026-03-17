@@ -19,7 +19,7 @@ import { addCreditBatch, CREDIT_COSTS, type CreditSource } from "./credits";
 function getStripe(): Stripe {
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key) throw new Error("STRIPE_SECRET_KEY no está configurado");
-  return new Stripe(key, { apiVersion: "2025-01-27.acacia" });
+  return new Stripe(key, { apiVersion: "2026-02-25.clover" });
 }
 
 // Precios en centavos de MXN (1 crédito = 1 MXN)

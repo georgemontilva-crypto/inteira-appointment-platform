@@ -339,6 +339,98 @@ export const appRouter = router({
           : 0;
         return { ...professional, user, reviews, avgRating };
       }),
+
+    updatePhoto: protectedProcedure
+      .input(z.object({ photoUrl: z.string().url() }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "professional") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "User is not a professional" });
+        }
+        const professional = await db.getProfessionalByUserId(ctx.user.id);
+        if (!professional) throw new TRPCError({ code: "NOT_FOUND", message: "Professional profile not found" });
+        const dbInstance = await db.getDb();
+        if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const { professionals } = await import("../drizzle/schema");
+        const { eq } = await import("drizzle-orm");
+        await dbInstance.update(professionals).set({
+          profilePhoto: input.photoUrl,
+          updatedAt: new Date(),
+        }).where(eq(professionals.id, professional.id));
+        return { success: true };
+      }),
+
+    getBlockedDays: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== "professional") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "User is not a professional" });
+      }
+      const professional = await db.getProfessionalByUserId(ctx.user.id);
+      if (!professional) throw new TRPCError({ code: "NOT_FOUND", message: "Professional profile not found" });
+      const dbInstance = await db.getDb();
+      if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      const { blockedDays } = await import("../drizzle/schema");
+      const { eq } = await import("drizzle-orm");
+      return await dbInstance.select().from(blockedDays).where(eq(blockedDays.professionalId, professional.id));
+    }),
+
+    addBlockedDay: protectedProcedure
+      .input(z.object({
+        blockedDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Formato debe ser YYYY-MM-DD"),
+        reason: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "professional") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "User is not a professional" });
+        }
+        const professional = await db.getProfessionalByUserId(ctx.user.id);
+        if (!professional) throw new TRPCError({ code: "NOT_FOUND", message: "Professional profile not found" });
+        const dbInstance = await db.getDb();
+        if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const { blockedDays } = await import("../drizzle/schema");
+        await dbInstance.insert(blockedDays).values({
+          professionalId: professional.id,
+          blockedDate: input.blockedDate,
+          reason: input.reason ?? null,
+        });
+        return { success: true };
+      }),
+
+    removeBlockedDay: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "professional") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "User is not a professional" });
+        }
+        const professional = await db.getProfessionalByUserId(ctx.user.id);
+        if (!professional) throw new TRPCError({ code: "NOT_FOUND", message: "Professional profile not found" });
+        const dbInstance = await db.getDb();
+        if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const { blockedDays } = await import("../drizzle/schema");
+        const { and, eq } = await import("drizzle-orm");
+        await dbInstance.delete(blockedDays).where(
+          and(
+            eq(blockedDays.id, input.id),
+            eq(blockedDays.professionalId, professional.id)
+          )
+        );
+        return { success: true };
+      }),
+
+    getMyReviews: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== "professional") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "User is not a professional" });
+      }
+      const professional = await db.getProfessionalByUserId(ctx.user.id);
+      if (!professional) throw new TRPCError({ code: "NOT_FOUND", message: "Professional profile not found" });
+      const reviews = await db.getProfessionalReviews(professional.id);
+      // Enrich with user name
+      const enriched = await Promise.all(
+        reviews.map(async (r) => {
+          const user = await db.getUserById(r.userId);
+          return { ...r, userName: user?.name ?? "Usuario" };
+        })
+      );
+      return enriched;
+    }),
   }),
 
   // Review routes

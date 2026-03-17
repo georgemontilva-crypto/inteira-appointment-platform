@@ -285,3 +285,17 @@ export const creditTransactions = mysqlTable("creditTransactions", {
 
 export type CreditTransaction = typeof creditTransactions.$inferSelect;
 export type InsertCreditTransaction = typeof creditTransactions.$inferInsert;
+
+/**
+ * Blocked days table — specific dates a professional is unavailable (vacations, personal days)
+ */
+export const blockedDays = mysqlTable("blockedDays", {
+  id: int("id").autoincrement().primaryKey(),
+  professionalId: int("professionalId").notNull(),
+  blockedDate: varchar("blockedDate", { length: 10 }).notNull(), // YYYY-MM-DD format
+  reason: varchar("reason", { length: 255 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type BlockedDay = typeof blockedDays.$inferSelect;
+export type InsertBlockedDay = typeof blockedDays.$inferInsert;

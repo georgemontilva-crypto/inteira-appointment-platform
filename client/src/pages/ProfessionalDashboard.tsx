@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
@@ -12,13 +12,12 @@ import { toast } from "sonner";
 import {
   Calendar, Clock, CheckCircle2, User, Video,
   ExternalLink, Plus, Star, BarChart3, ArrowLeft, AlertCircle, XCircle,
+  Camera, Trash2, MessageSquare, CalendarX,
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { Link } from "wouter";
 
 const DAYS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
-const DAY_SHORT = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
 const statusColors: Record<string, string> = {
   scheduled: "bg-blue-100 text-blue-700 border-blue-200",
@@ -38,13 +37,17 @@ const statusLabels: Record<string, string> = {
 
 export default function ProfessionalDashboard() {
   const { user, isAuthenticated, loading } = useAuth();
-  const [activeTab, setActiveTab] = useState<"citas" | "disponibilidad" | "perfil">("citas");
+  const [activeTab, setActiveTab] = useState<"citas" | "disponibilidad" | "dias-libres" | "resenas" | "perfil">("citas");
   const [newSlot, setNewSlot] = useState({ dayOfWeek: 1, startTime: "09:00", endTime: "17:00" });
   const [editingProfile, setEditingProfile] = useState(false);
   const [profileForm, setProfileForm] = useState({
     bio: "", education: "", certifications: "",
     yearsOfExperience: "", hourlyRate: "", languages: "Español",
   });
+  const [newBlockedDate, setNewBlockedDate] = useState("");
+  const [newBlockedReason, setNewBlockedReason] = useState("");
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   const { data: profile, isLoading: loadingProfile, refetch: refetchProfile } = trpc.professional.getProfile.useQuery(
     undefined,
@@ -57,6 +60,16 @@ export default function ProfessionalDashboard() {
   );
 
   const { data: availability, refetch: refetchAvailability } = trpc.professional.getAvailability.useQuery(
+    undefined,
+    { enabled: isAuthenticated }
+  );
+
+  const { data: blockedDays, refetch: refetchBlockedDays } = trpc.professional.getBlockedDays.useQuery(
+    undefined,
+    { enabled: isAuthenticated }
+  );
+
+  const { data: myReviews } = trpc.professional.getMyReviews.useQuery(
     undefined,
     { enabled: isAuthenticated }
   );
@@ -78,6 +91,32 @@ export default function ProfessionalDashboard() {
     onError: (err) => toast.error(err.message ?? "Error al actualizar perfil"),
   });
 
+  const updatePhotoMutation = trpc.professional.updatePhoto.useMutation({
+    onSuccess: () => {
+      toast.success("Foto de perfil actualizada");
+      refetchProfile();
+    },
+    onError: () => toast.error("Error al actualizar la foto"),
+  });
+
+  const addBlockedDayMutation = trpc.professional.addBlockedDay.useMutation({
+    onSuccess: () => {
+      toast.success("Día bloqueado correctamente");
+      setNewBlockedDate("");
+      setNewBlockedReason("");
+      refetchBlockedDays();
+    },
+    onError: () => toast.error("Error al bloquear el día"),
+  });
+
+  const removeBlockedDayMutation = trpc.professional.removeBlockedDay.useMutation({
+    onSuccess: () => {
+      toast.success("Día desbloqueado");
+      refetchBlockedDays();
+    },
+    onError: () => toast.error("Error al desbloquear el día"),
+  });
+
   const cancelMutation = trpc.appointment.cancelAppointment.useMutation({
     onSuccess: () => {
       toast.success("Cita cancelada");
@@ -93,6 +132,45 @@ export default function ProfessionalDashboard() {
     },
     onError: () => toast.error("Error al actualizar la cita"),
   });
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Solo se permiten imágenes");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("La imagen no puede superar 5 MB");
+      return;
+    }
+    setUploadingPhoto(true);
+    try {
+      // Convert to base64 for the upload endpoint
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          // Strip the data URL prefix (e.g. "data:image/jpeg;base64,")
+          resolve(result.split(",")[1] ?? "");
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const res = await fetch("/api/upload/professional-photo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ base64, mimeType: file.type, fileName: file.name }),
+      });
+      if (!res.ok) throw new Error("Error al subir la foto");
+      const data = await res.json();
+      await updatePhotoMutation.mutateAsync({ photoUrl: data.url });
+    } catch {
+      toast.error("Error al subir la foto de perfil");
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
 
   if (loading || loadingProfile) {
     return (
@@ -142,20 +220,43 @@ export default function ProfessionalDashboard() {
         <div className="container">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl overflow-hidden flex-shrink-0">
-                {profile.profilePhoto ? (
-                  <img src={profile.profilePhoto} alt={user?.name ?? "Profesional"} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full bg-white/20 flex items-center justify-center text-2xl font-bold">
-                    {user?.name?.charAt(0) ?? "P"}
-                  </div>
-                )}
+              {/* Foto de perfil con botón de cambio */}
+              <div className="relative group">
+                <div className="w-14 h-14 rounded-2xl overflow-hidden flex-shrink-0">
+                  {profile.profilePhoto ? (
+                    <img src={profile.profilePhoto} alt={user?.name ?? "Profesional"} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-white/20 flex items-center justify-center text-2xl font-bold">
+                      {user?.name?.charAt(0) ?? "P"}
+                    </div>
+                  )}
+                </div>
+                {/* Overlay de cambio de foto */}
+                <button
+                  onClick={() => photoInputRef.current?.click()}
+                  disabled={uploadingPhoto}
+                  className="absolute inset-0 rounded-2xl bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
+                >
+                  {uploadingPhoto ? (
+                    <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+                  ) : (
+                    <Camera className="w-4 h-4 text-white" />
+                  )}
+                </button>
+                <input
+                  ref={photoInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handlePhotoUpload}
+                />
               </div>
               <div>
                 <p className="text-white/70 text-sm">Panel del profesional</p>
                 <h1 className="text-2xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
                   {user?.name ?? "Profesional"}
                 </h1>
+                <p className="text-white/60 text-xs mt-0.5">Toca la foto para cambiarla</p>
               </div>
             </div>
             <Badge className={`border-0 ${profile.status === "approved" ? "bg-emerald-500/20 text-emerald-200" : profile.status === "pending" ? "bg-yellow-500/20 text-yellow-200" : "bg-red-500/20 text-red-200"}`}>
@@ -166,18 +267,20 @@ export default function ProfessionalDashboard() {
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-border bg-background sticky top-0 z-10">
+      <div className="border-b border-border bg-background sticky top-0 z-10 overflow-x-auto">
         <div className="container">
-          <div className="flex gap-1">
+          <div className="flex gap-1 min-w-max">
             {[
               { key: "citas", label: "Mis citas", icon: <Calendar className="w-4 h-4" /> },
               { key: "disponibilidad", label: "Disponibilidad", icon: <Clock className="w-4 h-4" /> },
+              { key: "dias-libres", label: "Días libres", icon: <CalendarX className="w-4 h-4" /> },
+              { key: "resenas", label: "Reseñas", icon: <Star className="w-4 h-4" />, badge: myReviews?.length },
               { key: "perfil", label: "Mi perfil", icon: <User className="w-4 h-4" /> },
             ].map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key as typeof activeTab)}
-                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                   activeTab === tab.key
                     ? "border-primary text-primary"
                     : "border-transparent text-muted-foreground hover:text-foreground"
@@ -185,13 +288,18 @@ export default function ProfessionalDashboard() {
               >
                 {tab.icon}
                 {tab.label}
+                {tab.badge !== undefined && tab.badge > 0 && (
+                  <span className="ml-1 bg-primary text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                    {tab.badge}
+                  </span>
+                )}
               </button>
             ))}
           </div>
         </div>
       </div>
 
-      {/* ── Banner: próxima cita con videollamada ── */}
+      {/* Banner: próxima cita con videollamada */}
       {(() => {
         const nextWithVideo = upcomingAppointments.find((a) => (a as any).videoCallLink && a.status === "scheduled");
         if (!nextWithVideo) return null;
@@ -227,10 +335,10 @@ export default function ProfessionalDashboard() {
       })()}
 
       <div className="container py-8">
+
         {/* Tab: Citas */}
         {activeTab === "citas" && (
           <div className="space-y-6">
-            {/* Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <Card className="border-border">
                 <CardContent className="p-5">
@@ -260,7 +368,6 @@ export default function ProfessionalDashboard() {
               </Card>
             </div>
 
-            {/* Upcoming */}
             <div>
               <h2 className="text-xl font-bold mb-4" style={{ fontFamily: "Poppins, sans-serif" }}>
                 Próximas citas
@@ -288,10 +395,10 @@ export default function ProfessionalDashboard() {
                         <div className="flex items-center justify-between gap-4">
                           <div className="flex items-center gap-4">
                             <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold text-lg">
-                              U
+                              {(apt as any).userName?.charAt(0) ?? "U"}
                             </div>
                             <div>
-                              <p className="font-semibold text-sm">Usuario #{apt.userId}</p>
+                              <p className="font-semibold text-sm">{(apt as any).userName ?? `Usuario #${apt.userId}`}</p>
                               <div className="flex items-center gap-2 mt-1">
                                 <Clock className="w-3 h-3 text-muted-foreground" />
                                 <span className="text-xs text-muted-foreground">
@@ -334,7 +441,6 @@ export default function ProfessionalDashboard() {
               )}
             </div>
 
-            {/* Past appointments */}
             {pastAppointments.length > 0 && (
               <div>
                 <h2 className="text-xl font-bold mb-4" style={{ fontFamily: "Poppins, sans-serif" }}>
@@ -347,10 +453,10 @@ export default function ProfessionalDashboard() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
                             <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center text-muted-foreground text-sm font-bold">
-                              U
+                              {(apt as any).userName?.charAt(0) ?? "U"}
                             </div>
                             <div>
-                              <p className="text-sm font-medium">Usuario #{apt.userId}</p>
+                              <p className="text-sm font-medium">{(apt as any).userName ?? `Usuario #${apt.userId}`}</p>
                               <p className="text-xs text-muted-foreground">
                                 {format(new Date(apt.appointmentDate), "d MMM yyyy", { locale: es })}
                               </p>
@@ -377,11 +483,10 @@ export default function ProfessionalDashboard() {
                 Configurar disponibilidad
               </h2>
               <p className="text-muted-foreground text-sm">
-                Define los días y horarios en que estás disponible para atender consultas.
+                Define los días y horarios semanales en que estás disponible para atender consultas.
               </p>
             </div>
 
-            {/* Current availability */}
             <Card className="border-border">
               <CardHeader>
                 <CardTitle className="text-base">Horarios actuales</CardTitle>
@@ -411,7 +516,6 @@ export default function ProfessionalDashboard() {
               </CardContent>
             </Card>
 
-            {/* Add new slot */}
             <Card className="border-border">
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
@@ -465,54 +569,340 @@ export default function ProfessionalDashboard() {
           </div>
         )}
 
-        {/* Tab: Perfil */}
-        {activeTab === "perfil" && (
-          <div className="max-w-2xl space-y-6">
-            <h2 className="text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
-              Mi perfil profesional
-            </h2>
+        {/* Tab: Días libres */}
+        {activeTab === "dias-libres" && (
+          <div className="space-y-6 max-w-2xl">
+            <div>
+              <h2 className="text-xl font-bold mb-2" style={{ fontFamily: "Poppins, sans-serif" }}>
+                Días libres y vacaciones
+              </h2>
+              <p className="text-muted-foreground text-sm">
+                Bloquea fechas específicas en las que no estarás disponible. Los pacientes no podrán agendar citas en estos días.
+              </p>
+            </div>
+
+            {/* Agregar día bloqueado */}
             <Card className="border-border">
-              <CardContent className="p-6 space-y-4">
-                <div className="grid grid-cols-2 gap-4 text-sm">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <CalendarX className="w-4 h-4 text-primary" />
+                  Bloquear fecha
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <p className="text-muted-foreground text-xs mb-1">Cédula profesional</p>
-                    <p className="font-medium">{profile.licenseNumber}</p>
+                    <Label className="text-xs font-medium mb-1 block">Fecha</Label>
+                    <input
+                      type="date"
+                      value={newBlockedDate}
+                      min={new Date().toISOString().split("T")[0]}
+                      onChange={(e) => setNewBlockedDate(e.target.value)}
+                      className="w-full rounded-lg border border-border p-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    />
                   </div>
                   <div>
-                    <p className="text-muted-foreground text-xs mb-1">Años de experiencia</p>
-                    <p className="font-medium">{profile.yearsOfExperience ?? "No especificado"}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground text-xs mb-1">Tarifa por hora</p>
-                    <p className="font-medium">{profile.hourlyRate ? `$${profile.hourlyRate} MXN` : "No especificada"}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground text-xs mb-1">Estado</p>
-                    <Badge className={`border-0 text-xs ${profile.status === "approved" ? "bg-emerald-100 text-emerald-700" : profile.status === "pending" ? "bg-yellow-100 text-yellow-700" : "bg-red-100 text-red-700"}`}>
-                      {profile.status === "approved" ? "Aprobado" : profile.status === "pending" ? "Pendiente" : "Rechazado"}
-                    </Badge>
+                    <Label className="text-xs font-medium mb-1 block">Motivo (opcional)</Label>
+                    <Input
+                      placeholder="Ej: Vacaciones, cita médica..."
+                      value={newBlockedReason}
+                      onChange={(e) => setNewBlockedReason(e.target.value)}
+                    />
                   </div>
                 </div>
-                {profile.bio && (
-                  <div>
-                    <p className="text-muted-foreground text-xs mb-1">Biografía</p>
-                    <p className="text-sm">{profile.bio}</p>
+                <Button
+                  onClick={() => {
+                    if (!newBlockedDate) {
+                      toast.error("Selecciona una fecha");
+                      return;
+                    }
+                    addBlockedDayMutation.mutate({ blockedDate: newBlockedDate, reason: newBlockedReason || undefined });
+                  }}
+                  disabled={addBlockedDayMutation.isPending}
+                  className="gradient-brand text-white border-0"
+                >
+                  <CalendarX className="w-4 h-4 mr-2" />
+                  Bloquear día
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Lista de días bloqueados */}
+            <Card className="border-border">
+              <CardHeader>
+                <CardTitle className="text-base">Fechas bloqueadas</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {!blockedDays || blockedDays.length === 0 ? (
+                  <div className="text-center py-6">
+                    <CalendarX className="w-10 h-10 text-muted-foreground/30 mx-auto mb-2" />
+                    <p className="text-muted-foreground text-sm">No tienes fechas bloqueadas</p>
                   </div>
-                )}
-                {profile.education && (
-                  <div>
-                    <p className="text-muted-foreground text-xs mb-1">Educación</p>
-                    <p className="text-sm">{profile.education}</p>
-                  </div>
-                )}
-                {profile.certifications && (
-                  <div>
-                    <p className="text-muted-foreground text-xs mb-1">Certificaciones</p>
-                    <p className="text-sm">{profile.certifications}</p>
+                ) : (
+                  <div className="space-y-2">
+                    {blockedDays
+                      .sort((a, b) => a.blockedDate.localeCompare(b.blockedDate))
+                      .map((day) => (
+                        <div key={day.id} className="flex items-center justify-between p-3 bg-red-50 border border-red-100 rounded-xl">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center">
+                              <CalendarX className="w-4 h-4 text-red-500" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-red-700">
+                                {format(new Date(day.blockedDate + "T12:00:00"), "EEEE d 'de' MMMM yyyy", { locale: es })}
+                              </p>
+                              {day.reason && (
+                                <p className="text-xs text-red-500">{day.reason}</p>
+                              )}
+                            </div>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 w-8 p-0 text-red-400 hover:text-red-600 hover:bg-red-100"
+                            onClick={() => removeBlockedDayMutation.mutate({ id: day.id })}
+                            disabled={removeBlockedDayMutation.isPending}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ))}
                   </div>
                 )}
               </CardContent>
             </Card>
+          </div>
+        )}
+
+        {/* Tab: Reseñas */}
+        {activeTab === "resenas" && (
+          <div className="space-y-6 max-w-2xl">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold mb-1" style={{ fontFamily: "Poppins, sans-serif" }}>
+                  Mis reseñas
+                </h2>
+                <p className="text-muted-foreground text-sm">
+                  Opiniones de tus pacientes sobre tus sesiones.
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-3xl font-bold text-primary">{profile.averageRating ?? "—"}</p>
+                <div className="flex items-center gap-0.5 justify-end mt-1">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Star
+                      key={star}
+                      className={`w-4 h-4 ${star <= Math.round(Number(profile.averageRating ?? 0)) ? "text-yellow-400 fill-yellow-400" : "text-gray-300"}`}
+                    />
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5">{profile.totalReviews ?? 0} reseñas</p>
+              </div>
+            </div>
+
+            {!myReviews || myReviews.length === 0 ? (
+              <Card className="border-border border-dashed">
+                <CardContent className="p-10 text-center">
+                  <MessageSquare className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
+                  <p className="font-medium text-muted-foreground">Aún no tienes reseñas</p>
+                  <p className="text-sm text-muted-foreground/70 mt-1">
+                    Las reseñas aparecerán aquí cuando tus pacientes califiquen sus sesiones.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                {myReviews.map((review) => (
+                  <Card key={review.id} className="border-border">
+                    <CardContent className="p-5">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                            {(review as any).userName?.charAt(0) ?? "U"}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-sm">{(review as any).userName ?? "Paciente"}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {format(new Date(review.createdAt), "d 'de' MMMM yyyy", { locale: es })}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-0.5 flex-shrink-0">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Star
+                              key={star}
+                              className={`w-4 h-4 ${star <= review.rating ? "text-yellow-400 fill-yellow-400" : "text-gray-300"}`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      {review.comment && (
+                        <p className="text-sm text-muted-foreground mt-3 leading-relaxed">
+                          "{review.comment}"
+                        </p>
+                      )}
+                      {review.isVerified && (
+                        <div className="flex items-center gap-1 mt-2">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                          <span className="text-xs text-emerald-600">Sesión verificada</span>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab: Perfil */}
+        {activeTab === "perfil" && (
+          <div className="max-w-2xl space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
+                Mi perfil profesional
+              </h2>
+              {!editingProfile && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setProfileForm({
+                      bio: profile.bio ?? "",
+                      education: profile.education ?? "",
+                      certifications: profile.certifications ?? "",
+                      yearsOfExperience: profile.yearsOfExperience?.toString() ?? "",
+                      hourlyRate: profile.hourlyRate?.toString() ?? "",
+                      languages: (profile as any).languages ?? "Español",
+                    });
+                    setEditingProfile(true);
+                  }}
+                >
+                  Editar perfil
+                </Button>
+              )}
+            </div>
+
+            {editingProfile ? (
+              <Card className="border-border">
+                <CardContent className="p-6 space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-xs">Años de experiencia</Label>
+                      <Input
+                        type="number"
+                        value={profileForm.yearsOfExperience}
+                        onChange={(e) => setProfileForm({ ...profileForm, yearsOfExperience: e.target.value })}
+                        placeholder="5"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Tarifa por hora (MXN)</Label>
+                      <Input
+                        type="number"
+                        value={profileForm.hourlyRate}
+                        onChange={(e) => setProfileForm({ ...profileForm, hourlyRate: e.target.value })}
+                        placeholder="800"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Idiomas</Label>
+                    <Input
+                      value={profileForm.languages}
+                      onChange={(e) => setProfileForm({ ...profileForm, languages: e.target.value })}
+                      placeholder="Español, Inglés"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Biografía</Label>
+                    <Textarea
+                      value={profileForm.bio}
+                      onChange={(e) => setProfileForm({ ...profileForm, bio: e.target.value })}
+                      placeholder="Cuéntanos sobre ti y tu experiencia..."
+                      rows={4}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Educación</Label>
+                    <Textarea
+                      value={profileForm.education}
+                      onChange={(e) => setProfileForm({ ...profileForm, education: e.target.value })}
+                      placeholder="Universidad, carrera, año de graduación..."
+                      rows={3}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Certificaciones</Label>
+                    <Textarea
+                      value={profileForm.certifications}
+                      onChange={(e) => setProfileForm({ ...profileForm, certifications: e.target.value })}
+                      placeholder="Certificaciones y cursos relevantes..."
+                      rows={3}
+                    />
+                  </div>
+                  <div className="flex gap-3 pt-2">
+                    <Button
+                      onClick={() => updateProfileMutation.mutate({
+                        ...profileForm,
+                        yearsOfExperience: profileForm.yearsOfExperience ? parseInt(profileForm.yearsOfExperience) : undefined,
+                      })}
+                      disabled={updateProfileMutation.isPending}
+                      className="gradient-brand text-white border-0"
+                    >
+                      {updateProfileMutation.isPending ? "Guardando..." : "Guardar cambios"}
+                    </Button>
+                    <Button variant="outline" onClick={() => setEditingProfile(false)}>
+                      Cancelar
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card className="border-border">
+                <CardContent className="p-6 space-y-4">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-muted-foreground text-xs mb-1">Cédula profesional</p>
+                      <p className="font-medium">{profile.licenseNumber}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs mb-1">Años de experiencia</p>
+                      <p className="font-medium">{profile.yearsOfExperience ?? "No especificado"}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs mb-1">Tarifa por hora</p>
+                      <p className="font-medium">{profile.hourlyRate ? `$${profile.hourlyRate} MXN` : "No especificada"}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs mb-1">Estado</p>
+                      <Badge className={`border-0 text-xs ${profile.status === "approved" ? "bg-emerald-100 text-emerald-700" : profile.status === "pending" ? "bg-yellow-100 text-yellow-700" : "bg-red-100 text-red-700"}`}>
+                        {profile.status === "approved" ? "Aprobado" : profile.status === "pending" ? "Pendiente" : "Rechazado"}
+                      </Badge>
+                    </div>
+                  </div>
+                  {profile.bio && (
+                    <div>
+                      <p className="text-muted-foreground text-xs mb-1">Biografía</p>
+                      <p className="text-sm">{profile.bio}</p>
+                    </div>
+                  )}
+                  {profile.education && (
+                    <div>
+                      <p className="text-muted-foreground text-xs mb-1">Educación</p>
+                      <p className="text-sm">{profile.education}</p>
+                    </div>
+                  )}
+                  {profile.certifications && (
+                    <div>
+                      <p className="text-muted-foreground text-xs mb-1">Certificaciones</p>
+                      <p className="text-sm">{profile.certifications}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </div>
         )}
       </div>
