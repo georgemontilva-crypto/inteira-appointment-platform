@@ -41,6 +41,23 @@ export async function getDb() {
   return _db;
 }
 
+// Cache of existing columns in users table (populated on first upsert)
+let _usersColumns: Set<string> | null = null;
+
+async function getUsersColumns(db: ReturnType<typeof drizzle>): Promise<Set<string>> {
+  if (_usersColumns) return _usersColumns;
+  try {
+    const [rows] = await db.execute("DESCRIBE `users`") as any;
+    const cols = Array.isArray(rows) ? rows : [rows];
+    _usersColumns = new Set(cols.map((r: any) => r.Field ?? r.field ?? Object.values(r)[0]));
+    console.log("[Database] users columns:", [..._usersColumns].join(", "));
+  } catch {
+    // Fallback: assume only the most basic columns exist
+    _usersColumns = new Set(["id", "openId", "email", "name"]);
+  }
+  return _usersColumns;
+}
+
 export async function upsertUser(user: InsertUser): Promise<void> {
   if (!user.openId || !user.email) {
     throw new Error("User openId and email are required for upsert");
@@ -53,34 +70,62 @@ export async function upsertUser(user: InsertUser): Promise<void> {
   }
 
   try {
-    // Use raw SQL to avoid Drizzle including columns that may not exist in production DB yet.
-    // Only use the core columns that are guaranteed to exist.
+    // Detect which columns actually exist in the DB to build a safe INSERT
+    const cols = await getUsersColumns(db);
     const now = new Date().toISOString().slice(0, 19).replace("T", " ");
     const name = user.name ?? null;
     const lastSignedIn = user.lastSignedIn
       ? new Date(user.lastSignedIn).toISOString().slice(0, 19).replace("T", " ")
       : now;
-
-    // Determine role: admin if owner, else default 'user'
     const role = user.role ?? (user.openId === ENV.ownerOpenId ? "admin" : "user");
 
     // Escape single quotes in string values
     const esc = (v: string | null) => v === null ? "NULL" : `'${String(v).replace(/'/g, "''")}'`;
 
+    // Build INSERT with only columns that exist
+    const insertCols: string[] = ["openId", "email"];
+    const insertVals: string[] = [esc(user.openId), esc(user.email)];
+    const updateParts: string[] = [];
+
+    if (cols.has("name")) {
+      insertCols.push("name"); insertVals.push(esc(name));
+      updateParts.push(`\`name\` = ${esc(name)}`);
+    }
+    if (cols.has("lastSignedIn")) {
+      insertCols.push("lastSignedIn"); insertVals.push(`'${lastSignedIn}'`);
+      updateParts.push(`\`lastSignedIn\` = '${lastSignedIn}'`);
+    }
+    if (cols.has("createdAt")) {
+      insertCols.push("createdAt"); insertVals.push(`'${now}'`);
+    }
+    if (cols.has("updatedAt")) {
+      insertCols.push("updatedAt"); insertVals.push(`'${now}'`);
+      updateParts.push(`\`updatedAt\` = '${now}'`);
+    }
+    if (cols.has("loginMethod") && user.loginMethod) {
+      insertCols.push("loginMethod"); insertVals.push(esc(user.loginMethod ?? null));
+      updateParts.push(`\`loginMethod\` = ${esc(user.loginMethod ?? null)}`);
+    }
+
+    if (updateParts.length === 0) {
+      updateParts.push(`\`email\` = ${esc(user.email)}`);
+    }
+
     const insertSQL = [
-      "INSERT INTO `users` (`openId`, `email`, `name`, `lastSignedIn`, `createdAt`, `updatedAt`)",
-      `VALUES (${esc(user.openId)}, ${esc(user.email)}, ${esc(name)}, '${lastSignedIn}', '${now}', '${now}')`,
-      "ON DUPLICATE KEY UPDATE",
-      `\`name\` = ${esc(name)}, \`lastSignedIn\` = '${lastSignedIn}', \`updatedAt\` = '${now}'`,
+      `INSERT INTO \`users\` (${insertCols.map(c => `\`${c}\``).join(", ")})`,
+      `VALUES (${insertVals.join(", ")})`,
+      `ON DUPLICATE KEY UPDATE ${updateParts.join(", ")}`,
     ].join(" ");
 
     await db.execute(insertSQL);
 
     // Try to update role separately (column may or may not exist)
-    try {
-      await db.execute(`UPDATE \`users\` SET \`role\` = '${role}' WHERE \`openId\` = ${esc(user.openId)} AND \`role\` = 'user'`);
-    } catch {
-      // role column may not exist yet, ignore
+    if (cols.has("role")) {
+      try {
+        await db.execute(`UPDATE \`users\` SET \`role\` = '${role}' WHERE \`openId\` = ${esc(user.openId)} AND \`role\` = 'user'`);
+      } catch {
+        // ignore
+      }
     }
   } catch (error) {
     console.error("[Database] Failed to upsert user:", error);
