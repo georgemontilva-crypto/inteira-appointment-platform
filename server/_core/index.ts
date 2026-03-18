@@ -146,6 +146,54 @@ async function runStartupMigrations() {
     ].join(" "));
     console.log("[Migration] creditTransactions table ready");
 
+    // ── Seed: ensure marketingdedsm@gmail.com has role=admin ──────────────────
+    try {
+      await db.execute(
+        "UPDATE `users` SET `role` = 'admin' WHERE `email` = 'marketingdedsm@gmail.com' AND `role` != 'admin'"
+      );
+      console.log("[Migration] Admin role ensured for marketingdedsm@gmail.com");
+    } catch (adminErr: any) {
+      console.warn("[Migration] Could not set admin role:", adminErr?.message);
+    }
+
+    // ── Recovery: credit Sesión Básica (350 credits) to jessievasq20@gmail.com ──
+    // This runs once; idempotency is guaranteed by the UNIQUE stripePaymentId key.
+    try {
+      const { addCreditBatch } = await import("../credits");
+      const { recordStripePayment, getPaymentByStripeId } = await import("../db");
+
+      const recoveryPaymentId = "RECOVERY_jessievasq20_sesion_basica_2026";
+      const existing = await getPaymentByStripeId(recoveryPaymentId);
+
+      if (!existing) {
+        // Find Jessie's userId
+        const [jessieRows] = await db.execute(
+          "SELECT id FROM `users` WHERE `email` = 'jessievasq20@gmail.com' LIMIT 1"
+        ) as any;
+        const jessieId: number | undefined = Array.isArray(jessieRows)
+          ? jessieRows[0]?.id
+          : jessieRows?.id;
+
+        if (jessieId) {
+          await recordStripePayment({
+            userId: jessieId,
+            stripePaymentId: recoveryPaymentId,
+            amount: "350",
+            currency: "MXN",
+            productType: "individual_basic",
+          });
+          await addCreditBatch(jessieId, "individual_basic");
+          console.log(`[Recovery] 350 créditos acreditados a jessievasq20@gmail.com (userId=${jessieId})`);
+        } else {
+          console.warn("[Recovery] jessievasq20@gmail.com not found in DB yet");
+        }
+      } else {
+        console.log("[Recovery] jessievasq20 credits already recovered, skipping");
+      }
+    } catch (recoveryErr: any) {
+      console.warn("[Recovery] Could not credit jessie:", recoveryErr?.message);
+    }
+
   } catch (err) {
     console.error("[Migration] Startup migration failed:", err);
   }
