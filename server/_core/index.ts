@@ -114,10 +114,20 @@ async function runStartupMigrations() {
     console.log("[Migration] payments table ready");
 
     // FIX 1: Ensure subscriptionId column exists (tables created before this column was added)
-    await db.execute(
-      "ALTER TABLE `payments` ADD COLUMN IF NOT EXISTS `subscriptionId` int"
-    ).catch(() => {});
-    console.log("[Migration] payments.subscriptionId column ready");
+    try {
+      const [cols] = await db.execute(
+        "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'payments' AND COLUMN_NAME = 'subscriptionId'"
+      ) as any;
+      const exists = Array.isArray(cols) ? cols.length > 0 : false;
+      if (!exists) {
+        await db.execute("ALTER TABLE `payments` ADD COLUMN `subscriptionId` int");
+        console.log("[Migration] payments.subscriptionId column added");
+      } else {
+        console.log("[Migration] payments.subscriptionId column already exists");
+      }
+    } catch (colErr: any) {
+      console.warn("[Migration] Could not add subscriptionId column:", colErr?.message);
+    }
 
     // Ensure creditBatches table exists
     await db.execute([
