@@ -1,12 +1,34 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, ArrowLeft, ChevronDown, ChevronUp } from "lucide-react";
-import { Link } from "wouter";
+import { CheckCircle2, ArrowLeft, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
+import { Link, useLocation } from "wouter";
 import { getLoginUrl } from "@/const";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+
+// Mapa de nombre de plan → productType de Stripe
+const PLAN_PRODUCT_MAP: Record<string, string> = {
+  "Plan Básico": "plan_basic",
+  "Plan Pro": "plan_pro",
+  "Sesión Básica": "individual_basic",
+  "Sesión Premium": "individual_premium",
+};
+
+async function redirectToStripeCheckout(productType: string, userId: number) {
+  const res = await fetch("/api/stripe/create-checkout", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ productType, userId }),
+  });
+  const data = await res.json();
+  if (data.url) {
+    window.location.href = data.url;
+  } else {
+    throw new Error(data.error ?? "Error desconocido");
+  }
+}
 
 const PLANS = [
   {
@@ -58,7 +80,7 @@ const INDIVIDUAL = [
 const FAQ = [
   {
     q: "¿Qué son los créditos?",
-    a: "Los créditos son la moneda interna de Inteira. Cada sesión consume créditos según su tipo: una sesión básica cuesta 245 créditos y una premium cuesta 1,250 créditos.",
+    a: "Los créditos son la moneda interna de Inteira. Cada sesión consume créditos según su tipo: una sesión básica cuesta 350 créditos y una premium cuesta 1,250 créditos.",
   },
   {
     q: "¿Qué pasa si no uso todos mis créditos?",
@@ -97,14 +119,44 @@ function FaqItem({ q, a }: { q: string; a: string }) {
 }
 
 export default function Plans() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  const [, navigate] = useLocation();
 
-  const handleSelectPlan = (planName: string) => {
+  // Detectar retorno de Stripe
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("payment") === "success") {
+      toast.success("¡Pago exitoso! Tus créditos serán acreditados en breve.");
+      window.history.replaceState({}, "", window.location.pathname);
+    } else if (params.get("payment") === "cancelled") {
+      toast.info("Pago cancelado.");
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
+
+  const handleSelectPlan = async (planName: string) => {
     if (!isAuthenticated) {
       window.location.href = getLoginUrl();
       return;
     }
-    toast.info(`Seleccionaste el ${planName}. La integración de pago estará disponible próximamente.`);
+    const productType = PLAN_PRODUCT_MAP[planName];
+    if (!productType) {
+      toast.error("Tipo de plan no reconocido");
+      return;
+    }
+    if (!user?.id) {
+      toast.error("Error de sesión. Vuelve a iniciar sesión.");
+      return;
+    }
+    setLoadingPlan(planName);
+    try {
+      await redirectToStripeCheckout(productType, user.id);
+    } catch (err) {
+      toast.error("Error al iniciar el pago. Intenta de nuevo.");
+      console.error("[Stripe]", err);
+      setLoadingPlan(null);
+    }
   };
 
   return (
@@ -179,6 +231,7 @@ export default function Plans() {
 
                   <Button
                     onClick={() => handleSelectPlan(plan.name)}
+                    disabled={loadingPlan === plan.name}
                     className={`w-full text-sm active:scale-95 transition-transform ${
                       plan.popular
                         ? "gradient-brand text-white border-0 shadow-md shadow-primary/30"
@@ -186,7 +239,14 @@ export default function Plans() {
                     }`}
                     variant={plan.popular ? "default" : "outline"}
                   >
-                    Comenzar con {plan.name}
+                    {loadingPlan === plan.name ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Redirigiendo...
+                      </>
+                    ) : (
+                      `Comenzar con ${plan.name}`
+                    )}
                   </Button>
                 </CardContent>
               </Card>
@@ -216,11 +276,19 @@ export default function Plans() {
                   </div>
                   <Button
                     onClick={() => handleSelectPlan(item.name)}
+                    disabled={loadingPlan === item.name}
                     variant="outline"
                     className="w-full border-primary/30 text-primary hover:bg-primary/5 text-xs active:scale-95 transition-transform"
                     size="sm"
                   >
-                    Comprar sesión
+                    {loadingPlan === item.name ? (
+                      <>
+                        <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
+                        Redirigiendo...
+                      </>
+                    ) : (
+                      "Comprar sesión"
+                    )}
                   </Button>
                 </CardContent>
               </Card>

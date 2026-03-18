@@ -98,8 +98,11 @@ async function runStartupMigrations() {
 }
 
 async function startServer() {
-  const app = express();
+   const app = express();
   const server = createServer(app);
+  // ⚠️ Stripe webhook MUST be registered BEFORE express.json() so it receives the raw body
+  // needed for signature verification. express.json() would parse it and break the HMAC check.
+  registerStripeRoutes(app);
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
@@ -107,9 +110,6 @@ async function startServer() {
   await runStartupMigrations();
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
-
-  // Stripe payment routes
-  registerStripeRoutes(app);
 
   // ─── File upload: professional profile photo ─────────────────────────────────
   app.post("/api/upload/professional-photo", async (req, res) => {
