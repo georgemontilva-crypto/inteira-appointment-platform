@@ -524,13 +524,14 @@ export async function createEmailLog(data: Partial<EmailLog>) {
 export async function getPaymentByStripeId(stripePaymentId: string) {
   const db = await getDb();
   if (!db) return null;
-
-  const results = await db
-    .select()
-    .from(payments)
-    .where(eq(payments.stripePaymentId, stripePaymentId))
-    .limit(1);
-  return results[0] ?? null;
+  try {
+    const [rows] = await db.execute(
+      "SELECT * FROM `payments` WHERE `stripeSessionId` = ? OR `stripePaymentIntentId` = ? LIMIT 1",
+      [stripePaymentId, stripePaymentId]
+    ) as any;
+    const arr = Array.isArray(rows) ? rows : [];
+    return arr[0] ?? null;
+  } catch { return null; }
 }
 
 export async function recordStripePayment(data: {
@@ -543,15 +544,21 @@ export async function recordStripePayment(data: {
 }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-
-  await db.insert(payments).values({
-    userId: data.userId,
-    stripePaymentId: data.stripePaymentId,
-    amount: data.amount,
-    currency: data.currency,
-    status: "succeeded",
-    paymentType: data.paymentType ?? "subscription",
-  } as any);
+  await db.execute(
+    `INSERT INTO \`payments\`
+     (\`userId\`, \`stripeSessionId\`, \`stripePaymentIntentId\`, \`amount\`, \`currency\`, \`status\`, \`type\`, \`creditsGranted\`, \`metadata\`)
+     VALUES (?, ?, ?, ?, ?, 'succeeded', ?, ?, ?)`,
+    [
+      data.userId,
+      data.stripePaymentId,                                    // stripeSessionId
+      data.stripePaymentId,                                    // stripePaymentIntentId (mismo valor por ahora)
+      data.amount,
+      data.currency,
+      data.paymentType ?? "subscription",                      // type
+      0,                                                       // creditsGranted (se actualiza después)
+      JSON.stringify({ productType: data.productType }),       // metadata
+    ]
+  );
 }
 
 export async function createPayment(data: Partial<Payment>) {

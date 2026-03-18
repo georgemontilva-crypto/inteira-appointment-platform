@@ -251,6 +251,15 @@ async function handleSuccessfulPayment(session: Stripe.Checkout.Session) {
     // Acreditar créditos al usuario (crea un CreditBatch con 60 días de vigencia)
     await addCreditBatch(userIdNum, productType as CreditSource);
 
+    // Actualizar creditsGranted en la fila de pago recién insertada
+    const dbConn = await (await import("./db")).getDb();
+    if (dbConn) {
+      await dbConn.execute(
+        "UPDATE `payments` SET `creditsGranted` = ? WHERE `stripeSessionId` = ?",
+        [creditsNum, session.id]
+      ).catch(() => {});
+    }
+
     console.log(`[Stripe] ✅ Pago procesado: ${creditsNum} créditos para usuario ${userIdNum} (${productType})`);
   } catch (err) {
     console.error("[Stripe] Error procesando pago exitoso:", err);
