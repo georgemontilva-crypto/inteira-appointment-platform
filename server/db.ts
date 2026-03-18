@@ -525,10 +525,10 @@ export async function getPaymentByStripeId(stripePaymentId: string) {
   const db = await getDb();
   if (!db) return null;
   try {
-    const [rows] = await db.execute(
-      "SELECT * FROM `payments` WHERE `stripeSessionId` = ? OR `stripePaymentIntentId` = ? LIMIT 1",
-      [stripePaymentId, stripePaymentId]
-    ) as any;
+    const result = await db.execute(
+      sql`SELECT * FROM payments WHERE stripeSessionId = ${stripePaymentId} OR stripePaymentIntentId = ${stripePaymentId} LIMIT 1`
+    );
+    const rows = result.rows ?? (result as any) ?? [];
     const arr = Array.isArray(rows) ? rows : [];
     return arr[0] ?? null;
   } catch { return null; }
@@ -546,19 +546,19 @@ export async function recordStripePayment(data: {
   if (!db) throw new Error("Database not available");
   try {
     await db.execute(
-      `INSERT INTO \`payments\`
-       (\`userId\`, \`stripeSessionId\`, \`stripePaymentIntentId\`, \`amount\`, \`currency\`, \`status\`, \`type\`, \`creditsGranted\`, \`metadata\`)
-       VALUES (?, ?, ?, ?, ?, 'succeeded', ?, ?, ?)`,
-      [
-        data.userId,
-        data.stripePaymentId,                                    // stripeSessionId
-        data.stripePaymentId,                                    // stripePaymentIntentId (mismo valor por ahora)
-        data.amount,
-        data.currency,
-        data.paymentType ?? "subscription",                      // type
-        0,                                                       // creditsGranted (se actualiza después)
-        JSON.stringify({ productType: data.productType }),       // metadata
-      ]
+      sql`INSERT INTO payments
+      (userId, stripeSessionId, stripePaymentIntentId, amount, currency, status, type, creditsGranted, metadata)
+      VALUES (
+        ${data.userId},
+        ${data.stripePaymentId},
+        ${data.stripePaymentId},
+        ${data.amount},
+        ${data.currency},
+        'succeeded',
+        ${data.paymentType ?? "subscription"},
+        ${0},
+        ${JSON.stringify({ productType: data.productType })}
+      )`
     );
   } catch (insertErr: any) {
     console.error("[recordStripePayment] INSERT failed:", insertErr?.message, insertErr?.code, insertErr?.sqlState);
