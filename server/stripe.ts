@@ -169,8 +169,7 @@ export function registerStripeRoutes(app: Express) {
         return res.status(400).json({ error: "email y productType son requeridos" });
       }
 
-      const { getDb } = await import("./db");
-      const dbConn = await getDb();
+      const dbConn = await db.getDb();
       if (!dbConn) return res.status(500).json({ error: "DB no disponible" });
 
       // Buscar el usuario por email
