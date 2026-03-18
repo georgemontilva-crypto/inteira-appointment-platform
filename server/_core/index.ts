@@ -92,6 +92,60 @@ async function runStartupMigrations() {
     }
 
     console.log("[Migration] users table columns ready");
+
+    // Ensure payments table exists
+    await db.execute([
+      "CREATE TABLE IF NOT EXISTS `payments` (",
+      "  `id` int AUTO_INCREMENT NOT NULL,",
+      "  `userId` int NOT NULL,",
+      "  `stripePaymentId` varchar(255) NOT NULL,",
+      "  `amount` decimal(10,2) NOT NULL,",
+      "  `currency` varchar(3) DEFAULT 'MXN',",
+      "  `status` enum('pending','succeeded','failed','canceled') DEFAULT 'pending',",
+      "  `paymentType` enum('subscription','appointment') NOT NULL,",
+      "  `appointmentId` int,",
+      "  `subscriptionId` int,",
+      "  `createdAt` timestamp NOT NULL DEFAULT (now()),",
+      "  `updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,",
+      "  CONSTRAINT `payments_id` PRIMARY KEY(`id`),",
+      "  UNIQUE KEY `payments_stripePaymentId_unique` (`stripePaymentId`)",
+      ")",
+    ].join(" "));
+    console.log("[Migration] payments table ready");
+
+    // Ensure creditBatches table exists
+    await db.execute([
+      "CREATE TABLE IF NOT EXISTS `creditBatches` (",
+      "  `id` int AUTO_INCREMENT NOT NULL,",
+      "  `userId` int NOT NULL,",
+      "  `amount` int NOT NULL,",
+      "  `remaining` int NOT NULL,",
+      "  `source` enum('plan_basic','plan_pro','individual_basic','individual_premium') NOT NULL,",
+      "  `expiresAt` timestamp NOT NULL,",
+      "  `expiredEarly` tinyint(1) DEFAULT 0,",
+      "  `createdAt` timestamp NOT NULL DEFAULT (now()),",
+      "  `updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,",
+      "  CONSTRAINT `creditBatches_id` PRIMARY KEY(`id`)",
+      ")",
+    ].join(" "));
+    console.log("[Migration] creditBatches table ready");
+
+    // Ensure creditTransactions table exists
+    await db.execute([
+      "CREATE TABLE IF NOT EXISTS `creditTransactions` (",
+      "  `id` int AUTO_INCREMENT NOT NULL,",
+      "  `userId` int NOT NULL,",
+      "  `batchId` int,",
+      "  `delta` int NOT NULL,",
+      "  `reason` enum('purchase','consume','expire','refund') NOT NULL,",
+      "  `appointmentId` int,",
+      "  `description` varchar(255),",
+      "  `createdAt` timestamp NOT NULL DEFAULT (now()),",
+      "  CONSTRAINT `creditTransactions_id` PRIMARY KEY(`id`)",
+      ")",
+    ].join(" "));
+    console.log("[Migration] creditTransactions table ready");
+
   } catch (err) {
     console.error("[Migration] Startup migration failed:", err);
   }
