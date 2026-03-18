@@ -2,14 +2,20 @@
  * stripe.ts — Integración de Stripe para Inteira
  *
  * Flujo:
- * 1. Frontend llama a createCheckoutSession con el producto a comprar
+ * 1. Frontend llama a /api/stripe/create-checkout con el producto a comprar
  * 2. Backend crea una Stripe Checkout Session y devuelve la URL
  * 3. Usuario completa el pago en Stripe
  * 4. Stripe envía un webhook a /api/stripe/webhook
  * 5. Backend verifica el webhook y acredita los créditos al usuario
+ *
+ * IMPORTANTE: registerStripeRoutes() se llama ANTES de express.json() en index.ts.
+ * Por eso cada ruta necesita su propio middleware de body parsing:
+ *   - create-checkout: express.json()  (necesita el body parseado)
+ *   - webhook:         express.raw()   (necesita el body sin parsear para verificar firma HMAC)
  */
 
 import Stripe from "stripe";
+import express from "express";
 import type { Express, Request, Response } from "express";
 import * as db from "./db";
 import { addCreditBatch, CREDIT_COSTS, type CreditSource } from "./credits";
@@ -49,8 +55,10 @@ const PRODUCT_PRICES: Record<CreditSource, { amount: number; name: string; descr
 // ─── Registro de rutas Express ────────────────────────────────────────────────
 
 export function registerStripeRoutes(app: Express) {
+
   // ── Crear sesión de Checkout ─────────────────────────────────────────────────
-  app.post("/api/stripe/create-checkout", async (req: Request, res: Response) => {
+  // express.json() inline porque esta ruta se registra antes del middleware global
+  app.post("/api/stripe/create-checkout", express.json(), async (req: Request, res: Response) => {
     try {
       const stripe = getStripe();
       const { productType, userId } = req.body as {
@@ -88,7 +96,7 @@ export function registerStripeRoutes(app: Express) {
         ],
         mode: "payment",
         success_url: `${baseUrl}/wallet?payment=success&session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${baseUrl}/wallet?payment=cancelled`,
+        cancel_url: `${baseUrl}/planes?payment=cancelled`,
         metadata: {
           userId: String(userId),
           productType,
@@ -105,36 +113,25 @@ export function registerStripeRoutes(app: Express) {
   });
 
   // ── Webhook de Stripe ────────────────────────────────────────────────────────
+  // express.raw() preserva el body como Buffer para verificar la firma HMAC de Stripe
   app.post(
     "/api/stripe/webhook",
-    // Necesitamos el body raw para verificar la firma
-    (req: Request, res: Response, next) => {
-      if (req.headers["content-type"] === "application/json") {
-        let data = "";
-        req.setEncoding("utf8");
-        req.on("data", (chunk) => { data += chunk; });
-        req.on("end", () => {
-          (req as any).rawBody = data;
-          next();
-        });
-      } else {
-        next();
-      }
-    },
+    express.raw({ type: "application/json" }),
     async (req: Request, res: Response) => {
       const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
       const signature = req.headers["stripe-signature"] as string;
-      const rawBody = (req as any).rawBody ?? JSON.stringify(req.body);
 
       let event: Stripe.Event;
 
       try {
         const stripe = getStripe();
         if (webhookSecret && signature) {
-          event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
+          // req.body es un Buffer gracias a express.raw()
+          event = stripe.webhooks.constructEvent(req.body, signature, webhookSecret);
         } else {
-          // Sin webhook secret (desarrollo local), parsear directamente
+          // Sin webhook secret (desarrollo local sin Stripe CLI), parsear directamente
           console.warn("[Stripe] Webhook sin verificación de firma (solo para desarrollo)");
+          const rawBody = req.body instanceof Buffer ? req.body.toString("utf8") : JSON.stringify(req.body);
           event = JSON.parse(rawBody) as Stripe.Event;
         }
       } catch (err) {
@@ -167,14 +164,14 @@ async function handleSuccessfulPayment(session: Stripe.Checkout.Session) {
     const userIdNum = parseInt(userId, 10);
     const creditsNum = parseInt(credits, 10);
 
-    // Verificar que no se haya procesado ya este pago
+    // Verificar que no se haya procesado ya este pago (idempotencia)
     const existingPayment = await db.getPaymentByStripeId(session.id);
     if (existingPayment) {
       console.log("[Stripe] Pago ya procesado:", session.id);
       return;
     }
 
-    // Registrar el pago
+    // Registrar el pago en la DB
     await db.recordStripePayment({
       userId: userIdNum,
       stripePaymentId: session.id,
@@ -183,10 +180,10 @@ async function handleSuccessfulPayment(session: Stripe.Checkout.Session) {
       productType: productType as CreditSource,
     });
 
-    // Acreditar créditos al usuario
+    // Acreditar créditos al usuario (crea un CreditBatch con 60 días de vigencia)
     await addCreditBatch(userIdNum, productType as CreditSource);
 
-    console.log(`[Stripe] ✅ Pago procesado: ${creditsNum} créditos para usuario ${userIdNum}`);
+    console.log(`[Stripe] ✅ Pago procesado: ${creditsNum} créditos para usuario ${userIdNum} (${productType})`);
   } catch (err) {
     console.error("[Stripe] Error procesando pago exitoso:", err);
   }
