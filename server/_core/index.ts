@@ -113,6 +113,12 @@ async function runStartupMigrations() {
     ].join(" "));
     console.log("[Migration] payments table ready");
 
+    // FIX 1: Ensure subscriptionId column exists (tables created before this column was added)
+    await db.execute(
+      "ALTER TABLE `payments` ADD COLUMN IF NOT EXISTS `subscriptionId` int"
+    ).catch(() => {});
+    console.log("[Migration] payments.subscriptionId column ready");
+
     // Ensure creditBatches table exists
     await db.execute([
       "CREATE TABLE IF NOT EXISTS `creditBatches` (",
@@ -181,6 +187,7 @@ async function runStartupMigrations() {
             amount: "350",
             currency: "MXN",
             productType: "individual_basic",
+            paymentType: "appointment",
           });
           await addCreditBatch(jessieId, "individual_basic");
           console.log(`[Recovery] 350 créditos acreditados a jessievasq20@gmail.com (userId=${jessieId})`);

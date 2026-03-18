@@ -539,6 +539,7 @@ export async function recordStripePayment(data: {
   amount: string;
   currency: string;
   productType: string;
+  paymentType?: "subscription" | "appointment";
 }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -549,7 +550,7 @@ export async function recordStripePayment(data: {
     amount: data.amount,
     currency: data.currency,
     status: "succeeded",
-    paymentType: "subscription",
+    paymentType: data.paymentType ?? "subscription",
   } as any);
 }
 
