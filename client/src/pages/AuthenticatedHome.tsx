@@ -63,6 +63,11 @@ export default function AuthenticatedHome() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
 
+  // Obtener perfil actualizado del usuario (tiene el nombre real guardado en DB)
+  const { data: profile } = trpc.user.getProfile.useQuery(undefined, {
+    staleTime: 60_000,
+  });
+
   // Queries
   const { data: appointments, isLoading: loadingApts } = trpc.user.getAppointments.useQuery(
     undefined,
@@ -85,14 +90,15 @@ export default function AuthenticatedHome() {
     { staleTime: 300_000 }
   );
 
-  // Derived
+  // Derived — usar profile (DB) como fuente principal, con fallback al user del contexto
+  const resolvedName = profile?.name || user?.name || user?.email?.split("@")[0] || "";
   type Apt = NonNullable<typeof appointments>[number];
   const upcomingApts: Apt[] = appointments?.filter((a) => a.status === "scheduled") ?? [];
   const completedCount = appointments?.filter((a) => a.status === "completed").length ?? 0;
   const nextApt = upcomingApts[0];
-  const firstName = user?.name?.split(" ")[0] ?? "Usuario";
-  const initials = user?.name
-    ? user.name.split(" ").map((n: string) => n[0]).slice(0, 2).join("").toUpperCase()
+  const firstName = resolvedName.split(" ")[0] || "";
+  const initials = resolvedName
+    ? resolvedName.split(" ").map((n: string) => n[0]).slice(0, 2).join("").toUpperCase()
     : "?";
 
   const hour = new Date().getHours();
@@ -166,7 +172,7 @@ export default function AuthenticatedHome() {
                 <div>
                   <p className="text-white/70 text-sm font-medium">{greeting},</p>
                   <h1 className="text-3xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
-                    {user?.name ?? "Usuario"} 👋
+                    {resolvedName || firstName} 👋
                   </h1>
                   <p className="text-white/60 text-sm mt-0.5">
                     {upcomingApts.length > 0
