@@ -148,6 +148,75 @@ export function registerStripeRoutes(app: Express) {
       return res.json({ received: true });
     }
   );
+
+  // ── Endpoint de recuperación de créditos ─────────────────────────────────────
+  // Permite acreditar créditos manualmente a un usuario usando un token secreto.
+  // Idempotente: no duplica créditos si se llama más de una vez.
+  app.post("/api/stripe/recover-credits", express.json(), async (req: Request, res: Response) => {
+    try {
+      const { token, email, productType } = req.body as {
+        token: string;
+        email: string;
+        productType: CreditSource;
+      };
+
+      const RECOVERY_TOKEN = "inteira-recovery-2026-jessie";
+      if (token !== RECOVERY_TOKEN) {
+        return res.status(403).json({ error: "Token inválido" });
+      }
+
+      if (!email || !productType) {
+        return res.status(400).json({ error: "email y productType son requeridos" });
+      }
+
+      const { getDb } = await import("./db");
+      const dbConn = await getDb();
+      if (!dbConn) return res.status(500).json({ error: "DB no disponible" });
+
+      // Buscar el usuario por email
+      const [rows] = await dbConn.execute(
+        `SELECT id FROM \`users\` WHERE \`email\` = ? LIMIT 1`,
+        [email]
+      ) as any;
+      const userId: number | undefined = Array.isArray(rows) ? rows[0]?.id : rows?.id;
+
+      if (!userId) {
+        return res.status(404).json({ error: `Usuario ${email} no encontrado` });
+      }
+
+      // Idempotencia: verificar si ya fue procesado
+      const recoveryId = `RECOVERY_${email.replace(/@/g, "_").replace(/\./g, "_")}_${productType}`;
+      const existing = await db.getPaymentByStripeId(recoveryId);
+      if (existing) {
+        return res.json({ success: false, message: "Créditos ya acreditados anteriormente" });
+      }
+
+      // Registrar pago de recuperación
+      await db.recordStripePayment({
+        userId,
+        stripePaymentId: recoveryId,
+        amount: String(CREDIT_COSTS[productType]),
+        currency: "MXN",
+        productType,
+      });
+
+      // Acreditar créditos
+      const batchId = await addCreditBatch(userId, productType);
+      const credits = CREDIT_COSTS[productType];
+
+      console.log(`[Recovery] ✅ ${credits} créditos acreditados a ${email} (userId=${userId}, batchId=${batchId})`);
+      return res.json({
+        success: true,
+        userId,
+        credits,
+        batchId,
+        message: `${credits} créditos acreditados a ${email}`,
+      });
+    } catch (err) {
+      console.error("[Recovery] Error:", err);
+      return res.status(500).json({ error: "Error al acreditar créditos" });
+    }
+  });
 }
 
 // ─── Lógica de pago exitoso ───────────────────────────────────────────────────
