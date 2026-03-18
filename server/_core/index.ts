@@ -316,7 +316,7 @@ setTimeout(async () => {
     console.log("[Recovery] Step 2/2 ✅ 350 créditos acreditados a jessievasq20");
 
   } catch (e: any) {
-    console.error("[Recovery] Failed:", e?.message);
+    console.error("[Recovery] Failed:", e?.message, "| full:", JSON.stringify(e));
   }
 }, 5000); // 5 segundos después del arranque
 

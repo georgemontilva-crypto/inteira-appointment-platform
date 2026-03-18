@@ -544,21 +544,26 @@ export async function recordStripePayment(data: {
 }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db.execute(
-    `INSERT INTO \`payments\`
-     (\`userId\`, \`stripeSessionId\`, \`stripePaymentIntentId\`, \`amount\`, \`currency\`, \`status\`, \`type\`, \`creditsGranted\`, \`metadata\`)
-     VALUES (?, ?, ?, ?, ?, 'succeeded', ?, ?, ?)`,
-    [
-      data.userId,
-      data.stripePaymentId,                                    // stripeSessionId
-      data.stripePaymentId,                                    // stripePaymentIntentId (mismo valor por ahora)
-      data.amount,
-      data.currency,
-      data.paymentType ?? "subscription",                      // type
-      0,                                                       // creditsGranted (se actualiza después)
-      JSON.stringify({ productType: data.productType }),       // metadata
-    ]
-  );
+  try {
+    await db.execute(
+      `INSERT INTO \`payments\`
+       (\`userId\`, \`stripeSessionId\`, \`stripePaymentIntentId\`, \`amount\`, \`currency\`, \`status\`, \`type\`, \`creditsGranted\`, \`metadata\`)
+       VALUES (?, ?, ?, ?, ?, 'succeeded', ?, ?, ?)`,
+      [
+        data.userId,
+        data.stripePaymentId,                                    // stripeSessionId
+        data.stripePaymentId,                                    // stripePaymentIntentId (mismo valor por ahora)
+        data.amount,
+        data.currency,
+        data.paymentType ?? "subscription",                      // type
+        0,                                                       // creditsGranted (se actualiza después)
+        JSON.stringify({ productType: data.productType }),       // metadata
+      ]
+    );
+  } catch (insertErr: any) {
+    console.error("[recordStripePayment] INSERT failed:", insertErr?.message, insertErr?.code, insertErr?.sqlState);
+    throw insertErr;
+  }
 }
 
 export async function createPayment(data: Partial<Payment>) {
