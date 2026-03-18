@@ -195,8 +195,8 @@ export default function AuthenticatedHome() {
         </div>
 
         {/* Stats strip — overlapping */}
-        <div className="mx-4 md:mx-0 md:container relative z-10">
-          <div className="bg-white rounded-2xl shadow-xl border border-border/30 grid grid-cols-3 divide-x divide-border -mb-5">
+        <div className="flex justify-center px-4 md:px-0 relative z-10 pb-6">
+          <div className="w-full max-w-md md:max-w-lg bg-white rounded-2xl shadow-xl border border-border/30 grid grid-cols-3 divide-x divide-border">
             <div className="flex flex-col items-center py-4">
               <span className="text-xl font-bold text-primary" style={{ fontFamily: "Poppins, sans-serif" }}>
                 {upcomingApts.length}
@@ -219,7 +219,6 @@ export default function AuthenticatedHome() {
             </div>
           </div>
         </div>
-        <div className="h-5" />
       </div>
 
       {/* ══════════════════════════════════════════
