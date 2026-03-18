@@ -172,74 +172,6 @@ async function runStartupMigrations() {
       console.warn("[Migration] Could not set admin role:", adminErr?.message);
     }
 
-    // ── Recovery: credit Sesión Básica (350 credits) to jessievasq20@gmail.com ──
-    // Idempotency checks BOTH payments (to avoid duplicate payment records) AND
-    // creditBatches (to catch the case where payments was inserted but addCreditBatch failed).
-    try {
-      const { addCreditBatch } = await import("../credits");
-      const { recordStripePayment, getPaymentByStripeId } = await import("../db");
-      const { creditBatches: creditBatchesTable } = await import("../../drizzle/schema");
-      const { eq: eqOp } = await import("drizzle-orm");
-
-      const recoveryPaymentId = "RECOVERY_jessievasq20_sesion_basica_2026";
-
-      // Find Jessie's userId first — needed for the creditBatches check
-      const [jessieRows] = await db.execute(
-        "SELECT id FROM `users` WHERE `email` = 'jessievasq20@gmail.com' LIMIT 1"
-      ) as any;
-      const jessieId: number | undefined = Array.isArray(jessieRows)
-        ? jessieRows[0]?.id
-        : jessieRows?.id;
-
-      if (!jessieId) {
-        console.warn("[Recovery] jessievasq20@gmail.com not found in DB yet");
-      } else {
-        const existing = await getPaymentByStripeId(recoveryPaymentId);
-        const hasBatch = existing
-          ? await db.select({ id: creditBatchesTable.id })
-              .from(creditBatchesTable)
-              .where(eqOp(creditBatchesTable.userId, jessieId))
-              .limit(1)
-              .then((r: any[]) => r.length > 0)
-          : false;
-
-        if (existing && hasBatch) {
-          console.log("[Recovery] jessievasq20 credits already recovered, skipping");
-        } else {
-          console.log(`[Recovery] Starting recovery for jessievasq20@gmail.com (userId=${jessieId}, paymentExists=${!!existing}, batchExists=${hasBatch})`);
-
-          // Step 1: record payment (skip if already exists to avoid UNIQUE constraint error)
-          if (!existing) {
-            try {
-              await recordStripePayment({
-                userId: jessieId,
-                stripePaymentId: recoveryPaymentId,
-                amount: "350",
-                currency: "MXN",
-                productType: "individual_basic",
-                paymentType: "appointment",
-              });
-              console.log("[Recovery] Step 1/2 ✅ Payment record inserted");
-            } catch (paymentErr: any) {
-              console.warn("[Recovery] Step 1/2 ❌ Failed to insert payment record:", paymentErr?.message);
-            }
-          } else {
-            console.log("[Recovery] Step 1/2 ⏭ Payment record already exists, skipping insert");
-          }
-
-          // Step 2: credit the batch (always attempt if no batch exists)
-          try {
-            await addCreditBatch(jessieId, "individual_basic");
-            console.log(`[Recovery] Step 2/2 ✅ 350 créditos acreditados a jessievasq20@gmail.com (userId=${jessieId})`);
-          } catch (batchErr: any) {
-            console.warn("[Recovery] Step 2/2 ❌ Failed to add credit batch:", batchErr?.message);
-          }
-        }
-      }
-    } catch (recoveryErr: any) {
-      console.warn("[Recovery] Unexpected error:", recoveryErr?.message);
-    }
-
   } catch (err) {
     console.error("[Migration] Startup migration failed:", err);
   }
@@ -324,6 +256,63 @@ async function startServer() {
 }
 
 startServer().catch(console.error);
+
+// ─── Recovery: jessievasq20 — runs 5s after startup so ALTER TABLE is fully applied ──
+setTimeout(async () => {
+  try {
+    const { getPaymentByStripeId, recordStripePayment, getDb } = await import("../db");
+    const { addCreditBatch } = await import("../credits");
+    const { creditBatches: creditBatchesTable } = await import("../../drizzle/schema");
+    const { eq: eqOp } = await import("drizzle-orm");
+    const db = await getDb();
+    if (!db) { console.warn("[Recovery] DB not available"); return; }
+
+    const recoveryPaymentId = "RECOVERY_jessievasq20_sesion_basica_2026";
+    const [jessieRows] = await db.execute(
+      "SELECT id FROM `users` WHERE `email` = 'jessievasq20@gmail.com' LIMIT 1"
+    ) as any;
+    const jessieId = Array.isArray(jessieRows) ? jessieRows[0]?.id : jessieRows?.id;
+
+    if (!jessieId) {
+      console.warn("[Recovery] jessievasq20 not found");
+      return;
+    }
+
+    const existing = await getPaymentByStripeId(recoveryPaymentId);
+    const hasBatch = existing
+      ? await db.select({ id: creditBatchesTable.id })
+          .from(creditBatchesTable)
+          .where(eqOp(creditBatchesTable.userId, jessieId))
+          .limit(1)
+          .then((r: any[]) => r.length > 0)
+      : false;
+
+    if (existing && hasBatch) {
+      console.log("[Recovery] jessievasq20 already recovered, skipping");
+      return;
+    }
+
+    if (!existing) {
+      await recordStripePayment({
+        userId: jessieId,
+        stripePaymentId: recoveryPaymentId,
+        amount: "350",
+        currency: "MXN",
+        productType: "individual_basic",
+        paymentType: "appointment",
+      });
+      console.log("[Recovery] Step 1/2 ✅ Payment inserted");
+    } else {
+      console.log("[Recovery] Step 1/2 ⏭ Payment already exists");
+    }
+
+    await addCreditBatch(jessieId, "individual_basic");
+    console.log("[Recovery] Step 2/2 ✅ 350 créditos acreditados a jessievasq20");
+
+  } catch (e: any) {
+    console.error("[Recovery] Failed:", e?.message);
+  }
+}, 5000); // 5 segundos después del arranque
 
 // ─── Cron: expire timed-out credit batches every hour ─────────────────────────
 const ONE_HOUR_MS = 60 * 60 * 1000;
