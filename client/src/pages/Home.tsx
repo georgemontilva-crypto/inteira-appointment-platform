@@ -1,4 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import AuthenticatedHome from "./AuthenticatedHome";
 import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -175,6 +176,10 @@ export default function Home() {
     : "?";
 
   const displaySpecialties = specialties ?? defaultSpecialties;
+
+  if (isAuthenticated) {
+    return <AuthenticatedHome />;
+  }
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-0">

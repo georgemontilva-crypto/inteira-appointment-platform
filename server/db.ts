@@ -699,3 +699,34 @@ export async function getTopProfessionals(limit = 5) {
     totalReviews: Number(r.totalReviews),
   }));
 }
+
+export async function getFeaturedProfessionals(limit = 6) {
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    const rows = await db
+      .select({
+        id: professionals.id,
+        userId: professionals.userId,
+        specialtyId: professionals.specialtyId,
+        bio: professionals.bio,
+        yearsOfExperience: professionals.yearsOfExperience,
+        profilePhoto: professionals.profilePhoto,
+        averageRating: professionals.averageRating,
+        totalReviews: professionals.totalReviews,
+        isAvailable: professionals.isAvailable,
+        name: users.name,
+        profileImage: users.profileImage,
+        specialtyName: specialties.name,
+      })
+      .from(professionals)
+      .leftJoin(users, eq(professionals.userId, users.id))
+      .leftJoin(specialties, eq(professionals.specialtyId, specialties.id))
+      .where(eq(professionals.status, "approved"))
+      .limit(limit);
+    return rows;
+  } catch (error) {
+    console.error("[Database] getFeaturedProfessionals error:", error);
+    return [];
+  }
+}

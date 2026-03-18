@@ -327,6 +327,12 @@ export const appRouter = router({
         return { success: true };
       }),
 
+    getFeatured: publicProcedure
+      .input(z.object({ limit: z.number().optional().default(6) }))
+      .query(async ({ input }) => {
+        return await db.getFeaturedProfessionals(input.limit);
+      }),
+
     getPublicProfile: publicProcedure
       .input(z.object({ id: z.number() }))
       .query(async ({ input }) => {
