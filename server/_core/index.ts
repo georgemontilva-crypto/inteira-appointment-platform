@@ -267,6 +267,12 @@ setTimeout(async () => {
     const db = await getDb();
     if (!db) { console.warn("[Recovery] DB not available"); return; }
 
+    const [colCheck] = await db.execute(
+      "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'payments' ORDER BY ORDINAL_POSITION"
+    ) as any;
+    const cols = Array.isArray(colCheck) ? colCheck.map((c: any) => c.COLUMN_NAME) : [];
+    console.log("[Recovery] payments columns in TiDB:", JSON.stringify(cols));
+
     const recoveryPaymentId = "RECOVERY_jessievasq20_sesion_basica_2026";
     const [jessieRows] = await db.execute(
       "SELECT id FROM `users` WHERE `email` = 'jessievasq20@gmail.com' LIMIT 1"
