@@ -636,6 +636,44 @@ export const appRouter = router({
 
         return { success: true };
       }),
+
+    // ── Recover a Stripe payment that was not credited (e.g. webhook missed) ──
+    recoverStripePayment: protectedProcedure
+      .input(
+        z.object({
+          stripeSessionId: z.string(),
+          userId: z.number(),
+          productType: z.enum(["individual_basic", "individual_premium", "plan_basic", "plan_pro"]),
+          amountMxn: z.number(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Only admins" });
+        }
+        // Idempotency check — don't double-credit
+        const existing = await db.getPaymentByStripeId(input.stripeSessionId);
+        if (existing) {
+          return { success: false, message: "Este pago ya fue procesado anteriormente" };
+        }
+        // Record the payment
+        await db.recordStripePayment({
+          userId: input.userId,
+          stripePaymentId: input.stripeSessionId,
+          amount: String(input.amountMxn),
+          currency: "MXN",
+          productType: input.productType,
+        });
+        // Credit the user
+        const batchId = await addCreditBatch(input.userId, input.productType as CreditSource);
+        const credits = CREDIT_COSTS[input.productType as CreditSource];
+        return {
+          success: true,
+          batchId,
+          creditsAdded: credits,
+          message: `${credits} créditos acreditados al usuario ${input.userId}`,
+        };
+      }),
   }),
 });
 
