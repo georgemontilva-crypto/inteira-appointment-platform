@@ -232,68 +232,67 @@ export function registerStripeRoutes(app: Express) {
 // ─── Lógica de pago exitoso ───────────────────────────────────────────────────
 
 async function handleSuccessfulPayment(session: Stripe.Checkout.Session) {
-  console.log("[Stripe] Processing checkout.session.completed", session.id, "metadata:", JSON.stringify(session.metadata));
+  console.log("[Stripe] Processing", session.id, "metadata:", JSON.stringify(session.metadata));
 
   const { userId, productType, credits } = session.metadata ?? {};
-
   if (!userId || !productType || !credits) {
-    console.error("[Stripe] Webhook: metadata incompleta", session.metadata);
+    console.error("[Stripe] Metadata incompleta:", session.metadata);
     return;
   }
 
-  const dbConn = await (await import("./db")).getDb();
-  if (!dbConn) { console.error("[Stripe] DB not available"); return; }
-
-  const client = (dbConn as any).$client;
+  const userIdNum = parseInt(userId);
+  const creditsNum = parseInt(credits);
 
   try {
-    // 1. Insertar en cola (idempotente por ON DUPLICATE KEY)
-    try {
-      await client.execute(
-        "INSERT INTO paymentQueue (stripeSessionId, userId, productType, credits, amount, currency, status) VALUES (?, ?, ?, ?, ?, ?, 'pending') ON DUPLICATE KEY UPDATE updatedAt=NOW()",
-        [
-          session.id,
-          parseInt(userId),
-          productType,
-          parseInt(credits),
-          String((session.amount_total ?? 0) / 100),
-          (session.currency ?? "mxn").toUpperCase(),
-        ]
-      );
-      console.log("[Stripe] Insertado en paymentQueue:", session.id);
-    } catch (insertErr: any) {
-      console.error("[Stripe] Error insertando en paymentQueue:", insertErr?.message, insertErr?.code);
-      return;
-    }
+    const db = await (await import("./db")).getDb();
+    if (!db) throw new Error("DB not available");
+    const client = (db as any).$client;
 
-    // 2. Obtener el item recién insertado o existente (retry por consistencia eventual en TiDB)
-    let item = null;
-    for (let i = 0; i < 3; i++) {
-      const selectResult = await client.execute(
+    // INSERT y obtener insertId en la misma operación
+    const insertResult = await client.execute(
+      "INSERT INTO paymentQueue (stripeSessionId, userId, productType, credits, amount, currency, status) VALUES (?, ?, ?, ?, ?, ?, 'pending') ON DUPLICATE KEY UPDATE updatedAt=NOW()",
+      [
+        session.id,
+        userIdNum,
+        productType,
+        creditsNum,
+        String((session.amount_total ?? 0) / 100),
+        (session.currency ?? "mxn").toUpperCase(),
+      ]
+    ) as any;
+
+    // insertId viene en insertResult directamente con MySQL2
+    const insertId = insertResult?.insertId ?? insertResult?.[0]?.insertId;
+    console.log("[Stripe] paymentQueue insertId:", insertId, "affectedRows:", insertResult?.affectedRows ?? insertResult?.[0]?.affectedRows);
+
+    if (!insertId || insertId === 0) {
+      // ON DUPLICATE KEY — el row ya existe, buscar el id
+      const findResult = await client.execute(
         "SELECT id, status FROM paymentQueue WHERE stripeSessionId=? LIMIT 1",
         [session.id]
       ) as any;
-      const selectRows = Array.isArray(selectResult) ? selectResult[0] : (selectResult?.rows ?? []);
-      const selectArr = Array.isArray(selectRows) ? selectRows : [];
-      item = selectArr[0] ?? null;
-      if (item) break;
-      console.log(`[Stripe] SELECT retry ${i + 1}/3 para ${session.id}`);
-      await new Promise(r => setTimeout(r, 200));
-    }
+      const findRows = Array.isArray(findResult) ? findResult[0] : [];
+      const findArr = Array.isArray(findRows) ? findRows : [];
+      const existing = findArr[0];
 
-    if (!item) {
-      console.error("[Stripe] No se encontró el item en paymentQueue después de 3 intentos:", session.id);
+      if (existing?.status === "completed") {
+        console.log("[Stripe] Pago ya completado:", session.id);
+        return;
+      }
+
+      if (existing?.id) {
+        const { processPayment } = await import("./paymentProcessor");
+        await processPayment(existing.id);
+      }
       return;
     }
-    console.log("[Stripe] paymentQueue item encontrado:", JSON.stringify(item));
 
-    if (item.status === "completed") { console.log("[Stripe] Pago ya procesado:", session.id); return; }
-
-    // 3. Procesar inmediatamente
-    await processPayment(item.id);
-    console.log(`[Stripe] ✅ Pago encolado y procesado: ${credits} créditos para usuario ${userId} (${productType})`);
+    // Nuevo INSERT — procesar inmediatamente con el insertId
+    const { processPayment } = await import("./paymentProcessor");
+    await processPayment(insertId);
+    console.log(`[Stripe] ✅ ${creditsNum} créditos procesados para userId=${userIdNum}`);
 
   } catch (err: any) {
-    console.error("[Stripe] Error en handleSuccessfulPayment:", err?.message, err?.stack);
+    console.error("[Stripe] ❌ Error:", err?.message);
   }
 }
