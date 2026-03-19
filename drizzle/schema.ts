@@ -299,3 +299,25 @@ export const blockedDays = mysqlTable("blockedDays", {
 
 export type BlockedDay = typeof blockedDays.$inferSelect;
 export type InsertBlockedDay = typeof blockedDays.$inferInsert;
+
+/**
+ * Payment queue — reliable processing with retry logic
+ */
+export const paymentQueue = mysqlTable("paymentQueue", {
+  id:              int("id").autoincrement().primaryKey(),
+  stripeSessionId: varchar("stripeSessionId", { length: 255 }).notNull().unique(),
+  userId:          int("userId").notNull(),
+  productType:     varchar("productType", { length: 64 }).notNull(),
+  credits:         int("credits").notNull(),
+  amount:          decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  currency:        varchar("currency", { length: 3 }).default("MXN"),
+  status:          mysqlEnum("status", ["pending", "processing", "completed", "failed"]).default("pending"),
+  attempts:        int("attempts").default(0),
+  lastError:       text("lastError"),
+  processedAt:     timestamp("processedAt"),
+  createdAt:       timestamp("createdAt").defaultNow().notNull(),
+  updatedAt:       timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type PaymentQueueItem = typeof paymentQueue.$inferSelect;
+export type InsertPaymentQueueItem = typeof paymentQueue.$inferInsert;

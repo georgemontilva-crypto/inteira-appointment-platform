@@ -18,7 +18,8 @@ import Stripe from "stripe";
 import express from "express";
 import type { Express, Request, Response } from "express";
 import * as db from "./db";
-import { addCreditBatch, CREDIT_COSTS, type CreditSource } from "./credits";
+import { CREDIT_COSTS, type CreditSource } from "./credits";
+import { processPayment } from "./paymentProcessor";
 import { sdk } from "./_core/sdk";
 
 // ─── Configuración ────────────────────────────────────────────────────────────
@@ -234,69 +235,46 @@ async function handleSuccessfulPayment(session: Stripe.Checkout.Session) {
   console.log("[Stripe] Processing checkout.session.completed", session.id, "metadata:", JSON.stringify(session.metadata));
 
   const { userId, productType, credits } = session.metadata ?? {};
-  const userIdNum = userId ? parseInt(userId, 10) : undefined;
+
+  if (!userId || !productType || !credits) {
+    console.error("[Stripe] Webhook: metadata incompleta", session.metadata);
+    return;
+  }
+
+  const dbConn = await (await import("./db")).getDb();
+  if (!dbConn) { console.error("[Stripe] DB not available"); return; }
+
+  const client = (dbConn as any).$client;
 
   try {
-    if (!userId || !productType || !credits) {
-      console.error("[Stripe] Webhook: metadata incompleta", session.metadata);
-      return;
-    }
+    // 1. Insertar en cola (INSERT IGNORE — idempotente por UNIQUE stripeSessionId)
+    await client.execute(
+      "INSERT IGNORE INTO paymentQueue (stripeSessionId, userId, productType, credits, amount, currency, status) VALUES (?, ?, ?, ?, ?, ?, 'pending')",
+      [
+        session.id,
+        parseInt(userId),
+        productType,
+        parseInt(credits),
+        String((session.amount_total ?? 0) / 100),
+        (session.currency ?? "mxn").toUpperCase(),
+      ]
+    );
 
-    const creditsNum = parseInt(credits, 10);
+    // 2. Obtener el item recién insertado o existente
+    const [rows] = await client.execute(
+      "SELECT id, status FROM paymentQueue WHERE stripeSessionId=? LIMIT 1",
+      [session.id]
+    ) as any;
+    const item = Array.isArray(rows) ? rows[0] : null;
 
-    // Verificar que no se haya procesado ya este pago (idempotencia)
-    let existingPayment;
-    try {
-      existingPayment = await db.getPaymentByStripeId(session.id);
-    } catch (err) {
-      console.error(`[Stripe] ❌ Falló getPaymentByStripeId — sessionId=${session.id} userId=${userId} productType=${productType}`);
-      console.error("[Stripe] Error:", (err as Error)?.stack ?? err);
-      throw err;
-    }
+    if (!item) { console.error("[Stripe] No se pudo insertar en paymentQueue"); return; }
+    if (item.status === "completed") { console.log("[Stripe] Pago ya procesado:", session.id); return; }
 
-    console.log(`[Stripe] getPaymentByStripeId result for ${session.id}:`, existingPayment ? `EXISTS (id=${existingPayment.id})` : "NOT FOUND — will process");
+    // 3. Procesar inmediatamente
+    await processPayment(item.id);
+    console.log(`[Stripe] ✅ Pago encolado y procesado: ${credits} créditos para usuario ${userId} (${productType})`);
 
-    if (existingPayment) {
-      console.log("[Stripe] Pago ya procesado:", session.id);
-      return;
-    }
-
-    // Registrar el pago en la DB
-    try {
-      await db.recordStripePayment({
-        userId: userIdNum!,
-        stripePaymentId: session.id,
-        amount: String((session.amount_total ?? 0) / 100),
-        currency: (session.currency ?? "mxn").toUpperCase(),
-        productType: productType as CreditSource,
-      });
-    } catch (err) {
-      console.error(`[Stripe] ❌ Falló recordStripePayment — sessionId=${session.id} userId=${userId} productType=${productType}`);
-      console.error("[Stripe] Error:", (err as Error)?.stack ?? err);
-      throw err;
-    }
-
-    // Acreditar créditos al usuario (crea un CreditBatch con 60 días de vigencia)
-    try {
-      await addCreditBatch(userIdNum!, productType as CreditSource);
-    } catch (err) {
-      console.error(`[Stripe] ❌ Falló addCreditBatch — sessionId=${session.id} userId=${userId} productType=${productType}`);
-      console.error("[Stripe] Error:", (err as Error)?.stack ?? err);
-      throw err;
-    }
-
-    // Actualizar creditsGranted en la fila de pago recién insertada
-    const dbConn = await (await import("./db")).getDb();
-    if (dbConn) {
-      await dbConn.execute(
-        "UPDATE `payments` SET `creditsGranted` = ? WHERE `stripeSessionId` = ?",
-        [creditsNum, session.id]
-      ).catch(() => {});
-    }
-
-    console.log(`[Stripe] ✅ Pago procesado: ${creditsNum} créditos para usuario ${userIdNum} (${productType})`);
-  } catch (err) {
-    console.error(`[Stripe] ❌ Error procesando pago — sessionId=${session.id} userId=${userId ?? "desconocido"} productType=${productType ?? "desconocido"}`);
-    console.error("[Stripe] Stack:", (err as Error)?.stack ?? err);
+  } catch (err: any) {
+    console.error("[Stripe] Error en handleSuccessfulPayment:", err?.message, err?.stack);
   }
 }

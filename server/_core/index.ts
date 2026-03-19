@@ -8,6 +8,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { expireTimedOutBatches } from "../credits";
+import { retryPendingPayments } from "../paymentProcessor";
 import { storagePut } from "../storage";
 import { registerStripeRoutes } from "../stripe";
 import { sdk } from "./sdk";
@@ -171,6 +172,28 @@ async function runStartupMigrations() {
       ")",
     ].join(" "));
     console.log("[Migration] creditTransactions table ready");
+
+    // Ensure paymentQueue table exists
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS \`paymentQueue\` (
+        \`id\` int NOT NULL AUTO_INCREMENT,
+        \`stripeSessionId\` varchar(255) NOT NULL,
+        \`userId\` int NOT NULL,
+        \`productType\` varchar(64) NOT NULL,
+        \`credits\` int NOT NULL,
+        \`amount\` decimal(10,2) NOT NULL,
+        \`currency\` varchar(3) DEFAULT 'MXN',
+        \`status\` enum('pending','processing','completed','failed') DEFAULT 'pending',
+        \`attempts\` int DEFAULT 0,
+        \`lastError\` text,
+        \`processedAt\` timestamp NULL,
+        \`createdAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        \`updatedAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (\`id\`),
+        UNIQUE KEY \`paymentQueue_stripeSessionId_unique\` (\`stripeSessionId\`)
+      )
+    `);
+    console.log("[Migration] paymentQueue table ready");
 
     // ── Seed: ensure marketingdedsm@gmail.com has role=admin ──────────────────
     try {
@@ -393,6 +416,15 @@ setTimeout(async () => {
   }
 }, 8000);
 */
+
+// ─── Cron: reintentos de pagos pendientes cada 2 minutos ──────────────────────
+setInterval(async () => {
+  await retryPendingPayments().catch(err =>
+    console.error("[Cron] Error en retryPendingPayments:", err?.message)
+  );
+}, 2 * 60 * 1000);
+// Correr una vez al arrancar (30s para que las migraciones terminen)
+setTimeout(() => retryPendingPayments().catch(console.error), 30000);
 
 // ─── Cron: expire timed-out credit batches every hour ─────────────────────────
 const ONE_HOUR_MS = 60 * 60 * 1000;
