@@ -254,6 +254,8 @@ async function handleSuccessfulPayment(session: Stripe.Checkout.Session) {
       throw err;
     }
 
+    console.log(`[Stripe] getPaymentByStripeId result for ${session.id}:`, existingPayment ? `EXISTS (id=${existingPayment.id})` : "NOT FOUND — will process");
+
     if (existingPayment) {
       console.log("[Stripe] Pago ya procesado:", session.id);
       return;
