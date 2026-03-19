@@ -267,6 +267,9 @@ async function startServer() {
 
 startServer().catch(console.error);
 
+/* DESACTIVADO — recoveries automáticos causaban créditos duplicados en cada arranque.
+   El bug de expireTimedOutBatches (expiresAt faltante en SELECT) ya fue corregido.
+
 // ─── Recovery: restaurar lotes víctimas del bug de expiración ────────────────
 setTimeout(async () => {
   try {
@@ -275,8 +278,6 @@ setTimeout(async () => {
     const db = await getDb();
     if (!db) return;
 
-    // Restaurar todos los lotes que tienen remaining=0 pero expiredEarly=false y expiresAt en el futuro
-    // Estos fueron víctimas del bug de expireTimedOutBatches que ponía todos en 0
     const [result] = await db.execute(
       sql`UPDATE creditBatches
           SET remaining = amount
@@ -294,7 +295,6 @@ setTimeout(async () => {
         "SELECT id FROM `users` WHERE `email` = 'jessievasq20@gmail.com' LIMIT 1"
       ) as any;
       const jessieId = Array.isArray(jessieRows) ? jessieRows[0]?.id : jessieRows?.id;
-
       if (jessieId) {
         const { addCreditBatch } = await import("../credits");
         await addCreditBatch(jessieId, "individual_basic", 700);
@@ -309,17 +309,14 @@ setTimeout(async () => {
       "SELECT id FROM `users` WHERE `email` = 'memoxgamer1993@gmail.com' LIMIT 1"
     ) as any;
     const memoId = Array.isArray(memoRows) ? memoRows[0]?.id : memoRows?.id;
-
     if (memoId) {
       const { creditBatches: cbTable } = await import("../../drizzle/schema");
       const { eq: eqOp } = await import("drizzle-orm");
-
       const existingBatch = await db.select()
         .from(cbTable)
         .where(eqOp(cbTable.userId, memoId))
         .limit(1)
         .then((r: any[]) => r[0] ?? null);
-
       if (!existingBatch) {
         const { addCreditBatch } = await import("../credits");
         await addCreditBatch(memoId, "individual_basic");
@@ -330,7 +327,6 @@ setTimeout(async () => {
     } else {
       console.warn("[Recovery] memoxgamer1993@gmail.com not found in DB");
     }
-
   } catch(e: any) {
     console.error("[Recovery] Error restaurando lotes:", e?.message);
   }
@@ -343,64 +339,48 @@ setTimeout(async () => {
     const db = await getDb();
     if (!db) return;
 
-    // ── Diagnóstico: schema real de creditBatches en TiDB ─────────────────
     console.log("[Diag] creditBatches schema check:", JSON.stringify(
       await db.execute("SELECT COLUMN_NAME, COLUMN_DEFAULT, IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'creditBatches' ORDER BY ORDINAL_POSITION")
         .then((r: any) => Array.isArray(r[0]) ? r[0] : [])
         .catch((e: any) => ({ error: e.message }))
     ));
 
-    // ── Diagnóstico: estado real de creditBatches ──────────────────────────
     try {
       const [batchRows] = await db.execute(`
         SELECT id, userId, amount, remaining, source, expiresAt, expiredEarly, createdAt
-        FROM creditBatches
-        ORDER BY createdAt DESC
-        LIMIT 20
+        FROM creditBatches ORDER BY createdAt DESC LIMIT 20
       `) as any;
       console.log("[Diag] creditBatches (últimos 20):", JSON.stringify(Array.isArray(batchRows) ? batchRows : []));
     } catch (e: any) {
       console.error("[Diag] Error leyendo creditBatches:", e?.message);
     }
 
-    // ── Diagnóstico: pagos succeeded ───────────────────────────────────────
     try {
       const [paymentRows] = await db.execute(`
         SELECT id, userId, stripeSessionId, amount, status, type, metadata, createdAt
-        FROM payments
-        WHERE status = 'succeeded'
-        ORDER BY createdAt DESC
-        LIMIT 10
+        FROM payments WHERE status = 'succeeded' ORDER BY createdAt DESC LIMIT 10
       `) as any;
       console.log("[Diag] payments succeeded (últimos 10):", JSON.stringify(Array.isArray(paymentRows) ? paymentRows : []));
     } catch (e: any) {
       console.error("[Diag] Error leyendo payments:", e?.message);
     }
 
-    // Buscar pagos sin creditBatch
     const [rows] = await db.execute(`
       SELECT p.userId, p.stripeSessionId, p.metadata, p.creditsGranted
       FROM payments p
       LEFT JOIN creditBatches cb ON cb.userId = p.userId
-      WHERE p.status = 'succeeded'
-      AND cb.id IS NULL
+      WHERE p.status = 'succeeded' AND cb.id IS NULL
     `) as any;
-
     const payments = Array.isArray(rows) ? rows : [];
     console.log(`[Recovery] Pagos sin creditBatch: ${payments.length}`);
-
     for (const payment of payments) {
       try {
-        const metadata = typeof payment.metadata === 'string'
-          ? JSON.parse(payment.metadata)
-          : payment.metadata;
+        const metadata = typeof payment.metadata === 'string' ? JSON.parse(payment.metadata) : payment.metadata;
         const productType = metadata?.productType;
-
         if (!productType || !payment.userId) {
           console.warn("[Recovery] Pago sin productType o userId:", payment.stripeSessionId);
           continue;
         }
-
         const { addCreditBatch } = await import("../credits");
         await addCreditBatch(payment.userId, productType);
         console.log(`[Recovery] ✅ Créditos acreditados — userId=${payment.userId} productType=${productType} session=${payment.stripeSessionId}`);
@@ -412,6 +392,7 @@ setTimeout(async () => {
     console.error("[Recovery] Error en recovery genérico:", e?.message);
   }
 }, 8000);
+*/
 
 // ─── Cron: expire timed-out credit batches every hour ─────────────────────────
 const ONE_HOUR_MS = 60 * 60 * 1000;
