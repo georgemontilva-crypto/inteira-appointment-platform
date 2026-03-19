@@ -254,9 +254,15 @@ async function handleSuccessfulPayment(session: Stripe.Checkout.Session) {
       [session.id, userIdNum, productType, creditsNum, String((session.amount_total ?? 0) / 100), (session.currency ?? "mxn").toUpperCase()]
     );
 
-    // Procesar directamente con stripeSessionId
+    // Procesar directamente con stripeSessionId + datos como fallback
     const { processPayment } = await import("./paymentProcessor");
-    await processPayment(session.id);
+    await processPayment(session.id, {
+      userId: userIdNum,
+      productType,
+      credits: creditsNum,
+      amount: String((session.amount_total ?? 0) / 100),
+      currency: (session.currency ?? "mxn").toUpperCase(),
+    });
     console.log(`[Stripe] ✅ ${creditsNum} créditos procesados para userId=${userIdNum}`);
 
   } catch (err: any) {

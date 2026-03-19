@@ -13,7 +13,14 @@ import { getDb } from "./db";
 import { type CreditSource } from "./credits";
 
 // Procesar un pago por stripeSessionId (no depende de insertId)
-export async function processPayment(stripeSessionId: string): Promise<boolean> {
+// data: fallback cuando el INSERT en paymentQueue no persiste antes del SELECT (TiDB eventual consistency)
+export async function processPayment(stripeSessionId: string, data?: {
+  userId: number;
+  productType: string;
+  credits: number;
+  amount: string;
+  currency: string;
+}): Promise<boolean> {
   const db = await getDb();
   if (!db) throw new Error("DB not available");
   const client = (db as any).$client;
@@ -29,6 +36,18 @@ export async function processPayment(stripeSessionId: string): Promise<boolean> 
     const item = findArr[0];
 
     if (!item) {
+      if (data) {
+        console.warn("[PaymentProcessor] Item no encontrado en DB, procesando con data directa:", stripeSessionId);
+        const { addCreditBatch } = await import("./credits");
+        await addCreditBatch(data.userId, data.productType as CreditSource);
+        // best-effort: insertar como completado para idempotencia futura
+        await client.execute(
+          "INSERT INTO paymentQueue (stripeSessionId, userId, productType, credits, amount, currency, status, attempts, processedAt) VALUES (?, ?, ?, ?, ?, ?, 'completed', 1, NOW()) ON DUPLICATE KEY UPDATE status='completed', processedAt=NOW(), updatedAt=NOW()",
+          [stripeSessionId, data.userId, data.productType, data.credits, data.amount, data.currency]
+        ).catch((e: any) => console.warn("[PaymentProcessor] best-effort INSERT falló:", e?.message));
+        console.log(`[PaymentProcessor] ✅ ${data.credits} créditos acreditados directamente — userId=${data.userId}`);
+        return true;
+      }
       console.error("[PaymentProcessor] Item no encontrado:", stripeSessionId);
       return false;
     }
