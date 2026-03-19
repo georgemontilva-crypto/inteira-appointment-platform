@@ -266,17 +266,27 @@ async function handleSuccessfulPayment(session: Stripe.Checkout.Session) {
       return;
     }
 
-    // 2. Obtener el item recién insertado o existente
-    const selectResult = await client.execute(
-      "SELECT id, status FROM paymentQueue WHERE stripeSessionId=? LIMIT 1",
-      [session.id]
-    ) as any;
-    const selectRows = Array.isArray(selectResult) ? selectResult[0] : (selectResult?.rows ?? selectResult ?? []);
-    const selectArr = Array.isArray(selectRows) ? selectRows : [];
-    const item = selectArr[0] ?? null;
-    console.log("[Stripe] paymentQueue item:", JSON.stringify(item));
+    // 2. Obtener el item recién insertado o existente (retry por consistencia eventual en TiDB)
+    let item = null;
+    for (let i = 0; i < 3; i++) {
+      const selectResult = await client.execute(
+        "SELECT id, status FROM paymentQueue WHERE stripeSessionId=? LIMIT 1",
+        [session.id]
+      ) as any;
+      const selectRows = Array.isArray(selectResult) ? selectResult[0] : (selectResult?.rows ?? []);
+      const selectArr = Array.isArray(selectRows) ? selectRows : [];
+      item = selectArr[0] ?? null;
+      if (item) break;
+      console.log(`[Stripe] SELECT retry ${i + 1}/3 para ${session.id}`);
+      await new Promise(r => setTimeout(r, 200));
+    }
 
-    if (!item) { console.error("[Stripe] No se pudo insertar en paymentQueue"); return; }
+    if (!item) {
+      console.error("[Stripe] No se encontró el item en paymentQueue después de 3 intentos:", session.id);
+      return;
+    }
+    console.log("[Stripe] paymentQueue item encontrado:", JSON.stringify(item));
+
     if (item.status === "completed") { console.log("[Stripe] Pago ya procesado:", session.id); return; }
 
     // 3. Procesar inmediatamente
