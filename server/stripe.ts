@@ -267,13 +267,14 @@ async function handleSuccessfulPayment(session: Stripe.Checkout.Session) {
     }
 
     // 2. Obtener el item recién insertado o existente
-    const result = await client.execute(
+    const selectResult = await client.execute(
       "SELECT id, status FROM paymentQueue WHERE stripeSessionId=? LIMIT 1",
       [session.id]
     ) as any;
-    const rows = Array.isArray(result) ? result[0] : (Array.isArray(result?.rows) ? result.rows : result ?? []);
-    const rowsArr = Array.isArray(rows) ? rows : [];
-    const item = rowsArr[0] ?? null;
+    const selectRows = Array.isArray(selectResult) ? selectResult[0] : (selectResult?.rows ?? selectResult ?? []);
+    const selectArr = Array.isArray(selectRows) ? selectRows : [];
+    const item = selectArr[0] ?? null;
+    console.log("[Stripe] paymentQueue item:", JSON.stringify(item));
 
     if (!item) { console.error("[Stripe] No se pudo insertar en paymentQueue"); return; }
     if (item.status === "completed") { console.log("[Stripe] Pago ya procesado:", session.id); return; }
