@@ -248,52 +248,30 @@ async function handleSuccessfulPayment(session: Stripe.Checkout.Session) {
     if (!db) throw new Error("DB not available");
     const client = (db as any).$client;
 
-    // INSERT y obtener insertId en la misma operación
-    const insertResult = await client.execute(
+    // INSERT
+    await client.execute(
       "INSERT INTO paymentQueue (stripeSessionId, userId, productType, credits, amount, currency, status) VALUES (?, ?, ?, ?, ?, ?, 'pending') ON DUPLICATE KEY UPDATE updatedAt=NOW()",
-      [
-        session.id,
-        userIdNum,
-        productType,
-        creditsNum,
-        String((session.amount_total ?? 0) / 100),
-        (session.currency ?? "mxn").toUpperCase(),
-      ]
+      [session.id, userIdNum, productType, creditsNum, String((session.amount_total ?? 0) / 100), (session.currency ?? "mxn").toUpperCase()]
+    );
+
+    // Obtener el ID con LAST_INSERT_ID() o SELECT
+    const idResult = await client.execute(
+      "SELECT LAST_INSERT_ID() as insertId, (SELECT id FROM paymentQueue WHERE stripeSessionId=? LIMIT 1) as existingId",
+      [session.id]
     ) as any;
+    const idRows = Array.isArray(idResult) ? idResult[0] : [];
+    const idArr = Array.isArray(idRows) ? idRows : [];
+    const idRow = idArr[0];
+    const queueId = idRow?.insertId || idRow?.existingId;
+    console.log("[Stripe] queueId:", queueId, "idRow:", JSON.stringify(idRow));
 
-    console.log("[Stripe] insertResult type:", typeof insertResult, "isArray:", Array.isArray(insertResult), "keys:", insertResult ? JSON.stringify(Object.keys(insertResult)).slice(0, 200) : "null");
-    console.log("[Stripe] insertResult[0]:", JSON.stringify(insertResult?.[0])?.slice(0, 300));
-    console.log("[Stripe] insertResult raw:", JSON.stringify(insertResult)?.slice(0, 300));
-
-    // insertId viene en insertResult directamente con MySQL2
-    const insertId = insertResult?.insertId ?? insertResult?.[0]?.insertId;
-    console.log("[Stripe] paymentQueue insertId:", insertId, "affectedRows:", insertResult?.affectedRows ?? insertResult?.[0]?.affectedRows);
-
-    if (!insertId || insertId === 0) {
-      // ON DUPLICATE KEY — el row ya existe, buscar el id
-      const findResult = await client.execute(
-        "SELECT id, status FROM paymentQueue WHERE stripeSessionId=? LIMIT 1",
-        [session.id]
-      ) as any;
-      const findRows = Array.isArray(findResult) ? findResult[0] : [];
-      const findArr = Array.isArray(findRows) ? findRows : [];
-      const existing = findArr[0];
-
-      if (existing?.status === "completed") {
-        console.log("[Stripe] Pago ya completado:", session.id);
-        return;
-      }
-
-      if (existing?.id) {
-        const { processPayment } = await import("./paymentProcessor");
-        await processPayment(existing.id);
-      }
+    if (!queueId) {
+      console.error("[Stripe] No se pudo obtener queueId para:", session.id);
       return;
     }
 
-    // Nuevo INSERT — procesar inmediatamente con el insertId
     const { processPayment } = await import("./paymentProcessor");
-    await processPayment(insertId);
+    await processPayment(queueId);
     console.log(`[Stripe] ✅ ${creditsNum} créditos procesados para userId=${userIdNum}`);
 
   } catch (err: any) {
