@@ -257,85 +257,31 @@ async function startServer() {
 
 startServer().catch(console.error);
 
-// ─── Recovery: jessievasq20 — runs 5s after startup so ALTER TABLE is fully applied ──
+// ─── Recovery: restaurar lotes víctimas del bug de expiración ────────────────
 setTimeout(async () => {
   try {
-    const { getPaymentByStripeId, recordStripePayment, getDb } = await import("../db");
-    const { addCreditBatch } = await import("../credits");
-    const { creditBatches: creditBatchesTable } = await import("../../drizzle/schema");
-    const { eq: eqOp, and: andOp, gt: gtOp, sql } = await import("drizzle-orm");
+    const { getDb } = await import("../db");
+    const { sql } = await import("drizzle-orm");
     const db = await getDb();
-    if (!db) { console.warn("[Recovery] DB not available"); return; }
+    if (!db) return;
 
-    const [colCheck] = await db.execute(
-      "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'payments' ORDER BY ORDINAL_POSITION"
+    // Restaurar todos los lotes que tienen remaining=0 pero expiredEarly=false y expiresAt en el futuro
+    // Estos fueron víctimas del bug de expireTimedOutBatches que ponía todos en 0
+    const [result] = await db.execute(
+      sql`UPDATE creditBatches
+          SET remaining = amount
+          WHERE remaining = 0
+          AND expiredEarly = 0
+          AND expiresAt > NOW()`
     ) as any;
-    const cols = Array.isArray(colCheck) ? colCheck.map((c: any) => c.COLUMN_NAME) : [];
-    console.log("[Recovery] payments columns in TiDB:", JSON.stringify(cols));
 
-    const recoveryPaymentId = "RECOVERY_jessievasq20_sesion_basica_2026";
-    const [jessieRows] = await db.execute(
-      "SELECT id FROM `users` WHERE `email` = 'jessievasq20@gmail.com' LIMIT 1"
-    ) as any;
-    const jessieId = Array.isArray(jessieRows) ? jessieRows[0]?.id : jessieRows?.id;
+    const affected = result?.affectedRows ?? 0;
+    console.log(`[Recovery] ✅ Restaurados ${affected} lotes de créditos (remaining=0 → amount)`);
 
-    if (!jessieId) {
-      console.warn("[Recovery] jessievasq20 not found");
-      return;
-    }
-
-    const existing = await getPaymentByStripeId(recoveryPaymentId);
-    const hasBatch = existing
-      ? await db.select({ id: creditBatchesTable.id })
-          .from(creditBatchesTable)
-          .where(eqOp(creditBatchesTable.userId, jessieId))
-          .limit(1)
-          .then((r: any[]) => r.length > 0)
-      : false;
-
-    if (existing && hasBatch) {
-      console.log("[Recovery] jessievasq20 already recovered, skipping");
-
-      // Si el lote existe pero remaining = 0, restaurarlo
-      const { creditBatches: cbTable } = await import("../../drizzle/schema");
-
-      const existingBatch = await db.select()
-        .from(cbTable)
-        .where(eqOp(cbTable.userId, jessieId))
-        .limit(1)
-        .then((r: any[]) => r[0] ?? null);
-
-      if (existingBatch && existingBatch.remaining === 0 && !existingBatch.expiredEarly) {
-        await db.execute(
-          sql`UPDATE creditBatches SET remaining = ${existingBatch.amount} WHERE id = ${existingBatch.id}`
-        );
-        console.log(`[Recovery] ✅ Restored remaining=${existingBatch.amount} for jessievasq20 batch id=${existingBatch.id}`);
-      }
-
-      return;
-    }
-
-    if (!existing) {
-      await recordStripePayment({
-        userId: jessieId,
-        stripePaymentId: recoveryPaymentId,
-        amount: "350",
-        currency: "MXN",
-        productType: "individual_basic",
-        paymentType: "appointment",
-      });
-      console.log("[Recovery] Step 1/2 ✅ Payment inserted");
-    } else {
-      console.log("[Recovery] Step 1/2 ⏭ Payment already exists");
-    }
-
-    await addCreditBatch(jessieId, "individual_basic");
-    console.log("[Recovery] Step 2/2 ✅ 350 créditos acreditados a jessievasq20");
-
-  } catch (e: any) {
-    console.error("[Recovery] Failed:", e?.message, "| full:", JSON.stringify(e));
+  } catch(e: any) {
+    console.error("[Recovery] Error restaurando lotes:", e?.message);
   }
-}, 5000); // 5 segundos después del arranque
+}, 5000);
 
 // ─── Recovery genérico: acreditar pagos sin creditBatch al arrancar ───────────
 setTimeout(async () => {
