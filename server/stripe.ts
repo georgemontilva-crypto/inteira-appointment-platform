@@ -220,35 +220,57 @@ export function registerStripeRoutes(app: Express) {
 // ─── Lógica de pago exitoso ───────────────────────────────────────────────────
 
 async function handleSuccessfulPayment(session: Stripe.Checkout.Session) {
-  try {
-    const { userId, productType, credits } = session.metadata ?? {};
+  console.log("[Stripe] Processing checkout.session.completed", session.id, "metadata:", JSON.stringify(session.metadata));
 
+  const { userId, productType, credits } = session.metadata ?? {};
+  const userIdNum = userId ? parseInt(userId, 10) : undefined;
+
+  try {
     if (!userId || !productType || !credits) {
       console.error("[Stripe] Webhook: metadata incompleta", session.metadata);
       return;
     }
 
-    const userIdNum = parseInt(userId, 10);
     const creditsNum = parseInt(credits, 10);
 
     // Verificar que no se haya procesado ya este pago (idempotencia)
-    const existingPayment = await db.getPaymentByStripeId(session.id);
+    let existingPayment;
+    try {
+      existingPayment = await db.getPaymentByStripeId(session.id);
+    } catch (err) {
+      console.error(`[Stripe] ❌ Falló getPaymentByStripeId — sessionId=${session.id} userId=${userId} productType=${productType}`);
+      console.error("[Stripe] Error:", (err as Error)?.stack ?? err);
+      throw err;
+    }
+
     if (existingPayment) {
       console.log("[Stripe] Pago ya procesado:", session.id);
       return;
     }
 
     // Registrar el pago en la DB
-    await db.recordStripePayment({
-      userId: userIdNum,
-      stripePaymentId: session.id,
-      amount: String((session.amount_total ?? 0) / 100),
-      currency: (session.currency ?? "mxn").toUpperCase(),
-      productType: productType as CreditSource,
-    });
+    try {
+      await db.recordStripePayment({
+        userId: userIdNum!,
+        stripePaymentId: session.id,
+        amount: String((session.amount_total ?? 0) / 100),
+        currency: (session.currency ?? "mxn").toUpperCase(),
+        productType: productType as CreditSource,
+      });
+    } catch (err) {
+      console.error(`[Stripe] ❌ Falló recordStripePayment — sessionId=${session.id} userId=${userId} productType=${productType}`);
+      console.error("[Stripe] Error:", (err as Error)?.stack ?? err);
+      throw err;
+    }
 
     // Acreditar créditos al usuario (crea un CreditBatch con 60 días de vigencia)
-    await addCreditBatch(userIdNum, productType as CreditSource);
+    try {
+      await addCreditBatch(userIdNum!, productType as CreditSource);
+    } catch (err) {
+      console.error(`[Stripe] ❌ Falló addCreditBatch — sessionId=${session.id} userId=${userId} productType=${productType}`);
+      console.error("[Stripe] Error:", (err as Error)?.stack ?? err);
+      throw err;
+    }
 
     // Actualizar creditsGranted en la fila de pago recién insertada
     const dbConn = await (await import("./db")).getDb();
@@ -261,6 +283,7 @@ async function handleSuccessfulPayment(session: Stripe.Checkout.Session) {
 
     console.log(`[Stripe] ✅ Pago procesado: ${creditsNum} créditos para usuario ${userIdNum} (${productType})`);
   } catch (err) {
-    console.error("[Stripe] Error procesando pago exitoso:", err);
+    console.error(`[Stripe] ❌ Error procesando pago — sessionId=${session.id} userId=${userId ?? "desconocido"} productType=${productType ?? "desconocido"}`);
+    console.error("[Stripe] Stack:", (err as Error)?.stack ?? err);
   }
 }
