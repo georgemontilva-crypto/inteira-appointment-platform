@@ -247,18 +247,24 @@ async function handleSuccessfulPayment(session: Stripe.Checkout.Session) {
   const client = (dbConn as any).$client;
 
   try {
-    // 1. Insertar en cola (INSERT IGNORE — idempotente por UNIQUE stripeSessionId)
-    await client.execute(
-      "INSERT IGNORE INTO paymentQueue (stripeSessionId, userId, productType, credits, amount, currency, status) VALUES (?, ?, ?, ?, ?, ?, 'pending')",
-      [
-        session.id,
-        parseInt(userId),
-        productType,
-        parseInt(credits),
-        String((session.amount_total ?? 0) / 100),
-        (session.currency ?? "mxn").toUpperCase(),
-      ]
-    );
+    // 1. Insertar en cola (idempotente por ON DUPLICATE KEY)
+    try {
+      await client.execute(
+        "INSERT INTO paymentQueue (stripeSessionId, userId, productType, credits, amount, currency, status) VALUES (?, ?, ?, ?, ?, ?, 'pending') ON DUPLICATE KEY UPDATE updatedAt=NOW()",
+        [
+          session.id,
+          parseInt(userId),
+          productType,
+          parseInt(credits),
+          String((session.amount_total ?? 0) / 100),
+          (session.currency ?? "mxn").toUpperCase(),
+        ]
+      );
+      console.log("[Stripe] Insertado en paymentQueue:", session.id);
+    } catch (insertErr: any) {
+      console.error("[Stripe] Error insertando en paymentQueue:", insertErr?.message, insertErr?.code);
+      return;
+    }
 
     // 2. Obtener el item recién insertado o existente
     const result = await client.execute(
