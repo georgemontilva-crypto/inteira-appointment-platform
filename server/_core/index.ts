@@ -278,6 +278,33 @@ setTimeout(async () => {
     const affected = result?.affectedRows ?? 0;
     console.log(`[Recovery] ✅ Restaurados ${affected} lotes de créditos (remaining=0 → amount)`);
 
+    // ── Recovery específico: memoxgamer1993@gmail.com ──────────────────────
+    const [memoRows] = await db.execute(
+      "SELECT id FROM `users` WHERE `email` = 'memoxgamer1993@gmail.com' LIMIT 1"
+    ) as any;
+    const memoId = Array.isArray(memoRows) ? memoRows[0]?.id : memoRows?.id;
+
+    if (memoId) {
+      const { creditBatches: cbTable } = await import("../../drizzle/schema");
+      const { eq: eqOp } = await import("drizzle-orm");
+
+      const existingBatch = await db.select()
+        .from(cbTable)
+        .where(eqOp(cbTable.userId, memoId))
+        .limit(1)
+        .then((r: any[]) => r[0] ?? null);
+
+      if (!existingBatch) {
+        const { addCreditBatch } = await import("../credits");
+        await addCreditBatch(memoId, "individual_basic");
+        console.log(`[Recovery] ✅ 350 créditos acreditados a memoxgamer1993@gmail.com (userId=${memoId})`);
+      } else {
+        console.log(`[Recovery] memoxgamer1993 ya tiene lote — remaining=${existingBatch.remaining}`);
+      }
+    } else {
+      console.warn("[Recovery] memoxgamer1993@gmail.com not found in DB");
+    }
+
   } catch(e: any) {
     console.error("[Recovery] Error restaurando lotes:", e?.message);
   }
