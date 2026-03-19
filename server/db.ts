@@ -528,9 +528,10 @@ export async function getPaymentByStripeId(stripePaymentId: string) {
     const result = await db.execute(
       sql`SELECT * FROM payments WHERE stripeSessionId = ${stripePaymentId} OR stripePaymentIntentId = ${stripePaymentId} LIMIT 1`
     );
-    const rows = result.rows ?? (result as any) ?? [];
-    const arr = Array.isArray(rows) ? rows : [];
-    const row = arr[0] ?? null;
+    // Drizzle execute con sql template devuelve [rows, fields] en TiDB/MySQL2
+    const arr = Array.isArray(result) ? (result as any[])[0] : ((result as any).rows ?? []);
+    const finalArr = Array.isArray(arr) ? arr : [];
+    const row = finalArr[0] ?? null;
     if (row) console.log("[DB] getPaymentByStripeId raw row keys:", JSON.stringify(Object.keys(row)), "id value:", row.id, "row[0]:", JSON.stringify(row).slice(0, 200));
     return row;
   } catch { return null; }
