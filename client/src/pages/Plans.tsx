@@ -16,11 +16,11 @@ const PLAN_PRODUCT_MAP: Record<string, string> = {
   "Sesión Premium": "individual_premium",
 };
 
-async function redirectToStripeCheckout(productType: string, userId: number) {
+async function redirectToStripeCheckout(productType: string) {
   const res = await fetch("/api/stripe/create-checkout", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ productType, userId }),
+    body: JSON.stringify({ productType }),
   });
   const data = await res.json();
   if (data.url) {
@@ -151,7 +151,7 @@ export default function Plans() {
     }
     setLoadingPlan(planName);
     try {
-      await redirectToStripeCheckout(productType, user.id);
+      await redirectToStripeCheckout(productType);
     } catch (err) {
       toast.error("Error al iniciar el pago. Intenta de nuevo.");
       console.error("[Stripe]", err);

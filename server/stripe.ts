@@ -19,6 +19,7 @@ import express from "express";
 import type { Express, Request, Response } from "express";
 import * as db from "./db";
 import { addCreditBatch, CREDIT_COSTS, type CreditSource } from "./credits";
+import { sdk } from "./_core/sdk";
 
 // ─── Configuración ────────────────────────────────────────────────────────────
 
@@ -60,14 +61,19 @@ export function registerStripeRoutes(app: Express) {
   // express.json() inline porque esta ruta se registra antes del middleware global
   app.post("/api/stripe/create-checkout", express.json(), async (req: Request, res: Response) => {
     try {
-      const stripe = getStripe();
-      const { productType, userId } = req.body as {
-        productType: CreditSource;
-        userId: number;
-      };
+      let sessionUser;
+      try {
+        sessionUser = await sdk.authenticateRequest(req);
+      } catch {
+        return res.status(401).json({ error: "No autenticado" });
+      }
+      const userId = sessionUser.id;
 
-      if (!productType || !userId) {
-        return res.status(400).json({ error: "productType y userId son requeridos" });
+      const stripe = getStripe();
+      const { productType } = req.body as { productType: CreditSource };
+
+      if (!productType) {
+        return res.status(400).json({ error: "productType es requerido" });
       }
 
       const product = PRODUCT_PRICES[productType];

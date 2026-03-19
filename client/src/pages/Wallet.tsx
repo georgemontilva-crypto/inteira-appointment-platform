@@ -62,12 +62,12 @@ function BatchStatusBadge({ batch }: { batch: { remaining: number; expiresAt: st
   return <Badge className="bg-emerald-100 text-emerald-700 border-0 text-[10px]">Activo</Badge>;
 }
 
-async function redirectToStripeCheckout(productType: string, userId: number) {
+async function redirectToStripeCheckout(productType: string) {
   try {
     const res = await fetch("/api/stripe/create-checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ productType, userId }),
+      body: JSON.stringify({ productType }),
     });
     const data = await res.json();
     if (data.url) {
@@ -108,7 +108,7 @@ export default function WalletPage() {
   const handleBuySession = async (sessionType: string) => {
     if (!user?.id) return;
     setBuyingSession(sessionType);
-    await redirectToStripeCheckout(sessionType, user.id);
+    await redirectToStripeCheckout(sessionType);
     setBuyingSession(null);
   };
 
