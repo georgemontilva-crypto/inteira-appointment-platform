@@ -532,7 +532,6 @@ export async function getPaymentByStripeId(stripePaymentId: string) {
     const arr = Array.isArray(result) ? (result as any[])[0] : ((result as any).rows ?? []);
     const finalArr = Array.isArray(arr) ? arr : [];
     const row = finalArr[0] ?? null;
-    if (row) console.log("[DB] getPaymentByStripeId raw row keys:", JSON.stringify(Object.keys(row)), "id value:", row.id, "row[0]:", JSON.stringify(row).slice(0, 200));
     return row;
   } catch { return null; }
 }
@@ -548,25 +547,16 @@ export async function recordStripePayment(data: {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  console.log("[DB] db keys:", Object.keys(db as any).slice(0, 20));
-
-  // Diagnóstico: ver valores permitidos en payments.status
-  try {
-    const [enumCheck] = await (db as any).$client.execute(
-      "SELECT COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'payments' AND COLUMN_NAME = 'status'"
-    ) as any;
-    console.log("[DB] payments.status enum:", JSON.stringify(enumCheck));
-  } catch (e: any) {
-    console.warn("[DB] Could not check status enum:", e?.message);
-  }
+  // NOTA: TiDB usa 'completed' como valor del enum status, no 'succeeded'
+  const PAYMENT_STATUS_COMPLETED = "completed";
 
   // Obtener el cliente MySQL2 subyacente desde Drizzle
   const client = (db as any).session?.client ?? (db as any).client ?? (db as any).$client;
 
   if (client && typeof client.execute === 'function') {
     await client.execute(
-      "INSERT INTO payments (userId, stripeSessionId, stripePaymentIntentId, amount, currency, status, type, creditsGranted, metadata) VALUES (?, ?, ?, ?, ?, 'completed', ?, 0, ?)",
-      [data.userId, data.stripePaymentId, data.stripePaymentId, data.amount, data.currency, data.paymentType ?? "subscription", JSON.stringify({ productType: data.productType })]
+      "INSERT INTO payments (userId, stripeSessionId, stripePaymentIntentId, amount, currency, status, type, creditsGranted, metadata) VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?)",
+      [data.userId, data.stripePaymentId, data.stripePaymentId, data.amount, data.currency, PAYMENT_STATUS_COMPLETED, data.paymentType ?? "subscription", JSON.stringify({ productType: data.productType })]
     );
   } else {
     // Fallback: construir query con valores escapados manualmente
@@ -579,7 +569,7 @@ export async function recordStripePayment(data: {
       metadata: JSON.stringify({ productType: data.productType }).replace(/'/g, "''"),
     };
     await db.execute(
-      sql`INSERT INTO payments (userId, stripeSessionId, stripePaymentIntentId, amount, currency, status, type, creditsGranted, metadata) VALUES (${escaped.userId}, ${escaped.sessionId}, ${escaped.sessionId}, ${escaped.amount}, ${escaped.currency}, 'completed', ${escaped.type}, 0, ${escaped.metadata})`
+      sql`INSERT INTO payments (userId, stripeSessionId, stripePaymentIntentId, amount, currency, status, type, creditsGranted, metadata) VALUES (${escaped.userId}, ${escaped.sessionId}, ${escaped.sessionId}, ${escaped.amount}, ${escaped.currency}, ${PAYMENT_STATUS_COMPLETED}, ${escaped.type}, 0, ${escaped.metadata})`
     );
   }
 }
