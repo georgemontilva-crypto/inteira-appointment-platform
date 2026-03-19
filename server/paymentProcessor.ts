@@ -14,6 +14,13 @@ import { addCreditBatch, type CreditSource } from "./credits";
 
 const MAX_ATTEMPTS = 3;
 
+// Helper: extraer rows de cualquier formato que devuelva $client.execute
+function extractRows(result: any): any[] {
+  if (Array.isArray(result)) return Array.isArray(result[0]) ? result[0] : result;
+  if (Array.isArray(result?.rows)) return result.rows;
+  return [];
+}
+
 // Procesar un pago de la cola
 export async function processPayment(queueId: number): Promise<boolean> {
   const db = await getDb();
@@ -29,19 +36,19 @@ export async function processPayment(queueId: number): Promise<boolean> {
 
   try {
     // Obtener el item de la cola
-    const [rows] = await client.execute(
+    const itemResult = await client.execute(
       "SELECT * FROM paymentQueue WHERE id=? LIMIT 1",
       [queueId]
     ) as any;
-    const item = Array.isArray(rows) ? rows[0] : null;
+    const item = extractRows(itemResult)[0] ?? null;
     if (!item) throw new Error("Queue item not found");
 
     // Idempotencia: verificar si ya existe un creditBatch reciente para este pago
-    const [batchRows] = await client.execute(
+    const batchResult = await client.execute(
       "SELECT id FROM creditBatches WHERE userId=? AND source=? AND createdAt >= DATE_SUB(NOW(), INTERVAL 1 HOUR) LIMIT 1",
       [item.userId, item.productType]
     ) as any;
-    const existingBatch = Array.isArray(batchRows) ? batchRows[0] : null;
+    const existingBatch = extractRows(batchResult)[0] ?? null;
 
     if (existingBatch) {
       // Ya fue procesado — marcar como completado sin duplicar créditos
@@ -67,11 +74,11 @@ export async function processPayment(queueId: number): Promise<boolean> {
 
   } catch (err: any) {
     // Leer intentos actuales para decidir si marcar como failed
-    const [currentRows] = await client.execute(
+    const currentResult = await client.execute(
       "SELECT attempts FROM paymentQueue WHERE id=? LIMIT 1",
       [queueId]
     ) as any;
-    const attempts = Array.isArray(currentRows) ? (currentRows[0]?.attempts ?? 1) : 1;
+    const attempts = extractRows(currentResult)[0]?.attempts ?? 1;
 
     const newStatus = attempts >= MAX_ATTEMPTS ? "failed" : "pending";
     await client.execute(
@@ -97,15 +104,15 @@ export async function retryPendingPayments(): Promise<void> {
   const client = (db as any).$client;
 
   try {
-    const [rows] = await client.execute(
+    const result = await client.execute(
       "SELECT id FROM paymentQueue WHERE status='pending' AND attempts < ? AND updatedAt < DATE_SUB(NOW(), INTERVAL 2 MINUTE) LIMIT 10",
       [MAX_ATTEMPTS]
     ) as any;
-    const pending = Array.isArray(rows) ? rows : [];
+    const pendingArr = extractRows(result);
 
-    if (pending.length > 0) {
-      console.log(`[PaymentProcessor] Reintentando ${pending.length} pagos pendientes`);
-      for (const row of pending) {
+    if (pendingArr.length > 0) {
+      console.log(`[PaymentProcessor] Reintentando ${pendingArr.length} pagos pendientes`);
+      for (const row of pendingArr) {
         await processPayment(row.id);
       }
     }
