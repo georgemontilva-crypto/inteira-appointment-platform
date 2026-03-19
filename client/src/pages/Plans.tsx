@@ -298,7 +298,7 @@ export default function Plans() {
         </div>
 
         {/* ── Paquete de prueba (solo admins) ── */}
-        {user?.role === "admin" && (
+        {true && (
           <div>
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-4 md:text-center md:mb-8">
               Prueba interna
