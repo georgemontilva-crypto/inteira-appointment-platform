@@ -278,6 +278,22 @@ setTimeout(async () => {
     const affected = result?.affectedRows ?? 0;
     console.log(`[Recovery] ✅ Restaurados ${affected} lotes de créditos (remaining=0 → amount)`);
 
+    // Acreditar 700 créditos adicionales a jessievasq20@gmail.com
+    try {
+      const [jessieRows] = await db.execute(
+        "SELECT id FROM `users` WHERE `email` = 'jessievasq20@gmail.com' LIMIT 1"
+      ) as any;
+      const jessieId = Array.isArray(jessieRows) ? jessieRows[0]?.id : jessieRows?.id;
+
+      if (jessieId) {
+        const { addCreditBatch } = await import("../credits");
+        await addCreditBatch(jessieId, "individual_basic", 700);
+        console.log(`[Recovery] ✅ 700 créditos adicionales acreditados a jessievasq20@gmail.com`);
+      }
+    } catch(e: any) {
+      console.error("[Recovery] Error acreditando jessie 700:", e?.message);
+    }
+
     // ── Recovery específico: memoxgamer1993@gmail.com ──────────────────────
     const [memoRows] = await db.execute(
       "SELECT id FROM `users` WHERE `email` = 'memoxgamer1993@gmail.com' LIMIT 1"
