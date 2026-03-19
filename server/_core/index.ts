@@ -263,7 +263,7 @@ setTimeout(async () => {
     const { getPaymentByStripeId, recordStripePayment, getDb } = await import("../db");
     const { addCreditBatch } = await import("../credits");
     const { creditBatches: creditBatchesTable } = await import("../../drizzle/schema");
-    const { eq: eqOp } = await import("drizzle-orm");
+    const { eq: eqOp, and: andOp, gt: gtOp, sql } = await import("drizzle-orm");
     const db = await getDb();
     if (!db) { console.warn("[Recovery] DB not available"); return; }
 
@@ -295,6 +295,23 @@ setTimeout(async () => {
 
     if (existing && hasBatch) {
       console.log("[Recovery] jessievasq20 already recovered, skipping");
+
+      // Si el lote existe pero remaining = 0, restaurarlo
+      const { creditBatches: cbTable } = await import("../../drizzle/schema");
+
+      const existingBatch = await db.select()
+        .from(cbTable)
+        .where(eqOp(cbTable.userId, jessieId))
+        .limit(1)
+        .then((r: any[]) => r[0] ?? null);
+
+      if (existingBatch && existingBatch.remaining === 0 && !existingBatch.expiredEarly) {
+        await db.execute(
+          sql`UPDATE creditBatches SET remaining = ${existingBatch.amount} WHERE id = ${existingBatch.id}`
+        );
+        console.log(`[Recovery] ✅ Restored remaining=${existingBatch.amount} for jessievasq20 batch id=${existingBatch.id}`);
+      }
+
       return;
     }
 
