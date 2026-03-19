@@ -320,6 +320,49 @@ setTimeout(async () => {
   }
 }, 5000); // 5 segundos después del arranque
 
+// ─── Recovery genérico: acreditar pagos sin creditBatch al arrancar ───────────
+setTimeout(async () => {
+  try {
+    const { getDb } = await import("../db");
+    const db = await getDb();
+    if (!db) return;
+
+    // Buscar pagos sin creditBatch
+    const [rows] = await db.execute(`
+      SELECT p.userId, p.stripeSessionId, p.metadata, p.creditsGranted
+      FROM payments p
+      LEFT JOIN creditBatches cb ON cb.userId = p.userId
+      WHERE p.status = 'succeeded'
+      AND cb.id IS NULL
+    `) as any;
+
+    const payments = Array.isArray(rows) ? rows : [];
+    console.log(`[Recovery] Pagos sin creditBatch: ${payments.length}`);
+
+    for (const payment of payments) {
+      try {
+        const metadata = typeof payment.metadata === 'string'
+          ? JSON.parse(payment.metadata)
+          : payment.metadata;
+        const productType = metadata?.productType;
+
+        if (!productType || !payment.userId) {
+          console.warn("[Recovery] Pago sin productType o userId:", payment.stripeSessionId);
+          continue;
+        }
+
+        const { addCreditBatch } = await import("../credits");
+        await addCreditBatch(payment.userId, productType);
+        console.log(`[Recovery] ✅ Créditos acreditados — userId=${payment.userId} productType=${productType} session=${payment.stripeSessionId}`);
+      } catch(e: any) {
+        console.error(`[Recovery] ❌ Error acreditando userId=${payment.userId}:`, e?.message);
+      }
+    }
+  } catch(e: any) {
+    console.error("[Recovery] Error en recovery genérico:", e?.message);
+  }
+}, 8000);
+
 // ─── Cron: expire timed-out credit batches every hour ─────────────────────────
 const ONE_HOUR_MS = 60 * 60 * 1000;
 setInterval(async () => {
