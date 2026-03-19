@@ -547,26 +547,11 @@ export async function recordStripePayment(data: {
 }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  try {
-    await db.execute(
-      sql`INSERT INTO payments
-      (userId, stripeSessionId, stripePaymentIntentId, amount, currency, status, type, creditsGranted, metadata)
-      VALUES (
-        ${data.userId},
-        ${data.stripePaymentId},
-        ${data.stripePaymentId},
-        ${data.amount},
-        ${data.currency},
-        'succeeded',
-        ${data.paymentType ?? "subscription"},
-        ${0},
-        ${JSON.stringify({ productType: data.productType })}
-      )`
-    );
-  } catch (insertErr: any) {
-    console.error("[recordStripePayment] INSERT failed:", insertErr?.message, insertErr?.code, insertErr?.sqlState);
-    throw insertErr;
-  }
+
+  // Usar sql tag con valores inline — TiDB/MySQL2 con Drizzle
+  await db.execute(
+    sql`INSERT INTO payments (userId, stripeSessionId, stripePaymentIntentId, amount, currency, status, type, creditsGranted, metadata) VALUES (${data.userId}, ${data.stripePaymentId}, ${data.stripePaymentId}, ${data.amount}, ${data.currency}, ${"succeeded"}, ${data.paymentType ?? "subscription"}, ${0}, ${JSON.stringify({ productType: data.productType })})`
+  );
 }
 
 export async function createPayment(data: Partial<Payment>) {
