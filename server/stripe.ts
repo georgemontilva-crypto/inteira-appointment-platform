@@ -52,11 +52,6 @@ const PRODUCT_PRICES: Record<CreditSource, { amount: number; name: string; descr
     name: "Plan Pro",
     description: "2,500 créditos mensuales · Válidos por 60 días",
   },
-  test_20: {
-    amount: 2000,        // $20 MXN en centavos
-    name: "Prueba $20",
-    description: "Paquete de prueba — 20 créditos",
-  },
 };
 
 // ─── Registro de rutas Express ────────────────────────────────────────────────
