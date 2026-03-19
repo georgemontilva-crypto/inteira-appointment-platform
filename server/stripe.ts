@@ -261,6 +261,10 @@ async function handleSuccessfulPayment(session: Stripe.Checkout.Session) {
       ]
     ) as any;
 
+    console.log("[Stripe] insertResult type:", typeof insertResult, "isArray:", Array.isArray(insertResult), "keys:", insertResult ? JSON.stringify(Object.keys(insertResult)).slice(0, 200) : "null");
+    console.log("[Stripe] insertResult[0]:", JSON.stringify(insertResult?.[0])?.slice(0, 300));
+    console.log("[Stripe] insertResult raw:", JSON.stringify(insertResult)?.slice(0, 300));
+
     // insertId viene en insertResult directamente con MySQL2
     const insertId = insertResult?.insertId ?? insertResult?.[0]?.insertId;
     console.log("[Stripe] paymentQueue insertId:", insertId, "affectedRows:", insertResult?.affectedRows ?? insertResult?.[0]?.affectedRows);
