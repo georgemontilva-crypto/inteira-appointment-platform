@@ -327,6 +327,33 @@ setTimeout(async () => {
     const db = await getDb();
     if (!db) return;
 
+    // ── Diagnóstico: estado real de creditBatches ──────────────────────────
+    try {
+      const [batchRows] = await db.execute(`
+        SELECT id, userId, amount, remaining, source, expiresAt, expiredEarly, createdAt
+        FROM creditBatches
+        ORDER BY createdAt DESC
+        LIMIT 20
+      `) as any;
+      console.log("[Diag] creditBatches (últimos 20):", JSON.stringify(Array.isArray(batchRows) ? batchRows : []));
+    } catch (e: any) {
+      console.error("[Diag] Error leyendo creditBatches:", e?.message);
+    }
+
+    // ── Diagnóstico: pagos succeeded ───────────────────────────────────────
+    try {
+      const [paymentRows] = await db.execute(`
+        SELECT id, userId, stripeSessionId, amount, status, type, metadata, createdAt
+        FROM payments
+        WHERE status = 'succeeded'
+        ORDER BY createdAt DESC
+        LIMIT 10
+      `) as any;
+      console.log("[Diag] payments succeeded (últimos 10):", JSON.stringify(Array.isArray(paymentRows) ? paymentRows : []));
+    } catch (e: any) {
+      console.error("[Diag] Error leyendo payments:", e?.message);
+    }
+
     // Buscar pagos sin creditBatch
     const [rows] = await db.execute(`
       SELECT p.userId, p.stripeSessionId, p.metadata, p.creditsGranted
