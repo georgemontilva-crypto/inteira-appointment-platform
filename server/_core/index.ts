@@ -146,6 +146,16 @@ async function runStartupMigrations() {
     ].join(" "));
     console.log("[Migration] creditBatches table ready");
 
+    // Ensure source enum includes test_20
+    try {
+      await db.execute(
+        "ALTER TABLE `creditBatches` MODIFY COLUMN `source` ENUM('plan_basic','plan_pro','individual_basic','individual_premium','test_20') NOT NULL"
+      );
+      console.log("[Migration] creditBatches.source enum updated with test_20");
+    } catch (enumErr: any) {
+      console.warn("[Migration] Could not update source enum:", enumErr?.message);
+    }
+
     // Ensure creditTransactions table exists
     await db.execute([
       "CREATE TABLE IF NOT EXISTS `creditTransactions` (",

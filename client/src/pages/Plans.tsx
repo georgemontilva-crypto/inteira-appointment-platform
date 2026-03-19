@@ -14,6 +14,7 @@ const PLAN_PRODUCT_MAP: Record<string, string> = {
   "Plan Pro": "plan_pro",
   "Sesión Básica": "individual_basic",
   "Sesión Premium": "individual_premium",
+  "Prueba $20": "test_20",
 };
 
 async function redirectToStripeCheckout(productType: string) {
@@ -295,6 +296,45 @@ export default function Plans() {
             ))}
           </div>
         </div>
+
+        {/* ── Paquete de prueba (solo admins) ── */}
+        {user?.role === "admin" && (
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-4 md:text-center md:mb-8">
+              Prueba interna
+            </p>
+            <div className="md:max-w-xs md:mx-auto">
+              <Card className="border border-dashed border-amber-400 bg-amber-50/50">
+                <CardContent className="p-4 md:p-6">
+                  <h4 className="font-semibold text-sm md:text-base">Prueba $20</h4>
+                  <p className="text-xs text-muted-foreground mt-1">Paquete de prueba — 20 créditos</p>
+                  <div className="mt-3 mb-4">
+                    <span className="text-xl md:text-2xl font-bold text-amber-600" style={{ fontFamily: "Poppins, sans-serif" }}>
+                      $20
+                    </span>
+                    <span className="text-xs text-muted-foreground ml-1">MXN</span>
+                  </div>
+                  <Button
+                    onClick={() => handleSelectPlan("Prueba $20")}
+                    disabled={loadingPlan === "Prueba $20"}
+                    variant="outline"
+                    className="w-full border-amber-400 text-amber-700 hover:bg-amber-50 text-xs active:scale-95 transition-transform"
+                    size="sm"
+                  >
+                    {loadingPlan === "Prueba $20" ? (
+                      <>
+                        <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
+                        Redirigiendo...
+                      </>
+                    ) : (
+                      "Comprar (prueba)"
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
 
         {/* ── FAQ ── */}
         <div className="md:max-w-2xl md:mx-auto">

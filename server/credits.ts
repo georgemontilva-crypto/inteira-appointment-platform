@@ -23,6 +23,7 @@ export const CREDIT_COSTS = {
   individual_premium: 1250,
   plan_basic: 980,
   plan_pro: 2500,
+  test_20: 20,
 } as const;
 
 export type CreditSource = keyof typeof CREDIT_COSTS;

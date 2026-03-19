@@ -259,7 +259,7 @@ export const creditBatches = mysqlTable("creditBatches", {
   userId: int("userId").notNull(),
   amount: int("amount").notNull(),       // original credits in this batch
   remaining: int("remaining").notNull(), // credits still available
-  source: mysqlEnum("source", ["plan_basic", "plan_pro", "individual_basic", "individual_premium"]).notNull(),
+  source: mysqlEnum("source", ["plan_basic", "plan_pro", "individual_basic", "individual_premium", "test_20"]).notNull(),
   expiresAt: timestamp("expiresAt").notNull(), // now + 60 days
   expiredEarly: boolean("expiredEarly").default(false), // true if cancelled subscription
   createdAt: timestamp("createdAt").defaultNow().notNull(),
