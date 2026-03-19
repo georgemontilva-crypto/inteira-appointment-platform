@@ -548,10 +548,30 @@ export async function recordStripePayment(data: {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  // Usar sql tag con valores inline — TiDB/MySQL2 con Drizzle
-  await db.execute(
-    sql`INSERT INTO payments (userId, stripeSessionId, stripePaymentIntentId, amount, currency, status, type, creditsGranted, metadata) VALUES (${data.userId}, ${data.stripePaymentId}, ${data.stripePaymentId}, ${data.amount}, ${data.currency}, ${"succeeded"}, ${data.paymentType ?? "subscription"}, ${0}, ${JSON.stringify({ productType: data.productType })})`
-  );
+  console.log("[DB] db keys:", Object.keys(db as any).slice(0, 20));
+
+  // Obtener el cliente MySQL2 subyacente desde Drizzle
+  const client = (db as any).session?.client ?? (db as any).client ?? (db as any).$client;
+
+  if (client && typeof client.execute === 'function') {
+    await client.execute(
+      "INSERT INTO payments (userId, stripeSessionId, stripePaymentIntentId, amount, currency, status, type, creditsGranted, metadata) VALUES (?, ?, ?, ?, ?, 'succeeded', ?, 0, ?)",
+      [data.userId, data.stripePaymentId, data.stripePaymentId, data.amount, data.currency, data.paymentType ?? "subscription", JSON.stringify({ productType: data.productType })]
+    );
+  } else {
+    // Fallback: construir query con valores escapados manualmente
+    const escaped = {
+      userId: Number(data.userId),
+      sessionId: data.stripePaymentId.replace(/'/g, "''"),
+      amount: data.amount.replace(/'/g, "''"),
+      currency: data.currency.replace(/'/g, "''"),
+      type: (data.paymentType ?? "subscription").replace(/'/g, "''"),
+      metadata: JSON.stringify({ productType: data.productType }).replace(/'/g, "''"),
+    };
+    await db.execute(
+      sql`INSERT INTO payments (userId, stripeSessionId, stripePaymentIntentId, amount, currency, status, type, creditsGranted, metadata) VALUES (${escaped.userId}, ${escaped.sessionId}, ${escaped.sessionId}, ${escaped.amount}, ${escaped.currency}, 'succeeded', ${escaped.type}, 0, ${escaped.metadata})`
+    );
+  }
 }
 
 export async function createPayment(data: Partial<Payment>) {
