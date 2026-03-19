@@ -248,30 +248,15 @@ async function handleSuccessfulPayment(session: Stripe.Checkout.Session) {
     if (!db) throw new Error("DB not available");
     const client = (db as any).$client;
 
-    // INSERT
+    // INSERT en cola
     await client.execute(
       "INSERT INTO paymentQueue (stripeSessionId, userId, productType, credits, amount, currency, status) VALUES (?, ?, ?, ?, ?, ?, 'pending') ON DUPLICATE KEY UPDATE updatedAt=NOW()",
       [session.id, userIdNum, productType, creditsNum, String((session.amount_total ?? 0) / 100), (session.currency ?? "mxn").toUpperCase()]
     );
 
-    // Obtener el ID con LAST_INSERT_ID() o SELECT
-    const idResult = await client.execute(
-      "SELECT LAST_INSERT_ID() as insertId, (SELECT id FROM paymentQueue WHERE stripeSessionId=? LIMIT 1) as existingId",
-      [session.id]
-    ) as any;
-    const idRows = Array.isArray(idResult) ? idResult[0] : [];
-    const idArr = Array.isArray(idRows) ? idRows : [];
-    const idRow = idArr[0];
-    const queueId = idRow?.insertId || idRow?.existingId;
-    console.log("[Stripe] queueId:", queueId, "idRow:", JSON.stringify(idRow));
-
-    if (!queueId) {
-      console.error("[Stripe] No se pudo obtener queueId para:", session.id);
-      return;
-    }
-
+    // Procesar directamente con stripeSessionId
     const { processPayment } = await import("./paymentProcessor");
-    await processPayment(queueId);
+    await processPayment(session.id);
     console.log(`[Stripe] ✅ ${creditsNum} créditos procesados para userId=${userIdNum}`);
 
   } catch (err: any) {

@@ -2,94 +2,101 @@
  * paymentProcessor.ts — Cola de pagos con reintentos
  *
  * Flujo:
- * 1. Webhook de Stripe inserta en paymentQueue (INSERT IGNORE — idempotente)
- * 2. processPayment() acredita créditos y marca como completed
+ * 1. Webhook de Stripe inserta en paymentQueue (INSERT ... ON DUPLICATE KEY — idempotente)
+ * 2. processPayment(stripeSessionId) acredita créditos y marca como completed
  * 3. Si falla, queda en pending para reintento automático
  * 4. retryPendingPayments() corre cada 2 minutos buscando pending
- * 5. Después de MAX_ATTEMPTS fallos, marca como failed y alerta por consola
+ * 5. Después de 3 fallos, marca como failed y alerta por consola
  */
 
 import { getDb } from "./db";
-import { addCreditBatch, type CreditSource } from "./credits";
+import { type CreditSource } from "./credits";
 
-const MAX_ATTEMPTS = 3;
-
-// Helper: extraer rows de cualquier formato que devuelva $client.execute
-function extractRows(result: any): any[] {
-  if (Array.isArray(result)) return Array.isArray(result[0]) ? result[0] : result;
-  if (Array.isArray(result?.rows)) return result.rows;
-  return [];
-}
-
-// Procesar un pago de la cola
-export async function processPayment(queueId: number): Promise<boolean> {
+// Procesar un pago por stripeSessionId (no depende de insertId)
+export async function processPayment(stripeSessionId: string): Promise<boolean> {
   const db = await getDb();
   if (!db) throw new Error("DB not available");
-
   const client = (db as any).$client;
 
-  // Marcar como processing
-  await client.execute(
-    "UPDATE paymentQueue SET status='processing', attempts=attempts+1, updatedAt=NOW() WHERE id=?",
-    [queueId]
-  );
-
   try {
-    // Obtener el item de la cola
-    const itemResult = await client.execute(
-      "SELECT * FROM paymentQueue WHERE id=? LIMIT 1",
-      [queueId]
+    // Obtener el item por stripeSessionId
+    const findResult = await client.execute(
+      "SELECT id, userId, productType, credits, attempts, status FROM paymentQueue WHERE stripeSessionId=? LIMIT 1",
+      [stripeSessionId]
     ) as any;
-    const item = extractRows(itemResult)[0] ?? null;
-    if (!item) throw new Error("Queue item not found");
+    const findRows = Array.isArray(findResult) ? findResult[0] : [];
+    const findArr = Array.isArray(findRows) ? findRows : [];
+    const item = findArr[0];
 
-    // Idempotencia: verificar si ya existe un creditBatch reciente para este pago
+    if (!item) {
+      console.error("[PaymentProcessor] Item no encontrado:", stripeSessionId);
+      return false;
+    }
+
+    if (item.status === "completed") {
+      console.log("[PaymentProcessor] Ya completado:", stripeSessionId);
+      return true;
+    }
+
+    // Marcar como processing
+    await client.execute(
+      "UPDATE paymentQueue SET status='processing', attempts=attempts+1, updatedAt=NOW() WHERE stripeSessionId=?",
+      [stripeSessionId]
+    );
+
+    // Verificar idempotencia — ¿ya tiene creditBatch reciente?
     const batchResult = await client.execute(
-      "SELECT id FROM creditBatches WHERE userId=? AND source=? AND createdAt >= DATE_SUB(NOW(), INTERVAL 1 HOUR) LIMIT 1",
+      "SELECT id FROM creditBatches WHERE userId=? AND source=? AND createdAt >= DATE_SUB(NOW(), INTERVAL 24 HOUR) LIMIT 1",
       [item.userId, item.productType]
     ) as any;
-    const existingBatch = extractRows(batchResult)[0] ?? null;
+    const batchRows = Array.isArray(batchResult) ? batchResult[0] : [];
+    const batchArr = Array.isArray(batchRows) ? batchRows : [];
 
-    if (existingBatch) {
-      // Ya fue procesado — marcar como completado sin duplicar créditos
+    if (batchArr.length > 0) {
       await client.execute(
-        "UPDATE paymentQueue SET status='completed', processedAt=NOW(), updatedAt=NOW() WHERE id=?",
-        [queueId]
+        "UPDATE paymentQueue SET status='completed', processedAt=NOW(), updatedAt=NOW() WHERE stripeSessionId=?",
+        [stripeSessionId]
       );
-      console.log(`[PaymentProcessor] ⏭ Ya procesado (batch existente) — queueId=${queueId} userId=${item.userId}`);
+      console.log("[PaymentProcessor] Ya tenía creditBatch:", stripeSessionId);
       return true;
     }
 
     // Acreditar créditos
+    const { addCreditBatch } = await import("./credits");
     await addCreditBatch(item.userId, item.productType as CreditSource);
 
     // Marcar como completado
     await client.execute(
-      "UPDATE paymentQueue SET status='completed', processedAt=NOW(), updatedAt=NOW() WHERE id=?",
-      [queueId]
+      "UPDATE paymentQueue SET status='completed', processedAt=NOW(), updatedAt=NOW() WHERE stripeSessionId=?",
+      [stripeSessionId]
     );
 
-    console.log(`[PaymentProcessor] ✅ Procesado — userId=${item.userId} productType=${item.productType} credits=${item.credits}`);
+    console.log(`[PaymentProcessor] ✅ ${item.credits} créditos acreditados — userId=${item.userId} productType=${item.productType}`);
     return true;
 
   } catch (err: any) {
-    // Leer intentos actuales para decidir si marcar como failed
-    const currentResult = await client.execute(
-      "SELECT attempts FROM paymentQueue WHERE id=? LIMIT 1",
-      [queueId]
-    ) as any;
-    const attempts = extractRows(currentResult)[0]?.attempts ?? 1;
+    // Leer attempts actuales para decidir status
+    let attempts = 1;
+    try {
+      const attResult = await client.execute(
+        "SELECT attempts FROM paymentQueue WHERE stripeSessionId=? LIMIT 1",
+        [stripeSessionId]
+      ) as any;
+      const attRows = Array.isArray(attResult) ? attResult[0] : [];
+      const attArr = Array.isArray(attRows) ? attRows : [];
+      attempts = attArr[0]?.attempts ?? 1;
+    } catch {}
 
-    const newStatus = attempts >= MAX_ATTEMPTS ? "failed" : "pending";
+    const newStatus = attempts >= 3 ? "failed" : "pending";
     await client.execute(
-      "UPDATE paymentQueue SET status=?, lastError=?, updatedAt=NOW() WHERE id=?",
-      [newStatus, (err?.message ?? "Unknown error").slice(0, 500), queueId]
-    );
+      "UPDATE paymentQueue SET status=?, lastError=?, updatedAt=NOW() WHERE stripeSessionId=?",
+      [newStatus, (err?.message ?? "Unknown error").slice(0, 500), stripeSessionId]
+    ).catch(() => {});
 
-    console.error(`[PaymentProcessor] ❌ Falló intento ${attempts}/${MAX_ATTEMPTS} — queueId=${queueId}: ${err?.message}`);
+    console.error(`[PaymentProcessor] ❌ Falló intento ${attempts}/3 — ${stripeSessionId}: ${err?.message}`);
 
     if (newStatus === "failed") {
-      console.error(`[PaymentProcessor] 🚨 Pago FALLIDO permanentemente — queueId=${queueId}. Requiere revisión manual en la tabla paymentQueue.`);
+      console.error(`[PaymentProcessor] 🚨 Pago FALLIDO permanentemente — ${stripeSessionId}. Requiere revisión manual.`);
     }
 
     return false;
@@ -100,20 +107,19 @@ export async function processPayment(queueId: number): Promise<boolean> {
 export async function retryPendingPayments(): Promise<void> {
   const db = await getDb();
   if (!db) return;
-
   const client = (db as any).$client;
 
   try {
     const result = await client.execute(
-      "SELECT id FROM paymentQueue WHERE status='pending' AND attempts < ? AND updatedAt < DATE_SUB(NOW(), INTERVAL 2 MINUTE) LIMIT 10",
-      [MAX_ATTEMPTS]
+      "SELECT stripeSessionId FROM paymentQueue WHERE status='pending' AND attempts < 3 AND updatedAt < DATE_SUB(NOW(), INTERVAL 2 MINUTE) LIMIT 10"
     ) as any;
-    const pendingArr = extractRows(result);
+    const rows = Array.isArray(result) ? result[0] : [];
+    const arr = Array.isArray(rows) ? rows : [];
 
-    if (pendingArr.length > 0) {
-      console.log(`[PaymentProcessor] Reintentando ${pendingArr.length} pagos pendientes`);
-      for (const row of pendingArr) {
-        await processPayment(row.id);
+    if (arr.length > 0) {
+      console.log(`[PaymentProcessor] Reintentando ${arr.length} pagos pendientes`);
+      for (const row of arr) {
+        await processPayment(row.stripeSessionId);
       }
     }
   } catch (err: any) {
