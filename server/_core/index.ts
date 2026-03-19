@@ -327,6 +327,13 @@ setTimeout(async () => {
     const db = await getDb();
     if (!db) return;
 
+    // ── Diagnóstico: schema real de creditBatches en TiDB ─────────────────
+    console.log("[Diag] creditBatches schema check:", JSON.stringify(
+      await db.execute("SELECT COLUMN_NAME, COLUMN_DEFAULT, IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'creditBatches' ORDER BY ORDINAL_POSITION")
+        .then((r: any) => Array.isArray(r[0]) ? r[0] : [])
+        .catch((e: any) => ({ error: e.message }))
+    ));
+
     // ── Diagnóstico: estado real de creditBatches ──────────────────────────
     try {
       const [batchRows] = await db.execute(`
