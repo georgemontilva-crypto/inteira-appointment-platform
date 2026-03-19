@@ -407,7 +407,10 @@ setInterval(async () => {
     console.error("[Cron] Error expiring credit batches:", err);
   }
 }, ONE_HOUR_MS);
-// Run once on startup to catch any batches that expired while server was down
-expireTimedOutBatches().catch((err) =>
-  console.error("[Cron] Startup expiry check failed:", err)
+// Run once on startup — delayed 15s so recovery (8s) finishes first
+setTimeout(
+  () => expireTimedOutBatches().catch((err) =>
+    console.error("[Cron] Startup expiry check failed:", err)
+  ),
+  15000
 );

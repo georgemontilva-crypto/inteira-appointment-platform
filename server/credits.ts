@@ -260,6 +260,7 @@ export async function expireTimedOutBatches(): Promise<number> {
       id: creditBatches.id,
       userId: creditBatches.userId,
       remaining: creditBatches.remaining,
+      expiresAt: creditBatches.expiresAt,
     })
     .from(creditBatches)
     .where(
