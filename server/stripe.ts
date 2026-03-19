@@ -114,40 +114,39 @@ export function registerStripeRoutes(app: Express) {
 
   // ── Webhook de Stripe ────────────────────────────────────────────────────────
   // express.raw() preserva el body como Buffer para verificar la firma HMAC de Stripe
-  app.post(
-    "/api/stripe/webhook",
-    express.raw({ type: "application/json" }),
-    async (req: Request, res: Response) => {
-      const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-      const signature = req.headers["stripe-signature"] as string;
+  async function webhookHandler(req: Request, res: Response) {
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    const signature = req.headers["stripe-signature"] as string;
 
-      let event: Stripe.Event;
+    let event: Stripe.Event;
 
-      try {
-        const stripe = getStripe();
-        if (webhookSecret && signature) {
-          // req.body es un Buffer gracias a express.raw()
-          event = stripe.webhooks.constructEvent(req.body, signature, webhookSecret);
-        } else {
-          // Sin webhook secret (desarrollo local sin Stripe CLI), parsear directamente
-          console.warn("[Stripe] Webhook sin verificación de firma (solo para desarrollo)");
-          const rawBody = req.body instanceof Buffer ? req.body.toString("utf8") : JSON.stringify(req.body);
-          event = JSON.parse(rawBody) as Stripe.Event;
-        }
-      } catch (err) {
-        console.error("[Stripe] Webhook signature verification failed:", err);
-        return res.status(400).json({ error: "Webhook signature inválida" });
+    try {
+      const stripe = getStripe();
+      if (webhookSecret && signature) {
+        // req.body es un Buffer gracias a express.raw()
+        event = stripe.webhooks.constructEvent(req.body, signature, webhookSecret);
+      } else {
+        // Sin webhook secret (desarrollo local sin Stripe CLI), parsear directamente
+        console.warn("[Stripe] Webhook sin verificación de firma (solo para desarrollo)");
+        const rawBody = req.body instanceof Buffer ? req.body.toString("utf8") : JSON.stringify(req.body);
+        event = JSON.parse(rawBody) as Stripe.Event;
       }
-
-      // Procesar eventos
-      if (event.type === "checkout.session.completed") {
-        const session = event.data.object as Stripe.Checkout.Session;
-        await handleSuccessfulPayment(session);
-      }
-
-      return res.json({ received: true });
+    } catch (err) {
+      console.error("[Stripe] Webhook signature verification failed:", err);
+      return res.status(400).json({ error: "Webhook signature inválida" });
     }
-  );
+
+    // Procesar eventos
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object as Stripe.Checkout.Session;
+      await handleSuccessfulPayment(session);
+    }
+
+    return res.json({ received: true });
+  }
+
+  app.post("/api/webhook/stripe", express.raw({ type: "application/json" }), webhookHandler);
+  app.post("/api/stripe/webhook", express.raw({ type: "application/json" }), webhookHandler);
 
   // ── Endpoint de recuperación de créditos ─────────────────────────────────────
   // Permite acreditar créditos manualmente a un usuario usando un token secreto.
