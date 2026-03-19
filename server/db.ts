@@ -530,7 +530,9 @@ export async function getPaymentByStripeId(stripePaymentId: string) {
     );
     const rows = result.rows ?? (result as any) ?? [];
     const arr = Array.isArray(rows) ? rows : [];
-    return arr[0] ?? null;
+    const row = arr[0] ?? null;
+    if (row) console.log("[DB] getPaymentByStripeId raw row keys:", JSON.stringify(Object.keys(row)), "id value:", row.id, "row[0]:", JSON.stringify(row).slice(0, 200));
+    return row;
   } catch { return null; }
 }
 
