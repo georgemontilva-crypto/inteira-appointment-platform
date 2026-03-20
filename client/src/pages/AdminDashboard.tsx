@@ -12,6 +12,7 @@ import {
   Users, CheckCircle2, XCircle, Clock, Shield, Plus,
   Settings, BarChart3, Award, TrendingUp, Calendar,
   Star, Activity, CreditCard, UserCheck, RefreshCw, Wrench,
+  ChevronDown, ChevronUp, FileText, ExternalLink,
 } from "lucide-react";
 
 // ─── Simple bar chart ────────────────────────────────────────────────────────
@@ -60,6 +61,8 @@ export default function AdminDashboard() {
   const { user, isAuthenticated, loading } = useAuth();
   const [activeTab, setActiveTab] = useState<"overview" | "profesionales" | "especialidades" | "planes" | "herramientas">("overview");
   const [rejectReason, setRejectReason] = useState<Record<number, string>>({});
+  const [tierSelect, setTierSelect] = useState<Record<number, "basic" | "pro">>({});
+  const [expandedBio, setExpandedBio] = useState<Record<number, boolean>>({});
   const [newSpecialty, setNewSpecialty] = useState({ name: "", description: "" });
   const [newPlan, setNewPlan] = useState({
     name: "", price: "", billingPeriod: "monthly" as "monthly" | "yearly",
@@ -373,85 +376,204 @@ export default function AdminDashboard() {
               </Card>
             ) : (
               <div className="space-y-4">
-                {pendingProfessionals?.map((pro) => (
-                  <Card key={pro.id} className="border-border hover:shadow-md transition-shadow">
-                    <CardContent className="p-6">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex items-start gap-4">
-                          <div className="w-14 h-14 rounded-2xl gradient-brand flex items-center justify-center text-white text-xl font-bold flex-shrink-0">
-                            P
-                          </div>
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <h3 className="font-bold">Profesional #{pro.id}</h3>
-                              <Badge className="bg-yellow-100 text-yellow-700 border-0 text-xs">
-                                <Clock className="w-3 h-3 mr-1" />
-                                Pendiente
-                              </Badge>
+                {pendingProfessionals?.map((pro) => {
+                  const selectedTier = tierSelect[pro.id] ?? "basic";
+                  const isBioExpanded = expandedBio[pro.id] ?? false;
+                  const avatar = (pro as any).userProfileImage || pro.profilePhoto;
+                  const name = (pro as any).userName ?? `Profesional #${pro.id}`;
+                  const email = (pro as any).userEmail;
+                  const specialtyName = (pro as any).specialtyName;
+
+                  return (
+                    <Card key={pro.id} className="border-border hover:shadow-md transition-shadow">
+                      <CardContent className="p-6 space-y-4">
+                        {/* ── Fila superior: avatar + info + acciones ── */}
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex items-start gap-4">
+                            {/* Avatar */}
+                            {avatar ? (
+                              <img
+                                src={avatar}
+                                alt={name}
+                                className="w-14 h-14 rounded-2xl object-cover flex-shrink-0"
+                              />
+                            ) : (
+                              <div className="w-14 h-14 rounded-2xl gradient-brand flex items-center justify-center text-white text-xl font-bold flex-shrink-0">
+                                {name.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+
+                            {/* Info */}
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h3 className="font-bold">{name}</h3>
+                                <Badge className="bg-yellow-100 text-yellow-700 border-0 text-xs">
+                                  <Clock className="w-3 h-3 mr-1" />
+                                  Pendiente
+                                </Badge>
+                                {specialtyName && (
+                                  <Badge variant="outline" className="text-xs">{specialtyName}</Badge>
+                                )}
+                              </div>
+                              {email && (
+                                <p className="text-sm text-muted-foreground">{email}</p>
+                              )}
+                              <p className="text-sm text-muted-foreground">
+                                Cédula: <span className="font-medium text-foreground">{pro.licenseNumber}</span>
+                              </p>
+                              {pro.yearsOfExperience && (
+                                <p className="text-sm text-muted-foreground">
+                                  Experiencia: <span className="font-medium text-foreground">{pro.yearsOfExperience} años</span>
+                                </p>
+                              )}
+                              {pro.education && (
+                                <p className="text-sm text-muted-foreground">
+                                  Educación: <span className="font-medium text-foreground">{pro.education}</span>
+                                </p>
+                              )}
+                              {(pro as any).createdAt && (
+                                <p className="text-xs text-muted-foreground">
+                                  Solicitud: {format(new Date((pro as any).createdAt), "d MMM yyyy, HH:mm", { locale: es })}
+                                </p>
+                              )}
                             </div>
-                            <p className="text-sm text-muted-foreground">
-                              Cédula: <span className="font-medium text-foreground">{pro.licenseNumber}</span>
-                            </p>
-                            {pro.yearsOfExperience && (
-                              <p className="text-sm text-muted-foreground">
-                                Experiencia: <span className="font-medium text-foreground">{pro.yearsOfExperience} años</span>
-                              </p>
-                            )}
-                            {pro.education && (
-                              <p className="text-sm text-muted-foreground">
-                                Educación: <span className="font-medium text-foreground">{pro.education}</span>
-                              </p>
-                            )}
-                            {pro.bio && (
-                              <p className="text-sm text-muted-foreground line-clamp-2 max-w-lg">
-                                {pro.bio}
-                              </p>
-                            )}
+                          </div>
+
+                          {/* ── Acciones ── */}
+                          <div className="flex flex-col gap-2 flex-shrink-0 min-w-[160px]">
+                            {/* Selector de tier */}
+                            <div className="flex gap-1">
+                              <button
+                                onClick={() => setTierSelect({ ...tierSelect, [pro.id]: "basic" })}
+                                className={`flex-1 text-xs py-1.5 px-2 rounded-lg border transition-colors ${
+                                  selectedTier === "basic"
+                                    ? "bg-primary text-white border-primary"
+                                    : "border-border text-muted-foreground hover:border-primary/40"
+                                }`}
+                              >
+                                Básico
+                              </button>
+                              <button
+                                onClick={() => setTierSelect({ ...tierSelect, [pro.id]: "pro" })}
+                                className={`flex-1 text-xs py-1.5 px-2 rounded-lg border transition-colors ${
+                                  selectedTier === "pro"
+                                    ? "bg-primary text-white border-primary"
+                                    : "border-border text-muted-foreground hover:border-primary/40"
+                                }`}
+                              >
+                                Pro
+                              </button>
+                            </div>
+
+                            {/* Botón Aprobar */}
+                            <Button
+                              size="sm"
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white border-0"
+                              onClick={() => approveMutation.mutate({ professionalId: pro.id, tier: selectedTier })}
+                              disabled={approveMutation.isPending}
+                            >
+                              <CheckCircle2 className="w-4 h-4 mr-1" />
+                              Aprobar como {selectedTier === "pro" ? "Pro" : "Básico"}
+                            </Button>
+
+                            {/* Rechazar */}
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                placeholder="Motivo de rechazo..."
+                                value={rejectReason[pro.id] ?? ""}
+                                onChange={(e) => setRejectReason({ ...rejectReason, [pro.id]: e.target.value })}
+                                className="text-xs rounded-lg border border-border p-1.5 bg-background focus:outline-none focus:ring-1 focus:ring-primary/30 w-full"
+                              />
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="border-red-300 text-red-600 hover:bg-red-50"
+                                onClick={() => {
+                                  if (!rejectReason[pro.id]) {
+                                    toast.error("Ingresa un motivo de rechazo");
+                                    return;
+                                  }
+                                  rejectMutation.mutate({
+                                    professionalId: pro.id,
+                                    reason: rejectReason[pro.id],
+                                  });
+                                }}
+                                disabled={rejectMutation.isPending}
+                              >
+                                <XCircle className="w-4 h-4" />
+                              </Button>
+                            </div>
                           </div>
                         </div>
 
-                        <div className="flex flex-col gap-2 flex-shrink-0">
-                          <Button
-                            size="sm"
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white border-0"
-                            onClick={() => approveMutation.mutate({ professionalId: pro.id })}
-                            disabled={approveMutation.isPending}
-                          >
-                            <CheckCircle2 className="w-4 h-4 mr-1" />
-                            Aprobar
-                          </Button>
-                          <div className="flex gap-2">
-                            <input
-                              type="text"
-                              placeholder="Motivo de rechazo..."
-                              value={rejectReason[pro.id] ?? ""}
-                              onChange={(e) => setRejectReason({ ...rejectReason, [pro.id]: e.target.value })}
-                              className="text-xs rounded-lg border border-border p-1.5 bg-background focus:outline-none focus:ring-1 focus:ring-primary/30 w-36"
-                            />
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="border-red-300 text-red-600 hover:bg-red-50"
-                              onClick={() => {
-                                if (!rejectReason[pro.id]) {
-                                  toast.error("Ingresa un motivo de rechazo");
-                                  return;
+                        {/* ── Bio expandible ── */}
+                        {pro.bio && (
+                          <div>
+                            <p className={`text-sm text-muted-foreground ${isBioExpanded ? "" : "line-clamp-2"}`}>
+                              {pro.bio}
+                            </p>
+                            {pro.bio.length > 120 && (
+                              <button
+                                onClick={() => setExpandedBio({ ...expandedBio, [pro.id]: !isBioExpanded })}
+                                className="text-xs text-primary mt-1 flex items-center gap-0.5"
+                              >
+                                {isBioExpanded
+                                  ? <><ChevronUp className="w-3 h-3" /> Ver menos</>
+                                  : <><ChevronDown className="w-3 h-3" /> Ver más</>
                                 }
-                                rejectMutation.mutate({
-                                  professionalId: pro.id,
-                                  reason: rejectReason[pro.id],
-                                });
-                              }}
-                              disabled={rejectMutation.isPending}
-                            >
-                              <XCircle className="w-4 h-4" />
-                            </Button>
+                              </button>
+                            )}
                           </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                        )}
+
+                        {/* ── Documentos ── */}
+                        {(pro.licenseDocument || pro.certifications) && (
+                          <div className="flex flex-wrap gap-2 pt-1 border-t border-border">
+                            {pro.licenseDocument && (
+                              pro.licenseDocument.startsWith("http") ? (
+                                <a
+                                  href={pro.licenseDocument}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-1 text-xs text-primary border border-primary/30 rounded-lg px-2 py-1 hover:bg-primary/5"
+                                >
+                                  <FileText className="w-3 h-3" />
+                                  Cédula profesional
+                                  <ExternalLink className="w-3 h-3" />
+                                </a>
+                              ) : (
+                                <span className="flex items-center gap-1 text-xs text-muted-foreground border border-border rounded-lg px-2 py-1">
+                                  <FileText className="w-3 h-3" />
+                                  {pro.licenseDocument}
+                                </span>
+                              )
+                            )}
+                            {pro.certifications && (
+                              pro.certifications.startsWith("http") ? (
+                                <a
+                                  href={pro.certifications}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-1 text-xs text-primary border border-primary/30 rounded-lg px-2 py-1 hover:bg-primary/5"
+                                >
+                                  <FileText className="w-3 h-3" />
+                                  Certificaciones
+                                  <ExternalLink className="w-3 h-3" />
+                                </a>
+                              ) : (
+                                <span className="flex items-center gap-1 text-xs text-muted-foreground border border-border rounded-lg px-2 py-1">
+                                  <FileText className="w-3 h-3" />
+                                  {pro.certifications}
+                                </span>
+                              )
+                            )}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             )}
           </div>

@@ -254,22 +254,59 @@ export async function getPendingProfessionals() {
   if (!db) return [];
 
   return await db
-    .select()
+    .select({
+      id: professionals.id,
+      userId: professionals.userId,
+      specialtyId: professionals.specialtyId,
+      licenseNumber: professionals.licenseNumber,
+      licenseDocument: professionals.licenseDocument,
+      yearsOfExperience: professionals.yearsOfExperience,
+      education: professionals.education,
+      certifications: professionals.certifications,
+      bio: professionals.bio,
+      profilePhoto: professionals.profilePhoto,
+      hourlyRate: professionals.hourlyRate,
+      status: professionals.status,
+      tier: professionals.tier,
+      createdAt: professionals.createdAt,
+      userName: users.name,
+      userEmail: users.email,
+      userProfileImage: users.profileImage,
+      specialtyName: specialties.name,
+    })
     .from(professionals)
+    .leftJoin(users, eq(professionals.userId, users.id))
+    .leftJoin(specialties, eq(professionals.specialtyId, specialties.id))
     .where(eq(professionals.status, "pending"));
 }
 
 export async function approveProfessional(
   professionalId: number,
-  adminId: number
+  adminId: number,
+  tier: "basic" | "pro" = "basic"
 ) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
+  // Get userId before updating
+  const proRows = await db
+    .select({ userId: professionals.userId })
+    .from(professionals)
+    .where(eq(professionals.id, professionalId))
+    .limit(1);
+  const userId = proRows[0]?.userId;
+
   await db
     .update(professionals)
-    .set({ status: "approved", updatedAt: new Date() })
+    .set({ status: "approved", tier, updatedAt: new Date() })
     .where(eq(professionals.id, professionalId));
+
+  if (userId) {
+    await db
+      .update(users)
+      .set({ role: "professional" })
+      .where(eq(users.id, userId));
+  }
 }
 
 export async function rejectProfessional(

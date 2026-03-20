@@ -8,6 +8,7 @@ import { users } from "../drizzle/schema";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { appointmentRouter } from "./routers-appointments";
+import { sendProfessionalApproval } from "./email";
 import {
   getUserCreditBalance,
   getAllBatches,
@@ -544,7 +545,10 @@ export const appRouter = router({
     }),
 
     approveProfessional: protectedProcedure
-      .input(z.object({ professionalId: z.number() }))
+      .input(z.object({
+        professionalId: z.number(),
+        tier: z.enum(["basic", "pro"]).default("basic"),
+      }))
       .mutation(async ({ ctx, input }) => {
         if (ctx.user.role !== "admin") {
           throw new TRPCError({
@@ -553,7 +557,27 @@ export const appRouter = router({
           });
         }
 
-        await db.approveProfessional(input.professionalId, ctx.user.id);
+        // Fetch data needed for email before approving
+        const professional = await db.getProfessionalById(input.professionalId);
+        if (!professional) throw new TRPCError({ code: "NOT_FOUND", message: "Professional not found" });
+
+        const user = await db.getUserById(professional.userId);
+        const specialty = professional.specialtyId
+          ? await db.getSpecialtyById(professional.specialtyId)
+          : null;
+
+        await db.approveProfessional(input.professionalId, ctx.user.id, input.tier);
+
+        // Send approval email (fire and forget)
+        if (user?.email) {
+          sendProfessionalApproval({
+            professionalEmail: user.email,
+            professionalName: user.name ?? "Profesional",
+            specialty: specialty?.name ?? "—",
+            approved: true,
+          }).catch(() => {});
+        }
+
         return { success: true };
       }),
 

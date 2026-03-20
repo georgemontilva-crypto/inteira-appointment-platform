@@ -72,6 +72,7 @@ export const professionals = mysqlTable("professionals", {
   averageRating: decimal("averageRating", { precision: 3, scale: 2 }).default("0"),
   totalReviews: int("totalReviews").default(0),
   isAvailable: boolean("isAvailable").default(true),
+  tier: mysqlEnum("tier", ["basic", "pro"]).default("basic").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

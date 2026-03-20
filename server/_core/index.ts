@@ -185,6 +185,10 @@ async function runStartupMigrations() {
     `);
     console.log("[Migration] paymentQueue table ready");
 
+    // Ensure professionals.tier column exists
+    await db.execute("ALTER TABLE `professionals` ADD COLUMN IF NOT EXISTS `tier` ENUM('basic','pro') NOT NULL DEFAULT 'basic'").catch(() => {});
+    console.log("[Migration] professionals.tier column ready");
+
     // ── Seed: ensure marketingdedsm@gmail.com has role=admin ──────────────────
     try {
       await db.execute(
