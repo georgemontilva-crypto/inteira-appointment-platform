@@ -42,7 +42,8 @@ const subscriptionPlanSchema = z.object({
 
 const professionalRegistrationSchema = z.object({
   specialtyId: z.number(),
-  licenseNumber: z.string().min(1),
+  licenseNumber: z.string().optional(),      // not all specialties require it
+  licenseDocument: z.string().optional(),    // identity doc URL
   yearsOfExperience: z.number().optional(),
   education: z.string().optional(),
   certifications: z.string().optional(),
@@ -166,18 +167,24 @@ export const appRouter = router({
           });
         }
 
+        // Generate unique placeholder when no cédula required for this specialty
+        const licenseNum =
+          (input.licenseNumber ?? "").trim() ||
+          `NOLIC_${ctx.user.id}_${Date.now()}`;
+
         // Create professional profile
         await db.createProfessional(
           ctx.user.id,
           input.specialtyId,
-          input.licenseNumber,
+          licenseNum,
           {
-          yearsOfExperience: input.yearsOfExperience,
-          education: input.education,
-          certifications: input.certifications,
-          bio: input.bio,
-          hourlyRate: input.hourlyRate ? input.hourlyRate : undefined,
-          profilePhoto: input.profilePhoto ?? null,
+            yearsOfExperience: input.yearsOfExperience,
+            education: input.education,
+            certifications: input.certifications,
+            bio: input.bio,
+            hourlyRate: input.hourlyRate ? input.hourlyRate : undefined,
+            profilePhoto: input.profilePhoto ?? null,
+            licenseDocument: input.licenseDocument ?? null,
           }
         );
 

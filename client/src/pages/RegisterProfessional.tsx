@@ -7,7 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import {
   CheckCircle2,
@@ -16,29 +23,184 @@ import {
   FileText,
   ArrowLeft,
   Camera,
-  Award,
-  CreditCard,
   Clock,
-  DollarSign,
+  Briefcase,
+  Shield,
+  AlertTriangle,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 
+// ── Category requirements ─────────────────────────────────────────────────────
+const CATEGORY_REQUIREMENTS = {
+  MANDATORY_CEDULA: [
+    "psicologia", "contador", "legal", "pedagogo",
+    "gastroenterologo", "dermatologo", "nutriologo", "consulta_general",
+  ],
+  OPTIONAL_CEDULA: [
+    "emprendimiento", "marketing", "coach_ejecutivo",
+    "asesor_financiero", "tutor_uni", "tutor_prep",
+  ],
+  CERTIFICATES_ONLY: [
+    "desarrollo", "coach_vida", "estilo_vida", "vocacion",
+    "guia_espiritual", "teologia", "meditacion",
+    "profesor_ingles", "profesor_idiomas", "lenguaje_senas", "oratoria",
+    "ia", "entrenador_canino",
+  ],
+};
+
+type DocCategory = "mandatory_cedula" | "optional_cedula" | "certificates_only" | null;
+
+function getDocCategory(campo: string): DocCategory {
+  if (CATEGORY_REQUIREMENTS.MANDATORY_CEDULA.includes(campo)) return "mandatory_cedula";
+  if (CATEGORY_REQUIREMENTS.OPTIONAL_CEDULA.includes(campo)) return "optional_cedula";
+  if (CATEGORY_REQUIREMENTS.CERTIFICATES_ONLY.includes(campo)) return "certificates_only";
+  return null;
+}
+
+// ── Campo options with groups ─────────────────────────────────────────────────
+const CAMPO_GROUPS = [
+  {
+    group: "Desarrollo Personal y Bienestar",
+    items: [
+      { value: "psicologia", label: "Psicología" },
+      { value: "desarrollo", label: "Desarrollo Personal" },
+      { value: "coach_vida", label: "Coach de Vida" },
+      { value: "estilo_vida", label: "Estilo de Vida" },
+      { value: "vocacion", label: "Vocación" },
+    ],
+  },
+  {
+    group: "Espiritualidad",
+    items: [
+      { value: "guia_espiritual", label: "Guía Espiritual" },
+      { value: "teologia", label: "Teología" },
+      { value: "meditacion", label: "Meditación y Mindfulness" },
+    ],
+  },
+  {
+    group: "Negocios y Finanzas",
+    items: [
+      { value: "emprendimiento", label: "Emprendimiento" },
+      { value: "asesor_financiero", label: "Asesor Financiero" },
+      { value: "contador", label: "Contador" },
+      { value: "marketing", label: "Marketing" },
+      { value: "coach_ejecutivo", label: "Coach Ejecutivo" },
+    ],
+  },
+  {
+    group: "Salud Integral",
+    items: [
+      { value: "gastroenterologo", label: "Gastroenterólogo" },
+      { value: "dermatologo", label: "Dermatólogo" },
+      { value: "nutriologo", label: "Nutriólogo" },
+      { value: "consulta_general", label: "Consulta General" },
+    ],
+  },
+  {
+    group: "Educación y Formación",
+    items: [
+      { value: "tutor_uni", label: "Tutor Universitario" },
+      { value: "tutor_prep", label: "Tutor Preparatoria" },
+      { value: "pedagogo", label: "Pedagogo" },
+      { value: "profesor_ingles", label: "Profesor de Inglés" },
+      { value: "profesor_idiomas", label: "Profesor de Idiomas" },
+      { value: "lenguaje_senas", label: "Lenguaje de Señas" },
+      { value: "oratoria", label: "Oratoria y Comunicación" },
+    ],
+  },
+  {
+    group: "Tecnología",
+    items: [{ value: "ia", label: "Inteligencia Artificial" }],
+  },
+  {
+    group: "Legal",
+    items: [{ value: "legal", label: "Legal" }],
+  },
+  {
+    group: "Mascotas",
+    items: [{ value: "entrenador_canino", label: "Entrenador Canino" }],
+  },
+];
+
+// Maps campo value → specialty name for DB ID lookup
+const CAMPO_TO_SPECIALTY: Record<string, string> = {
+  psicologia: "Psicología",
+  desarrollo: "Desarrollo Personal",
+  coach_vida: "Coach de Vida",
+  estilo_vida: "Estilo de Vida",
+  vocacion: "Vocación",
+  guia_espiritual: "Guía Espiritual",
+  teologia: "Teología",
+  meditacion: "Meditación",
+  emprendimiento: "Emprendimiento",
+  asesor_financiero: "Finanzas",
+  contador: "Finanzas",
+  marketing: "Marketing",
+  coach_ejecutivo: "Emprendimiento",
+  gastroenterologo: "Salud",
+  dermatologo: "Salud",
+  nutriologo: "Salud",
+  consulta_general: "Salud",
+  tutor_uni: "Educación",
+  tutor_prep: "Educación",
+  pedagogo: "Educación",
+  profesor_ingles: "Idiomas",
+  profesor_idiomas: "Idiomas",
+  lenguaje_senas: "Idiomas",
+  oratoria: "Idiomas",
+  ia: "Tecnología",
+  legal: "Legal",
+  entrenador_canino: "Mascotas",
+};
+
+// ── File upload helper ────────────────────────────────────────────────────────
+async function uploadFile(file: File): Promise<string> {
+  const base64 = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve((reader.result as string).split(",")[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+  const res = await fetch("/api/upload/professional-photo", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ base64, mimeType: file.type, fileName: file.name }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as any).error ?? "Error al subir archivo");
+  }
+  const data = await res.json();
+  return data.url as string;
+}
+
+// ── FileUploadField ───────────────────────────────────────────────────────────
 interface FileUploadFieldProps {
   label: string;
   description: string;
-  icon: React.ReactNode;
   accept: string;
   file: File | null;
   onChange: (file: File | null) => void;
+  required?: boolean;
+  badge?: React.ReactNode;
 }
 
-function FileUploadField({ label, description, icon, accept, file, onChange }: FileUploadFieldProps) {
+function FileUploadField({ label, description, accept, file, onChange, required, badge }: FileUploadFieldProps) {
   const ref = useRef<HTMLInputElement>(null);
   return (
     <div className="space-y-2">
-      <Label className="text-sm font-semibold text-foreground">{label}</Label>
+      {label && (
+        <div className="flex items-center gap-2">
+          <Label className="text-sm font-semibold text-foreground">
+            {label}
+            {required && <span className="text-red-500 ml-1">*</span>}
+          </Label>
+          {badge}
+        </div>
+      )}
       <div
-        className="border-2 border-dashed border-border rounded-xl p-5 cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all duration-200 group"
+        className="border-2 border-dashed border-border rounded-xl p-4 cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all duration-200 group"
         onClick={() => ref.current?.click()}
       >
         <input
@@ -48,60 +210,58 @@ function FileUploadField({ label, description, icon, accept, file, onChange }: F
           className="hidden"
           onChange={(e) => onChange(e.target.files?.[0] ?? null)}
         />
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary/20 transition-colors flex-shrink-0">
-            {icon}
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary/20 transition-colors flex-shrink-0">
+            <Upload className="w-5 h-5" />
           </div>
           <div className="flex-1 min-w-0">
             {file ? (
-              <div>
+              <>
                 <p className="text-sm font-medium text-primary truncate">{file.name}</p>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   {(file.size / 1024).toFixed(1)} KB — Haz clic para cambiar
                 </p>
-              </div>
+              </>
             ) : (
-              <div>
+              <>
                 <p className="text-sm font-medium text-foreground">
                   <span className="text-primary">Subir archivo</span> o arrastra aquí
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
-              </div>
+              </>
             )}
           </div>
-          <Upload className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0" />
         </div>
       </div>
     </div>
   );
 }
 
+// ── Main component ────────────────────────────────────────────────────────────
 export default function RegisterProfessional() {
   const { isAuthenticated, loading } = useAuth();
   const [, navigate] = useLocation();
   const [submitted, setSubmitted] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
-  // Form fields matching inteira.mx/registro-de-asesor
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
     username: "",
     gender: "",
-    campo: "",           // "Selecciona tu Campo" — la especialidad principal
-    especialidad: "",    // sub-especialidad libre
-    bio: "",
     email: "",
-    licenseNumber: "",
+    campo: "",
+    especialidad: "",
+    bio: "",
     yearsOfExperience: "",
-    hourlyRate: "",
     education: "",
-    languages: "Español",
+    licenseNumber: "",
   });
 
-  // File uploads
   const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
-  const [certifications, setCertifications] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [identityDoc, setIdentityDoc] = useState<File | null>(null);
+  const [certifications, setCertifications] = useState<File | null>(null);
 
   const { data: specialties } = trpc.specialty.getAll.useQuery();
 
@@ -115,8 +275,9 @@ export default function RegisterProfessional() {
     },
   });
 
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const docCategory = getDocCategory(form.campo);
+  const handleChange = (field: string, value: string) =>
+    setForm((prev) => ({ ...prev, [field]: value }));
 
   const handlePhotoChange = (file: File | null) => {
     setProfilePhoto(file);
@@ -129,76 +290,46 @@ export default function RegisterProfessional() {
     }
   };
 
-  const handleChange = (field: string, value: string) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.campo) {
-      toast.error("Selecciona tu campo de especialidad");
-      return;
-    }
-    if (!form.firstName || !form.lastName) {
-      toast.error("Nombre y apellido son obligatorios");
-      return;
-    }
-    if (!form.licenseNumber) {
-      toast.error("El número de cédula profesional es obligatorio");
-      return;
-    }
+    if (!form.firstName || !form.lastName) return toast.error("Nombre y apellido son obligatorios");
+    if (!form.campo) return toast.error("Selecciona tu campo de especialidad");
+    if (!form.bio.trim()) return toast.error("La descripción profesional es obligatoria");
+    if (!profilePhoto) return toast.error("La foto de perfil es obligatoria");
+    if (!identityDoc) return toast.error("El documento de identidad es obligatorio");
+    if (docCategory === "mandatory_cedula" && !form.licenseNumber.trim())
+      return toast.error("La cédula profesional es obligatoria para tu especialidad");
+    if ((docCategory === "optional_cedula" || docCategory === "certificates_only") && !certifications)
+      return toast.error("El archivo de certificaciones es obligatorio");
 
-    // Upload profile photo to S3 if provided
-    let profilePhotoUrl: string | undefined;
-    if (profilePhoto) {
-      try {
-        setUploadingPhoto(true);
-        const base64 = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => {
-            const result = reader.result as string;
-            resolve(result.split(",")[1]);
-          };
-          reader.onerror = reject;
-          reader.readAsDataURL(profilePhoto);
-        });
-        const res = await fetch("/api/upload/professional-photo", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ base64, mimeType: profilePhoto.type, fileName: profilePhoto.name }),
-        });
-        if (!res.ok) {
-          const err = await res.json();
-          throw new Error(err.error ?? "Error al subir la foto");
-        }
-        const data = await res.json();
-        profilePhotoUrl = data.url;
-        toast.success("Foto subida correctamente");
-      } catch (err: unknown) {
-        toast.error((err as Error).message ?? "Error al subir la foto de perfil");
-        setUploadingPhoto(false);
-        return;
-      } finally {
-        setUploadingPhoto(false);
-      }
+    setUploading(true);
+    try {
+      const profilePhotoUrl = await uploadFile(profilePhoto);
+      const identityDocUrl = await uploadFile(identityDoc);
+      let certificationsUrl: string | undefined;
+      if (certifications) certificationsUrl = await uploadFile(certifications);
+
+      const specialtyName = CAMPO_TO_SPECIALTY[form.campo];
+      const matchedSpecialty = specialties?.find(
+        (s) => s.name === specialtyName ||
+          s.name.toLowerCase().includes((specialtyName ?? "").toLowerCase())
+      );
+
+      registerMutation.mutate({
+        specialtyId: matchedSpecialty?.id ?? 1,
+        licenseNumber: form.licenseNumber.trim() || undefined,
+        licenseDocument: identityDocUrl,
+        bio: form.bio || undefined,
+        education: form.education || undefined,
+        certifications: certificationsUrl,
+        yearsOfExperience: form.yearsOfExperience ? parseInt(form.yearsOfExperience) : undefined,
+        profilePhoto: profilePhotoUrl,
+      });
+    } catch (err: unknown) {
+      toast.error((err as Error).message ?? "Error al subir archivos");
+    } finally {
+      setUploading(false);
     }
-
-    // Find the specialty ID from the selected campo
-    const selectedSpecialty = specialties?.find(
-      (s) => s.name === form.campo
-    );
-
-    registerMutation.mutate({
-      specialtyId: selectedSpecialty?.id ?? 1,
-      licenseNumber: form.licenseNumber,
-      bio: form.bio || undefined,
-      education: form.education || undefined,
-      certifications: certifications?.name || undefined,
-      yearsOfExperience: form.yearsOfExperience ? parseInt(form.yearsOfExperience) : undefined,
-      hourlyRate: form.hourlyRate || undefined,
-      profilePhoto: profilePhotoUrl,
-    });
   };
 
   if (loading) {
@@ -224,9 +355,7 @@ export default function RegisterProfessional() {
               Necesitas una cuenta para registrarte como asesor en inteira.
             </p>
             <a href={getLoginUrl()}>
-              <Button className="w-full bg-primary hover:bg-primary/90 text-white">
-                Iniciar sesión
-              </Button>
+              <Button className="w-full bg-primary hover:bg-primary/90 text-white">Iniciar sesión</Button>
             </a>
           </CardContent>
         </Card>
@@ -246,21 +375,21 @@ export default function RegisterProfessional() {
               Solicitud enviada
             </h2>
             <p className="text-muted-foreground mb-2">
-              Tu solicitud de registro como asesor ha sido recibida. El equipo de inteira revisará tu perfil y documentos.
+              Tu solicitud ha sido recibida. El equipo de inteira revisará tu perfil y documentos.
             </p>
             <p className="text-sm text-muted-foreground mb-8">
-              Recibirás un correo electrónico cuando tu cuenta sea aprobada o si se necesita información adicional.
+              Recibirás un correo cuando tu cuenta sea aprobada o si se necesita información adicional.
             </p>
             <Link href="/">
-              <Button className="bg-primary hover:bg-primary/90 text-white">
-                Volver al inicio
-              </Button>
+              <Button className="bg-primary hover:bg-primary/90 text-white">Volver al inicio</Button>
             </Link>
           </CardContent>
         </Card>
       </div>
     );
   }
+
+  const isSubmitting = uploading || registerMutation.isPending;
 
   return (
     <div className="min-h-screen bg-background">
@@ -300,36 +429,28 @@ export default function RegisterProfessional() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="firstName">Nombre de pila <span className="text-red-500">*</span></Label>
-                    <Input
-                      id="firstName"
-                      placeholder="Nombre de pila"
-                      value={form.firstName}
-                      onChange={(e) => handleChange("firstName", e.target.value)}
-                      required
-                    />
+                    <Label htmlFor="firstName">Nombre <span className="text-red-500">*</span></Label>
+                    <Input id="firstName" placeholder="Nombre de pila" value={form.firstName}
+                      onChange={(e) => handleChange("firstName", e.target.value)} required />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="lastName">Apellido <span className="text-red-500">*</span></Label>
-                    <Input
-                      id="lastName"
-                      placeholder="Apellido"
-                      value={form.lastName}
-                      onChange={(e) => handleChange("lastName", e.target.value)}
-                      required
-                    />
+                    <Input id="lastName" placeholder="Apellido" value={form.lastName}
+                      onChange={(e) => handleChange("lastName", e.target.value)} required />
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="username">Nombre de usuario <span className="text-red-500">*</span></Label>
-                  <Input
-                    id="username"
-                    placeholder="Nombre de usuario"
-                    value={form.username}
-                    onChange={(e) => handleChange("username", e.target.value)}
-                    required
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="username">Nombre de usuario <span className="text-red-500">*</span></Label>
+                    <Input id="username" placeholder="@usuario" value={form.username}
+                      onChange={(e) => handleChange("username", e.target.value)} required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Correo electrónico</Label>
+                    <Input id="email" type="email" placeholder="correo@ejemplo.com" value={form.email}
+                      onChange={(e) => handleChange("email", e.target.value)} />
+                  </div>
                 </div>
 
                 <div className="space-y-2">
@@ -337,14 +458,8 @@ export default function RegisterProfessional() {
                   <div className="flex gap-6 pt-1">
                     {["Masculino", "Femenino", "Prefiero no decir"].map((g) => (
                       <label key={g} className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="gender"
-                          value={g}
-                          checked={form.gender === g}
-                          onChange={() => handleChange("gender", g)}
-                          className="accent-primary"
-                        />
+                        <input type="radio" name="gender" value={g} checked={form.gender === g}
+                          onChange={() => handleChange("gender", g)} className="accent-primary" />
                         <span className="text-sm text-foreground">{g}</span>
                       </label>
                     ))}
@@ -358,7 +473,7 @@ export default function RegisterProfessional() {
               <CardContent className="p-6 space-y-5">
                 <div className="flex items-center gap-3 mb-2">
                   <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
-                    <Award className="w-5 h-5 text-primary" />
+                    <Briefcase className="w-5 h-5 text-primary" />
                   </div>
                   <h3 className="font-bold text-foreground" style={{ fontFamily: "Poppins, sans-serif" }}>
                     Especialidad profesional
@@ -366,24 +481,32 @@ export default function RegisterProfessional() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Selecciona tu Campo <span className="text-red-500">*</span></Label>
-                  <Select value={form.campo} onValueChange={(v) => handleChange("campo", v)}>
+                  <Label>Campo principal <span className="text-red-500">*</span></Label>
+                  <Select
+                    value={form.campo}
+                    onValueChange={(v) => {
+                      handleChange("campo", v);
+                      setIdentityDoc(null);
+                      setCertifications(null);
+                      handleChange("licenseNumber", "");
+                    }}
+                  >
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecciona tu Campo" />
+                      <SelectValue placeholder="Selecciona tu campo" />
                     </SelectTrigger>
                     <SelectContent>
-                      {(specialties ?? [
-                        { id: 1, name: "Psicología" },
-                        { id: 2, name: "Emprendimiento" },
-                        { id: 3, name: "Finanzas" },
-                        { id: 4, name: "Idiomas" },
-                        { id: 5, name: "Imagen Personal" },
-                        { id: 6, name: "Legal" },
-                        { id: 7, name: "Vocación" },
-                      ]).map((s) => (
-                        <SelectItem key={s.id} value={s.name}>
-                          {s.name}
-                        </SelectItem>
+                      {CAMPO_GROUPS.map((group, gi) => (
+                        <div key={group.group}>
+                          {gi > 0 && <SelectSeparator />}
+                          <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide pointer-events-none select-none">
+                            {group.group}
+                          </div>
+                          {group.items.map((item) => (
+                            <SelectItem key={item.value} value={item.value}>
+                              {item.label}
+                            </SelectItem>
+                          ))}
+                        </div>
                       ))}
                     </SelectContent>
                   </Select>
@@ -391,79 +514,58 @@ export default function RegisterProfessional() {
 
                 <div className="space-y-2">
                   <Label htmlFor="especialidad">Especialidad específica</Label>
-                  <Input
-                    id="especialidad"
-                    placeholder="Ej: Terapia cognitivo-conductual, Derecho laboral..."
-                    value={form.especialidad}
-                    onChange={(e) => handleChange("especialidad", e.target.value)}
-                  />
+                  <Input id="especialidad" placeholder="Ej: Terapia cognitivo-conductual, Derecho laboral..."
+                    value={form.especialidad} onChange={(e) => handleChange("especialidad", e.target.value)} />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="bio">Breve descripción <span className="text-red-500">*</span></Label>
-                  <Textarea
-                    id="bio"
-                    placeholder="Breve descripción de tu experiencia y enfoque profesional..."
-                    value={form.bio}
-                    onChange={(e) => handleChange("bio", e.target.value)}
-                    rows={4}
-                    required
-                  />
+                  <Label htmlFor="bio">Descripción profesional <span className="text-red-500">*</span></Label>
+                  <Textarea id="bio" placeholder="Describe tu experiencia, enfoque y cómo puedes ayudar a tus clientes..."
+                    value={form.bio} onChange={(e) => handleChange("bio", e.target.value)} rows={4} />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="yearsOfExperience">
-                    <Clock className="w-4 h-4 inline mr-1 text-primary" />
-                    Años de experiencia
-                  </Label>
-                  <Input
-                    id="yearsOfExperience"
-                    type="number"
-                    min="0"
-                    max="60"
-                    placeholder="Ej: 5"
-                    value={form.yearsOfExperience}
-                    onChange={(e) => handleChange("yearsOfExperience", e.target.value)}
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="yearsOfExperience">
+                      <Clock className="w-4 h-4 inline mr-1 text-primary" />
+                      Años de experiencia
+                    </Label>
+                    <Input id="yearsOfExperience" type="number" min="0" max="60" placeholder="Ej: 5"
+                      value={form.yearsOfExperience} onChange={(e) => handleChange("yearsOfExperience", e.target.value)} />
+                  </div>
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="education">Formación académica</Label>
-                  <Textarea
-                    id="education"
-                    placeholder="Ej: Licenciatura en Psicología, UNAM. Maestría en Psicoterapia Cognitiva..."
-                    value={form.education}
-                    onChange={(e) => handleChange("education", e.target.value)}
-                    rows={3}
-                  />
+                  <Textarea id="education" placeholder="Ej: Licenciatura en Psicología, UNAM. Maestría en Psicoterapia..."
+                    value={form.education} onChange={(e) => handleChange("education", e.target.value)} rows={3} />
                 </div>
               </CardContent>
             </Card>
 
-            {/* ── Sección 3: Documentos ── */}
+            {/* ── Sección 3: Documentos (dinámica) ── */}
             <Card className="border-border">
               <CardContent className="p-6 space-y-5">
                 <div className="flex items-center gap-3 mb-2">
                   <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
-                    <FileText className="w-5 h-5 text-primary" />
+                    <Shield className="w-5 h-5 text-primary" />
                   </div>
                   <div>
                     <h3 className="font-bold text-foreground" style={{ fontFamily: "Poppins, sans-serif" }}>
                       Documentos de verificación
                     </h3>
                     <p className="text-xs text-muted-foreground">
-                      Los documentos son revisados por el equipo de inteira antes de aprobar tu perfil.
+                      Revisados por el equipo de inteira antes de aprobar tu perfil.
                     </p>
                   </div>
                 </div>
 
-                {/* Profile photo with preview */}
+                {/* Photo — always required */}
                 <div className="space-y-3">
                   <Label className="text-sm font-semibold text-foreground">
-                    Foto de perfil
+                    Foto de perfil <span className="text-red-500">*</span>
                   </Label>
                   <div className="flex items-center gap-5">
-                    {/* Avatar preview */}
                     <div className="relative flex-shrink-0">
                       <div className="w-20 h-20 rounded-full overflow-hidden bg-primary/10 border-2 border-dashed border-primary/30 flex items-center justify-center">
                         {photoPreview ? (
@@ -473,88 +575,111 @@ export default function RegisterProfessional() {
                         )}
                       </div>
                       {photoPreview && (
-                        <button
-                          type="button"
-                          onClick={() => handlePhotoChange(null)}
-                          className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-destructive text-white text-xs flex items-center justify-center hover:bg-destructive/80"
-                        >
+                        <button type="button" onClick={() => handlePhotoChange(null)}
+                          className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-destructive text-white text-xs flex items-center justify-center hover:bg-destructive/80">
                           ×
                         </button>
                       )}
                     </div>
-                    {/* Upload button */}
                     <div className="flex-1">
-                      <FileUploadField
-                        label=""
-                        description="JPG, PNG o WEBP — máximo 5 MB"
-                        icon={<Upload className="w-5 h-5" />}
-                        accept="image/jpeg,image/png,image/webp"
-                        file={profilePhoto}
-                        onChange={handlePhotoChange}
-                      />
+                      <FileUploadField label="" description="JPG, PNG o WEBP — máximo 5 MB"
+                        accept="image/jpeg,image/png,image/webp" file={profilePhoto} onChange={handlePhotoChange} />
                     </div>
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="licenseNumber">
-                    Número de cédula profesional <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="licenseNumber"
-                    placeholder="Ej: 12345678"
-                    value={form.licenseNumber}
-                    onChange={(e) => handleChange("licenseNumber", e.target.value)}
-                    required
-                  />
-                </div>
-
-                <FileUploadField
-                  label="Certificaciones y títulos"
-                  description="PDF, JPG o PNG — máximo 10 MB"
-                  icon={<Award className="w-5 h-5" />}
-                  accept=".pdf,image/*"
-                  file={certifications}
-                  onChange={setCertifications}
-                />
-
+                {/* Identity doc — always required */}
                 <FileUploadField
                   label="Documento de identidad"
                   description="INE, pasaporte o cédula — PDF, JPG o PNG — máximo 10 MB"
-                  icon={<CreditCard className="w-5 h-5" />}
                   accept=".pdf,image/*"
                   file={identityDoc}
                   onChange={setIdentityDoc}
+                  required
                 />
+
+                {/* No campo selected yet */}
+                {!form.campo && (
+                  <div className="rounded-xl border border-dashed border-border p-5 text-center">
+                    <FileText className="w-8 h-8 text-muted-foreground/50 mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">
+                      Selecciona tu campo de especialidad para ver qué documentos adicionales se requieren.
+                    </p>
+                  </div>
+                )}
+
+                {/* Cédula obligatoria */}
+                {docCategory === "mandatory_cedula" && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="licenseNumber" className="text-sm font-semibold">
+                        Número de cédula profesional <span className="text-red-500">*</span>
+                      </Label>
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700 border border-red-200">
+                        <AlertTriangle className="w-3 h-3" />
+                        Requerido por ley
+                      </span>
+                    </div>
+                    <Input id="licenseNumber" placeholder="Ej: 12345678"
+                      value={form.licenseNumber} onChange={(e) => handleChange("licenseNumber", e.target.value)} />
+                  </div>
+                )}
+
+                {/* Cédula opcional */}
+                {docCategory === "optional_cedula" && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="licenseNumber" className="text-sm font-semibold">
+                        Número de cédula profesional
+                      </Label>
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                        Opcional — da más confianza
+                      </span>
+                    </div>
+                    <Input id="licenseNumber" placeholder="Ej: 12345678 (opcional)"
+                      value={form.licenseNumber} onChange={(e) => handleChange("licenseNumber", e.target.value)} />
+                  </div>
+                )}
+
+                {/* Certificaciones — obligatorias para optional_cedula y certificates_only */}
+                {(docCategory === "optional_cedula" || docCategory === "certificates_only") && (
+                  <FileUploadField
+                    label="Certificaciones y títulos"
+                    description="PDF, JPG o PNG — máximo 10 MB"
+                    accept=".pdf,image/*"
+                    file={certifications}
+                    onChange={setCertifications}
+                    required
+                  />
+                )}
+
+                {/* Certificaciones — opcionales para mandatory_cedula */}
+                {docCategory === "mandatory_cedula" && (
+                  <FileUploadField
+                    label="Certificaciones y títulos"
+                    description="PDF, JPG o PNG — máximo 10 MB (opcional)"
+                    accept=".pdf,image/*"
+                    file={certifications}
+                    onChange={setCertifications}
+                  />
+                )}
               </CardContent>
             </Card>
 
             {/* ── Submit ── */}
             <div className="pb-8">
-              <Button
-                type="submit"
-                disabled={registerMutation.isPending || uploadingPhoto}
-                className="w-full bg-primary hover:bg-primary/90 text-white h-12 text-base font-semibold rounded-xl"
-              >
-                {uploadingPhoto ? (
+              <Button type="submit" disabled={isSubmitting}
+                className="w-full bg-primary hover:bg-primary/90 text-white h-12 text-base font-semibold rounded-xl">
+                {isSubmitting ? (
                   <span className="flex items-center gap-2">
                     <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
-                    Subiendo foto...
+                    {uploading ? "Subiendo archivos..." : "Enviando solicitud..."}
                   </span>
-                ) : registerMutation.isPending ? (
-                  <span className="flex items-center gap-2">
-                    <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
-                    Enviando solicitud...
-                  </span>
-                ) : (
-                  "Enviar solicitud"
-                )}
+                ) : "Enviar solicitud"}
               </Button>
               <p className="text-center text-xs text-muted-foreground mt-3">
                 Al enviar, aceptas los{" "}
-                <a href="#" className="text-primary hover:underline">
-                  términos y condiciones
-                </a>{" "}
+                <a href="#" className="text-primary hover:underline">términos y condiciones</a>{" "}
                 de inteira para asesores.
               </p>
             </div>
