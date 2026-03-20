@@ -422,6 +422,68 @@ export const appRouter = router({
         return { success: true };
       }),
 
+    getWallet: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== "professional") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "User is not a professional" });
+      }
+      const professional = await db.getProfessionalByUserId(ctx.user.id);
+      if (!professional) throw new TRPCError({ code: "NOT_FOUND", message: "Professional profile not found" });
+
+      const { getProfessionalWallet, getProfessionalEarningsHistory, getProfessionalWithdrawals } = await import("./professionalWallet");
+      const [wallet, earnings, withdrawals] = await Promise.all([
+        getProfessionalWallet(professional.id),
+        getProfessionalEarningsHistory(professional.id),
+        getProfessionalWithdrawals(professional.id),
+      ]);
+      return { wallet, earnings, withdrawals };
+    }),
+
+    getEarningsHistory: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== "professional") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "User is not a professional" });
+      }
+      const professional = await db.getProfessionalByUserId(ctx.user.id);
+      if (!professional) throw new TRPCError({ code: "NOT_FOUND", message: "Professional profile not found" });
+      const { getProfessionalEarningsHistory } = await import("./professionalWallet");
+      return await getProfessionalEarningsHistory(professional.id);
+    }),
+
+    requestWithdrawal: protectedProcedure
+      .input(z.object({
+        amount: z.number().positive(),
+        clabe: z.string().length(18).regex(/^\d{18}$/, "CLABE debe tener 18 dígitos numéricos"),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "professional") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "User is not a professional" });
+        }
+        const professional = await db.getProfessionalByUserId(ctx.user.id);
+        if (!professional) throw new TRPCError({ code: "NOT_FOUND", message: "Professional profile not found" });
+
+        const { getProfessionalWallet, createWithdrawalRequest } = await import("./professionalWallet");
+        const wallet = await getProfessionalWallet(professional.id);
+        const balance = parseFloat(wallet?.balance ?? "0");
+
+        if (input.amount < 500) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "El retiro mínimo es de $500 MXN",
+          });
+        }
+        if (input.amount > balance) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Saldo insuficiente. Disponible: $${balance.toFixed(2)} MXN`,
+          });
+        }
+
+        await createWithdrawalRequest(professional.id, input.amount, input.clabe);
+        return {
+          success: true,
+          message: `Solicitud de $${input.amount} MXN enviada. Se procesa en 1–3 días hábiles.`,
+        };
+      }),
+
     getMyReviews: protectedProcedure.query(async ({ ctx }) => {
       if (ctx.user.role !== "professional") {
         throw new TRPCError({ code: "FORBIDDEN", message: "User is not a professional" });

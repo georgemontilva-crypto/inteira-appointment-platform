@@ -341,3 +341,51 @@ export const professionalPenalties = mysqlTable("professionalPenalties", {
 export type ProfessionalPenalty = typeof professionalPenalties.$inferSelect;
 export type InsertProfessionalPenalty = typeof professionalPenalties.$inferInsert;
 export type InsertPaymentQueueItem = typeof paymentQueue.$inferInsert;
+
+/**
+ * Professional wallet — one balance row per professional
+ */
+export const professionalWallet = mysqlTable("professionalWallet", {
+  id: int("id").autoincrement().primaryKey(),
+  professionalId: int("professionalId").notNull().unique(),
+  balance: decimal("balance", { precision: 10, scale: 2 }).default("0").notNull(),
+  pendingWithdrawal: decimal("pendingWithdrawal", { precision: 10, scale: 2 }).default("0").notNull(),
+  totalEarned: decimal("totalEarned", { precision: 10, scale: 2 }).default("0").notNull(),
+  totalWithdrawn: decimal("totalWithdrawn", { precision: 10, scale: 2 }).default("0").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type ProfessionalWallet = typeof professionalWallet.$inferSelect;
+
+/**
+ * Professional earnings — one row per completed appointment
+ */
+export const professionalEarnings = mysqlTable("professionalEarnings", {
+  id: int("id").autoincrement().primaryKey(),
+  professionalId: int("professionalId").notNull(),
+  appointmentId: int("appointmentId").notNull().unique(),
+  grossAmount: decimal("grossAmount", { precision: 10, scale: 2 }).notNull(),
+  commissionRate: decimal("commissionRate", { precision: 5, scale: 4 }).notNull(),
+  commissionAmount: decimal("commissionAmount", { precision: 10, scale: 2 }).notNull(),
+  netAmount: decimal("netAmount", { precision: 10, scale: 2 }).notNull(),
+  status: mysqlEnum("status", ["pending", "credited", "reversed"]).default("credited").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type ProfessionalEarning = typeof professionalEarnings.$inferSelect;
+
+/**
+ * Withdrawal requests
+ */
+export const withdrawalRequests = mysqlTable("withdrawalRequests", {
+  id: int("id").autoincrement().primaryKey(),
+  professionalId: int("professionalId").notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  clabe: varchar("clabe", { length: 18 }).notNull(),
+  status: mysqlEnum("status", ["pending", "approved", "rejected", "paid"]).default("pending").notNull(),
+  adminNotes: longtext("adminNotes"),
+  requestedAt: timestamp("requestedAt").defaultNow().notNull(),
+  processedAt: timestamp("processedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type WithdrawalRequest = typeof withdrawalRequests.$inferSelect;

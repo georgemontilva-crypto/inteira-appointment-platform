@@ -210,6 +210,59 @@ async function runStartupMigrations() {
     ].join(" ")).catch(() => {});
     console.log("[Migration] professionalPenalties table ready");
 
+    // Ensure professionalWallet table exists
+    await db.execute([
+      "CREATE TABLE IF NOT EXISTS `professionalWallet` (",
+      "  `id` int AUTO_INCREMENT NOT NULL,",
+      "  `professionalId` int NOT NULL,",
+      "  `balance` decimal(10,2) NOT NULL DEFAULT 0,",
+      "  `pendingWithdrawal` decimal(10,2) NOT NULL DEFAULT 0,",
+      "  `totalEarned` decimal(10,2) NOT NULL DEFAULT 0,",
+      "  `totalWithdrawn` decimal(10,2) NOT NULL DEFAULT 0,",
+      "  `createdAt` timestamp NOT NULL DEFAULT (now()),",
+      "  `updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,",
+      "  CONSTRAINT `professionalWallet_id` PRIMARY KEY(`id`),",
+      "  UNIQUE KEY `professionalWallet_professionalId_unique` (`professionalId`)",
+      ")",
+    ].join(" ")).catch(() => {});
+    console.log("[Migration] professionalWallet table ready");
+
+    // Ensure professionalEarnings table exists
+    await db.execute([
+      "CREATE TABLE IF NOT EXISTS `professionalEarnings` (",
+      "  `id` int AUTO_INCREMENT NOT NULL,",
+      "  `professionalId` int NOT NULL,",
+      "  `appointmentId` int NOT NULL,",
+      "  `grossAmount` decimal(10,2) NOT NULL,",
+      "  `commissionRate` decimal(5,4) NOT NULL,",
+      "  `commissionAmount` decimal(10,2) NOT NULL,",
+      "  `netAmount` decimal(10,2) NOT NULL,",
+      "  `status` enum('pending','credited','reversed') NOT NULL DEFAULT 'credited',",
+      "  `createdAt` timestamp NOT NULL DEFAULT (now()),",
+      "  CONSTRAINT `professionalEarnings_id` PRIMARY KEY(`id`),",
+      "  UNIQUE KEY `professionalEarnings_appointmentId_unique` (`appointmentId`)",
+      ")",
+    ].join(" ")).catch(() => {});
+    console.log("[Migration] professionalEarnings table ready");
+
+    // Ensure withdrawalRequests table exists
+    await db.execute([
+      "CREATE TABLE IF NOT EXISTS `withdrawalRequests` (",
+      "  `id` int AUTO_INCREMENT NOT NULL,",
+      "  `professionalId` int NOT NULL,",
+      "  `amount` decimal(10,2) NOT NULL,",
+      "  `clabe` varchar(18) NOT NULL,",
+      "  `status` enum('pending','approved','rejected','paid') NOT NULL DEFAULT 'pending',",
+      "  `adminNotes` longtext,",
+      "  `requestedAt` timestamp NOT NULL DEFAULT (now()),",
+      "  `processedAt` timestamp NULL,",
+      "  `createdAt` timestamp NOT NULL DEFAULT (now()),",
+      "  `updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,",
+      "  CONSTRAINT `withdrawalRequests_id` PRIMARY KEY(`id`)",
+      ")",
+    ].join(" ")).catch(() => {});
+    console.log("[Migration] withdrawalRequests table ready");
+
     // ── Seed: ensure marketingdedsm@gmail.com has role=admin ──────────────────
     try {
       await db.execute(

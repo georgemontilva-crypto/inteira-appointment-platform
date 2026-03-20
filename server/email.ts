@@ -253,6 +253,31 @@ export async function sendAppointmentCancellation(params: {
   });
 }
 
+// 5a. Professional earning notification
+export async function sendProfessionalEarningNotification(params: {
+  professionalEmail: string;
+  professionalName: string;
+  netAmount: number;
+  appointmentId: number;
+}): Promise<boolean> {
+  const content = `
+    <p>Hola <strong>${params.professionalName}</strong>,</p>
+    <p>Tu sesión ha sido marcada como completada. Se han acreditado <strong style="color:#10B981;">$${params.netAmount.toFixed(2)} MXN</strong> a tu wallet.</p>
+    <div class="info-box">
+      <p><strong>Cita #:</strong> ${params.appointmentId}</p>
+      <p><strong>Monto acreditado:</strong> $${params.netAmount.toFixed(2)} MXN</p>
+    </div>
+    <p>Puedes solicitar un retiro desde tu panel cuando tu saldo sea de al menos $500 MXN.</p>
+    <a href="https://inteira.mx/profesional/wallet" class="btn">Ver mi wallet</a>
+  `;
+
+  return sendEmail({
+    to: params.professionalEmail,
+    subject: `💰 Sesión completada — $${params.netAmount.toFixed(2)} MXN acreditados`,
+    html: baseTemplate(content),
+  });
+}
+
 // 5. Subscription status change
 export async function sendSubscriptionUpdate(params: {
   userEmail: string;

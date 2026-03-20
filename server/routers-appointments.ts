@@ -456,6 +456,26 @@ export const appointmentRouter = router({
         })
         .where(eq(appointments.id, input.appointmentId));
 
+      // Credit professional earnings
+      const { creditProfessionalEarning } = await import("./professionalWallet");
+      const { netAmount } = await creditProfessionalEarning(
+        completingProfessional.id,
+        input.appointmentId,
+        (completingProfessional.tier ?? "basic") as "basic" | "pro"
+      );
+
+      // Notify professional (fire and forget)
+      const profUser = await db.getUserById(completingProfessional.userId);
+      if (profUser?.email) {
+        const { sendProfessionalEarningNotification } = await import("./email");
+        sendProfessionalEarningNotification({
+          professionalEmail: profUser.email,
+          professionalName: profUser.name ?? "Profesional",
+          netAmount,
+          appointmentId: input.appointmentId,
+        }).catch(() => {});
+      }
+
       return { success: true };
     }),
 });
