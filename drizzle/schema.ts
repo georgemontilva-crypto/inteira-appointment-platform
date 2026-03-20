@@ -158,6 +158,8 @@ export const appointments = mysqlTable("appointments", {
   canceledAt: timestamp("canceledAt"),
   canceledBy: mysqlEnum("canceledBy", ["user", "professional", "admin"]),
   cancellationReason: longtext("cancellationReason"),
+  penaltyAmount: int("penaltyAmount").default(0),
+  penaltyType: mysqlEnum("penaltyType", ["none", "partial", "full", "credits_lost"]),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -321,4 +323,21 @@ export const paymentQueue = mysqlTable("paymentQueue", {
 });
 
 export type PaymentQueueItem = typeof paymentQueue.$inferSelect;
+
+/**
+ * Professional penalties — multas por cancelaciones tardías o no-shows
+ */
+export const professionalPenalties = mysqlTable("professionalPenalties", {
+  id: int("id").autoincrement().primaryKey(),
+  professionalId: int("professionalId").notNull(),
+  appointmentId: int("appointmentId"),
+  amount: int("amount").notNull(),
+  penaltyType: mysqlEnum("penaltyType", ["partial", "full"]).notNull(),
+  reason: varchar("reason", { length: 255 }),
+  status: mysqlEnum("status", ["pending", "collected", "waived"]).default("pending").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ProfessionalPenalty = typeof professionalPenalties.$inferSelect;
+export type InsertProfessionalPenalty = typeof professionalPenalties.$inferInsert;
 export type InsertPaymentQueueItem = typeof paymentQueue.$inferInsert;

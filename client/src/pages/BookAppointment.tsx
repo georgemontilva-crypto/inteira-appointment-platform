@@ -12,7 +12,7 @@ import {
   ArrowLeft, Clock, Video, CheckCircle2, Calendar as CalendarIcon,
   AlertCircle, Star, Wallet,
 } from "lucide-react";
-import { format, addHours, isBefore, startOfDay } from "date-fns";
+import { format, addMinutes, isBefore, startOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 
 const VIDEO_PROVIDERS = [
@@ -30,6 +30,7 @@ export default function BookAppointment() {
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [videoProvider, setVideoProvider] = useState<"zoom" | "google_meet">("zoom");
   const [notes, setNotes] = useState("");
+  const [policyAccepted, setPolicyAccepted] = useState(false);
   const [step, setStep] = useState<"date" | "time" | "confirm" | "done">("date");
 
   // Wallet query for credit balance indicator
@@ -63,6 +64,7 @@ export default function BookAppointment() {
   const handleDateSelect = (date: Date | undefined) => {
     setSelectedDate(date);
     setSelectedSlot(null);
+    setPolicyAccepted(false);
     if (date) setStep("time");
   };
 
@@ -85,9 +87,9 @@ export default function BookAppointment() {
     });
   };
 
-  // Disable past dates and dates less than 4 hours from now
+  // Disable past dates and dates less than 30 minutes from now
   const disabledDays = (date: Date) => {
-    const minDate = addHours(new Date(), 4);
+    const minDate = addMinutes(new Date(), 30);
     return isBefore(startOfDay(date), startOfDay(minDate));
   };
 
@@ -237,7 +239,7 @@ export default function BookAppointment() {
                   />
                 </div>
                 <p className="text-xs text-muted-foreground text-center mt-3">
-                  Las citas deben agendarse con al menos 4 horas de anticipación
+                  Las citas deben agendarse con al menos 30 minutos de anticipación
                 </p>
               </CardContent>
             </Card>
@@ -324,9 +326,34 @@ export default function BookAppointment() {
                     />
                   </div>
 
+                  {/* Política de cancelación */}
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 space-y-3">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-semibold text-amber-800">⚠️ Política de cancelación</p>
+                        <p className="text-sm text-amber-700 mt-1 leading-relaxed">
+                          Puedes cancelar sin costo hasta 4 horas antes de tu cita.<br />
+                          Si cancelas con menos de 4 horas o no te presentas, perderás los créditos de esta sesión.
+                        </p>
+                      </div>
+                    </div>
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={policyAccepted}
+                        onChange={(e) => setPolicyAccepted(e.target.checked)}
+                        className="w-4 h-4 rounded border-amber-400 accent-amber-600"
+                      />
+                      <span className="text-sm text-amber-800 font-medium">
+                        Entendido — acepto la política de cancelación
+                      </span>
+                    </label>
+                  </div>
+
                   <Button
                     onClick={handleConfirm}
-                    disabled={bookMutation.isPending}
+                    disabled={bookMutation.isPending || !policyAccepted}
                     className="w-full gradient-brand text-white border-0 shadow-md shadow-primary/30 h-12 text-base"
                   >
                     {bookMutation.isPending ? (
@@ -417,7 +444,7 @@ export default function BookAppointment() {
                   <div className="text-xs text-muted-foreground">
                     <p className="flex items-start gap-1">
                       <AlertCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />
-                      Las citas deben agendarse con al menos 4 horas de anticipación.
+                      Las citas deben agendarse con al menos 30 minutos de anticipación.
                     </p>
                   </div>
                 </CardContent>

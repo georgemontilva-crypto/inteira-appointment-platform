@@ -372,6 +372,40 @@ export default function ProfessionalProfile() {
                 )}
               </CardContent>
             </Card>
+
+            {/* ── Políticas de la plataforma ── */}
+            <Card className="border-amber-200 bg-amber-50/30">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2" style={{ fontFamily: "Poppins, sans-serif" }}>
+                  📋 Políticas de cancelación para expertos
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3 p-3 bg-white rounded-xl border border-emerald-200">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500 mt-1.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-semibold text-emerald-700">Más de 12 horas de aviso</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Sin penalización</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 p-3 bg-white rounded-xl border border-amber-200">
+                    <div className="w-2 h-2 rounded-full bg-amber-500 mt-1.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-semibold text-amber-700">Entre 4 y 12 horas de aviso</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Multa de 75 créditos ($75 MXN)</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 p-3 bg-white rounded-xl border border-red-200">
+                    <div className="w-2 h-2 rounded-full bg-red-500 mt-1.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-semibold text-red-700">Menos de 4 horas o No-Show</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Multa de 150 créditos ($150 MXN)</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Sidebar */}

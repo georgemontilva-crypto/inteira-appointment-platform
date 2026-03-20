@@ -79,7 +79,7 @@ export const appointmentRouter = router({
       if (!canScheduleAppointment(appointmentDateObj)) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Appointments must be scheduled at least 4 hours in advance",
+          message: "Las citas deben agendarse con al menos 30 minutos de anticipación",
         });
       }
 
@@ -251,7 +251,7 @@ export const appointmentRouter = router({
         });
       }
 
-      // Check authorization
+      // Check authorization (user)
       if (
         ctx.user.role === "user" &&
         appointment.userId !== ctx.user.id
@@ -262,24 +262,53 @@ export const appointmentRouter = router({
         });
       }
 
-      if (
-        ctx.user.role === "professional" &&
-        appointment.professionalId !== ctx.user.id
-      ) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Not authorized to cancel this appointment",
-        });
+      // ── Política de cancelación ───────────────────────────────────────────
+      const now = new Date();
+      const appointmentTime = new Date(appointment.appointmentDate);
+      const hoursUntil = (appointmentTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+      const canceledByRole = ctx.user.role === "user" ? "user" : "professional";
+
+      // Verificar que el profesional es dueño de esta cita (fix bug: professionalId ≠ userId)
+      if (canceledByRole === "professional") {
+        const userProfessional = await db.getProfessionalByUserId(ctx.user.id);
+        if (!userProfessional || appointment.professionalId !== userProfessional.id) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized to cancel this appointment" });
+        }
       }
 
-      // Check if appointment can be canceled (at least 4 hours before)
-      const now = new Date();
-      const fourHoursFromNow = new Date(now.getTime() + 4 * 60 * 60 * 1000);
-      if (appointment.appointmentDate <= fourHoursFromNow) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Cannot cancel appointment less than 4 hours before start time",
-        });
+      let penaltyAmount = 0;
+      let penaltyType: "none" | "partial" | "full" | "credits_lost" = "none";
+
+      if (canceledByRole === "professional") {
+        // Profesional cancela: siempre devolver créditos al cliente
+        if (appointment.status === "scheduled") {
+          await addCreditBatch(appointment.userId, "individual_basic", 350).catch(() => {});
+        }
+        // Multa según anticipación
+        if (hoursUntil >= 12) {
+          penaltyAmount = 0;
+          penaltyType = "none";
+        } else if (hoursUntil >= 4) {
+          penaltyAmount = 75;
+          penaltyType = "partial";
+        } else {
+          penaltyAmount = 150;
+          penaltyType = "full";
+        }
+      } else {
+        // Cliente cancela
+        if (hoursUntil >= 4) {
+          // Con suficiente anticipación: devolver créditos
+          if (appointment.status === "scheduled") {
+            await addCreditBatch(appointment.userId, "individual_basic", 350).catch(() => {});
+          }
+          penaltyAmount = 0;
+          penaltyType = "none";
+        } else {
+          // Cancelación tardía: cliente pierde créditos (ya consumidos)
+          penaltyAmount = 0;
+          penaltyType = "credits_lost";
+        }
       }
 
       // Update appointment status
@@ -296,25 +325,21 @@ export const appointmentRouter = router({
         .set({
           status: "canceled",
           canceledAt: new Date(),
-          canceledBy: ctx.user.role === "user" ? "user" : "professional",
+          canceledBy: canceledByRole,
           cancellationReason: input.reason,
+          penaltyAmount,
+          penaltyType,
           updatedAt: new Date(),
         })
         .where(eq(appointments.id, input.appointmentId));
 
-      // ── Refund credits when user cancels ─────────────────────────────────
-      // Only refund if the user (not the professional) cancels and the appointment
-      // was in "scheduled" status (not already completed or cancelled).
-      if (ctx.user.role === "user" && appointment.status === "scheduled") {
-        try {
-          // Add a new credit batch as refund (60-day validity from now)
-          await addCreditBatch(ctx.user.id, "individual_basic");
-          // Override: we want to record a refund transaction instead.
-          // consumeCredits with negative amount is not supported, so we use
-          // addCreditBatch which creates a new 350-credit batch.
-        } catch {
-          // Non-critical: log but don't fail the cancellation
-        }
+      // Registrar penalización del profesional si aplica
+      if (canceledByRole === "professional" && penaltyAmount > 0) {
+        await (db_instance as any).$client.execute(
+          "INSERT INTO professionalPenalties (professionalId, appointmentId, amount, penaltyType, reason) VALUES (?, ?, ?, ?, ?)",
+          [appointment.professionalId, input.appointmentId, penaltyAmount, penaltyType,
+           `Cancelación con ${Math.round(hoursUntil)}h de anticipación`]
+        ).catch(() => {});
       }
 
       // Send cancellation email
@@ -398,11 +423,20 @@ export const appointmentRouter = router({
         });
       }
 
-      // Only professional can mark as completed
+      // Only professional can mark as completed — and only their own appointment
       if (ctx.user.role !== "professional") {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "Only professionals can mark appointments as completed",
+        });
+      }
+
+      // Fix: professionalId in appointments is professionals.id, not users.id
+      const completingProfessional = await db.getProfessionalByUserId(ctx.user.id);
+      if (!completingProfessional || appointment.professionalId !== completingProfessional.id) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Not authorized to complete this appointment",
         });
       }
 

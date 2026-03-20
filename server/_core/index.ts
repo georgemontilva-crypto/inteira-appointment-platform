@@ -189,6 +189,27 @@ async function runStartupMigrations() {
     await db.execute("ALTER TABLE `professionals` ADD COLUMN IF NOT EXISTS `tier` ENUM('basic','pro') NOT NULL DEFAULT 'basic'").catch(() => {});
     console.log("[Migration] professionals.tier column ready");
 
+    // Ensure appointments.penaltyAmount and penaltyType columns exist
+    await db.execute("ALTER TABLE `appointments` ADD COLUMN IF NOT EXISTS `penaltyAmount` int DEFAULT 0").catch(() => {});
+    await db.execute("ALTER TABLE `appointments` ADD COLUMN IF NOT EXISTS `penaltyType` ENUM('none','partial','full','credits_lost')").catch(() => {});
+    console.log("[Migration] appointments penalty columns ready");
+
+    // Ensure professionalPenalties table exists
+    await db.execute([
+      "CREATE TABLE IF NOT EXISTS `professionalPenalties` (",
+      "  `id` int AUTO_INCREMENT NOT NULL,",
+      "  `professionalId` int NOT NULL,",
+      "  `appointmentId` int,",
+      "  `amount` int NOT NULL,",
+      "  `penaltyType` enum('partial','full') NOT NULL,",
+      "  `reason` varchar(255),",
+      "  `status` enum('pending','collected','waived') NOT NULL DEFAULT 'pending',",
+      "  `createdAt` timestamp NOT NULL DEFAULT (now()),",
+      "  CONSTRAINT `professionalPenalties_id` PRIMARY KEY(`id`)",
+      ")",
+    ].join(" ")).catch(() => {});
+    console.log("[Migration] professionalPenalties table ready");
+
     // ── Seed: ensure marketingdedsm@gmail.com has role=admin ──────────────────
     try {
       await db.execute(
