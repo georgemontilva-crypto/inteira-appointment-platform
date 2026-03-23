@@ -317,3 +317,26 @@ export async function sendSubscriptionUpdate(params: {
     html: baseTemplate(content),
   });
 }
+
+// 6. Admin — new professional request
+export async function sendAdminNewProfessionalRequest(params: {
+  adminEmail: string;
+  professionalName: string;
+  professionalEmail: string;
+}): Promise<boolean> {
+  const content = `
+    <p>Hola,</p>
+    <p>El usuario <strong>${params.professionalName}</strong> (${params.professionalEmail}) ha enviado una solicitud para registrarse como profesional en Inteira.</p>
+    <div class="info-box">
+      <p><strong>Nombre:</strong> ${params.professionalName}</p>
+      <p><strong>Email:</strong> ${params.professionalEmail}</p>
+    </div>
+    <a href="https://inteira.mx/admin?tab=professionals" class="btn">Revisar solicitud</a>
+  `;
+
+  return sendEmail({
+    to: params.adminEmail,
+    subject: "Nueva solicitud de profesional — Inteira",
+    html: baseTemplate(content),
+  });
+}

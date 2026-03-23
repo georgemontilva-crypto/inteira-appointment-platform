@@ -8,7 +8,7 @@ import { users } from "../drizzle/schema";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { appointmentRouter } from "./routers-appointments";
-import { sendProfessionalApproval } from "./email";
+import { sendProfessionalApproval, sendAdminNewProfessionalRequest } from "./email";
 import {
   getUserCreditBalance,
   getAllBatches,
@@ -187,6 +187,25 @@ export const appRouter = router({
             licenseDocument: input.licenseDocument ?? null,
           }
         );
+
+        // Notificar al admin principal por email (fire and forget)
+        setImmediate(async () => {
+          try {
+            const user = await db.getUserById(ctx.user.id);
+            const admins = await db.getAdminUsers();
+            const adminEmail = process.env.ADMIN_EMAIL ?? "marketingdedsm@gmail.com";
+            const targets = admins.length > 0
+              ? admins.map((a) => a.email).filter(Boolean)
+              : [adminEmail];
+            for (const email of targets) {
+              await sendAdminNewProfessionalRequest({
+                adminEmail: email,
+                professionalName: user?.name ?? "Usuario desconocido",
+                professionalEmail: user?.email ?? "",
+              });
+            }
+          } catch {}
+        });
 
         return { success: true };
       }),

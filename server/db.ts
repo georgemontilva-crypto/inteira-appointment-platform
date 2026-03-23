@@ -787,3 +787,17 @@ export async function getFeaturedProfessionals(limit = 6) {
     return [];
   }
 }
+
+export async function getAdminUsers() {
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    return await db
+      .select()
+      .from(users)
+      .where(eq(users.role, "admin"));
+  } catch (error) {
+    console.error("[Database] getAdminUsers error:", error);
+    return [];
+  }
+}
