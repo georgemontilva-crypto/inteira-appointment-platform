@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +26,7 @@ import {
   TrendingUp,
   MessageCircle,
   Zap,
+  Bell,
 } from "lucide-react";
 
 // Mapa de ícono por especialidad
@@ -62,6 +64,7 @@ const statusLabels: Record<string, string> = {
 export default function AuthenticatedHome() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
+  const utils = trpc.useUtils();
 
   // Obtener perfil actualizado del usuario (tiene el nombre real guardado en DB)
   const { data: profile } = trpc.user.getProfile.useQuery(undefined, {
@@ -89,6 +92,29 @@ export default function AuthenticatedHome() {
     undefined,
     { staleTime: 300_000 }
   );
+
+  // Notifications
+  const { data: unreadCountData } = trpc.notifications.getUnreadCount.useQuery(undefined, {
+    enabled: !!user,
+    refetchInterval: 30000,
+  });
+  const { data: notifications } = trpc.notifications.getAll.useQuery(undefined, {
+    enabled: !!user,
+    refetchInterval: 30000,
+  });
+  const markAllRead = trpc.notifications.markAllRead.useMutation({
+    onSuccess: () => {
+      utils.notifications.getAll.invalidate();
+      utils.notifications.getUnreadCount.invalidate();
+    },
+  });
+  const markOneRead = trpc.notifications.markRead.useMutation({
+    onSuccess: () => {
+      utils.notifications.getAll.invalidate();
+      utils.notifications.getUnreadCount.invalidate();
+    },
+  });
+  const unreadCount = unreadCountData?.count ?? 0;
 
   // Derived — usar profile (DB) como fuente principal, con fallback al user del contexto
   const resolvedName = profile?.name || user?.name || user?.email?.split("@")[0] || "";
@@ -136,12 +162,63 @@ export default function AuthenticatedHome() {
                 </h1>
               </div>
             </div>
-            <Link href="/wallet">
-              <div className="flex items-center gap-1.5 bg-white/20 rounded-xl px-3 py-2 active:scale-95 transition-transform cursor-pointer">
-                <Wallet className="w-4 h-4 text-white" />
-                <span className="text-white font-bold text-sm">{(wallet?.balance ?? 0).toLocaleString("es-MX")}</span>
-              </div>
-            </Link>
+            <div className="flex items-center gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button className="relative p-2 rounded-full hover:bg-white/20 transition-colors">
+                    <Bell className="w-5 h-5 text-white" />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                        {unreadCount > 9 ? "9+" : unreadCount}
+                      </span>
+                    )}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-80 p-0 rounded-xl shadow-lg">
+                  <div className="flex items-center justify-between px-4 py-3 border-b">
+                    <h3 className="font-semibold text-sm">Notificaciones</h3>
+                    {unreadCount > 0 && (
+                      <button onClick={() => markAllRead.mutate()} className="text-xs text-primary hover:underline">
+                        Marcar todas como leídas
+                      </button>
+                    )}
+                  </div>
+                  <div className="max-h-80 overflow-y-auto divide-y">
+                    {!notifications || notifications.length === 0 ? (
+                      <div className="py-8 text-center text-muted-foreground text-sm">No hay notificaciones</div>
+                    ) : (
+                      notifications.map((n: any) => (
+                        <div
+                          key={n.id}
+                          onClick={() => {
+                            if (!n.isRead) markOneRead.mutate({ id: n.id });
+                            if (n.link) window.location.href = n.link;
+                          }}
+                          className={`px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors ${!n.isRead ? "bg-primary/5" : ""}`}
+                        >
+                          <div className="flex items-start gap-2">
+                            {!n.isRead && <span className="w-2 h-2 rounded-full bg-primary mt-1.5 flex-shrink-0" />}
+                            <div className={!n.isRead ? "" : "ml-4"}>
+                              <p className="text-sm font-medium leading-tight">{n.title}</p>
+                              <p className="text-xs text-muted-foreground mt-0.5 leading-snug">{n.message}</p>
+                              <p className="text-[10px] text-muted-foreground mt-1">
+                                {new Date(n.createdAt).toLocaleDateString("es", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
+              <Link href="/wallet">
+                <div className="flex items-center gap-1.5 bg-white/20 rounded-xl px-3 py-2 active:scale-95 transition-transform cursor-pointer">
+                  <Wallet className="w-4 h-4 text-white" />
+                  <span className="text-white font-bold text-sm">{(wallet?.balance ?? 0).toLocaleString("es-MX")}</span>
+                </div>
+              </Link>
+            </div>
           </div>
 
           {/* Search bar */}
@@ -182,6 +259,55 @@ export default function AuthenticatedHome() {
                 </div>
               </div>
               <div className="flex items-center gap-3">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button className="relative p-2 rounded-full hover:bg-white/20 transition-colors">
+                      <Bell className="w-5 h-5 text-white" />
+                      {unreadCount > 0 && (
+                        <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                          {unreadCount > 9 ? "9+" : unreadCount}
+                        </span>
+                      )}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent align="end" className="w-80 p-0 rounded-xl shadow-lg">
+                    <div className="flex items-center justify-between px-4 py-3 border-b">
+                      <h3 className="font-semibold text-sm">Notificaciones</h3>
+                      {unreadCount > 0 && (
+                        <button onClick={() => markAllRead.mutate()} className="text-xs text-primary hover:underline">
+                          Marcar todas como leídas
+                        </button>
+                      )}
+                    </div>
+                    <div className="max-h-80 overflow-y-auto divide-y">
+                      {!notifications || notifications.length === 0 ? (
+                        <div className="py-8 text-center text-muted-foreground text-sm">No hay notificaciones</div>
+                      ) : (
+                        notifications.map((n: any) => (
+                          <div
+                            key={n.id}
+                            onClick={() => {
+                              if (!n.isRead) markOneRead.mutate({ id: n.id });
+                              if (n.link) window.location.href = n.link;
+                            }}
+                            className={`px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors ${!n.isRead ? "bg-primary/5" : ""}`}
+                          >
+                            <div className="flex items-start gap-2">
+                              {!n.isRead && <span className="w-2 h-2 rounded-full bg-primary mt-1.5 flex-shrink-0" />}
+                              <div className={!n.isRead ? "" : "ml-4"}>
+                                <p className="text-sm font-medium leading-tight">{n.title}</p>
+                                <p className="text-xs text-muted-foreground mt-0.5 leading-snug">{n.message}</p>
+                                <p className="text-[10px] text-muted-foreground mt-1">
+                                  {new Date(n.createdAt).toLocaleDateString("es", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </PopoverContent>
+                </Popover>
                 <Link href="/especialidades">
                   <Button className="bg-white text-primary hover:bg-white/90 font-semibold shadow-md">
                     <Plus className="w-4 h-4 mr-2" />
