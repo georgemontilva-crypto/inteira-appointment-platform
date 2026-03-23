@@ -10,6 +10,13 @@ import { TRPCError } from "@trpc/server";
 import { appointmentRouter } from "./routers-appointments";
 import { sendProfessionalApproval, sendAdminNewProfessionalRequest } from "./email";
 import {
+  createNotification,
+  getUnreadNotifications,
+  getUnreadCount,
+  markAllRead,
+  markOneRead,
+} from "./notifications";
+import {
   getUserCreditBalance,
   getAllBatches,
   getActiveBatches,
@@ -188,7 +195,7 @@ export const appRouter = router({
           }
         );
 
-        // Notificar al admin principal por email (fire and forget)
+        // Notificar al admin principal por email + notificación in-app (fire and forget)
         setImmediate(async () => {
           try {
             const user = await db.getUserById(ctx.user.id);
@@ -202,6 +209,15 @@ export const appRouter = router({
                 adminEmail: email,
                 professionalName: user?.name ?? "Usuario desconocido",
                 professionalEmail: user?.email ?? "",
+              });
+            }
+            for (const admin of admins) {
+              await createNotification({
+                userId: admin.id,
+                type: "info",
+                title: "Nueva solicitud de profesional",
+                message: `${user?.name ?? "Un usuario"} ha enviado una solicitud para ser profesional.`,
+                link: "/admin?tab=professionals",
               });
             }
           } catch {}
@@ -666,6 +682,15 @@ export const appRouter = router({
           }).catch(() => {});
         }
 
+        // Notificación in-app al profesional aprobado
+        createNotification({
+          userId: professional.userId,
+          type: "professional_approved",
+          title: "¡Solicitud aprobada!",
+          message: "Tu solicitud para ser profesional en Inteira fue aprobada. Ya puedes recibir citas.",
+          link: "/dashboard",
+        }).catch(() => {});
+
         return { success: true };
       }),
 
@@ -785,6 +810,30 @@ export const appRouter = router({
           creditsAdded: credits,
           message: `${credits} créditos acreditados al usuario ${input.userId}`,
         };
+      }),
+  }),
+
+  // Notifications routes
+  notifications: router({
+    getAll: protectedProcedure.query(async ({ ctx }) => {
+      return await getUnreadNotifications(ctx.user.id);
+    }),
+
+    getUnreadCount: protectedProcedure.query(async ({ ctx }) => {
+      const count = await getUnreadCount(ctx.user.id);
+      return { count };
+    }),
+
+    markAllRead: protectedProcedure.mutation(async ({ ctx }) => {
+      await markAllRead(ctx.user.id);
+      return { success: true };
+    }),
+
+    markRead: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        await markOneRead(input.id, ctx.user.id);
+        return { success: true };
       }),
   }),
 });

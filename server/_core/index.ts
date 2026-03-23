@@ -263,6 +263,21 @@ async function runStartupMigrations() {
     ].join(" ")).catch(() => {});
     console.log("[Migration] withdrawalRequests table ready");
 
+    // Ensure notifications table exists
+    await db.execute(`CREATE TABLE IF NOT EXISTS \`notifications\` (
+      \`id\` int NOT NULL AUTO_INCREMENT,
+      \`userId\` int NOT NULL,
+      \`type\` varchar(64) NOT NULL DEFAULT 'info',
+      \`title\` varchar(255) NOT NULL,
+      \`message\` text NOT NULL,
+      \`link\` varchar(512),
+      \`isRead\` tinyint(1) NOT NULL DEFAULT 0,
+      \`createdAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (\`id\`),
+      KEY \`notifications_userId_idx\` (\`userId\`)
+    )`).catch(() => {});
+    console.log("[Migration] notifications table ready");
+
     // ── Seed: ensure marketingdedsm@gmail.com has role=admin ──────────────────
     try {
       await db.execute(

@@ -389,3 +389,20 @@ export const withdrawalRequests = mysqlTable("withdrawalRequests", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 export type WithdrawalRequest = typeof withdrawalRequests.$inferSelect;
+
+/**
+ * In-app notifications table
+ */
+export const notifications = mysqlTable("notifications", {
+  id:        int("id").autoincrement().primaryKey(),
+  userId:    int("userId").notNull(),
+  type:      mysqlEnum("type", ["info", "success", "warning", "error", "professional_approved", "professional_rejected", "appointment_confirmed", "appointment_cancelled", "withdrawal_approved", "withdrawal_rejected", "new_earning"]).notNull(),
+  title:     varchar("title", { length: 255 }).notNull(),
+  message:   text("message").notNull(),
+  link:      varchar("link", { length: 512 }),
+  isRead:    boolean("isRead").default(false).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = typeof notifications.$inferInsert;

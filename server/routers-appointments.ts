@@ -14,6 +14,7 @@ import {
   sendAppointmentCancellation,
 } from "./email";
 import { consumeCredits, getUserCreditBalance, addCreditBatch } from "./credits";
+import { createNotification } from "./notifications";
 
 // Credit cost per session type (MXN = credits 1:1)
 const SESSION_CREDIT_COST = 350; // Sesión básica
@@ -475,6 +476,15 @@ export const appointmentRouter = router({
           appointmentId: input.appointmentId,
         }).catch(() => {});
       }
+
+      // Notificación in-app al profesional
+      createNotification({
+        userId: completingProfessional.userId,
+        type: "new_earning",
+        title: "Asesoría completada",
+        message: `Has completado una asesoría. Se acreditaron $${netAmount} MXN a tu wallet.`,
+        link: "/profesional/wallet",
+      }).catch(() => {});
 
       return { success: true };
     }),
