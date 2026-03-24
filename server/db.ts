@@ -283,6 +283,7 @@ export async function getPendingProfessionals() {
        WHERE p.status = 'pending'
        ORDER BY p.createdAt DESC`
     ) as any;
+    console.error("[DEBUG] result type:", typeof result, "keys:", Object.keys(result || {}), "isArray:", Array.isArray(result));
     const rows = Array.isArray(result) ? result[0] : [];
     return Array.isArray(rows) ? rows : [];
   } catch (e: any) {
