@@ -211,14 +211,19 @@ export async function createProfessional(
 export async function getProfessionalByUserId(userId: number) {
   const db = await getDb();
   if (!db) return undefined;
-
-  const result = await db
-    .select()
-    .from(professionals)
-    .where(eq(professionals.userId, userId))
-    .limit(1);
-
-  return result.length > 0 ? result[0] : undefined;
+  const client = (db as any).$client;
+  try {
+    const result = await client.execute(
+      "SELECT * FROM `professionals` WHERE `userId` = ? LIMIT 1",
+      [userId]
+    ) as any;
+    const rows = Array.isArray(result) ? result[0] : [];
+    const arr = Array.isArray(rows) ? rows : [];
+    return arr[0] ?? undefined;
+  } catch (e: any) {
+    console.error("[DB] getProfessionalByUserId error:", e?.message);
+    return undefined;
+  }
 }
 
 export async function getProfessionalById(id: number) {
