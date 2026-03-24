@@ -27,6 +27,7 @@ import {
   MessageCircle,
   Zap,
   Bell,
+  Shield,
 } from "lucide-react";
 
 // Mapa de ícono por especialidad
@@ -441,6 +442,18 @@ export default function AuthenticatedHome() {
                 </div>
               </div>
             </Link>
+            {user?.role === "admin" && (
+              <Link href="/admin">
+                <div className="bg-red-50 border border-red-200 rounded-xl p-4 hover:bg-red-100 transition-colors cursor-pointer col-span-2 md:col-span-1">
+                  <div className="flex flex-col items-center gap-2 text-center">
+                    <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                      <Shield className="w-5 h-5 text-red-600" />
+                    </div>
+                    <span className="text-sm font-medium text-red-700">Panel Admin</span>
+                  </div>
+                </div>
+              </Link>
+            )}
           </div>
         </div>
 
