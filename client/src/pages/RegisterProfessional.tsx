@@ -161,7 +161,7 @@ async function uploadFile(file: File): Promise<string> {
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
-  const res = await fetch("/api/upload/professional-photo", {
+  const res = await fetch("/api/upload/professional-file", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
@@ -592,7 +592,7 @@ export default function RegisterProfessional() {
                 <FileUploadField
                   label="Documento de identidad"
                   description="INE, pasaporte o cédula — PDF, JPG o PNG — máximo 10 MB"
-                  accept=".pdf,image/*"
+                  accept="application/pdf,image/jpeg,image/png,image/webp"
                   file={identityDoc}
                   onChange={setIdentityDoc}
                   required
@@ -646,7 +646,7 @@ export default function RegisterProfessional() {
                   <FileUploadField
                     label="Certificaciones y títulos"
                     description="PDF, JPG o PNG — máximo 10 MB"
-                    accept=".pdf,image/*"
+                    accept="application/pdf,image/jpeg,image/png,image/webp"
                     file={certifications}
                     onChange={setCertifications}
                     required
@@ -658,7 +658,7 @@ export default function RegisterProfessional() {
                   <FileUploadField
                     label="Certificaciones y títulos"
                     description="PDF, JPG o PNG — máximo 10 MB (opcional)"
-                    accept=".pdf,image/*"
+                    accept="application/pdf,image/jpeg,image/png,image/webp"
                     file={certifications}
                     onChange={setCertifications}
                   />

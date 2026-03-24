@@ -307,8 +307,8 @@ async function startServer() {
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
 
-  // ─── File upload: professional profile photo ─────────────────────────────────
-  app.post("/api/upload/professional-photo", async (req, res) => {
+  // ─── File upload: professional profile photo / documents ────────────────────
+  app.post("/api/upload/professional-file", async (req, res) => {
     try {
       let user = null;
       try { user = await sdk.authenticateRequest(req); } catch { user = null; }
@@ -324,14 +324,14 @@ async function startServer() {
         return res.status(400).json({ error: "base64, mimeType and fileName are required" });
       }
 
-      const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+      const allowedTypes = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
       if (!allowedTypes.includes(mimeType)) {
-        return res.status(400).json({ error: "Only JPEG, PNG and WebP images are allowed" });
+        return res.status(400).json({ error: "Only JPEG, PNG, WebP and PDF files are allowed" });
       }
 
       const buffer = Buffer.from(base64, "base64");
-      if (buffer.length > 5 * 1024 * 1024) {
-        return res.status(400).json({ error: "Image must be under 5 MB" });
+      if (buffer.length > 10 * 1024 * 1024) {
+        return res.status(400).json({ error: "File must be under 10 MB" });
       }
 
       const ext = mimeType.split("/")[1] ?? "jpg";
