@@ -279,12 +279,12 @@ export async function getPendingProfessionals() {
        FROM professionals p
        LEFT JOIN users u ON p.userId = u.id
        LEFT JOIN specialties s ON p.specialtyId = s.id
-       WHERE p.status = ?
+       WHERE p.id > ?
        ORDER BY p.createdAt DESC`,
-      ['pending']
+      [0]
     ) as any;
     const rows = Array.isArray(result) ? result[0] : [];
-    console.error("[DEBUG] pending rows:", JSON.stringify(rows?.slice(0,2)));
+    console.error("[DEBUG] all rows (first 3):", JSON.stringify(rows?.slice(0,3)?.map((r: any) => ({ id: r.id, userId: r.userId, status: r.status }))));
     return Array.isArray(rows) ? rows : [];
   } catch (e: any) {
     console.error("[DB] getPendingProfessionals error:", e?.message);
