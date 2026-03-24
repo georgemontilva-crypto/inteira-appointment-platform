@@ -175,18 +175,21 @@ export default function AuthenticatedHome() {
                     )}
                   </button>
                 </PopoverTrigger>
-                <PopoverContent align="end" className="w-80 p-0 rounded-xl shadow-lg">
-                  <div className="flex items-center justify-between px-4 py-3 border-b">
-                    <h3 className="font-semibold text-sm">Notificaciones</h3>
+                <PopoverContent align="end" sideOffset={8} className="w-[340px] p-0 rounded-xl overflow-hidden" style={{boxShadow: "0 8px 32px rgba(61,78,63,0.12)", border: "0.5px solid rgba(96,117,98,0.2)"}}>
+                  <div className="flex items-center justify-between px-4 py-3 border-b bg-[#F7FAFC]" style={{borderColor: "rgba(96,117,98,0.15)"}}>
+                    <div>
+                      <h3 className="text-sm font-medium text-[#333333]">Notificaciones</h3>
+                      {unreadCount > 0 && <p className="text-[11px] text-[#607562]">{unreadCount} sin leer</p>}
+                    </div>
                     {unreadCount > 0 && (
-                      <button onClick={() => markAllRead.mutate()} className="text-xs text-primary hover:underline">
+                      <button onClick={() => markAllRead.mutate()} className="text-xs text-[#607562] px-[10px] py-1 rounded-md transition-colors hover:bg-[rgba(96,117,98,0.08)]" style={{border: "0.5px solid rgba(96,117,98,0.3)"}}>
                         Marcar todas como leídas
                       </button>
                     )}
                   </div>
-                  <div className="max-h-80 overflow-y-auto divide-y">
+                  <div className="max-h-[300px] overflow-y-auto [scrollbar-width:thin] [scrollbar-color:rgba(96,117,98,0.25)_transparent] [&::-webkit-scrollbar]:w-[3px] [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[rgba(96,117,98,0.25)] [&::-webkit-scrollbar-thumb]:rounded-full">
                     {!notifications || notifications.length === 0 ? (
-                      <div className="py-8 text-center text-muted-foreground text-sm">No hay notificaciones</div>
+                      <div className="py-10 text-center text-sm text-[#93A295]">No hay notificaciones</div>
                     ) : (
                       notifications.map((n: any) => (
                         <div
@@ -195,21 +198,26 @@ export default function AuthenticatedHome() {
                             if (!n.isRead) markOneRead.mutate({ id: n.id });
                             if (n.link) window.location.href = n.link;
                           }}
-                          className={`px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors ${!n.isRead ? "bg-primary/5" : ""}`}
+                          className={`flex gap-3 px-4 py-3 cursor-pointer transition-colors items-start border-b last:border-b-0 ${!n.isRead ? "bg-[#f0f4f0] hover:bg-[#e8efe8]" : "hover:bg-[#F7FAFC]"}`}
+                          style={{borderColor: "rgba(96,117,98,0.1)"}}
                         >
-                          <div className="flex items-start gap-2">
-                            {!n.isRead && <span className="w-2 h-2 rounded-full bg-primary mt-1.5 flex-shrink-0" />}
-                            <div className={!n.isRead ? "" : "ml-4"}>
-                              <p className="text-sm font-medium leading-tight">{n.title}</p>
-                              <p className="text-xs text-muted-foreground mt-0.5 leading-snug">{n.message}</p>
-                              <p className="text-[10px] text-muted-foreground mt-1">
-                                {new Date(n.createdAt).toLocaleDateString("es", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
-                              </p>
-                            </div>
+                          <div className={`w-[34px] h-[34px] rounded-full flex items-center justify-center flex-shrink-0 mt-[1px] ${!n.isRead ? "bg-[rgba(96,117,98,0.15)]" : "bg-[rgba(147,162,149,0.2)]"}`}>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" stroke={!n.isRead ? "#607562" : "#93A295"}>
+                              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                            </svg>
                           </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[13px] font-medium text-[#333333] leading-snug mb-[2px]">{n.title}</p>
+                            <p className="text-[12px] text-[#666666] leading-snug truncate">{n.message}</p>
+                            <p className="text-[11px] text-[#93A295] mt-1">{new Date(n.createdAt).toLocaleDateString("es", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</p>
+                          </div>
+                          {!n.isRead && <div className="w-[7px] h-[7px] rounded-full bg-[#607562] mt-[6px] flex-shrink-0" />}
                         </div>
                       ))
                     )}
+                  </div>
+                  <div className="px-4 py-[10px] text-center bg-[#F7FAFC]" style={{borderTop: "0.5px solid rgba(96,117,98,0.15)"}}>
+                    <span className="text-xs text-[#607562] cursor-pointer hover:underline">Ver todas las notificaciones</span>
                   </div>
                 </PopoverContent>
               </Popover>
@@ -271,18 +279,21 @@ export default function AuthenticatedHome() {
                       )}
                     </button>
                   </PopoverTrigger>
-                  <PopoverContent align="end" className="w-80 p-0 rounded-xl shadow-lg">
-                    <div className="flex items-center justify-between px-4 py-3 border-b">
-                      <h3 className="font-semibold text-sm">Notificaciones</h3>
+                  <PopoverContent align="end" sideOffset={8} className="w-[340px] p-0 rounded-xl overflow-hidden" style={{boxShadow: "0 8px 32px rgba(61,78,63,0.12)", border: "0.5px solid rgba(96,117,98,0.2)"}}>
+                    <div className="flex items-center justify-between px-4 py-3 border-b bg-[#F7FAFC]" style={{borderColor: "rgba(96,117,98,0.15)"}}>
+                      <div>
+                        <h3 className="text-sm font-medium text-[#333333]">Notificaciones</h3>
+                        {unreadCount > 0 && <p className="text-[11px] text-[#607562]">{unreadCount} sin leer</p>}
+                      </div>
                       {unreadCount > 0 && (
-                        <button onClick={() => markAllRead.mutate()} className="text-xs text-primary hover:underline">
+                        <button onClick={() => markAllRead.mutate()} className="text-xs text-[#607562] px-[10px] py-1 rounded-md transition-colors hover:bg-[rgba(96,117,98,0.08)]" style={{border: "0.5px solid rgba(96,117,98,0.3)"}}>
                           Marcar todas como leídas
                         </button>
                       )}
                     </div>
-                    <div className="max-h-80 overflow-y-auto divide-y">
+                    <div className="max-h-[300px] overflow-y-auto [scrollbar-width:thin] [scrollbar-color:rgba(96,117,98,0.25)_transparent] [&::-webkit-scrollbar]:w-[3px] [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[rgba(96,117,98,0.25)] [&::-webkit-scrollbar-thumb]:rounded-full">
                       {!notifications || notifications.length === 0 ? (
-                        <div className="py-8 text-center text-muted-foreground text-sm">No hay notificaciones</div>
+                        <div className="py-10 text-center text-sm text-[#93A295]">No hay notificaciones</div>
                       ) : (
                         notifications.map((n: any) => (
                           <div
@@ -291,21 +302,26 @@ export default function AuthenticatedHome() {
                               if (!n.isRead) markOneRead.mutate({ id: n.id });
                               if (n.link) window.location.href = n.link;
                             }}
-                            className={`px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors ${!n.isRead ? "bg-primary/5" : ""}`}
+                            className={`flex gap-3 px-4 py-3 cursor-pointer transition-colors items-start border-b last:border-b-0 ${!n.isRead ? "bg-[#f0f4f0] hover:bg-[#e8efe8]" : "hover:bg-[#F7FAFC]"}`}
+                            style={{borderColor: "rgba(96,117,98,0.1)"}}
                           >
-                            <div className="flex items-start gap-2">
-                              {!n.isRead && <span className="w-2 h-2 rounded-full bg-primary mt-1.5 flex-shrink-0" />}
-                              <div className={!n.isRead ? "" : "ml-4"}>
-                                <p className="text-sm font-medium leading-tight">{n.title}</p>
-                                <p className="text-xs text-muted-foreground mt-0.5 leading-snug">{n.message}</p>
-                                <p className="text-[10px] text-muted-foreground mt-1">
-                                  {new Date(n.createdAt).toLocaleDateString("es", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
-                                </p>
-                              </div>
+                            <div className={`w-[34px] h-[34px] rounded-full flex items-center justify-center flex-shrink-0 mt-[1px] ${!n.isRead ? "bg-[rgba(96,117,98,0.15)]" : "bg-[rgba(147,162,149,0.2)]"}`}>
+                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" stroke={!n.isRead ? "#607562" : "#93A295"}>
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                              </svg>
                             </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[13px] font-medium text-[#333333] leading-snug mb-[2px]">{n.title}</p>
+                              <p className="text-[12px] text-[#666666] leading-snug truncate">{n.message}</p>
+                              <p className="text-[11px] text-[#93A295] mt-1">{new Date(n.createdAt).toLocaleDateString("es", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</p>
+                            </div>
+                            {!n.isRead && <div className="w-[7px] h-[7px] rounded-full bg-[#607562] mt-[6px] flex-shrink-0" />}
                           </div>
                         ))
                       )}
+                    </div>
+                    <div className="px-4 py-[10px] text-center bg-[#F7FAFC]" style={{borderTop: "0.5px solid rgba(96,117,98,0.15)"}}>
+                      <span className="text-xs text-[#607562] cursor-pointer hover:underline">Ver todas las notificaciones</span>
                     </div>
                   </PopoverContent>
                 </Popover>
