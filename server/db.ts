@@ -194,18 +194,29 @@ export async function createProfessional(
   userId: number,
   specialtyId: number,
   licenseNumber: string,
-  data?: Partial<Professional>
+  data?: Partial<any>
 ) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
+  const client = (db as any).$client;
 
-  return await db.insert(professionals).values({
-    userId,
-    specialtyId,
-    licenseNumber,
-    status: "pending",
-    ...data,
-  });
+  await client.execute(
+    `INSERT INTO professionals
+     (userId, specialtyId, licenseNumber, status, bio, profilePhoto, licenseDocument, education, certifications, yearsOfExperience, hourlyRate)
+     VALUES (?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      userId,
+      specialtyId,
+      licenseNumber,
+      data?.bio ?? null,
+      data?.profilePhoto ?? null,
+      data?.licenseDocument ?? null,
+      data?.education ?? null,
+      data?.certifications ?? null,
+      data?.yearsOfExperience ?? null,
+      data?.hourlyRate ?? null,
+    ]
+  );
 }
 
 export async function getProfessionalByUserId(userId: number) {
