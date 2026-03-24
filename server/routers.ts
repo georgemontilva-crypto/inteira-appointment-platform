@@ -220,7 +220,9 @@ export const appRouter = router({
                 link: "/admin?tab=professionals",
               });
             }
-          } catch {}
+          } catch (err: any) {
+            console.error("[Register] Error enviando notificaciones al admin:", err?.message);
+          }
         });
 
         return { success: true };

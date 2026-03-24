@@ -71,7 +71,10 @@ export default function AdminDashboard() {
   });
 
   const { data: pendingProfessionals, refetch: refetchPending, isLoading: loadingPending } =
-    trpc.admin.getPendingProfessionals.useQuery(undefined, { enabled: isAuthenticated });
+    trpc.admin.getPendingProfessionals.useQuery(undefined, {
+      enabled: isAuthenticated,
+      refetchInterval: 30000, // refresca cada 30 segundos
+    });
   const { data: specialties, refetch: refetchSpecialties } = trpc.specialty.getAll.useQuery();
   const { data: plans, refetch: refetchPlans } = trpc.subscriptionPlan.getAll.useQuery();
   const { data: metrics } = trpc.admin.getMetrics.useQuery(undefined, { enabled: isAuthenticated });

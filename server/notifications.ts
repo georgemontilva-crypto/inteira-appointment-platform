@@ -10,10 +10,16 @@ export async function createNotification(params: {
   const db = await getDb();
   if (!db) return;
   const client = (db as any).$client;
-  await client.execute(
-    "INSERT INTO notifications (userId, type, title, message, link) VALUES (?, ?, ?, ?, ?)",
-    [params.userId, params.type, params.title, params.message, params.link ?? null]
-  );
+  try {
+    await client.execute(
+      "INSERT INTO notifications (userId, type, title, message, link) VALUES (?, ?, ?, ?, ?)",
+      [params.userId, params.type, params.title, params.message, params.link ?? null]
+    );
+    console.log(`[Notifications] Creada notificación para userId=${params.userId}: ${params.title}`);
+  } catch (e: any) {
+    console.error("[Notifications] Error creando notificación:", e?.message);
+    throw e; // relanzar para que el caller sepa que falló
+  }
 }
 
 export async function getUnreadNotifications(userId: number) {
