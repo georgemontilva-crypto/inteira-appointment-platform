@@ -639,61 +639,33 @@ export async function getUserPayments(userId: number) {
 export async function getAdminMetrics() {
   const db = await getDb();
   if (!db) return null;
+  const client = (db as any).$client;
+  try {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString().slice(0, 19).replace('T', ' ');
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 19).replace('T', ' ');
 
-  const now = new Date();
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const [[{ totalUsers }]] = await client.execute("SELECT COUNT(*) as totalUsers FROM users", []) as any;
+    const [[{ newUsersMonth }]] = await client.execute("SELECT COUNT(*) as newUsersMonth FROM users WHERE createdAt >= ?", [monthStart]) as any;
+    const [[{ activeProfessionals }]] = await client.execute("SELECT COUNT(*) as activeProfessionals FROM professionals WHERE status = ?", ['approved']) as any;
+    const [[{ appointmentsToday }]] = await client.execute("SELECT COUNT(*) as appointmentsToday FROM appointments WHERE appointmentDate >= ? AND status != ?", [todayStart, 'canceled']) as any;
+    const [[{ appointmentsMonth }]] = await client.execute("SELECT COUNT(*) as appointmentsMonth FROM appointments WHERE appointmentDate >= ? AND status != ?", [monthStart, 'canceled']) as any;
+    const [[{ completedMonth }]] = await client.execute("SELECT COUNT(*) as completedMonth FROM appointments WHERE appointmentDate >= ? AND status = ?", [monthStart, 'completed']) as any;
+    const [[{ activeSubscriptions }]] = await client.execute("SELECT COUNT(*) as activeSubscriptions FROM userSubscriptions WHERE status = ?", ['active']) as any;
 
-  // Total users
-  const [{ totalUsers }] = await db
-    .select({ totalUsers: sql<number>`COUNT(*)` })
-    .from(users);
-
-  // New users this month
-  const [{ newUsersMonth }] = await db
-    .select({ newUsersMonth: sql<number>`COUNT(*)` })
-    .from(users)
-    .where(sql`createdAt >= ${monthStart}`);
-
-  // Active professionals (approved)
-  const [{ activeProfessionals }] = await db
-    .select({ activeProfessionals: sql<number>`COUNT(*)` })
-    .from(professionals)
-    .where(sql`approvalStatus = 'approved'`);
-
-  // Appointments today
-  const [{ appointmentsToday }] = await db
-    .select({ appointmentsToday: sql<number>`COUNT(*)` })
-    .from(appointments)
-    .where(sql`appointmentDate >= ${todayStart} AND status != 'canceled'`);
-
-  // Appointments this month
-  const [{ appointmentsMonth }] = await db
-    .select({ appointmentsMonth: sql<number>`COUNT(*)` })
-    .from(appointments)
-    .where(sql`appointmentDate >= ${monthStart} AND status != 'canceled'`);
-
-  // Completed appointments this month (revenue proxy: each = avg 800 credits)
-  const [{ completedMonth }] = await db
-    .select({ completedMonth: sql<number>`COUNT(*)` })
-    .from(appointments)
-    .where(sql`appointmentDate >= ${monthStart} AND status = 'completed'`);
-
-  // Active subscriptions
-  const [{ activeSubscriptions }] = await db
-    .select({ activeSubscriptions: sql<number>`COUNT(*)` })
-    .from(userSubscriptions)
-    .where(sql`status = 'active'`);
-
-  return {
-    totalUsers: Number(totalUsers),
-    newUsersMonth: Number(newUsersMonth),
-    activeProfessionals: Number(activeProfessionals),
-    appointmentsToday: Number(appointmentsToday),
-    appointmentsMonth: Number(appointmentsMonth),
-    completedMonth: Number(completedMonth),
-    activeSubscriptions: Number(activeSubscriptions),
-  };
+    return {
+      totalUsers: Number(totalUsers) || 0,
+      newUsersMonth: Number(newUsersMonth) || 0,
+      activeProfessionals: Number(activeProfessionals) || 0,
+      appointmentsToday: Number(appointmentsToday) || 0,
+      appointmentsMonth: Number(appointmentsMonth) || 0,
+      completedMonth: Number(completedMonth) || 0,
+      activeSubscriptions: Number(activeSubscriptions) || 0,
+    };
+  } catch (e: any) {
+    console.error("[DB] getAdminMetrics error:", e?.message);
+    return null;
+  }
 }
 
 export async function getAppointmentsByDay(days = 30) {
