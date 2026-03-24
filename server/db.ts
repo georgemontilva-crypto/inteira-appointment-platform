@@ -271,8 +271,7 @@ export async function getPendingProfessionals() {
   const client = (db as any).$client;
   try {
     const result = await client.execute(
-      `SELECT
-        p.id, p.userId, p.specialtyId, p.licenseNumber, p.licenseDocument,
+      `SELECT p.id, p.userId, p.specialtyId, p.licenseNumber, p.licenseDocument,
         p.yearsOfExperience, p.education, p.certifications, p.bio,
         p.profilePhoto, p.hourlyRate, p.status, p.tier, p.createdAt,
         u.name as userName, u.email as userEmail, u.profileImage as userProfileImage,
@@ -280,8 +279,9 @@ export async function getPendingProfessionals() {
        FROM professionals p
        LEFT JOIN users u ON p.userId = u.id
        LEFT JOIN specialties s ON p.specialtyId = s.id
-       WHERE p.status = 'pending'
-       ORDER BY p.createdAt DESC`
+       WHERE p.status = ?
+       ORDER BY p.createdAt DESC`,
+      ['pending']
     ) as any;
     console.error("[DEBUG] result type:", typeof result, "keys:", Object.keys(result || {}), "isArray:", Array.isArray(result));
     const rows = Array.isArray(result) ? result[0] : [];
