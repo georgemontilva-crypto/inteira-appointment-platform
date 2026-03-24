@@ -186,8 +186,20 @@ async function runStartupMigrations() {
     console.log("[Migration] paymentQueue table ready");
 
     // Ensure professionals.tier column exists
-    await db.execute("ALTER TABLE `professionals` ADD COLUMN IF NOT EXISTS `tier` ENUM('basic','pro') NOT NULL DEFAULT 'basic'").catch(() => {});
-    console.log("[Migration] professionals.tier column ready");
+    try {
+      const [tierCols] = await db.execute(
+        "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'professionals' AND COLUMN_NAME = 'tier'"
+      ) as any;
+      const tierExists = Array.isArray(tierCols) ? tierCols.length > 0 : false;
+      if (!tierExists) {
+        await db.execute("ALTER TABLE `professionals` ADD COLUMN `tier` ENUM('basic','pro') NOT NULL DEFAULT 'basic'");
+        console.log("[Migration] professionals.tier column added");
+      } else {
+        console.log("[Migration] professionals.tier column already exists");
+      }
+    } catch (colErr: any) {
+      console.warn("[Migration] Could not add tier column:", colErr?.message);
+    }
 
     // Ensure appointments.penaltyAmount and penaltyType columns exist
     await db.execute("ALTER TABLE `appointments` ADD COLUMN IF NOT EXISTS `penaltyAmount` int DEFAULT 0").catch(() => {});
