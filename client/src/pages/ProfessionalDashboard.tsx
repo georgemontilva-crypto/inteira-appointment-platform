@@ -216,13 +216,14 @@ export default function ProfessionalDashboard() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="gradient-hero text-white py-8">
-        <div className="container">
-          <div className="flex items-center justify-between">
+      <div className="gradient-hero text-white relative overflow-hidden rounded-b-2xl">
+        <div className="absolute top-0 right-0 w-56 h-56 rounded-full pointer-events-none" style={{background:"rgba(255,255,255,0.05)",transform:"translate(30%,-30%)"}} />
+        <div className="absolute bottom-0 right-24 w-36 h-36 rounded-full pointer-events-none" style={{background:"rgba(255,255,255,0.04)",transform:"translateY(50%)"}} />
+        <div className="container py-6 relative z-10">
+          <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
-              {/* Foto de perfil con botón de cambio */}
               <div className="relative group">
-<div className="w-14 h-14 rounded-2xl overflow-hidden flex-shrink-0">
+                <div className="w-14 h-14 rounded-full overflow-hidden flex-shrink-0 border-2 border-white/30">
                   {profile.profilePhoto || (user as any)?.avatarUrl || (user as any)?.profileImage ? (
                     <img
                       src={profile.profilePhoto ?? (user as any)?.avatarUrl ?? (user as any)?.profileImage}
@@ -231,16 +232,15 @@ export default function ProfessionalDashboard() {
                       onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
                     />
                   ) : (
-                    <div className="w-full h-full bg-white/20 flex items-center justify-center text-2xl font-bold">
+                    <div className="w-full h-full bg-white/20 flex items-center justify-center text-xl font-medium">
                       {user?.name?.charAt(0) ?? "P"}
                     </div>
                   )}
                 </div>
-                {/* Overlay de cambio de foto */}
                 <button
                   onClick={() => photoInputRef.current?.click()}
                   disabled={uploadingPhoto}
-                  className="absolute inset-0 rounded-2xl bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
+                  className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
                 >
                   {uploadingPhoto ? (
                     <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
@@ -248,25 +248,38 @@ export default function ProfessionalDashboard() {
                     <Camera className="w-4 h-4 text-white" />
                   )}
                 </button>
-                <input
-                  ref={photoInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handlePhotoUpload}
-                />
+                <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
               </div>
               <div>
-                <p className="text-white/70 text-sm">Panel del profesional</p>
-                <h1 className="text-2xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
-                  {user?.name ?? "Profesional"}
-                </h1>
-                <p className="text-white/60 text-xs mt-0.5">Toca la foto para cambiarla</p>
+                <p className="text-white/60 text-xs mb-0.5">Panel del profesional</p>
+                <h1 className="text-xl font-medium text-white">{user?.name ?? "Profesional"}</h1>
+                <div className="flex items-center gap-1.5 mt-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  <span className="text-[11px] text-white/70">
+                    {profile.status === "approved" ? "Aprobado" : profile.status === "pending" ? "Pendiente de aprobación" : "Rechazado"}
+                    {profile.tier ? ` · Tier ${profile.tier === "pro" ? "Pro" : "Básico"}` : ""}
+                  </span>
+                </div>
               </div>
             </div>
-            <Badge className={`border-0 ${profile.status === "approved" ? "bg-emerald-500/20 text-emerald-200" : profile.status === "pending" ? "bg-yellow-500/20 text-yellow-200" : "bg-red-500/20 text-red-200"}`}>
-              {profile.status === "approved" ? "✓ Aprobado" : profile.status === "pending" ? "⏳ Pendiente de aprobación" : "✗ Rechazado"}
-            </Badge>
+          </div>
+          <div className="grid grid-cols-4 gap-0 border-t border-white/10 pt-4">
+            <div className="text-center px-2">
+              <p className="text-lg font-medium text-emerald-300">{profile.hourlyRate ? `$${profile.hourlyRate}` : "—"}</p>
+              <p className="text-[11px] text-white/50 mt-0.5">Tarifa/hr</p>
+            </div>
+            <div className="text-center px-2 border-l border-white/10">
+              <p className="text-lg font-medium text-white">{appointments?.filter((a: any) => a.status === "completed").length ?? 0}</p>
+              <p className="text-[11px] text-white/50 mt-0.5">Completadas</p>
+            </div>
+            <div className="text-center px-2 border-l border-white/10">
+              <p className="text-lg font-medium text-emerald-300">{myReviews && myReviews.length > 0 ? (myReviews.reduce((s: number, r: any) => s + r.rating, 0) / myReviews.length).toFixed(1) : "—"}</p>
+              <p className="text-[11px] text-white/50 mt-0.5">Calificación</p>
+            </div>
+            <div className="text-center px-2 border-l border-white/10">
+              <p className="text-lg font-medium text-white">{appointments?.filter((a: any) => a.status === "scheduled").length ?? 0}</p>
+              <p className="text-[11px] text-white/50 mt-0.5">Próximas</p>
+            </div>
           </div>
         </div>
       </div>
