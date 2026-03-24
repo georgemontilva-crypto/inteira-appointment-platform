@@ -269,8 +269,16 @@ export async function getPendingProfessionals() {
   const db = await getDb();
   if (!db) return [];
   const client = (db as any).$client;
+
+  const query = (sql: string, params: any[]) => new Promise<any[]>((resolve, reject) => {
+    client.execute(sql, params, (err: any, results: any) => {
+      if (err) reject(err);
+      else resolve(Array.isArray(results) ? results : []);
+    });
+  });
+
   try {
-    const result = await client.execute(
+    return await query(
       `SELECT p.id, p.userId, p.specialtyId, p.licenseNumber, p.licenseDocument,
         p.yearsOfExperience, p.education, p.certifications, p.bio,
         p.profilePhoto, p.hourlyRate, p.status, p.tier, p.createdAt,
@@ -279,14 +287,10 @@ export async function getPendingProfessionals() {
        FROM professionals p
        LEFT JOIN users u ON p.userId = u.id
        LEFT JOIN specialties s ON p.specialtyId = s.id
-       WHERE p.id > ?
+       WHERE p.status = ?
        ORDER BY p.createdAt DESC`,
-      [0]
-    ) as any;
-    const rows = Array.isArray(result) ? result[0] : [];
-    const countResult = await client.execute("SELECT COUNT(*) as total FROM professionals", []) as any;
-    console.error("[DEBUG] total professionals:", JSON.stringify(countResult[0]?.[0]));
-    return Array.isArray(rows) ? rows : [];
+      ['pending']
+    );
   } catch (e: any) {
     console.error("[DB] getPendingProfessionals error:", e?.message);
     return [];
@@ -642,33 +646,35 @@ export async function getAdminMetrics() {
   const db = await getDb();
   if (!db) return null;
   const client = (db as any).$client;
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString().slice(0,19).replace('T',' ');
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0,19).replace('T',' ');
+
+  const query = (sql: string, params: any[]) => new Promise<any[]>((resolve, reject) => {
+    client.execute(sql, params, (err: any, results: any) => {
+      if (err) reject(err);
+      else resolve(Array.isArray(results) ? results : []);
+    });
+  });
+
   try {
-    const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString().slice(0, 19).replace('T', ' ');
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 19).replace('T', ' ');
+    const [r1] = await query("SELECT COUNT(*) as totalUsers FROM users", []);
+    const [r2] = await query("SELECT COUNT(*) as newUsersMonth FROM users WHERE createdAt >= ?", [monthStart]);
+    const [r3] = await query("SELECT COUNT(*) as activeProfessionals FROM professionals WHERE status = ?", ['approved']);
+    const [r4] = await query("SELECT COUNT(*) as appointmentsToday FROM appointments WHERE appointmentDate >= ? AND status != ?", [todayStart, 'canceled']);
+    const [r5] = await query("SELECT COUNT(*) as appointmentsMonth FROM appointments WHERE appointmentDate >= ? AND status != ?", [monthStart, 'canceled']);
+    const [r6] = await query("SELECT COUNT(*) as completedMonth FROM appointments WHERE appointmentDate >= ? AND status = ?", [monthStart, 'completed']);
+    const [r7] = await query("SELECT COUNT(*) as activeSubscriptions FROM userSubscriptions WHERE status = ?", ['active']);
 
-    const r1 = await client.execute("SELECT COUNT(*) as totalUsers FROM users", []) as any;
-    const totalUsers = Number(r1[0]?.[0]?.totalUsers) || 0;
-
-    const r2 = await client.execute("SELECT COUNT(*) as newUsersMonth FROM users WHERE createdAt >= ?", [monthStart]) as any;
-    const newUsersMonth = Number(r2[0]?.[0]?.newUsersMonth) || 0;
-
-    const r3 = await client.execute("SELECT COUNT(*) as activeProfessionals FROM professionals WHERE status = ?", ['approved']) as any;
-    const activeProfessionals = Number(r3[0]?.[0]?.activeProfessionals) || 0;
-
-    const r4 = await client.execute("SELECT COUNT(*) as appointmentsToday FROM appointments WHERE appointmentDate >= ? AND status != ?", [todayStart, 'canceled']) as any;
-    const appointmentsToday = Number(r4[0]?.[0]?.appointmentsToday) || 0;
-
-    const r5 = await client.execute("SELECT COUNT(*) as appointmentsMonth FROM appointments WHERE appointmentDate >= ? AND status != ?", [monthStart, 'canceled']) as any;
-    const appointmentsMonth = Number(r5[0]?.[0]?.appointmentsMonth) || 0;
-
-    const r6 = await client.execute("SELECT COUNT(*) as completedMonth FROM appointments WHERE appointmentDate >= ? AND status = ?", [monthStart, 'completed']) as any;
-    const completedMonth = Number(r6[0]?.[0]?.completedMonth) || 0;
-
-    const r7 = await client.execute("SELECT COUNT(*) as activeSubscriptions FROM userSubscriptions WHERE status = ?", ['active']) as any;
-    const activeSubscriptions = Number(r7[0]?.[0]?.activeSubscriptions) || 0;
-
-    return { totalUsers, newUsersMonth, activeProfessionals, appointmentsToday, appointmentsMonth, completedMonth, activeSubscriptions };
+    return {
+      totalUsers: Number(r1?.totalUsers) || 0,
+      newUsersMonth: Number(r2?.newUsersMonth) || 0,
+      activeProfessionals: Number(r3?.activeProfessionals) || 0,
+      appointmentsToday: Number(r4?.appointmentsToday) || 0,
+      appointmentsMonth: Number(r5?.appointmentsMonth) || 0,
+      completedMonth: Number(r6?.completedMonth) || 0,
+      activeSubscriptions: Number(r7?.activeSubscriptions) || 0,
+    };
   } catch (e: any) {
     console.error("[DB] getAdminMetrics error:", e?.message);
     return null;
