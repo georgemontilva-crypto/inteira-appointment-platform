@@ -284,6 +284,7 @@ export async function getPendingProfessionals() {
       ['pending']
     ) as any;
     const rows = Array.isArray(result) ? result[0] : [];
+    console.error("[DEBUG] pending rows:", JSON.stringify(rows?.slice(0,2)));
     return Array.isArray(rows) ? rows : [];
   } catch (e: any) {
     console.error("[DB] getPendingProfessionals error:", e?.message);
