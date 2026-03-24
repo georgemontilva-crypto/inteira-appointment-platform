@@ -802,13 +802,16 @@ export async function getFeaturedProfessionals(limit = 6) {
 export async function getAdminUsers() {
   const db = await getDb();
   if (!db) return [];
+  const client = (db as any).$client;
   try {
-    return await db
-      .select()
-      .from(users)
-      .where(eq(users.role, "admin"));
-  } catch (error) {
-    console.error("[Database] getAdminUsers error:", error);
+    const result = await client.execute(
+      "SELECT * FROM users WHERE role = ?",
+      ['admin']
+    ) as any;
+    const rows = Array.isArray(result) ? result[0] : [];
+    return Array.isArray(rows) ? rows : [];
+  } catch (e: any) {
+    console.error("[DB] getAdminUsers error:", e?.message);
     return [];
   }
 }
