@@ -269,8 +269,9 @@ export async function getPendingProfessionals() {
   const db = await getDb();
   if (!db) return [];
   const client = (db as any).$client;
-  try {
-    const result = await client.execute(
+
+  const rows = await new Promise<any[]>((resolve, reject) => {
+    client.execute(
       `SELECT p.id, p.userId, p.specialtyId, p.licenseNumber, p.licenseDocument,
         p.yearsOfExperience, p.education, p.certifications, p.bio,
         p.profilePhoto, p.hourlyRate, p.status, p.tier, p.createdAt,
@@ -281,15 +282,14 @@ export async function getPendingProfessionals() {
        LEFT JOIN specialties s ON p.specialtyId = s.id
        WHERE p.status = ?
        ORDER BY p.createdAt DESC`,
-      ['pending']
-    ) as any;
-    console.error("[DEBUG] result type:", typeof result, "keys:", Object.keys(result || {}), "isArray:", Array.isArray(result));
-    const rows = Array.isArray(result) ? result[0] : [];
-    return Array.isArray(rows) ? rows : [];
-  } catch (e: any) {
-    console.error("[DB] getPendingProfessionals error:", e?.message);
-    return [];
-  }
+      ['pending'],
+      (err: any, results: any) => {
+        if (err) reject(err);
+        else resolve(Array.isArray(results) ? results : []);
+      }
+    );
+  });
+  return rows;
 }
 
 export async function approveProfessional(
