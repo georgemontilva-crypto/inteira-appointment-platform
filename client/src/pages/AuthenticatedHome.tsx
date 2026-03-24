@@ -28,6 +28,7 @@ import {
   Zap,
   Bell,
   Shield,
+  LockOpen,
 } from "lucide-react";
 
 // Mapa de ícono por especialidad
@@ -697,22 +698,24 @@ export default function AuthenticatedHome() {
         {/* ── Suscripción / CTA ── */}
         {!subscription && (
           <div className="gradient-hero rounded-2xl p-6 text-white relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/3 pointer-events-none" />
-            <div className="relative z-10">
-              <div className="flex items-center gap-2 mb-2">
-                <Sparkles className="w-5 h-5 text-white/80" />
-                <span className="text-xs font-semibold text-white/80 uppercase tracking-widest">Desbloquea más</span>
+            <div className="absolute top-0 right-0 w-56 h-56 bg-white/[0.06] rounded-full -translate-y-1/3 translate-x-1/4 pointer-events-none" />
+            <div className="absolute bottom-0 right-24 w-40 h-40 bg-white/[0.04] rounded-full translate-y-1/2 pointer-events-none" />
+            <div className="relative z-10 flex items-center justify-between gap-6">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-white/[0.12] border border-white/[0.18] flex items-center justify-center flex-shrink-0">
+                  <LockOpen className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-medium text-white/55 uppercase tracking-widest block mb-1">Desbloquea más</span>
+                  <h3 className="text-base font-medium text-white mb-1">Activa un plan y ahorra</h3>
+                  <p className="text-white/65 text-xs max-w-sm leading-relaxed">
+                    Con un plan mensual obtienes citas ilimitadas a un precio fijo y acceso prioritario a todos los especialistas.
+                  </p>
+                </div>
               </div>
-              <h3 className="text-xl font-bold mb-2" style={{ fontFamily: "Poppins, sans-serif" }}>
-                Activa un plan y ahorra
-              </h3>
-              <p className="text-white/75 text-sm mb-4 max-w-md">
-                Con un plan mensual obtienes citas ilimitadas a un precio fijo y acceso prioritario a todos los especialistas.
-              </p>
-              <Link href="/planes">
-                <Button className="bg-white text-primary hover:bg-white/90 font-semibold shadow-md active:scale-95 transition-transform">
-                  Ver planes disponibles
-                  <ArrowRight className="ml-2 w-4 h-4" />
+              <Link href="/planes" className="flex-shrink-0">
+                <Button className="bg-white text-primary hover:bg-white/90 font-medium shadow-none active:scale-95 transition-transform whitespace-nowrap">
+                  Ver planes disponibles →
                 </Button>
               </Link>
             </div>
