@@ -301,15 +301,36 @@ export default function AuthenticatedHome() {
               { id: 3, name: "Legal" },
               { id: 4, name: "Finanzas" },
             ]).slice(0, 8).map((s) => {
-              const colorClass = SPECIALTY_COLORS[s.name] ?? "bg-primary/10 text-primary";
-              const icon = SPECIALTY_ICONS[s.name] ?? <Users className="w-5 h-5" />;
+              const n = s.name.toLowerCase();
+              const icon = n.includes("coaching") || n.includes("vida") ? (
+                <svg viewBox="0 0 24 24" fill="none" stroke="#607562" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-[22px] h-[22px]"><path d="M4.5 16.5l-1.5 4.5 4.5-1.5L19 8 17 6 4.5 16.5z"/><path d="M14 4l6 6"/><path d="M5 20l-1-1"/></svg>
+              ) : n.includes("mindfulness") || n.includes("meditación") || n.includes("meditacion") ? (
+                <svg viewBox="0 0 24 24" fill="none" stroke="#607562" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-[22px] h-[22px]"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10"/><path d="M12 2c2 4 2 8 0 12"/><path d="M2 12c4-2 8-2 12 0"/></svg>
+              ) : n.includes("nutrición") || n.includes("nutricion") ? (
+                <svg viewBox="0 0 24 24" fill="none" stroke="#607562" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-[22px] h-[22px]"><path d="M12 2a7 7 0 0 1 7 7c0 5-7 13-7 13S5 14 5 9a7 7 0 0 1 7-7z"/><path d="M12 2c1 2.5 0 5-2 6"/></svg>
+              ) : n.includes("orientación") || n.includes("orientacion") || n.includes("vocacional") ? (
+                <svg viewBox="0 0 24 24" fill="none" stroke="#607562" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-[22px] h-[22px]"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+              ) : n.includes("psicología") || n.includes("psicologia") || n.includes("mental") ? (
+                <svg viewBox="0 0 24 24" fill="none" stroke="#607562" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-[22px] h-[22px]"><path d="M9.5 2A6.5 6.5 0 0 1 16 8.5c0 2.5-1.5 4.5-3 6l-1 5.5H12l-1-5.5c-1.5-1.5-3-3.5-3-6A6.5 6.5 0 0 1 9.5 2z"/><path d="M12 14.5v1"/><path d="M6.5 8.5h1"/><path d="M16.5 8.5h-1"/></svg>
+              ) : n.includes("pareja") || n.includes("amor") || n.includes("relación") || n.includes("relacion") ? (
+                <svg viewBox="0 0 24 24" fill="none" stroke="#607562" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-[22px] h-[22px]"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+              ) : n.includes("social") || n.includes("habilidades") ? (
+                <svg viewBox="0 0 24 24" fill="none" stroke="#607562" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-[22px] h-[22px]"><path d="M18 11V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h3l3 3 3-3h3a2 2 0 0 0 2-2z"/><path d="M22 13v3a2 2 0 0 1-2 2h-2"/></svg>
+              ) : (
+                <svg viewBox="0 0 24 24" fill="none" stroke="#607562" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-[22px] h-[22px]"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              );
               return (
                 <Link href={`/especialidades/${s.id}`} key={s.id}>
-                  <div className="flex-shrink-0 w-[140px] bg-white rounded-2xl border border-border/60 shadow-sm p-4 flex flex-col items-center gap-2 hover:shadow-md hover:border-primary/20 active:scale-[0.97] transition-all cursor-pointer text-center">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${colorClass}`}>
+                  <div
+                    className="flex-shrink-0 w-[160px] h-[120px] flex flex-col items-center justify-center gap-2.5 cursor-pointer transition-all active:scale-[0.97]"
+                    style={{ background: "#fff", border: "1px solid rgba(96,117,98,0.15)", borderRadius: "12px", padding: "16px 12px" }}
+                    onMouseEnter={(e) => (e.currentTarget.style.borderColor = "rgba(96,117,98,0.45)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.borderColor = "rgba(96,117,98,0.15)")}
+                  >
+                    <div className="w-[44px] h-[44px] rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "rgba(96,117,98,0.1)" }}>
                       {icon}
                     </div>
-                    <span className="text-xs font-semibold text-foreground leading-tight">{s.name}</span>
+                    <span className="text-center leading-tight" style={{ fontSize: "12px", color: "#333333", fontWeight: 500 }}>{s.name}</span>
                   </div>
                 </Link>
               );
