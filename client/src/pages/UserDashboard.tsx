@@ -206,7 +206,7 @@ export default function UserDashboard() {
               </h1>
             </div>
             <Button
-              onClick={() => navigate("/especialidades/1")}
+              onClick={() => navigate("/especialidades")}
               className="bg-white/20 hover:bg-white/30 text-white border-0 flex-shrink-0"
               size="sm"
             >
@@ -261,7 +261,7 @@ export default function UserDashboard() {
                 <Button
                   className="mt-4 gradient-brand text-white border-0"
                   size="sm"
-                  onClick={() => navigate("/especialidades/1")}
+                  onClick={() => navigate("/especialidades")}
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Agendar ahora

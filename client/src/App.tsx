@@ -20,12 +20,14 @@ import UserProfile from "./pages/UserProfile";
 import Subscription from "./pages/Subscription";
 import MobileNav from "./components/MobileNav";
 import Login from "./pages/Login";
+import SpecialtiesPage from "./pages/SpecialtiesPage";
 
 function Router() {
   return (
     <Switch>
       {/* Public routes */}
       <Route path="/" component={Home} />
+      <Route path="/especialidades" component={SpecialtiesPage} />
       <Route path="/especialidades/:id" component={ProfessionalsList} />
       <Route path="/profesional/:id" component={ProfessionalProfile} />
 
