@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
@@ -24,12 +25,17 @@ import Login from "./pages/Login";
 import { useAuth } from "./_core/hooks/useAuth";
 
 function DashboardRouter() {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   const [, navigate] = useLocation();
-  if (user?.role === "professional") {
-    navigate("/panel-profesional");
-    return null;
-  }
+
+  useEffect(() => {
+    if (!isLoading && user?.role === "professional") {
+      navigate("/panel-profesional");
+    }
+  }, [user, isLoading]);
+
+  if (isLoading) return null;
+  if (user?.role === "professional") return null;
   return <UserDashboard />;
 }
 
