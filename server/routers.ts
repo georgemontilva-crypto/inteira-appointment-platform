@@ -72,7 +72,7 @@ export const appRouter = router({
   // Auth routes
   auth: router({
     me: publicProcedure.query((opts) => {
-      console.error("[DEBUG] auth.me user role:", opts.ctx.user?.role, "id:", opts.ctx.user?.id);
+      console.error("[DEBUG] auth.me:", opts.ctx.user?.email, "role:", opts.ctx.user?.role);
       return opts.ctx.user;
     }),
     logout: publicProcedure.mutation(({ ctx }) => {
