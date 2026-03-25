@@ -362,14 +362,14 @@ export default function AuthenticatedHome() {
           <h2 className="text-base font-bold text-foreground mb-3" style={{ fontFamily: "Poppins, sans-serif" }}>
             Explorar especialidades
           </h2>
-          <div className="grid md:grid-cols-2 gap-3">
+          <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(96,117,98,0.2) transparent" }}>
             {(specialties ?? [
               { id: 1, name: "Psicología", description: null },
               { id: 2, name: "Emprendimiento", description: null },
               { id: 3, name: "Legal", description: null },
               { id: 4, name: "Finanzas", description: null },
             ]).map((s) => (
-              <Link key={s.id} href={`/especialidades/${s.id}`}>
+              <Link key={s.id} href={`/especialidades/${s.id}`} className="flex-shrink-0 w-[300px]">
                 <Card className="group cursor-pointer border-border active:scale-[0.99] md:hover:border-primary/40 md:hover:shadow-md transition-all duration-200">
                   <CardContent className="p-4 md:p-5">
                     <div className="flex items-center gap-3.5">
