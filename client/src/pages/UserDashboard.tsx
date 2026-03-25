@@ -25,6 +25,7 @@ import {
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { getLoginUrl } from "@/const";
+import DashboardLayout from "../components/DashboardLayout";
 
 const statusColors: Record<string, string> = {
   scheduled: "bg-blue-100 text-blue-700",
@@ -128,6 +129,7 @@ export default function UserDashboard() {
   };
 
   return (
+    <DashboardLayout>
     <div className="min-h-screen bg-background pb-24 md:pb-8">
 
       {/* ── Mobile Header ── */}
@@ -647,5 +649,6 @@ export default function UserDashboard() {
         </div>
       </div>
     </div>
+    </DashboardLayout>
   );
 }
