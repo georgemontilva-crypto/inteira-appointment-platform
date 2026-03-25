@@ -1,12 +1,9 @@
-import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Link, useLocation } from "wouter";
+import { Link } from "wouter";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import {
@@ -17,7 +14,6 @@ import {
   Plus,
   ChevronRight,
   Wallet,
-  Search,
   Sparkles,
   ArrowRight,
   CheckCircle2,
@@ -26,10 +22,10 @@ import {
   TrendingUp,
   MessageCircle,
   Zap,
-  Bell,
   Shield,
   LockOpen,
 } from "lucide-react";
+import DashboardLayout from "../components/DashboardLayout";
 
 // Mapa de ícono por especialidad
 const SPECIALTY_ICONS: Record<string, React.ReactNode> = {
@@ -65,8 +61,6 @@ const statusLabels: Record<string, string> = {
 
 export default function AuthenticatedHome() {
   const { user } = useAuth();
-  const [, navigate] = useLocation();
-  const utils = trpc.useUtils();
 
   // Obtener perfil actualizado del usuario (tiene el nombre real guardado en DB)
   const { data: profile } = trpc.user.getProfile.useQuery(undefined, {
@@ -95,286 +89,21 @@ export default function AuthenticatedHome() {
     { staleTime: 300_000 }
   );
 
-  // Notifications
-  const { data: unreadCountData } = trpc.notifications.getUnreadCount.useQuery(undefined, {
-    enabled: !!user,
-    refetchInterval: 30000,
-  });
-  const { data: notifications } = trpc.notifications.getAll.useQuery(undefined, {
-    enabled: !!user,
-    refetchInterval: 30000,
-  });
-  const markAllRead = trpc.notifications.markAllRead.useMutation({
-    onSuccess: () => {
-      utils.notifications.getAll.invalidate();
-      utils.notifications.getUnreadCount.invalidate();
-    },
-  });
-  const markOneRead = trpc.notifications.markRead.useMutation({
-    onSuccess: () => {
-      utils.notifications.getAll.invalidate();
-      utils.notifications.getUnreadCount.invalidate();
-    },
-  });
-  const unreadCount = unreadCountData?.count ?? 0;
-
   // Derived — usar profile (DB) como fuente principal, con fallback al user del contexto
   const resolvedName = profile?.name || user?.name || user?.email?.split("@")[0] || "";
   type Apt = NonNullable<typeof appointments>[number];
   const upcomingApts: Apt[] = appointments?.filter((a) => a.status === "scheduled") ?? [];
   const completedCount = appointments?.filter((a) => a.status === "completed").length ?? 0;
-  const nextApt = upcomingApts[0];
-  const firstName = resolvedName.split(" ")[0] || "";
-  const initials = resolvedName
-    ? resolvedName.split(" ").map((n: string) => n[0]).slice(0, 2).join("").toUpperCase()
-    : "?";
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Buenos días" : hour < 18 ? "Buenas tardes" : "Buenas noches";
 
   return (
-    <div className="min-h-screen bg-[#F7F9F7] pb-24 md:pb-0">
-      {/* ══════════════════════════════════════════
-          HERO HEADER — Mobile & Desktop
-          ══════════════════════════════════════════ */}
-      <div className="gradient-hero text-white relative overflow-hidden">
-        {/* Decorative blobs */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/3 pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-40 h-40 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/3 pointer-events-none" />
-
-        {/* Mobile header */}
-        <div className="md:hidden px-5 pt-20 pb-8 relative z-10">
-          <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-3">
-              {(user as any)?.profileImage ? (
-                <img
-                  src={(user as any).profileImage}
-                  alt={user?.name ?? "Avatar"}
-                  className="w-11 h-11 rounded-2xl object-cover shadow-md"
-                />
-              ) : (
-                <div className="w-11 h-11 rounded-2xl bg-white/25 flex items-center justify-center text-white text-lg font-bold shadow-md">
-                  {initials}
-                </div>
-              )}
-              <div>
-                <p className="text-white/70 text-xs font-medium">{greeting}</p>
-                <h1 className="text-xl font-bold leading-tight" style={{ fontFamily: "Poppins, sans-serif" }}>
-                  {firstName} 👋
-                </h1>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <button className="relative p-2 rounded-full hover:bg-white/20 transition-colors">
-                    <Bell className="w-5 h-5 text-white" />
-                    {unreadCount > 0 && (
-                      <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                        {unreadCount > 9 ? "9+" : unreadCount}
-                      </span>
-                    )}
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent align="end" sideOffset={8} className="w-[340px] p-0 rounded-xl overflow-hidden" style={{boxShadow: "0 8px 32px rgba(61,78,63,0.12)", border: "0.5px solid rgba(96,117,98,0.2)"}}>
-                  <div className="flex items-center justify-between px-4 py-3 border-b bg-[#F7FAFC]" style={{borderColor: "rgba(96,117,98,0.15)"}}>
-                    <div>
-                      <h3 className="text-sm font-medium text-[#333333]">Notificaciones</h3>
-                      {unreadCount > 0 && <p className="text-[11px] text-[#607562]">{unreadCount} sin leer</p>}
-                    </div>
-                    {unreadCount > 0 && (
-                      <button onClick={() => markAllRead.mutate()} className="text-xs text-[#607562] px-[10px] py-1 rounded-md transition-colors hover:bg-[rgba(96,117,98,0.08)]" style={{border: "0.5px solid rgba(96,117,98,0.3)"}}>
-                        Marcar todas como leídas
-                      </button>
-                    )}
-                  </div>
-                  <div className="max-h-[300px] overflow-y-auto [scrollbar-width:thin] [scrollbar-color:rgba(96,117,98,0.25)_transparent] [&::-webkit-scrollbar]:w-[3px] [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[rgba(96,117,98,0.25)] [&::-webkit-scrollbar-thumb]:rounded-full">
-                    {!notifications || notifications.length === 0 ? (
-                      <div className="py-10 text-center text-sm text-[#93A295]">No hay notificaciones</div>
-                    ) : (
-                      notifications.map((n: any) => (
-                        <div
-                          key={n.id}
-                          onClick={() => {
-                            if (!n.isRead) markOneRead.mutate({ id: n.id });
-                            if (n.link) window.location.href = n.link;
-                          }}
-                          className={`flex gap-3 px-4 py-3 cursor-pointer transition-colors items-start border-b last:border-b-0 ${!n.isRead ? "bg-[#f0f4f0] hover:bg-[#e8efe8]" : "hover:bg-[#F7FAFC]"}`}
-                          style={{borderColor: "rgba(96,117,98,0.1)"}}
-                        >
-                          <div className={`w-[34px] h-[34px] rounded-full flex items-center justify-center flex-shrink-0 mt-[1px] ${!n.isRead ? "bg-[rgba(96,117,98,0.15)]" : "bg-[rgba(147,162,149,0.2)]"}`}>
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" stroke={!n.isRead ? "#607562" : "#93A295"}>
-                              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-                            </svg>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[13px] font-medium text-[#333333] leading-snug mb-[2px]">{n.title}</p>
-                            <p className="text-[12px] text-[#666666] leading-snug truncate">{n.message}</p>
-                            <p className="text-[11px] text-[#93A295] mt-1">{new Date(n.createdAt).toLocaleDateString("es", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</p>
-                          </div>
-                          {!n.isRead && <div className="w-[7px] h-[7px] rounded-full bg-[#607562] mt-[6px] flex-shrink-0" />}
-                        </div>
-                      ))
-                    )}
-                  </div>
-                  <div className="px-4 py-[10px] text-center bg-[#F7FAFC]" style={{borderTop: "0.5px solid rgba(96,117,98,0.15)"}}>
-                    <span className="text-xs text-[#607562] cursor-pointer hover:underline">Ver todas las notificaciones</span>
-                  </div>
-                </PopoverContent>
-              </Popover>
-              <Link href="/wallet">
-                <div className="flex items-center gap-1.5 bg-white/20 rounded-xl px-3 py-2 active:scale-95 transition-transform cursor-pointer">
-                  <Wallet className="w-4 h-4 text-white" />
-                  <span className="text-white font-bold text-sm">{(wallet?.balance ?? 0).toLocaleString("es-MX")}</span>
-                </div>
-              </Link>
-            </div>
-          </div>
-
-          {/* Search bar */}
-          <Link href="/especialidades">
-            <div className="flex items-center gap-3 bg-white/20 backdrop-blur-sm rounded-2xl px-4 py-3 active:scale-[0.98] transition-transform cursor-pointer border border-white/20">
-              <Search className="w-4 h-4 text-white/70 flex-shrink-0" />
-              <span className="text-white/70 text-sm">Buscar especialista o área...</span>
-            </div>
-          </Link>
-        </div>
-
-        {/* Desktop header */}
-        <div className="hidden md:block py-10 relative z-10">
-          <div className="container">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-5">
-                {(user as any)?.profileImage ? (
-                  <img
-                    src={(user as any).profileImage}
-                    alt={user?.name ?? "Avatar"}
-                    className="w-16 h-16 rounded-2xl object-cover shadow-lg"
-                  />
-                ) : (
-                  <div className="w-16 h-16 rounded-2xl bg-white/25 flex items-center justify-center text-white text-2xl font-bold shadow-lg">
-                    {initials}
-                  </div>
-                )}
-                <div>
-                  <p className="text-white/70 text-sm font-medium">{greeting},</p>
-                  <h1 className="text-3xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
-                    {resolvedName || firstName} 👋
-                  </h1>
-                  <p className="text-white/60 text-sm mt-0.5">
-                    {upcomingApts.length > 0
-                      ? `Tienes ${upcomingApts.length} cita${upcomingApts.length > 1 ? "s" : ""} próxima${upcomingApts.length > 1 ? "s" : ""}`
-                      : "¿Con quién quieres hablar hoy?"}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <button className="relative p-2 rounded-full hover:bg-white/20 transition-colors">
-                      <Bell className="w-5 h-5 text-white" />
-                      {unreadCount > 0 && (
-                        <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                          {unreadCount > 9 ? "9+" : unreadCount}
-                        </span>
-                      )}
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent align="end" sideOffset={8} className="w-[340px] p-0 rounded-xl overflow-hidden" style={{boxShadow: "0 8px 32px rgba(61,78,63,0.12)", border: "0.5px solid rgba(96,117,98,0.2)"}}>
-                    <div className="flex items-center justify-between px-4 py-3 border-b bg-[#F7FAFC]" style={{borderColor: "rgba(96,117,98,0.15)"}}>
-                      <div>
-                        <h3 className="text-sm font-medium text-[#333333]">Notificaciones</h3>
-                        {unreadCount > 0 && <p className="text-[11px] text-[#607562]">{unreadCount} sin leer</p>}
-                      </div>
-                      {unreadCount > 0 && (
-                        <button onClick={() => markAllRead.mutate()} className="text-xs text-[#607562] px-[10px] py-1 rounded-md transition-colors hover:bg-[rgba(96,117,98,0.08)]" style={{border: "0.5px solid rgba(96,117,98,0.3)"}}>
-                          Marcar todas como leídas
-                        </button>
-                      )}
-                    </div>
-                    <div className="max-h-[300px] overflow-y-auto [scrollbar-width:thin] [scrollbar-color:rgba(96,117,98,0.25)_transparent] [&::-webkit-scrollbar]:w-[3px] [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[rgba(96,117,98,0.25)] [&::-webkit-scrollbar-thumb]:rounded-full">
-                      {!notifications || notifications.length === 0 ? (
-                        <div className="py-10 text-center text-sm text-[#93A295]">No hay notificaciones</div>
-                      ) : (
-                        notifications.map((n: any) => (
-                          <div
-                            key={n.id}
-                            onClick={() => {
-                              if (!n.isRead) markOneRead.mutate({ id: n.id });
-                              if (n.link) window.location.href = n.link;
-                            }}
-                            className={`flex gap-3 px-4 py-3 cursor-pointer transition-colors items-start border-b last:border-b-0 ${!n.isRead ? "bg-[#f0f4f0] hover:bg-[#e8efe8]" : "hover:bg-[#F7FAFC]"}`}
-                            style={{borderColor: "rgba(96,117,98,0.1)"}}
-                          >
-                            <div className={`w-[34px] h-[34px] rounded-full flex items-center justify-center flex-shrink-0 mt-[1px] ${!n.isRead ? "bg-[rgba(96,117,98,0.15)]" : "bg-[rgba(147,162,149,0.2)]"}`}>
-                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" stroke={!n.isRead ? "#607562" : "#93A295"}>
-                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-                              </svg>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-[13px] font-medium text-[#333333] leading-snug mb-[2px]">{n.title}</p>
-                              <p className="text-[12px] text-[#666666] leading-snug truncate">{n.message}</p>
-                              <p className="text-[11px] text-[#93A295] mt-1">{new Date(n.createdAt).toLocaleDateString("es", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</p>
-                            </div>
-                            {!n.isRead && <div className="w-[7px] h-[7px] rounded-full bg-[#607562] mt-[6px] flex-shrink-0" />}
-                          </div>
-                        ))
-                      )}
-                    </div>
-                    <div className="px-4 py-[10px] text-center bg-[#F7FAFC]" style={{borderTop: "0.5px solid rgba(96,117,98,0.15)"}}>
-                      <span className="text-xs text-[#607562] cursor-pointer hover:underline">Ver todas las notificaciones</span>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-                <Link href="/especialidades">
-                  <Button className="bg-white text-primary hover:bg-white/90 font-semibold shadow-md">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Nueva cita
-                  </Button>
-                </Link>
-                <Link href="/wallet">
-                  <div className="flex items-center gap-2 bg-white/20 rounded-xl px-4 py-2.5 cursor-pointer hover:bg-white/30 transition-colors">
-                    <Wallet className="w-4 h-4 text-white" />
-                    <span className="text-white font-bold">{(wallet?.balance ?? 0).toLocaleString("es-MX")}</span>
-                    <span className="text-white/70 text-xs">créditos</span>
-                  </div>
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Stats strip — overlapping */}
-        <div className="flex justify-center px-4 md:px-0 relative z-10 pb-6">
-          <div className="w-full max-w-md md:max-w-lg bg-white rounded-2xl shadow-xl border border-border/30 grid grid-cols-3 divide-x divide-border">
-            <div className="flex flex-col items-center py-4">
-              <span className="text-xl font-bold text-primary" style={{ fontFamily: "Poppins, sans-serif" }}>
-                {upcomingApts.length}
-              </span>
-              <span className="text-[10px] md:text-xs text-muted-foreground mt-0.5">Próximas</span>
-            </div>
-            <div className="flex flex-col items-center py-4">
-              <span className="text-xl font-bold text-emerald-600" style={{ fontFamily: "Poppins, sans-serif" }}>
-                {completedCount}
-              </span>
-              <span className="text-[10px] md:text-xs text-muted-foreground mt-0.5">Completadas</span>
-            </div>
-            <div className="flex flex-col items-center py-4">
-              <span className="text-xl font-bold text-primary" style={{ fontFamily: "Poppins, sans-serif" }}>
-                {subscription ? "Activo" : "—"}
-              </span>
-              <span className="text-[10px] md:text-xs text-muted-foreground mt-0.5">
-                {subscription ? (subscription as any).planName ?? "Plan" : "Sin plan"}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ══════════════════════════════════════════
-          MAIN CONTENT
-          ══════════════════════════════════════════ */}
-      <div className="container py-8 space-y-8">
+    <DashboardLayout
+      title={`${greeting}, ${resolvedName}`}
+      subtitle="¿Con quién quieres hablar hoy?"
+    >
+      <div className="space-y-8">
 
         {/* ── Banner: próxima cita con videollamada ── */}
         {(() => {
@@ -763,6 +492,6 @@ export default function AuthenticatedHome() {
         })()}
 
       </div>
-    </div>
+    </DashboardLayout>
   );
 }

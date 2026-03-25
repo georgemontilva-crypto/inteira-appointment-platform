@@ -1,264 +1,256 @@
-import { useAuth } from "@/_core/hooks/useAuth";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarInset,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarProvider,
-  SidebarTrigger,
-  useSidebar,
-} from "@/components/ui/sidebar";
-import { getLoginUrl } from "@/const";
-import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users } from "lucide-react";
-import { CSSProperties, useEffect, useRef, useState } from "react";
-import { useLocation } from "wouter";
-import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
-import { Button } from "./ui/button";
+import { useState } from "react";
+import { Link, useLocation } from "wouter";
+import { useAuth } from "../_core/hooks/useAuth";
+import { trpc } from "../lib/trpc";
 
-const menuItems = [
-  { icon: LayoutDashboard, label: "Page 1", path: "/" },
-  { icon: Users, label: "Page 2", path: "/some-path" },
+const NAV_SECTIONS = [
+  {
+    label: "General",
+    items: [
+      { label: "Inicio", icon: "home", href: "/dashboard" },
+      { label: "Mis citas", icon: "calendar", href: "/citas" },
+    ],
+  },
+  {
+    label: "Especialistas",
+    items: [
+      { label: "Explorar", icon: "search", href: "/especialistas" },
+      { label: "Especialidades", icon: "users", href: "/especialidades" },
+    ],
+  },
+  {
+    label: "Mi cuenta",
+    items: [
+      { label: "Wallet", icon: "wallet", href: "/wallet" },
+      { label: "Planes", icon: "star", href: "/planes" },
+      { label: "Notificaciones", icon: "bell", href: "/notificaciones", badge: true },
+      { label: "Perfil", icon: "user", href: "/perfil" },
+    ],
+  },
 ];
 
-const SIDEBAR_WIDTH_KEY = "sidebar-width";
-const DEFAULT_WIDTH = 280;
-const MIN_WIDTH = 200;
-const MAX_WIDTH = 480;
-
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const [sidebarWidth, setSidebarWidth] = useState(() => {
-    const saved = localStorage.getItem(SIDEBAR_WIDTH_KEY);
-    return saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
-  });
-  const { loading, user } = useAuth();
-
-  useEffect(() => {
-    localStorage.setItem(SIDEBAR_WIDTH_KEY, sidebarWidth.toString());
-  }, [sidebarWidth]);
-
-  if (loading) {
-    return <DashboardLayoutSkeleton />
-  }
-
-  if (!user) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="flex flex-col items-center gap-8 p-8 max-w-md w-full">
-          <div className="flex flex-col items-center gap-6">
-            <h1 className="text-2xl font-semibold tracking-tight text-center">
-              Sign in to continue
-            </h1>
-            <p className="text-sm text-muted-foreground text-center max-w-sm">
-              Access to this dashboard requires authentication. Continue to launch the login flow.
-            </p>
-          </div>
-          <Button
-            onClick={() => {
-              window.location.href = getLoginUrl();
-            }}
-            size="lg"
-            className="w-full shadow-lg hover:shadow-xl transition-all"
-          >
-            Sign in
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <SidebarProvider
-      style={
-        {
-          "--sidebar-width": `${sidebarWidth}px`,
-        } as CSSProperties
-      }
-    >
-      <DashboardLayoutContent setSidebarWidth={setSidebarWidth}>
-        {children}
-      </DashboardLayoutContent>
-    </SidebarProvider>
-  );
-}
-
-type DashboardLayoutContentProps = {
-  children: React.ReactNode;
-  setSidebarWidth: (width: number) => void;
+const ICONS: Record<string, JSX.Element> = {
+  home: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
+  calendar: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
+  search: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
+  users: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>,
+  wallet: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>,
+  star: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
+  bell: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>,
+  user: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+  shield: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
+  settings: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>,
+  logout: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>,
+  grid: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><rect x="2" y="2" width="9" height="9" rx="1"/><rect x="13" y="2" width="9" height="9" rx="1"/><rect x="2" y="13" width="9" height="9" rx="1"/><rect x="13" y="13" width="9" height="9" rx="1"/></svg>,
+  layers: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>,
 };
 
-function DashboardLayoutContent({
-  children,
-  setSidebarWidth,
-}: DashboardLayoutContentProps) {
+function Icon({ name, className = "w-4 h-4" }: { name: string; className?: string }) {
+  return <span className={className} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>{ICONS[name]}</span>;
+}
+
+interface DashboardLayoutProps {
+  children: React.ReactNode;
+  title?: string;
+  subtitle?: string;
+  headerRight?: React.ReactNode;
+}
+
+export default function DashboardLayout({ children, title, subtitle, headerRight }: DashboardLayoutProps) {
   const { user, logout } = useAuth();
-  const [location, setLocation] = useLocation();
-  const { state, toggleSidebar } = useSidebar();
-  const isCollapsed = state === "collapsed";
-  const [isResizing, setIsResizing] = useState(false);
-  const sidebarRef = useRef<HTMLDivElement>(null);
-  const activeMenuItem = menuItems.find(item => item.path === location);
-  const isMobile = useIsMobile();
+  const [location] = useLocation();
+  const [panelOpen, setPanelOpen] = useState(false);
 
-  useEffect(() => {
-    if (isCollapsed) {
-      setIsResizing(false);
-    }
-  }, [isCollapsed]);
+  const { data: unreadCount } = trpc.notifications.getUnreadCount.useQuery(undefined, {
+    enabled: !!user,
+    refetchInterval: 30000,
+  });
+  const { data: notifications } = trpc.notifications.getAll.useQuery(undefined, {
+    enabled: !!user,
+    refetchInterval: 30000,
+  });
+  const markAllRead = trpc.notifications.markAllRead.useMutation({ onSuccess: () => {} });
+  const markOneRead = trpc.notifications.markRead.useMutation({ onSuccess: () => {} });
 
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isResizing) return;
+  const count = unreadCount?.count ?? 0;
+  const initials = user?.name?.charAt(0)?.toUpperCase() ?? "U";
 
-      const sidebarLeft = sidebarRef.current?.getBoundingClientRect().left ?? 0;
-      const newWidth = e.clientX - sidebarLeft;
-      if (newWidth >= MIN_WIDTH && newWidth <= MAX_WIDTH) {
-        setSidebarWidth(newWidth);
-      }
-    };
-
-    const handleMouseUp = () => {
-      setIsResizing(false);
-    };
-
-    if (isResizing) {
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
-      document.body.style.cursor = "col-resize";
-      document.body.style.userSelect = "none";
-    }
-
-    return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-    };
-  }, [isResizing, setSidebarWidth]);
+  const sections = [...NAV_SECTIONS];
+  if (user?.role === "admin") {
+    sections.push({ label: "Admin", items: [{ label: "Panel", icon: "shield", href: "/admin" }] });
+  }
+  if (user?.role === "professional") {
+    sections.push({ label: "Profesional", items: [{ label: "Mi panel", icon: "shield", href: "/panel-profesional" }] });
+  }
 
   return (
-    <>
-      <div className="relative" ref={sidebarRef}>
-        <Sidebar
-          collapsible="icon"
-          className="border-r-0"
-          disableTransition={isResizing}
-        >
-          <SidebarHeader className="h-16 justify-center">
-            <div className="flex items-center gap-3 px-2 transition-all w-full">
-              <button
-                onClick={toggleSidebar}
-                className="h-8 w-8 flex items-center justify-center hover:bg-accent rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring shrink-0"
-                aria-label="Toggle navigation"
-              >
-                <PanelLeft className="h-4 w-4 text-muted-foreground" />
-              </button>
-              {!isCollapsed ? (
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="font-semibold tracking-tight truncate">
-                    Navigation
-                  </span>
+    <div className="flex flex-col min-h-screen bg-[#F7FAFC]">
+      {/* TOP BAR */}
+      <header className="h-[52px] bg-white border-b border-[rgba(96,117,98,0.15)] flex items-center gap-2 px-4 flex-shrink-0 sticky top-0 z-30">
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg,#3d4e3f,#607562)" }}>
+            <Icon name="layers" className="w-3.5 h-3.5 text-white" />
+          </div>
+          <span className="text-sm font-medium text-[#333333] hidden sm:block">Inteira</span>
+        </div>
+
+        <div className="flex items-center gap-2 bg-[#F7FAFC] border border-[rgba(96,117,98,0.2)] rounded-full px-3 h-[34px] w-[200px] flex-shrink-0 ml-2">
+          <Icon name="search" className="w-3.5 h-3.5 text-[#93A295]" />
+          <input className="bg-transparent border-none outline-none text-[13px] text-[#333333] w-full placeholder:text-[#93A295]" placeholder="Buscar especialistas..." />
+        </div>
+
+        <nav className="hidden md:flex items-center">
+          {["Descubrir", "Explorar", "Especialidades", "Planes"].map((l) => (
+            <span key={l} className="px-3 h-[52px] flex items-center text-[13px] font-medium text-[#93A295] hover:text-[#3d4e3f] cursor-pointer border-b-2 border-transparent hover:border-[#607562] transition-colors whitespace-nowrap">{l}</span>
+          ))}
+        </nav>
+
+        <div className="flex-1" />
+
+        <div className="flex items-center gap-1">
+          <button onClick={() => setPanelOpen(true)} className="relative w-9 h-9 rounded-full flex items-center justify-center hover:bg-[#f0f4f0] transition-colors text-[#607562]">
+            <Icon name="bell" className="w-[18px] h-[18px]" />
+            {count > 0 && <span className="absolute top-0.5 right-0.5 min-w-[15px] h-[15px] bg-red-600 text-white text-[8px] font-bold rounded-full flex items-center justify-center px-0.5">{count > 9 ? "9+" : count}</span>}
+          </button>
+          <button className="relative w-9 h-9 rounded-full flex items-center justify-center hover:bg-[#f0f4f0] transition-colors text-[#607562]">
+            <Icon name="wallet" className="w-[18px] h-[18px]" />
+          </button>
+          <button onClick={() => setPanelOpen(true)} className="relative w-9 h-9 rounded-full flex items-center justify-center hover:bg-[#f0f4f0] transition-colors text-[#607562]">
+            <Icon name="grid" className="w-[18px] h-[18px]" />
+          </button>
+          <button onClick={() => setPanelOpen(true)} className="ml-1 w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-medium text-white relative border-2 border-[rgba(96,117,98,0.3)]" style={{ background: "linear-gradient(135deg,#3d4e3f,#607562)" }}>
+            {initials}
+            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-green-400 border-2 border-white" />
+          </button>
+        </div>
+      </header>
+
+      <div className="flex flex-1 overflow-hidden">
+        {/* SIDEBAR */}
+        <aside className="w-[210px] flex-shrink-0 bg-white border-r border-[rgba(96,117,98,0.15)] flex-col hidden md:flex overflow-y-auto" style={{ scrollbarWidth: "none" }}>
+          <nav className="flex-1 p-2.5 flex flex-col gap-3">
+            {sections.map((section) => (
+              <div key={section.label}>
+                <p className="text-[9px] text-[#93A295] tracking-widest uppercase px-1 mb-1.5 font-medium">{section.label}</p>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {section.items.map((item) => {
+                    const isActive = location === item.href || location.startsWith(item.href + "/");
+                    const isAdmin = item.icon === "shield" && user?.role === "admin";
+                    return (
+                      <Link key={item.href} href={item.href}>
+                        <a className={`flex flex-col items-start justify-end p-2.5 rounded-[9px] border min-h-[60px] transition-all cursor-pointer relative ${
+                          isActive ? "bg-[rgba(96,117,98,0.12)] border-[rgba(96,117,98,0.35)]" :
+                          isAdmin ? "bg-[#fff8f7] border-[rgba(180,60,60,0.2)]" :
+                          "bg-[#F7FAFC] border-[rgba(96,117,98,0.15)] hover:bg-[#f0f4f0] hover:border-[rgba(96,117,98,0.3)]"
+                        }`}>
+                          {(item as any).badge && count > 0 && (
+                            <span className="absolute top-1.5 right-1.5 min-w-[14px] h-[14px] bg-red-600 text-white text-[8px] font-bold rounded-full flex items-center justify-center px-0.5">{count > 9 ? "9+" : count}</span>
+                          )}
+                          <span className={`w-4 h-4 mb-1.5 ${isActive ? "text-[#3d4e3f]" : isAdmin ? "text-[#B43C3C]" : "text-[#93A295]"}`}>
+                            {ICONS[item.icon]}
+                          </span>
+                          <span className={`text-[10px] font-medium leading-tight ${isActive ? "text-[#3d4e3f]" : isAdmin ? "text-[#B43C3C]" : "text-[#607562]"}`}>
+                            {item.label}
+                          </span>
+                        </a>
+                      </Link>
+                    );
+                  })}
                 </div>
-              ) : null}
-            </div>
-          </SidebarHeader>
-
-          <SidebarContent className="gap-0">
-            <SidebarMenu className="px-2 py-1">
-              {menuItems.map(item => {
-                const isActive = location === item.path;
-                return (
-                  <SidebarMenuItem key={item.path}>
-                    <SidebarMenuButton
-                      isActive={isActive}
-                      onClick={() => setLocation(item.path)}
-                      tooltip={item.label}
-                      className={`h-10 transition-all font-normal`}
-                    >
-                      <item.icon
-                        className={`h-4 w-4 ${isActive ? "text-primary" : ""}`}
-                      />
-                      <span>{item.label}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarContent>
-
-          <SidebarFooter className="p-3">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-3 rounded-lg px-1 py-1 hover:bg-accent/50 transition-colors w-full text-left group-data-[collapsible=icon]:justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                  <Avatar className="h-9 w-9 border shrink-0">
-                    <AvatarFallback className="text-xs font-medium">
-                      {user?.name?.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0 group-data-[collapsible=icon]:hidden">
-                    <p className="text-sm font-medium truncate leading-none">
-                      {user?.name || "-"}
-                    </p>
-                    <p className="text-xs text-muted-foreground truncate mt-1.5">
-                      {user?.email || "-"}
-                    </p>
-                  </div>
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem
-                  onClick={logout}
-                  className="cursor-pointer text-destructive focus:text-destructive"
-                >
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Sign out</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </SidebarFooter>
-        </Sidebar>
-        <div
-          className={`absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-primary/20 transition-colors ${isCollapsed ? "hidden" : ""}`}
-          onMouseDown={() => {
-            if (isCollapsed) return;
-            setIsResizing(true);
-          }}
-          style={{ zIndex: 50 }}
-        />
-      </div>
-
-      <SidebarInset>
-        {isMobile && (
-          <div className="flex border-b h-14 items-center justify-between bg-background/95 px-2 backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40">
-            <div className="flex items-center gap-2">
-              <SidebarTrigger className="h-9 w-9 rounded-lg bg-background" />
-              <div className="flex items-center gap-3">
-                <div className="flex flex-col gap-1">
-                  <span className="tracking-tight text-foreground">
-                    {activeMenuItem?.label ?? "Menu"}
-                  </span>
-                </div>
+              </div>
+            ))}
+          </nav>
+          <div className="p-2 border-t border-[rgba(96,117,98,0.1)]">
+            <div className="flex items-center gap-2 px-2 py-1.5 rounded-[9px] bg-[#F7FAFC] border border-[rgba(96,117,98,0.15)] cursor-pointer">
+              <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-medium text-white flex-shrink-0" style={{ background: "linear-gradient(135deg,#3d4e3f,#607562)" }}>{initials}</div>
+              <div className="min-w-0">
+                <p className="text-[11px] font-medium text-[#333333] truncate">{user?.name ?? "Usuario"}</p>
+                <p className="text-[9px] text-[#607562]">{user?.role === "admin" ? "Admin" : user?.role === "professional" ? "Profesional" : "Usuario"}</p>
               </div>
             </div>
           </div>
-        )}
-        <main className="flex-1 p-4">{children}</main>
-      </SidebarInset>
-    </>
+        </aside>
+
+        {/* MAIN CONTENT */}
+        <main className="flex-1 overflow-y-auto min-w-0">
+          {(title || headerRight) && (
+            <div className="bg-gradient-to-br from-[#3d4e3f] to-[#607562] px-6 py-5 relative overflow-hidden flex-shrink-0">
+              <div className="absolute top-0 right-0 w-40 h-40 rounded-full pointer-events-none" style={{ background: "rgba(255,255,255,0.05)", transform: "translate(30%,-30%)" }} />
+              <div className="absolute bottom-0 right-20 w-28 h-28 rounded-full pointer-events-none" style={{ background: "rgba(255,255,255,0.04)", transform: "translateY(50%)" }} />
+              <div className="relative z-10 flex items-start justify-between gap-4">
+                <div>
+                  {title && <h1 className="text-lg font-medium text-white">{title}</h1>}
+                  {subtitle && <p className="text-[12px] text-white/60 mt-0.5">{subtitle}</p>}
+                </div>
+                {headerRight && <div className="flex-shrink-0">{headerRight}</div>}
+              </div>
+            </div>
+          )}
+          <div className="p-4 md:p-6">{children}</div>
+        </main>
+      </div>
+
+      {/* RIGHT PANEL */}
+      {panelOpen && (
+        <div className="fixed inset-0 z-50" onClick={() => setPanelOpen(false)}>
+          <div className="absolute inset-0 bg-black/20" />
+          <div className="absolute top-2 right-2 bottom-2 w-[300px] bg-white border border-[rgba(96,117,98,0.2)] rounded-xl shadow-xl flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-1 px-2 pt-2 border-b border-[rgba(96,117,98,0.12)]">
+              <button className="w-9 h-9 rounded-lg flex items-center justify-center bg-[rgba(96,117,98,0.1)] text-[#607562]"><Icon name="bell" className="w-4 h-4" /></button>
+              <button className="w-9 h-9 rounded-lg flex items-center justify-center hover:bg-[#f0f4f0] text-[#93A295]"><Icon name="star" className="w-4 h-4" /></button>
+              <button className="w-9 h-9 rounded-lg flex items-center justify-center hover:bg-[#f0f4f0] text-[#93A295]"><Icon name="wallet" className="w-4 h-4" /></button>
+              <div className="flex-1" />
+              <button onClick={() => setPanelOpen(false)} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[#f0f4f0] text-[#93A295]">
+                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <div className="p-4 text-center bg-[#F7FAFC] border-b border-[rgba(96,117,98,0.1)]">
+              <div className="w-12 h-12 rounded-full flex items-center justify-center text-base font-medium text-white mx-auto mb-2 border-2 border-[rgba(96,117,98,0.25)] relative" style={{ background: "linear-gradient(135deg,#3d4e3f,#607562)" }}>
+                {initials}
+                <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-green-400 border-2 border-white" />
+              </div>
+              <p className="text-sm font-medium text-[#333333]">{user?.name ?? "Usuario"}</p>
+              <p className="text-[11px] text-green-500 mt-0.5">En línea</p>
+              <div className="flex items-center justify-center gap-2 mt-2">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-[rgba(96,117,98,0.1)] text-[#3d4e3f] border border-[rgba(96,117,98,0.25)]">
+                  {user?.role === "admin" ? "Admin" : user?.role === "professional" ? "Profesional" : "Usuario"}
+                </span>
+              </div>
+              <div className="flex gap-2 mt-3">
+                <button className="flex-1 py-1.5 rounded-lg text-[11px] font-medium bg-white border border-[rgba(96,117,98,0.25)] text-[#3d4e3f] hover:bg-[#f0f4f0] transition-colors">Mi perfil</button>
+                <button className="w-8 h-8 rounded-lg flex items-center justify-center bg-white border border-[rgba(96,117,98,0.25)] text-[#607562] hover:bg-[#f0f4f0] transition-colors"><Icon name="settings" className="w-3.5 h-3.5" /></button>
+                <button onClick={logout} className="w-8 h-8 rounded-lg flex items-center justify-center bg-white border border-[rgba(96,117,98,0.25)] text-[#607562] hover:bg-[#fff0ee] hover:text-red-600 transition-colors"><Icon name="logout" className="w-3.5 h-3.5" /></button>
+              </div>
+            </div>
+            <div className="flex justify-end px-3 py-2 border-b border-[rgba(96,117,98,0.08)]">
+              {count > 0 && <button onClick={() => markAllRead.mutate()} className="text-[11px] text-[#607562] hover:underline">Marcar todas como leídas</button>}
+            </div>
+            <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(96,117,98,0.2) transparent" }}>
+              {!notifications || notifications.length === 0 ? (
+                <div className="py-10 text-center text-[12px] text-[#93A295]">No hay notificaciones</div>
+              ) : (
+                notifications.map((n: any) => (
+                  <div key={n.id} onClick={() => { if (!n.isRead) markOneRead.mutate({ id: n.id }); if (n.link) window.location.href = n.link; }}
+                    className={`flex gap-2.5 px-3.5 py-3 border-b border-[rgba(96,117,98,0.08)] cursor-pointer transition-colors ${!n.isRead ? "bg-[#f5f8f5] hover:bg-[#eef3ee]" : "hover:bg-[#F7FAFC]"}`}>
+                    <div className="w-7 h-7 rounded-full bg-[rgba(96,117,98,0.1)] flex items-center justify-center flex-shrink-0 mt-0.5 text-[#607562]">
+                      <Icon name="bell" className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-[12px] font-medium text-[#333333] leading-snug">{n.title}</p>
+                        <span className="text-[9px] text-[#93A295] flex-shrink-0">{new Date(n.createdAt).toLocaleDateString("es", { day: "numeric", month: "short" })}</span>
+                      </div>
+                      <p className="text-[11px] text-[#666666] mt-0.5 leading-snug line-clamp-2">{n.message}</p>
+                      {n.link && <p className="text-[10px] text-[#607562] mt-1">Ver detalles →</p>}
+                    </div>
+                    {!n.isRead && <div className="w-1.5 h-1.5 rounded-full bg-[#607562] flex-shrink-0 mt-1.5" />}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
