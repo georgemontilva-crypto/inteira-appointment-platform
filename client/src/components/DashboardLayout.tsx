@@ -7,10 +7,10 @@ import { trpc } from "../lib/trpc";
 const NAV_ITEMS = [
   { label: "Inicio",          icon: "home",     href: "/dashboard" },
   { label: "Mis citas",       icon: "calendar", href: "/citas" },
-  { label: "Explorar",        icon: "search",   href: "/especialistas" },
+  { label: "Explorar",        icon: "search",   href: "/especialidades" },
   { label: "Wallet",          icon: "wallet",   href: "/wallet" },
   { label: "Planes",          icon: "star",     href: "/planes" },
-  { label: "Notificaciones",  icon: "bell",     href: "/notificaciones", badge: true },
+  { label: "Notificaciones",  icon: "bell",     href: "#notifications", badge: true },
   { label: "Perfil",          icon: "user",     href: "/perfil" },
 ];
 
@@ -105,8 +105,15 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
         </div>
 
         <nav className="hidden md:flex items-center">
-          {["Descubrir", "Explorar", "Especialidades", "Planes"].map((l) => (
-            <span key={l} className="px-3 h-[58px] flex items-center text-[13px] font-medium text-[#93A295] hover:text-[#3d4e3f] cursor-pointer border-b-2 border-transparent hover:border-[#607562] transition-colors whitespace-nowrap">{l}</span>
+          {[
+            { label: "Descubrir",    href: "/especialidades" },
+            { label: "Explorar",     href: "/especialidades" },
+            { label: "Especialidades", href: "/especialidades" },
+            { label: "Planes",       href: "/planes" },
+          ].map((item) => (
+            <Link key={item.label} href={item.href}>
+              <a className="px-3 h-[58px] flex items-center text-[13px] font-medium text-[#93A295] hover:text-[#3d4e3f] cursor-pointer border-b-2 border-transparent hover:border-[#607562] transition-colors whitespace-nowrap">{item.label}</a>
+            </Link>
           ))}
         </nav>
 
@@ -140,27 +147,39 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
           <nav className="flex-1 overflow-hidden p-2.5">
             <div className="grid grid-cols-2 gap-1.5" style={{ gridAutoRows: "minmax(68px, auto)" }}>
               {navItems.map((item) => {
-                const isActive = location === item.href || location.startsWith(item.href + "/");
+                const isNotifications = item.href === "#notifications";
+                const isActive = !isNotifications && (location === item.href || location.startsWith(item.href + "/"));
                 const isAdmin = item.icon === "shield" && user?.role === "admin";
+                const cellClass = `flex flex-col items-start justify-end p-2.5 rounded-[9px] border min-h-[68px] transition-all cursor-pointer relative ${
+                  isActive
+                    ? "bg-[rgba(96,117,98,0.12)] border-[rgba(96,117,98,0.35)]"
+                    : isAdmin
+                    ? "bg-[#fff8f7] border-[rgba(180,60,60,0.2)]"
+                    : "bg-[#F7FAFC] border-[rgba(96,117,98,0.15)] hover:bg-[#f0f4f0] hover:border-[rgba(96,117,98,0.3)]"
+                }`;
+                const inner = (
+                  <>
+                    {(item as any).badge && count > 0 && (
+                      <span className="absolute top-1.5 right-1.5 min-w-[14px] h-[14px] bg-red-600 text-white text-[8px] font-bold rounded-full flex items-center justify-center px-0.5">{count > 9 ? "9+" : count}</span>
+                    )}
+                    <span className={`w-[18px] h-[18px] mb-1.5 ${isActive ? "text-[#3d4e3f]" : isAdmin ? "text-[#B43C3C]" : "text-[#93A295]"}`}>
+                      {ICONS[item.icon]}
+                    </span>
+                    <span className={`text-[11px] font-medium leading-tight ${isActive ? "text-[#3d4e3f]" : isAdmin ? "text-[#B43C3C]" : "text-[#607562]"}`}>
+                      {item.label}
+                    </span>
+                  </>
+                );
+                if (isNotifications) {
+                  return (
+                    <button key="notifications" className={cellClass} onClick={() => openPanel("notifications")}>
+                      {inner}
+                    </button>
+                  );
+                }
                 return (
                   <Link key={item.href} href={item.href}>
-                    <a className={`flex flex-col items-start justify-end p-2.5 rounded-[9px] border min-h-[68px] transition-all cursor-pointer relative ${
-                      isActive
-                        ? "bg-[rgba(96,117,98,0.12)] border-[rgba(96,117,98,0.35)]"
-                        : isAdmin
-                        ? "bg-[#fff8f7] border-[rgba(180,60,60,0.2)]"
-                        : "bg-[#F7FAFC] border-[rgba(96,117,98,0.15)] hover:bg-[#f0f4f0] hover:border-[rgba(96,117,98,0.3)]"
-                    }`}>
-                      {(item as any).badge && count > 0 && (
-                        <span className="absolute top-1.5 right-1.5 min-w-[14px] h-[14px] bg-red-600 text-white text-[8px] font-bold rounded-full flex items-center justify-center px-0.5">{count > 9 ? "9+" : count}</span>
-                      )}
-                      <span className={`w-[18px] h-[18px] mb-1.5 ${isActive ? "text-[#3d4e3f]" : isAdmin ? "text-[#B43C3C]" : "text-[#93A295]"}`}>
-                        {ICONS[item.icon]}
-                      </span>
-                      <span className={`text-[11px] font-medium leading-tight ${isActive ? "text-[#3d4e3f]" : isAdmin ? "text-[#B43C3C]" : "text-[#607562]"}`}>
-                        {item.label}
-                      </span>
-                    </a>
+                    <a className={cellClass}>{inner}</a>
                   </Link>
                 );
               })}
@@ -194,7 +213,7 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
               </div>
             </div>
           )}
-          <div className="p-5 md:p-8">{children}</div>
+          <div>{children}</div>
         </main>
       </div>
 
@@ -389,13 +408,14 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
                       <span className="text-[12px] font-medium text-[#333333]">Mi suscripción</span>
                     </a>
                   </Link>
-                  <Link href="/notificaciones">
-                    <a className="flex items-center gap-3 px-3 py-2.5 rounded-[9px] hover:bg-[#f0f4f0] transition-colors cursor-pointer" onClick={() => setPanelOpen(false)}>
-                      <Icon name="bell" className="w-4 h-4 text-[#607562]" />
-                      <span className="text-[12px] font-medium text-[#333333]">Notificaciones</span>
-                      {count > 0 && <span className="ml-auto min-w-[18px] h-[18px] bg-red-600 text-white text-[9px] font-bold rounded-full flex items-center justify-center px-1">{count}</span>}
-                    </a>
-                  </Link>
+                  <button
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[9px] hover:bg-[#f0f4f0] transition-colors cursor-pointer text-left"
+                    onClick={() => { setActiveTab("notifications"); }}
+                  >
+                    <Icon name="bell" className="w-4 h-4 text-[#607562]" />
+                    <span className="text-[12px] font-medium text-[#333333]">Notificaciones</span>
+                    {count > 0 && <span className="ml-auto min-w-[18px] h-[18px] bg-red-600 text-white text-[9px] font-bold rounded-full flex items-center justify-center px-1">{count}</span>}
+                  </button>
                   {user?.role === "admin" && (
                     <Link href="/admin">
                       <a className="flex items-center gap-3 px-3 py-2.5 rounded-[9px] hover:bg-[#fff0ee] transition-colors cursor-pointer" onClick={() => setPanelOpen(false)}>
