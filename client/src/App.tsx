@@ -21,6 +21,7 @@ import Subscription from "./pages/Subscription";
 import MobileNav from "./components/MobileNav";
 import Login from "./pages/Login";
 import SpecialtiesPage from "./pages/SpecialtiesPage";
+import AppointmentsPage from "./pages/AppointmentsPage";
 
 function Router() {
   return (
@@ -50,6 +51,9 @@ function Router() {
       {/* Legal */}
       <Route path="/terminos" component={TermsOfService} />
       <Route path="/privacidad" component={PrivacyPolicy} />
+
+      {/* Appointments */}
+      <Route path="/citas" component={AppointmentsPage} />
 
       {/* Protected dashboards */}
       <Route path="/dashboard" component={UserDashboard} />
