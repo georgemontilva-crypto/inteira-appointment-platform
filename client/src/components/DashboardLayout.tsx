@@ -134,11 +134,11 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
         </div>
       </header>
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex overflow-hidden" style={{ height: "calc(100vh - 52px)" }}>
         {/* SIDEBAR */}
-        <aside className="w-[210px] flex-shrink-0 bg-white border-r border-[rgba(96,117,98,0.15)] flex-col hidden md:flex overflow-hidden">
-          <nav className="flex-1 p-2.5">
-            <div className="grid grid-cols-2 gap-1.5">
+        <aside className="w-[210px] flex-shrink-0 bg-white border-r border-[rgba(96,117,98,0.15)] flex-col hidden md:flex overflow-hidden sticky top-[52px]" style={{ height: "calc(100vh - 52px)" }}>
+          <nav className="flex-1 overflow-hidden p-2.5">
+            <div className="grid grid-cols-2 gap-1.5" style={{ gridAutoRows: "minmax(60px, auto)" }}>
               {navItems.map((item) => {
                 const isActive = location === item.href || location.startsWith(item.href + "/");
                 const isAdmin = item.icon === "shield" && user?.role === "admin";
@@ -168,7 +168,7 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
           </nav>
 
           {/* Footer fixed at bottom */}
-          <div className="p-2 border-t border-[rgba(96,117,98,0.1)]">
+          <div className="mt-auto p-2 border-t border-[rgba(96,117,98,0.1)]">
             <div className="flex items-center gap-2 px-2 py-1.5 rounded-[9px] bg-[#F7FAFC] border border-[rgba(96,117,98,0.15)] cursor-pointer" onClick={() => openPanel("profile")}>
               <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-medium text-white flex-shrink-0" style={{ background: "linear-gradient(135deg,#3d4e3f,#607562)" }}>{initials}</div>
               <div className="min-w-0">
