@@ -71,7 +71,10 @@ export const appRouter = router({
 
   // Auth routes
   auth: router({
-    me: publicProcedure.query((opts) => opts.ctx.user),
+    me: publicProcedure.query((opts) => {
+      console.error("[DEBUG] auth.me user role:", opts.ctx.user?.role, "id:", opts.ctx.user?.id);
+      return opts.ctx.user;
+    }),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
