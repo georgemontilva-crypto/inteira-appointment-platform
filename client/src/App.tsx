@@ -1,7 +1,7 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
-import { Route, Switch } from "wouter";
+import { Route, Switch, useLocation } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
@@ -21,6 +21,17 @@ import UserProfile from "./pages/UserProfile";
 import Subscription from "./pages/Subscription";
 import MobileNav from "./components/MobileNav";
 import Login from "./pages/Login";
+import { useAuth } from "./_core/hooks/useAuth";
+
+function DashboardRouter() {
+  const { user } = useAuth();
+  const [, navigate] = useLocation();
+  if (user?.role === "professional") {
+    navigate("/panel-profesional");
+    return null;
+  }
+  return <UserDashboard />;
+}
 
 function Router() {
   return (
@@ -52,7 +63,7 @@ function Router() {
       <Route path="/privacidad" component={PrivacyPolicy} />
 
       {/* Protected dashboards */}
-      <Route path="/dashboard" component={UserDashboard} />
+      <Route path="/dashboard" component={DashboardRouter} />
       <Route path="/panel-profesional" component={ProfessionalDashboard} />
       <Route path="/admin" component={AdminDashboard} />
 
