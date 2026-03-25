@@ -679,7 +679,7 @@ export default function AuthenticatedHome() {
                       </p>
                     )}
                     {/* CTA */}
-                    <Link href={`/especialistas/${pro.id}`}>
+                    <Link href={`/profesional/${pro.id}`}>
                       <Button
                         size="sm"
                         className="w-full gradient-brand text-white border-0 font-semibold text-xs h-9 active:scale-[0.98] transition-transform"
