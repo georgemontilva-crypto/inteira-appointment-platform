@@ -15,6 +15,7 @@ import {
   Plus,
   X,
   ThumbsUp,
+  Sparkles,
   Brain,
   Scale,
   TrendingUp,
@@ -116,7 +117,7 @@ export default function UserDashboard() {
     undefined,
     { enabled: isAuthenticated }
   );
-  const { data: subscription, isLoading: loadingSubscription } = trpc.user.getSubscription.useQuery(
+  const { data: subscription } = trpc.user.getSubscription.useQuery(
     undefined,
     { enabled: isAuthenticated }
   );
