@@ -18,7 +18,7 @@ import Stripe from "stripe";
 import express from "express";
 import type { Express, Request, Response } from "express";
 import * as db from "./db";
-import { CREDIT_COSTS, type CreditSource } from "./credits";
+import { CREDIT_COSTS, addCreditBatch, type CreditSource } from "./credits";
 import { processPayment } from "./paymentProcessor";
 import { sdk } from "./_core/sdk";
 
@@ -179,10 +179,10 @@ export function registerStripeRoutes(app: Express) {
       if (!dbConn) return res.status(500).json({ error: "DB no disponible" });
 
       // Buscar el usuario por email
-      const [rows] = await dbConn.execute(
+      const [rows] = await (dbConn as any).execute(
         `SELECT id FROM \`users\` WHERE \`email\` = ? LIMIT 1`,
         [email]
-      ) as any;
+      );
       const userId: number | undefined = Array.isArray(rows) ? rows[0]?.id : rows?.id;
 
       if (!userId) {

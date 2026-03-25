@@ -234,7 +234,7 @@ export default function AppointmentsPage() {
                         <Badge className={`${statusColors[apt.status]} border-0 text-[10px]`}>
                           {statusLabels[apt.status]}
                         </Badge>
-                        {apt.status === "completed" && (
+                        {apt.status === "completed" && !(apt as any).hasReview && (
                           <Button
                             size="sm"
                             variant="outline"
@@ -244,6 +244,12 @@ export default function AppointmentsPage() {
                             <Star className="w-3 h-3 mr-1" />
                             Calificar
                           </Button>
+                        )}
+                        {apt.status === "completed" && (apt as any).hasReview && (
+                          <Badge className="border-0 text-[10px] bg-yellow-50 text-yellow-600">
+                            <Star className="w-3 h-3 mr-1 fill-yellow-400 text-yellow-400" />
+                            Calificada
+                          </Badge>
                         )}
                       </div>
                     </div>

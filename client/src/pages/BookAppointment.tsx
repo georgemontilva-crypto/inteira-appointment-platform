@@ -33,6 +33,7 @@ export default function BookAppointment() {
   const [notes, setNotes] = useState("");
   const [policyAccepted, setPolicyAccepted] = useState(false);
   const [step, setStep] = useState<"date" | "time" | "confirm" | "done">("date");
+  const [confirmedVideoLink, setConfirmedVideoLink] = useState<string | null>(null);
 
   // Wallet query for credit balance indicator
   const { data: wallet } = trpc.user.getWallet.useQuery(undefined, { enabled: isAuthenticated });
@@ -53,7 +54,8 @@ export default function BookAppointment() {
   );
 
   const bookMutation = trpc.appointment.scheduleAppointment.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      setConfirmedVideoLink((data as any)?.videoCallLink ?? null);
       setStep("done");
       toast.success("¡Cita agendada exitosamente!");
     },
@@ -150,6 +152,14 @@ export default function BookAppointment() {
                   <span>{videoProvider === "zoom" ? "Zoom" : "Google Meet"}</span>
                 </div>
               </div>
+            )}
+            {confirmedVideoLink && (
+              <a href={confirmedVideoLink} target="_blank" rel="noopener noreferrer" className="block">
+                <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white border-0">
+                  <Video className="w-4 h-4 mr-2" />
+                  Unirse a la videollamada
+                </Button>
+              </a>
             )}
             <div className="flex gap-3">
               <Link href="/dashboard" className="flex-1">
@@ -340,8 +350,8 @@ export default function BookAppointment() {
 
                   <Button
                     onClick={handleConfirm}
-                    disabled={bookMutation.isPending || !policyAccepted}
-                    className="w-full gradient-brand text-white border-0 shadow-md shadow-primary/30 h-12 text-base"
+                    disabled={bookMutation.isPending || !policyAccepted || !hasEnoughCredits}
+                    className="w-full gradient-brand text-white border-0 shadow-md shadow-primary/30 h-12 text-base disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {bookMutation.isPending ? (
                       <div className="flex items-center gap-2">

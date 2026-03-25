@@ -110,45 +110,7 @@ export const appointmentRouter = router({
         });
       }
 
-      // Check user subscription
-      const subscription = await db.getUserSubscription(ctx.user.id);
-      if (!subscription || subscription.status !== "active") {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "User does not have an active subscription",
-        });
-      }
-
-      // Check plan limits
-      const plan = await db.getSubscriptionPlanById(subscription.planId);
-      if (!plan) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Subscription plan not found",
-        });
-      }
-
-      if (
-        plan.maxAppointmentsPerMonth &&
-        (subscription.appointmentsUsedThisMonth ?? 0) >= plan.maxAppointmentsPerMonth
-      ) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Monthly appointment limit reached",
-        });
-      }
-
-      if (
-        plan.maxMinutesPerAppointment &&
-        input.durationMinutes > plan.maxMinutesPerAppointment
-      ) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: `Appointment duration exceeds plan limit of ${plan.maxMinutesPerAppointment} minutes`,
-        });
-      }
-
-      // ── Check credit balance ──────────────────────────────────────────────
+      // ── Check credit balance (modelo basado en créditos, no suscripción obligatoria) ──
       const creditBalance = await getUserCreditBalance(ctx.user.id);
       if (creditBalance < SESSION_CREDIT_COST) {
         throw new TRPCError({

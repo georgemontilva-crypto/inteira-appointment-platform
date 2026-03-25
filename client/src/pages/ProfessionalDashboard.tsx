@@ -88,6 +88,14 @@ export default function ProfessionalDashboard() {
     onError: () => toast.error("Error al actualizar disponibilidad"),
   });
 
+  const removeAvailabilityMutation = trpc.professional.removeAvailability.useMutation({
+    onSuccess: () => {
+      refetchAvailability();
+      toast.success("Horario eliminado");
+    },
+    onError: () => toast.error("Error al eliminar el horario"),
+  });
+
   const updateProfileMutation = trpc.professional.updateProfile.useMutation({
     onSuccess: () => {
       toast.success("Perfil actualizado correctamente");
@@ -216,6 +224,61 @@ export default function ProfessionalDashboard() {
     );
   }
 
+  // Mostrar pantalla de estado si no está aprobado
+  if (profile.status === "pending") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background px-4">
+        <Card className="max-w-md w-full">
+          <CardContent className="p-8 text-center space-y-4">
+            <div className="w-16 h-16 rounded-full bg-yellow-100 flex items-center justify-center mx-auto">
+              <Clock className="w-8 h-8 text-yellow-600" />
+            </div>
+            <h2 className="text-xl font-bold text-foreground">Solicitud en revisión</h2>
+            <p className="text-muted-foreground text-sm">
+              Tu solicitud para ser profesional en Inteira está siendo revisada por nuestro equipo.
+              Recibirás un correo electrónico cuando sea aprobada.
+            </p>
+            <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200 text-sm px-4 py-1">
+              Pendiente de aprobación
+            </Badge>
+            <a href="/dashboard">
+              <Button variant="outline" className="w-full mt-2">Ir al dashboard</Button>
+            </a>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (profile.status === "rejected") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background px-4">
+        <Card className="max-w-md w-full">
+          <CardContent className="p-8 text-center space-y-4">
+            <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto">
+              <XCircle className="w-8 h-8 text-red-600" />
+            </div>
+            <h2 className="text-xl font-bold text-foreground">Solicitud rechazada</h2>
+            <p className="text-muted-foreground text-sm">
+              Tu solicitud no fue aprobada en esta ocasión.
+              {(profile as any).rejectionReason && (
+                <span className="block mt-2 font-medium text-foreground">
+                  Motivo: {(profile as any).rejectionReason}
+                </span>
+              )}
+            </p>
+            <p className="text-muted-foreground text-xs">
+              Si tienes preguntas, contáctanos a soporte@inteira.mx
+            </p>
+            <a href="/dashboard">
+              <Button variant="outline" className="w-full">Ir al dashboard</Button>
+            </a>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   const upcomingAppointments = appointments?.filter((a) => a.status === "scheduled") ?? [];
   const pastAppointments = appointments?.filter((a) => a.status !== "scheduled") ?? [];
 
@@ -271,7 +334,7 @@ export default function ProfessionalDashboard() {
           </div>
           <div className="grid grid-cols-4 gap-0 border-t border-white/10 pt-4">
             <div className="text-center px-2">
-              <p className="text-lg font-medium text-emerald-300">${wallet?.balance?.toFixed(0) ?? "0"}</p>
+              <p className="text-lg font-medium text-emerald-300">${wallet?.wallet?.balance ? parseFloat(String(wallet.wallet.balance)).toFixed(0) : "0"}</p>
               <p className="text-[11px] text-white/50 mt-0.5">Balance</p>
             </div>
             <div className="text-center px-2 border-l border-white/10">
@@ -533,6 +596,15 @@ export default function ProfessionalDashboard() {
                             <p className="text-xs text-muted-foreground">{slot.startTime} - {slot.endTime}</p>
                           </div>
                         </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 h-auto"
+                          onClick={() => removeAvailabilityMutation.mutate({ id: slot.id })}
+                          disabled={removeAvailabilityMutation.isPending}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </div>
                     ))}
                   </div>

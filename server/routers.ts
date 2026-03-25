@@ -197,6 +197,16 @@ export const appRouter = router({
           }
         );
 
+        // Actualizar el rol del usuario a 'professional' para que pueda acceder a las rutas de profesional
+        const dbInst = await db.getDb();
+        if (dbInst) {
+          const { users: usersTable } = await import("../drizzle/schema");
+          const { eq: eqOp } = await import("drizzle-orm");
+          await dbInst.update(usersTable)
+            .set({ role: "professional" })
+            .where(eqOp(usersTable.id, ctx.user.id));
+        }
+
         // Notificar al admin principal por email + notificación in-app (fire and forget)
         setImmediate(async () => {
           try {
@@ -251,9 +261,23 @@ export const appRouter = router({
             message: "Professional not found",
           });
         }
+        // Solo mostrar profesionales aprobados en el perfil público
+        if (professional.status !== "approved") {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Professional not available",
+          });
+        }
 
         const user = await db.getUserById(professional.userId);
-        const reviews = await db.getProfessionalReviews(professional.id);
+        const rawReviews = await db.getProfessionalReviews(professional.id);
+        // Enrich reviews with reviewer name
+        const reviews = await Promise.all(
+          rawReviews.map(async (r) => {
+            const reviewer = await db.getUserById(r.userId);
+            return { ...r, userName: reviewer?.name ?? "Usuario" };
+          })
+        );
 
         return {
           ...professional,
@@ -297,7 +321,15 @@ export const appRouter = router({
         });
       }
 
-      return await db.getProfessionalAppointments(professional.id);
+      const apts = await db.getProfessionalAppointments(professional.id);
+      // Enrich with patient name
+      const enriched = await Promise.all(
+        apts.map(async (apt) => {
+          const patient = await db.getUserById(apt.userId);
+          return { ...apt, userName: patient?.name ?? null, userEmail: patient?.email ?? null };
+        })
+      );
+      return enriched;
     }),
 
     getAvailability: protectedProcedure.query(async ({ ctx }) => {
@@ -342,6 +374,27 @@ export const appRouter = router({
           endTime: input.endTime,
           isAvailable: input.isAvailable,
         });
+        return { success: true };
+      }),
+
+    removeAvailability: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "professional") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "User is not a professional" });
+        }
+        const professional = await db.getProfessionalByUserId(ctx.user.id);
+        if (!professional) throw new TRPCError({ code: "NOT_FOUND", message: "Professional profile not found" });
+        const dbInstance = await db.getDb();
+        if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const { professionalAvailability } = await import("../drizzle/schema");
+        const { and, eq } = await import("drizzle-orm");
+        await dbInstance.delete(professionalAvailability).where(
+          and(
+            eq(professionalAvailability.id, input.id),
+            eq(professionalAvailability.professionalId, professional.id)
+          )
+        );
         return { success: true };
       }),
 
@@ -562,6 +615,38 @@ export const appRouter = router({
         if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
         const { reviews } = await import("../drizzle/schema");
+        const { and, eq } = await import("drizzle-orm");
+
+        // Verificar si ya existe un review del mismo usuario para esta cita o profesional
+        if (input.appointmentId) {
+          const existing = await dbInstance.select().from(reviews).where(
+            and(
+              eq(reviews.userId, ctx.user.id),
+              eq(reviews.appointmentId, input.appointmentId)
+            )
+          ).limit(1);
+          if (existing.length > 0) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Ya has calificado esta cita anteriormente",
+            });
+          }
+        } else {
+          // Sin appointmentId: verificar que no haya review previo del mismo usuario al mismo profesional
+          const existing = await dbInstance.select().from(reviews).where(
+            and(
+              eq(reviews.userId, ctx.user.id),
+              eq(reviews.professionalId, input.professionalId)
+            )
+          ).limit(1);
+          if (existing.length > 0) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Ya has calificado a este profesional anteriormente",
+            });
+          }
+        }
+
         await dbInstance.insert(reviews).values({
           professionalId: input.professionalId,
           userId: ctx.user.id,
@@ -590,7 +675,15 @@ export const appRouter = router({
     getByProfessional: publicProcedure
       .input(z.object({ professionalId: z.number() }))
       .query(async ({ input }) => {
-        return await db.getProfessionalReviews(input.professionalId);
+        const rawReviews = await db.getProfessionalReviews(input.professionalId);
+        // Enrich with reviewer name
+        const enriched = await Promise.all(
+          rawReviews.map(async (r) => {
+            const reviewer = await db.getUserById(r.userId);
+            return { ...r, userName: reviewer?.name ?? "Usuario" };
+          })
+        );
+        return enriched;
       }),
   }),
 
@@ -713,7 +806,27 @@ export const appRouter = router({
           });
         }
 
+        const professional = await db.getProfessionalById(input.professionalId);
+        if (!professional) throw new TRPCError({ code: "NOT_FOUND", message: "Professional not found" });
+        const user = await db.getUserById(professional.userId);
         await db.rejectProfessional(input.professionalId, input.reason);
+        // Enviar email de rechazo al profesional
+        if (user?.email) {
+          sendProfessionalApproval({
+            professionalEmail: user.email,
+            professionalName: user.name ?? "Profesional",
+            specialty: "",
+            approved: false,
+          }).catch(() => {});
+        }
+        // Notificación in-app al profesional rechazado
+        createNotification({
+          userId: professional.userId,
+          type: "professional_rejected",
+          title: "Solicitud no aprobada",
+          message: input.reason ?? "Tu solicitud no fue aprobada en esta ocasión.",
+          link: "/panel-profesional",
+        }).catch(() => {});
         return { success: true };
       }),
   }),

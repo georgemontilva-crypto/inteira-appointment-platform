@@ -333,12 +333,13 @@ export default function ProfessionalProfile() {
                     {(reviews ?? []).map((review) => (
                       <div key={review.id} className="border-b border-border/50 pb-4 last:border-0 last:pb-0">
                         <div className="flex items-start gap-3">
-                          <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                            <User className="w-4 h-4 text-primary" />
+                          <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 text-primary font-semibold text-sm">
+                            {((review as any).userName ?? "U").charAt(0).toUpperCase()}
                           </div>
                           <div className="flex-1">
                             <div className="flex items-center justify-between gap-2 mb-1">
                               <div className="flex items-center gap-2">
+                                <p className="text-sm font-medium text-foreground">{(review as any).userName ?? "Usuario"}</p>
                                 <StarRating value={review.rating} readonly size="sm" />
                                 {review.isVerified && (
                                   <Badge className="bg-green-100 text-green-700 border-green-200 text-xs px-1.5 py-0">

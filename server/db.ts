@@ -527,7 +527,19 @@ export async function getUserAppointments(userId: number) {
     .leftJoin(users, eq(professionals.userId, users.id))
     .where(eq(appointments.userId, userId));
 
-  return rows;
+  // Enrich each appointment with hasReview flag
+  const enriched = await Promise.all(
+    rows.map(async (apt) => {
+      const existingReview = await db
+        .select({ id: reviews.id })
+        .from(reviews)
+        .where(and(eq(reviews.appointmentId, apt.id), eq(reviews.userId, userId)))
+        .limit(1);
+      return { ...apt, hasReview: existingReview.length > 0 };
+    })
+  );
+
+  return enriched;
 }
 
 export async function getProfessionalAppointments(professionalId: number) {
