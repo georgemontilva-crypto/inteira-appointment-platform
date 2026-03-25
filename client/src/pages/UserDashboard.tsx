@@ -2,9 +2,9 @@ import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Link } from "wouter";
+import { useLocation } from "wouter";
 import { toast } from "sonner";
 import {
   Calendar,
@@ -13,16 +13,8 @@ import {
   Clock,
   ChevronRight,
   Plus,
-  CreditCard,
-  CheckCircle2,
-  AlertCircle,
-  User,
-  LogOut,
-  Wallet,
   X,
   ThumbsUp,
-  Sparkles,
-  Shield,
   Brain,
   Scale,
   TrendingUp,
@@ -111,7 +103,8 @@ const statusLabels: Record<string, string> = {
 };
 
 export default function UserDashboard() {
-  const { user, isAuthenticated, loading, logout } = useAuth();
+  const { user, isAuthenticated, loading } = useAuth();
+  const [, navigate] = useLocation();
   const utils = trpc.useUtils();
 
   const [cancelingId, setCancelingId] = useState<number | null>(null);
@@ -127,7 +120,7 @@ export default function UserDashboard() {
     undefined,
     { enabled: isAuthenticated }
   );
-  const { data: wallet } = trpc.user.getWallet.useQuery(undefined, { enabled: isAuthenticated });
+  const { data: walletData } = trpc.user.getWallet.useQuery(undefined, { enabled: isAuthenticated });
   const { data: specialties } = trpc.specialty.getAll.useQuery(undefined, { staleTime: 300_000 });
 
   // Cancel appointment mutation
@@ -200,520 +193,242 @@ export default function UserDashboard() {
 
   return (
     <DashboardLayout>
-    <div className="bg-background">
+      <div className="p-4 md:p-6 space-y-6">
 
-      {/* ── Banner: créditos por vencer ── */}
-      {wallet && wallet.nextExpiry && (() => {
-        const daysLeft = Math.ceil((new Date(wallet.nextExpiry).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-        if (daysLeft > 10 || wallet.balance === 0) return null;
-        return (
-          <div className="container pt-4 md:pt-6">
-            <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3.5 text-amber-800">
-              <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold">
-                  {daysLeft <= 0
-                    ? "Tienes créditos que vencen hoy"
-                    : `Tienes créditos que vencen en ${daysLeft} día${daysLeft === 1 ? "" : "s"}`}
-                </p>
-                <p className="text-xs text-amber-700 mt-0.5">
-                  Úsalos antes del {new Date(wallet.nextExpiry).toLocaleDateString("es-MX", { day: "numeric", month: "long" })} para no perderlos.
-                </p>
-              </div>
-              <Link href="/dashboard">
-                <Button size="sm" className="bg-amber-500 hover:bg-amber-600 text-white border-0 text-xs h-8 px-3 flex-shrink-0">
+        {/* HERO */}
+        <div className="rounded-2xl gradient-hero text-white p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-white/70 text-sm mb-1">Bienvenido de vuelta</p>
+              <h1 className="text-2xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
+                {user?.name?.split(" ")[0] ?? "Hola"} 👋
+              </h1>
+            </div>
+            <Button
+              onClick={() => navigate("/especialidades/1")}
+              className="bg-white/20 hover:bg-white/30 text-white border-0 flex-shrink-0"
+              size="sm"
+            >
+              <Plus className="w-4 h-4 mr-1" />
+              Nueva cita
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
+            <div className="bg-white/10 rounded-xl p-3">
+              <p className="text-2xl font-bold">{upcomingAppointments.length}</p>
+              <p className="text-white/70 text-xs">Próximas</p>
+            </div>
+            <div className="bg-white/10 rounded-xl p-3">
+              <p className="text-2xl font-bold">{completedCount}</p>
+              <p className="text-white/70 text-xs">Completadas</p>
+            </div>
+            <div className="bg-white/10 rounded-xl p-3">
+              <p className="text-2xl font-bold">{(walletData?.balance ?? 0).toLocaleString("es-MX")}</p>
+              <p className="text-white/70 text-xs">Créditos</p>
+            </div>
+            <div className="bg-white/10 rounded-xl p-3">
+              <p className="text-sm font-bold truncate">{(subscription as any)?.planName ?? "Sin plan"}</p>
+              <p className="text-white/70 text-xs">Plan activo</p>
+            </div>
+          </div>
+        </div>
+
+        {/* PRÓXIMAS CITAS */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-base font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>Próximas citas</h2>
+            <Button variant="ghost" size="sm" className="text-primary text-xs" onClick={() => navigate("/dashboard")}>
+              Ver todas <ChevronRight className="w-3.5 h-3.5 ml-1" />
+            </Button>
+          </div>
+
+          {loadingAppointments ? (
+            <div className="space-y-2">
+              {[1, 2].map((i) => (
+                <Card key={i} className="border-border animate-pulse">
+                  <CardContent className="p-4 h-16" />
+                </Card>
+              ))}
+            </div>
+          ) : upcomingAppointments.length === 0 ? (
+            <Card className="border-border border-dashed">
+              <CardContent className="p-8 text-center">
+                <Calendar className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
+                <p className="font-medium text-muted-foreground">No tienes citas próximas</p>
+                <p className="text-sm text-muted-foreground mt-1">Agenda tu primera consulta con un especialista</p>
+                <Button
+                  className="mt-4 gradient-brand text-white border-0"
+                  size="sm"
+                  onClick={() => navigate("/especialidades/1")}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
                   Agendar ahora
                 </Button>
-              </Link>
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* ── Banner: próxima cita con videollamada ── */}
-      {(() => {
-        const nextWithVideo = upcomingAppointments.find((a) => a.videoCallLink && a.status === "scheduled");
-        if (!nextWithVideo) return null;
-        const msUntil = new Date(nextWithVideo.appointmentDate).getTime() - Date.now();
-        const isToday = new Date(nextWithVideo.appointmentDate).toDateString() === new Date().toDateString();
-        const isSoon = msUntil > 0 && msUntil < 60 * 60 * 1000;
-        if (!isToday && !isSoon) return null;
-        return (
-          <div className="container pt-4">
-            <div className="rounded-2xl overflow-hidden border border-primary/30 bg-gradient-to-r from-primary/10 to-emerald-50">
-              <div className="flex items-center gap-3 px-4 py-3.5">
-                <div className="w-10 h-10 rounded-xl gradient-brand flex items-center justify-center flex-shrink-0">
-                  <Video className="w-5 h-5 text-white" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-primary">
-                    {isSoon ? "¡Tu cita comienza pronto!" : "Tienes una cita hoy"}
-                  </p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {format(new Date(nextWithVideo.appointmentDate), "HH:mm", { locale: es })} · {nextWithVideo.durationMinutes} min · {(nextWithVideo as any).professionalName ?? `Especialista #${nextWithVideo.professionalId}`}
-                  </p>
-                </div>
-                <a href={nextWithVideo.videoCallLink!} target="_blank" rel="noopener noreferrer">
-                  <Button size="sm" className="gradient-brand text-white border-0 text-xs h-8 px-3 flex-shrink-0 font-semibold">
-                    <Video className="w-3 h-3 mr-1" />
-                    Unirse ahora
-                  </Button>
-                </a>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* ── Main content ── */}
-      <div className="container py-4 md:py-8 space-y-4 md:space-y-8">
-
-        {/* Desktop stats */}
-        <div className="hidden md:grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card className="border-border">
-            <CardContent className="p-5">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <Calendar className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-primary">{upcomingAppointments.length}</p>
-                  <p className="text-xs text-muted-foreground">Próximas citas</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-border">
-            <CardContent className="p-5">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-emerald-600">{completedCount}</p>
-                  <p className="text-xs text-muted-foreground">Completadas</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-border">
-            <CardContent className="p-5">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <Wallet className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-primary">{(wallet?.balance ?? 0).toLocaleString("es-MX")}</p>
-                  <p className="text-xs text-muted-foreground">Créditos disponibles</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-border">
-            <CardContent className="p-5">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
-                  <Star className="w-5 h-5 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-blue-600">{subscription?.appointmentsUsedThisMonth ?? 0}</p>
-                  <p className="text-xs text-muted-foreground">Citas este mes</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* ── Acciones rápidas ── */}
-        <div className="mb-6">
-          <h2 className="text-base font-bold text-foreground mb-3" style={{ fontFamily: "Poppins, sans-serif" }}>
-            Acciones rápidas
-          </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Link href="/book">
-              <div className="flex items-center gap-3 bg-white rounded-2xl p-4 border border-border/60 shadow-sm hover:shadow-md hover:border-primary/30 active:scale-[0.98] transition-all cursor-pointer group">
-                <div className="w-10 h-10 rounded-xl gradient-brand flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
-                  <Plus className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-foreground">Nueva cita</p>
-                  <p className="text-[10px] text-muted-foreground">Agendar ahora</p>
-                </div>
-              </div>
-            </Link>
-            <Link href="/citas">
-              <div className="flex items-center gap-3 bg-white rounded-2xl p-4 border border-border/60 shadow-sm hover:shadow-md hover:border-primary/30 active:scale-[0.98] transition-all cursor-pointer group">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
-                  <Calendar className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-foreground">Mis citas</p>
-                  <p className="text-[10px] text-muted-foreground">Ver historial</p>
-                </div>
-              </div>
-            </Link>
-            <Link href="/wallet">
-              <div className="flex items-center gap-3 bg-white rounded-2xl p-4 border border-border/60 shadow-sm hover:shadow-md hover:border-primary/30 active:scale-[0.98] transition-all cursor-pointer group">
-                <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
-                  <Wallet className="w-5 h-5 text-emerald-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-foreground">Mi Wallet</p>
-                  <p className="text-[10px] text-muted-foreground">{(wallet?.balance ?? 0).toLocaleString("es-MX")} créditos</p>
-                </div>
-              </div>
-            </Link>
-            <Link href="/planes">
-              <div className="flex items-center gap-3 bg-white rounded-2xl p-4 border border-border/60 shadow-sm hover:shadow-md hover:border-primary/30 active:scale-[0.98] transition-all cursor-pointer group">
-                <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
-                  <Sparkles className="w-5 h-5 text-amber-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-foreground">Planes</p>
-                  <p className="text-[10px] text-muted-foreground">Explorar</p>
-                </div>
-              </div>
-            </Link>
-            {user?.role === "admin" && (
-              <Link href="/admin">
-                <div className="bg-red-50 border border-red-200 rounded-xl p-4 hover:bg-red-100 transition-colors cursor-pointer col-span-2 md:col-span-1">
-                  <div className="flex flex-col items-center gap-2 text-center">
-                    <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
-                      <Shield className="w-5 h-5 text-red-600" />
-                    </div>
-                    <span className="text-sm font-medium text-red-700">Panel Admin</span>
-                  </div>
-                </div>
-              </Link>
-            )}
-          </div>
-        </div>
-
-        {/* ── Explorar especialidades ── */}
-        <div className="mb-6">
-          <h2 className="text-base font-bold text-foreground mb-3" style={{ fontFamily: "Poppins, sans-serif" }}>
-            Explorar especialidades
-          </h2>
-          <div className="flex gap-3 overflow-x-auto pb-2 [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}>
-            {(specialties ?? [
-              { id: 1, name: "Psicología", description: null },
-              { id: 2, name: "Emprendimiento", description: null },
-              { id: 3, name: "Legal", description: null },
-              { id: 4, name: "Finanzas", description: null },
-            ]).map((s) => (
-              <Link key={s.id} href={`/especialidades/${s.id}`} className="flex-shrink-0">
-                <Card className="group cursor-pointer border-border w-[260px] active:scale-[0.99] md:hover:border-primary/40 md:hover:shadow-md transition-all duration-200">
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-2">
+              {upcomingAppointments.slice(0, 3).map((apt) => (
+                <Card key={apt.id} className="border-border hover:border-primary/30 hover:shadow-md transition-all">
                   <CardContent className="p-4">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-xl ${specialtyBg[s.name] ?? "bg-[#607562]"} flex items-center justify-center flex-shrink-0 shadow-sm group-hover:scale-105 transition-transform duration-200`}>
-                        {specialtyIcon[s.name] ?? <Compass className="w-5 h-5 text-white" />}
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl gradient-brand flex items-center justify-center text-white font-bold flex-shrink-0">
+                          {((apt as any).professionalName ?? "P").charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="font-semibold text-sm">{(apt as any).professionalName ?? `Especialista #${apt.professionalId}`}</p>
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <Clock className="w-3 h-3 text-muted-foreground" />
+                            <span className="text-xs text-muted-foreground">
+                              {format(new Date(apt.appointmentDate), "d MMM 'a las' HH:mm", { locale: es })}
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-sm font-bold text-foreground">{s.name}</h3>
-                        <p className="text-xs text-muted-foreground leading-relaxed line-clamp-1">
-                          {(s as any).description ?? "Consultas con profesionales certificados."}
-                        </p>
+                      <div className="flex items-center gap-2">
+                        {apt.videoCallLink && (
+                          <a href={apt.videoCallLink} target="_blank" rel="noopener noreferrer">
+                            <Button size="sm" className="gradient-brand text-white border-0 h-7 text-xs px-3">
+                              <Video className="w-3 h-3 mr-1" />
+                              Unirse
+                            </Button>
+                          </a>
+                        )}
+                        <Badge className={statusColors[apt.status] + " border-0 text-xs"}>
+                          {statusLabels[apt.status]}
+                        </Badge>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs px-2 border-red-200 text-red-500 hover:bg-red-50"
+                          disabled={cancelingId === apt.id}
+                          onClick={() => handleCancel(apt.id)}
+                        >
+                          {cancelingId === apt.id ? (
+                            <span className="animate-spin w-3 h-3 border-2 border-red-400 border-t-transparent rounded-full" />
+                          ) : (
+                            <X className="w-3 h-3" />
+                          )}
+                        </Button>
                       </div>
-                      <ChevronRight className="w-4 h-4 text-muted-foreground/50 flex-shrink-0" />
                     </div>
                   </CardContent>
                 </Card>
-              </Link>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* HISTORIAL (si hay citas pasadas) */}
+        {pastAppointments.length > 0 && (
+          <div>
+            <h2 className="text-base font-bold mb-3" style={{ fontFamily: "Poppins, sans-serif" }}>Historial</h2>
+            <div className="space-y-2">
+              {pastAppointments.slice(0, 3).map((apt) => (
+                <Card key={apt.id} className="border-border opacity-90">
+                  <CardContent className="p-3.5">
+                    {ratingId === apt.id ? (
+                      <div className="space-y-3">
+                        <p className="text-sm font-semibold">Califica tu sesión</p>
+                        <div className="flex gap-1">
+                          {[1, 2, 3, 4, 5].map((s) => (
+                            <button key={s} onClick={() => setRating(s)} className="focus:outline-none">
+                              <Star className={`w-6 h-6 transition-colors ${s <= rating ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground"}`} />
+                            </button>
+                          ))}
+                        </div>
+                        <textarea
+                          value={ratingComment}
+                          onChange={(e) => setRatingComment(e.target.value)}
+                          placeholder="Comentario opcional..."
+                          rows={2}
+                          className="w-full text-sm border border-border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 bg-background"
+                        />
+                        <div className="flex gap-2">
+                          <Button size="sm" className="gradient-brand text-white border-0 text-xs" disabled={reviewMutation.isPending} onClick={() => handleSubmitReview(apt)}>
+                            <ThumbsUp className="w-3 h-3 mr-1" />
+                            Enviar
+                          </Button>
+                          <Button size="sm" variant="ghost" className="text-xs" onClick={() => setRatingId(null)}>Cancelar</Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-xl bg-muted flex items-center justify-center text-muted-foreground font-bold text-sm flex-shrink-0">
+                            {((apt as any).professionalName ?? "P").charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="font-medium text-sm">{(apt as any).professionalName ?? `Especialista #${apt.professionalId}`}</p>
+                            <p className="text-xs text-muted-foreground">{format(new Date(apt.appointmentDate), "d MMM yyyy", { locale: es })}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Badge className={statusColors[apt.status] + " border-0 text-xs"}>{statusLabels[apt.status]}</Badge>
+                          {apt.status === "completed" && (
+                            <Button size="sm" variant="outline" className="h-6 text-[10px] px-2 border-yellow-200 text-yellow-600 hover:bg-yellow-50" onClick={() => setRatingId(apt.id)}>
+                              <Star className="w-3 h-3 mr-1" />
+                              Calificar
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ESPECIALIDADES */}
+        <div>
+          <h2 className="text-base font-bold mb-3" style={{ fontFamily: "Poppins, sans-serif" }}>Explorar especialidades</h2>
+          <div
+            className="flex gap-3 overflow-x-auto pb-2 [&::-webkit-scrollbar]:hidden"
+            style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}
+          >
+            {(specialties ?? [
+              { id: 1, name: "Psicología" },
+              { id: 2, name: "Emprendimiento" },
+              { id: 3, name: "Finanzas" },
+              { id: 4, name: "Legal" },
+            ]).map((s) => (
+              <button
+                key={s.id}
+                onClick={() => navigate(`/especialidades/${s.id}`)}
+                className="flex-shrink-0 flex items-center gap-3 bg-white rounded-2xl p-4 border border-border/60 shadow-sm hover:shadow-md hover:border-primary/30 active:scale-[0.98] transition-all w-[200px] text-left"
+              >
+                <div className={`w-10 h-10 rounded-xl ${specialtyBg[s.name] ?? "bg-[#607562]"} flex items-center justify-center flex-shrink-0`}>
+                  {specialtyIcon[s.name] ?? <Compass className="w-5 h-5 text-white" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-foreground truncate">{s.name}</p>
+                  <p className="text-xs text-muted-foreground">Ver profesionales</p>
+                </div>
+              </button>
             ))}
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-4 md:gap-6">
-          {/* Appointments column */}
-          <div className="lg:col-span-2 space-y-3 md:space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-base md:text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
-                Próximas citas
-              </h2>
-              <Button variant="ghost" size="sm" className="text-primary text-xs md:text-sm">
-                Ver todas <ChevronRight className="w-3.5 h-3.5 ml-1" />
-              </Button>
-            </div>
-
-            {loadingAppointments ? (
-              <div className="space-y-3">
-                {[1, 2].map((i) => (
-                  <Card key={i} className="border-border animate-pulse">
-                    <CardContent className="p-4 h-16" />
-                  </Card>
-                ))}
-              </div>
-            ) : upcomingAppointments.length === 0 ? (
-              <Card className="border-border border-dashed">
-                <CardContent className="p-6 md:p-8 text-center">
-                  <Calendar className="w-10 h-10 md:w-12 md:h-12 text-muted-foreground/50 mx-auto mb-3" />
-                  <p className="text-muted-foreground font-medium text-sm md:text-base">No tienes citas próximas</p>
-                  <p className="text-xs md:text-sm text-muted-foreground mt-1">Agenda tu primera consulta con un especialista</p>
-                  <Link href="/dashboard">
-                    <Button className="mt-4 gradient-brand text-white border-0" size="sm">
-                      <Plus className="w-4 h-4 mr-2" />
-                      Agendar cita
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-2 md:space-y-3">
-                {upcomingAppointments.slice(0, 5).map((apt) => (
-                  <Card key={apt.id} className="border-border active:scale-[0.99] md:hover:shadow-md transition-all">
-                    <CardContent className="p-4 md:p-5">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl gradient-brand flex items-center justify-center text-white font-bold flex-shrink-0">
-                            P
-                          </div>
-                          <div>
-                            <p className="font-semibold text-sm">{(apt as any).professionalName ?? `Especialista #${apt.professionalId}`}</p>
-                            <div className="flex items-center gap-1.5 mt-0.5">
-                              <Clock className="w-3 h-3 text-muted-foreground" />
-                              <span className="text-xs text-muted-foreground">
-                                {format(new Date(apt.appointmentDate), "d MMM 'a las' HH:mm", { locale: es })}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex flex-col items-end gap-1.5">
-                          <Badge className={statusColors[apt.status] + " border-0 text-[10px] md:text-xs"}>
-                            {statusLabels[apt.status]}
-                          </Badge>
-                          <div className="flex gap-1.5">
-                            {apt.videoCallLink && (
-                              <a href={apt.videoCallLink} target="_blank" rel="noopener noreferrer">
-                                <Button size="sm" className="gradient-brand text-white border-0 h-6 md:h-7 text-[10px] md:text-xs px-2 md:px-3">
-                                  <Video className="w-3 h-3 mr-1" />
-                                  Unirse
-                                </Button>
-                              </a>
-                            )}
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-6 md:h-7 text-[10px] md:text-xs px-2 border-red-200 text-red-500 hover:bg-red-50 hover:border-red-300"
-                              disabled={cancelingId === apt.id}
-                              onClick={() => handleCancel(apt.id)}
-                            >
-                              {cancelingId === apt.id ? (
-                                <span className="animate-spin w-3 h-3 border-2 border-red-400 border-t-transparent rounded-full" />
-                              ) : (
-                                <>
-                                  <X className="w-3 h-3 mr-1" />
-                                  Cancelar
-                                </>
-                              )}
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-
-            {/* Past appointments */}
-            {pastAppointments.length > 0 && (
-              <>
-                <h2 className="text-base md:text-xl font-bold pt-2 md:pt-4" style={{ fontFamily: "Poppins, sans-serif" }}>
-                  Historial
-                </h2>
-                <div className="space-y-2 md:space-y-3">
-                  {pastAppointments.slice(0, 5).map((apt) => (
-                    <Card key={apt.id} className="border-border opacity-90">
-                      <CardContent className="p-3.5 md:p-4">
-                        {/* Rating form inline */}
-                        {ratingId === apt.id ? (
-                          <div className="space-y-3">
-                            <p className="text-sm font-semibold">Califica tu sesión</p>
-                            <div className="flex gap-1">
-                              {[1, 2, 3, 4, 5].map((s) => (
-                                <button key={s} onClick={() => setRating(s)} className="focus:outline-none">
-                                  <Star
-                                    className={`w-6 h-6 transition-colors ${s <= rating ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground"}`}
-                                  />
-                                </button>
-                              ))}
-                            </div>
-                            <textarea
-                              value={ratingComment}
-                              onChange={(e) => setRatingComment(e.target.value)}
-                              placeholder="Comentario opcional..."
-                              rows={2}
-                              className="w-full text-sm border border-border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 bg-background"
-                            />
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                className="gradient-brand text-white border-0 text-xs"
-                                disabled={reviewMutation.isPending}
-                                onClick={() => handleSubmitReview(apt)}
-                              >
-                                <ThumbsUp className="w-3 h-3 mr-1" />
-                                Enviar
-                              </Button>
-                              <Button size="sm" variant="ghost" className="text-xs" onClick={() => setRatingId(null)}>
-                                Cancelar
-                              </Button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-3">
-                              <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-muted flex items-center justify-center text-muted-foreground font-bold text-sm flex-shrink-0">
-                                P
-                              </div>
-                              <div>
-                                <p className="font-medium text-sm">{(apt as any).professionalName ?? `Especialista #${apt.professionalId}`}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  {format(new Date(apt.appointmentDate), "d MMM yyyy", { locale: es })}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              <Badge className={statusColors[apt.status] + " border-0 text-[10px] md:text-xs"}>
-                                {statusLabels[apt.status]}
-                              </Badge>
-                              {apt.status === "completed" && (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-6 text-[10px] px-2 border-yellow-200 text-yellow-600 hover:bg-yellow-50"
-                                  onClick={() => setRatingId(apt.id)}
-                                >
-                                  <Star className="w-3 h-3 mr-1" />
-                                  Calificar
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </>
-            )}
+        {/* PROMO BANNER */}
+        <div className="rounded-2xl gradient-hero text-white p-6 flex items-center justify-between gap-4">
+          <div>
+            <p className="text-lg font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>Mejora tu experiencia</p>
+            <p className="text-white/70 text-sm mt-1">Accede a más citas y beneficios exclusivos con un plan premium.</p>
           </div>
-
-          {/* Sidebar */}
-          <div className="space-y-3 md:space-y-4">
-            {/* Subscription card */}
-            <Card className="border-border">
-              <CardHeader className="pb-2 md:pb-3">
-                <CardTitle className="text-sm md:text-base flex items-center gap-2">
-                  <CreditCard className="w-4 h-4 text-primary" />
-                  Mi suscripción
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 md:space-y-4">
-                {loadingSubscription ? (
-                  <div className="animate-pulse h-16 bg-muted rounded-lg" />
-                ) : subscription ? (
-                  <>
-                    <div className="p-4 rounded-xl gradient-brand text-white">
-                      <p className="text-white/70 text-xs mb-1">Plan activo</p>
-                      <p className="text-lg md:text-xl font-bold">
-                        {(subscription as any).planName ?? `Plan #${subscription.planId}`}
-                      </p>
-                      <p className="text-white/70 text-xs mt-1">
-                        Vence: {subscription.endDate
-                          ? format(new Date(subscription.endDate), "d MMM yyyy", { locale: es })
-                          : "Sin vencimiento"}
-                      </p>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground text-xs">Citas usadas este mes</span>
-                      <span className="font-medium text-xs">{subscription.appointmentsUsedThisMonth ?? 0}</span>
-                    </div>
-                    <Link href="/suscripcion">
-                      <Button variant="outline" size="sm" className="w-full border-primary/30 text-primary hover:bg-primary/5 text-xs active:scale-95 transition-transform">
-                        Gestionar plan
-                      </Button>
-                    </Link>
-                  </>
-                ) : (
-                  <>
-                    <div className="p-4 rounded-xl bg-muted text-center">
-                      <AlertCircle className="w-7 h-7 text-muted-foreground mx-auto mb-2" />
-                      <p className="text-sm font-medium">Sin plan activo</p>
-                      <p className="text-xs text-muted-foreground mt-1">Elige un plan para agendar citas</p>
-                    </div>
-                    <Link href="/planes">
-                      <Button className="w-full gradient-brand text-white border-0 text-sm active:scale-95 transition-transform" size="sm">
-                        Ver planes disponibles
-                      </Button>
-                    </Link>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Wallet widget */}
-            <Card className="border-border">
-              <CardHeader className="pb-2 md:pb-3">
-                <CardTitle className="text-sm md:text-base flex items-center gap-2">
-                  <Wallet className="w-4 h-4 text-primary" />
-                  Mi Wallet
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="p-3 rounded-xl bg-primary/5 border border-primary/15">
-                  <p className="text-xs text-muted-foreground">Saldo disponible</p>
-                  <p className="text-2xl font-bold text-primary" style={{ fontFamily: "Poppins, sans-serif" }}>
-                    {(wallet?.balance ?? 0).toLocaleString("es-MX")}
-                    <span className="text-sm font-normal text-muted-foreground ml-1">créditos</span>
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    ≈ ${(wallet?.balance ?? 0).toLocaleString("es-MX")} MXN
-                  </p>
-                  {wallet?.nextExpiry && (
-                    <p className="text-[10px] text-amber-600 mt-1 font-medium">
-                      ⚠ Créditos por vencer: {format(new Date(wallet.nextExpiry), "d MMM yyyy", { locale: es })}
-                    </p>
-                  )}
-                </div>
-                <Link href="/wallet">
-                  <Button variant="outline" size="sm" className="w-full border-primary/30 text-primary hover:bg-primary/5 text-xs active:scale-95 transition-transform">
-                    Ver historial de créditos
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-
-            {/* Quick actions — desktop only */}
-            <Card className="border-border hidden md:block">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Acciones rápidas</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Link href="/dashboard">
-                  <Button variant="ghost" className="w-full justify-start text-sm h-9 hover:bg-primary/5 hover:text-primary">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Agendar nueva cita
-                  </Button>
-                </Link>
-                <Link href="/wallet">
-                  <Button variant="ghost" className="w-full justify-start text-sm h-9 hover:bg-primary/5 hover:text-primary">
-                    <Wallet className="w-4 h-4 mr-2" />
-                    Ver mi wallet
-                  </Button>
-                </Link>
-                <Link href="/perfil">
-                  <Button variant="ghost" className="w-full justify-start text-sm h-9 hover:bg-primary/5 hover:text-primary">
-                    <User className="w-4 h-4 mr-2" />
-                    Editar perfil
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          </div>
+          <Button
+            onClick={() => navigate("/planes")}
+            className="bg-white text-primary hover:bg-white/90 border-0 flex-shrink-0"
+            size="sm"
+          >
+            Ver planes
+          </Button>
         </div>
+
       </div>
-    </div>
     </DashboardLayout>
   );
 }
