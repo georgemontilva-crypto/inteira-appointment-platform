@@ -5,9 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
+import DashboardLayout from "../components/DashboardLayout";
 import {
   Wallet,
-  ArrowLeft,
   Clock,
   TrendingDown,
   TrendingUp,
@@ -142,27 +142,12 @@ export default function WalletPage() {
   );
 
   return (
-    <div className="min-h-screen bg-background pb-24 md:pb-8">
-      {/* ── Header ── */}
-      <div className="gradient-hero text-white">
-        <div className="container py-7 md:py-10">
-          <Link href="/dashboard">
-            <Button variant="ghost" className="text-white/80 hover:text-white hover:bg-white/10 mb-3 -ml-2 active:scale-95 transition-transform">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              <span className="text-sm">Dashboard</span>
-            </Button>
-          </Link>
-          <div className="flex items-center gap-3 mb-1">
-            <Wallet className="w-6 h-6 text-white/80" />
-            <h1 className="text-2xl md:text-3xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
-              Mi Wallet
-            </h1>
-          </div>
-          <p className="text-white/70 text-sm">Créditos Inteira · 1 crédito = $1 MXN</p>
-        </div>
-      </div>
-
+    <DashboardLayout>
       <div className="container py-5 md:py-8 space-y-5 md:space-y-8">
+        <div>
+          <h1 className="text-2xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>Mi Wallet</h1>
+          <p className="text-sm text-muted-foreground mt-1">Créditos Inteira · 1 crédito = $1 MXN</p>
+        </div>
 
         {/* ── Balance card ── */}
         <div className="grid md:grid-cols-3 gap-4">
@@ -391,6 +376,6 @@ export default function WalletPage() {
           </div>
         )}
       </div>
-    </div>
+    </DashboardLayout>
   );
 }

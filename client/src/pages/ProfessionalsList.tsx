@@ -5,7 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Link, useRoute } from "wouter";
-import { Star, Clock, Award, ArrowLeft, Calendar, Search, SlidersHorizontal, X } from "lucide-react";
+import { Star, Clock, Award, Calendar, Search, SlidersHorizontal, X } from "lucide-react";
+import DashboardLayout from "../components/DashboardLayout";
 
 type SortOption = "rating" | "experience" | "price_asc" | "price_desc";
 
@@ -75,26 +76,16 @@ export default function ProfessionalsList() {
   const hasActiveFilters = onlyAvailable || sortBy !== "rating";
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="gradient-hero text-white py-12">
-        <div className="container">
-          <Link href="/dashboard">
-            <Button variant="ghost" className="text-white/80 hover:text-white hover:bg-white/10 mb-4 -ml-2">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Inicio
-            </Button>
-          </Link>
-          <h1 className="text-4xl font-bold mb-2" style={{ fontFamily: "Poppins, sans-serif" }}>
+    <DashboardLayout>
+      <div className="container py-8">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
             {specialty?.name ?? "Especialidad"}
           </h1>
-          <p className="text-white/80">
+          <p className="text-sm text-muted-foreground mt-1">
             {filtered.length} de {professionals?.length ?? 0} profesionales
           </p>
         </div>
-      </div>
-
-      <div className="container py-8">
         {/* Search & Filter bar */}
         <div className="mb-6 space-y-3">
           <div className="flex gap-2">
@@ -291,6 +282,6 @@ export default function ProfessionalsList() {
           </div>
         )}
       </div>
-    </div>
+    </DashboardLayout>
   );
 }

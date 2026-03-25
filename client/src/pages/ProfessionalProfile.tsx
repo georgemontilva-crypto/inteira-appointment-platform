@@ -6,8 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Link, useRoute } from "wouter";
+import DashboardLayout from "../components/DashboardLayout";
 import {
-  Star, Award, Clock, CheckCircle2, ArrowLeft, Calendar,
+  Star, Award, Clock, CheckCircle2, Calendar,
   Shield, GraduationCap, MessageSquare, User,
 } from "lucide-react";
 import { format } from "date-fns";
@@ -116,39 +117,30 @@ export default function ProfessionalProfile() {
   }));
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Hero header */}
-      <div className="bg-[#607562] text-white py-12">
-        <div className="container">
-          <Button
-            variant="ghost"
-            className="text-white/80 hover:text-white hover:bg-white/10 mb-6 -ml-2"
-            onClick={() => window.history.back()}
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Volver
-          </Button>
-
+    <DashboardLayout>
+      <div className="container py-8">
+        {/* Profile header card */}
+        <div className="rounded-2xl border border-border bg-card p-6 mb-8">
           <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
-            <div className="w-24 h-24 rounded-3xl bg-white/20 flex items-center justify-center text-4xl font-bold flex-shrink-0">
+            <div className="w-20 h-20 rounded-2xl gradient-brand flex items-center justify-center text-white text-3xl font-bold flex-shrink-0">
               {professional.user?.name?.charAt(0)?.toUpperCase() ?? "P"}
             </div>
             <div className="flex-1">
               <div className="flex flex-wrap items-center gap-3 mb-2">
-                <h1 className="text-3xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
+                <h1 className="text-2xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
                   {professional.user?.name ?? `Especialista #${professional.id}`}
                 </h1>
                 {professional.status === "approved" && (
-                  <Badge className="bg-white/20 text-white border-white/30 text-xs">
+                  <Badge className="bg-primary/10 text-primary border-primary/20 text-xs">
                     <CheckCircle2 className="w-3 h-3 mr-1" />
                     Verificado
                   </Badge>
                 )}
               </div>
-              <div className="flex flex-wrap items-center gap-4 text-white/80 text-sm">
+              <div className="flex flex-wrap items-center gap-4 text-muted-foreground text-sm">
                 <div className="flex items-center gap-1.5">
                   <StarRating value={Math.round(rating)} readonly size="sm" />
-                  <span className="font-semibold text-white">{rating > 0 ? rating.toFixed(1) : "Nuevo"}</span>
+                  <span className="font-semibold text-foreground">{rating > 0 ? rating.toFixed(1) : "Nuevo"}</span>
                   <span>({totalReviews} {totalReviews === 1 ? "reseña" : "reseñas"})</span>
                 </div>
                 {professional.yearsOfExperience && (
@@ -166,16 +158,14 @@ export default function ProfessionalProfile() {
               </div>
             </div>
             <Link href={`/agendar/${professional.id}`}>
-              <Button size="lg" className="bg-white text-[#607562] hover:bg-white/90 font-semibold shadow-lg">
-                <Calendar className="w-5 h-5 mr-2" />
+              <Button className="gradient-brand text-white border-0 shadow-md font-semibold">
+                <Calendar className="w-4 h-4 mr-2" />
                 Agendar cita
               </Button>
             </Link>
           </div>
         </div>
-      </div>
 
-      <div className="container py-10">
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Main content */}
           <div className="lg:col-span-2 space-y-6">
@@ -482,6 +472,6 @@ export default function ProfessionalProfile() {
           </div>
         </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 }

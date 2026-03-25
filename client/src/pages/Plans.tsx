@@ -1,8 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, ArrowLeft, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
+import { CheckCircle2, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import { Link, useLocation } from "wouter";
+import DashboardLayout from "../components/DashboardLayout";
 import { getLoginUrl } from "@/const";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { toast } from "sonner";
@@ -160,26 +161,12 @@ export default function Plans() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-24 md:pb-0">
-      {/* ── Header ── */}
-      <div className="gradient-hero text-white pt-safe">
-        <div className="container py-8 md:py-12">
-          <Link href="/">
-            <Button variant="ghost" className="text-white/80 hover:text-white hover:bg-white/10 mb-4 -ml-2 active:scale-95 transition-transform">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              <span className="text-sm">Volver</span>
-            </Button>
-          </Link>
-          <h1 className="text-2xl md:text-3xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
-            Planes y precios
-          </h1>
-          <p className="text-white/80 mt-1.5 text-sm md:text-base">
-            Sin contratos. Cancela cuando quieras.
-          </p>
-        </div>
-      </div>
-
+    <DashboardLayout>
       <div className="container py-6 md:py-12 space-y-8 md:space-y-12">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>Planes y precios</h1>
+          <p className="text-muted-foreground mt-1.5 text-sm md:text-base">Sin contratos. Cancela cuando quieras.</p>
+        </div>
 
         {/* ── Suscripciones ── */}
         <div>
@@ -308,6 +295,6 @@ export default function Plans() {
           </div>
         </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 }

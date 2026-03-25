@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
+import DashboardLayout from "../components/DashboardLayout";
 import { toast } from "sonner";
 import {
-  User, Phone, FileText, ArrowLeft, Save, Shield, Wallet,
+  User, Phone, FileText, Save, Shield, Wallet,
   Calendar, Star,
 } from "lucide-react";
 
@@ -88,31 +89,19 @@ export default function UserProfile() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="gradient-hero text-white py-10">
-        <div className="container">
-          <Link href="/dashboard">
-            <Button variant="ghost" className="text-white/80 hover:text-white hover:bg-white/10 mb-4 -ml-2">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Dashboard
-            </Button>
-          </Link>
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center text-white text-2xl font-bold">
-              {profile?.name?.charAt(0)?.toUpperCase() ?? "U"}
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
-                {profile?.name ?? "Mi perfil"}
-              </h1>
-              <p className="text-white/70 text-sm">{profile?.email}</p>
-            </div>
+    <DashboardLayout>
+      <div className="container py-8">
+        <div className="flex items-center gap-4 mb-8">
+          <div className="w-14 h-14 rounded-2xl gradient-brand flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
+            {profile?.name?.charAt(0)?.toUpperCase() ?? "U"}
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
+              {profile?.name ?? "Mi perfil"}
+            </h1>
+            <p className="text-sm text-muted-foreground">{profile?.email}</p>
           </div>
         </div>
-      </div>
-
-      <div className="container py-8">
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Edit form */}
           <div className="lg:col-span-2 space-y-6">
@@ -296,6 +285,6 @@ export default function UserProfile() {
           </div>
         </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 }

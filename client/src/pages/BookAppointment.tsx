@@ -6,10 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link, useRoute, useLocation } from "wouter";
+import DashboardLayout from "../components/DashboardLayout";
 import { Calendar } from "@/components/ui/calendar";
 import { toast } from "sonner";
 import {
-  ArrowLeft, Clock, Video, CheckCircle2, Calendar as CalendarIcon,
+  Clock, Video, CheckCircle2, Calendar as CalendarIcon,
   AlertCircle, Star, Wallet,
 } from "lucide-react";
 import { format, addMinutes, isBefore, startOfDay } from "date-fns";
@@ -169,30 +170,16 @@ export default function BookAppointment() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="gradient-hero text-white py-10">
-        <div className="container">
-          <Button
-            variant="ghost"
-            className="text-white/80 hover:text-white hover:bg-white/10 mb-4 -ml-2"
-            onClick={() => window.history.back()}
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Volver
-          </Button>
-          <h1 className="text-3xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
-            Agendar cita
-          </h1>
+    <DashboardLayout>
+      <div className="container py-8">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>Agendar cita</h1>
           {professional && (
-            <p className="text-white/80 mt-1">
+            <p className="text-sm text-muted-foreground mt-1">
               con {professional.user?.name ?? `Especialista #${professional.id}`}
             </p>
           )}
         </div>
-      </div>
-
-      <div className="container py-8">
         {/* Steps indicator */}
         <div className="flex items-center gap-2 mb-8">
           {["Fecha", "Hora", "Confirmar"].map((label, i) => {
@@ -453,6 +440,6 @@ export default function BookAppointment() {
           </div>
         </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 }
