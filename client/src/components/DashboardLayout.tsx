@@ -90,7 +90,7 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
   return (
     <div className="flex flex-col min-h-screen bg-[#F7FAFC]">
       {/* TOP BAR */}
-      <header className="h-[52px] bg-white border-b border-[rgba(96,117,98,0.15)] flex items-center gap-2 px-4 flex-shrink-0 sticky top-0 z-30">
+      <header className="h-[58px] bg-white border-b border-[rgba(96,117,98,0.15)] flex items-center gap-2 px-4 flex-shrink-0 sticky top-0 z-30">
         <div className="flex items-center gap-2 flex-shrink-0">
           <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg,#3d4e3f,#607562)" }}>
             <Icon name="layers" className="w-3.5 h-3.5 text-white" />
@@ -105,7 +105,7 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
 
         <nav className="hidden md:flex items-center">
           {["Descubrir", "Explorar", "Especialidades", "Planes"].map((l) => (
-            <span key={l} className="px-3 h-[52px] flex items-center text-[13px] font-medium text-[#93A295] hover:text-[#3d4e3f] cursor-pointer border-b-2 border-transparent hover:border-[#607562] transition-colors whitespace-nowrap">{l}</span>
+            <span key={l} className="px-3 h-[58px] flex items-center text-[13px] font-medium text-[#93A295] hover:text-[#3d4e3f] cursor-pointer border-b-2 border-transparent hover:border-[#607562] transition-colors whitespace-nowrap">{l}</span>
           ))}
         </nav>
 
@@ -133,17 +133,17 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
         </div>
       </header>
 
-      <div className="flex overflow-hidden" style={{ height: "calc(100vh - 52px)" }}>
+      <div className="flex overflow-hidden" style={{ height: "calc(100vh - 58px)" }}>
         {/* SIDEBAR */}
-        <aside className="w-[210px] flex-shrink-0 bg-white border-r border-[rgba(96,117,98,0.15)] flex-col hidden md:flex overflow-hidden sticky top-[52px]" style={{ height: "calc(100vh - 52px)" }}>
+        <aside className="w-[220px] flex-shrink-0 bg-white border-r border-[rgba(96,117,98,0.15)] flex-col hidden md:flex overflow-hidden sticky top-[58px]" style={{ height: "calc(100vh - 58px)" }}>
           <nav className="flex-1 overflow-hidden p-2.5">
-            <div className="grid grid-cols-2 gap-1.5" style={{ gridAutoRows: "minmax(60px, auto)" }}>
+            <div className="grid grid-cols-2 gap-1.5" style={{ gridAutoRows: "minmax(68px, auto)" }}>
               {navItems.map((item) => {
                 const isActive = location === item.href || location.startsWith(item.href + "/");
                 const isAdmin = item.icon === "shield" && user?.role === "admin";
                 return (
                   <Link key={item.href} href={item.href}>
-                    <a className={`flex flex-col items-start justify-end p-2.5 rounded-[9px] border min-h-[60px] transition-all cursor-pointer relative ${
+                    <a className={`flex flex-col items-start justify-end p-2.5 rounded-[9px] border min-h-[68px] transition-all cursor-pointer relative ${
                       isActive
                         ? "bg-[rgba(96,117,98,0.12)] border-[rgba(96,117,98,0.35)]"
                         : isAdmin
@@ -153,10 +153,10 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
                       {(item as any).badge && count > 0 && (
                         <span className="absolute top-1.5 right-1.5 min-w-[14px] h-[14px] bg-red-600 text-white text-[8px] font-bold rounded-full flex items-center justify-center px-0.5">{count > 9 ? "9+" : count}</span>
                       )}
-                      <span className={`w-4 h-4 mb-1.5 ${isActive ? "text-[#3d4e3f]" : isAdmin ? "text-[#B43C3C]" : "text-[#93A295]"}`}>
+                      <span className={`w-[18px] h-[18px] mb-1.5 ${isActive ? "text-[#3d4e3f]" : isAdmin ? "text-[#B43C3C]" : "text-[#93A295]"}`}>
                         {ICONS[item.icon]}
                       </span>
-                      <span className={`text-[10px] font-medium leading-tight ${isActive ? "text-[#3d4e3f]" : isAdmin ? "text-[#B43C3C]" : "text-[#607562]"}`}>
+                      <span className={`text-[11px] font-medium leading-tight ${isActive ? "text-[#3d4e3f]" : isAdmin ? "text-[#B43C3C]" : "text-[#607562]"}`}>
                         {item.label}
                       </span>
                     </a>
@@ -179,7 +179,7 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
         </aside>
 
         {/* MAIN CONTENT */}
-        <main className="flex-1 overflow-y-auto min-w-0">
+        <main className="flex-1 overflow-y-auto min-w-0 pb-16 md:pb-0">
           {(title || headerRight) && (
             <div className="bg-gradient-to-br from-[#3d4e3f] to-[#607562] px-6 py-5 relative overflow-hidden flex-shrink-0">
               <div className="absolute top-0 right-0 w-40 h-40 rounded-full pointer-events-none" style={{ background: "rgba(255,255,255,0.05)", transform: "translate(30%,-30%)" }} />
@@ -193,9 +193,30 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
               </div>
             </div>
           )}
-          <div className="p-4 md:p-6">{children}</div>
+          <div className="p-5 md:p-8">{children}</div>
         </main>
       </div>
+
+      {/* MOBILE BOTTOM NAV */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-[rgba(96,117,98,0.18)] flex items-center z-40">
+        {[
+          { label: "Inicio",   icon: "home",     href: "/dashboard" },
+          { label: "Citas",    icon: "calendar", href: "/citas" },
+          { label: "Explorar", icon: "search",   href: "/especialidades" },
+          { label: "Planes",   icon: "star",     href: "/planes" },
+          { label: "Perfil",   icon: "user",     href: "/perfil" },
+        ].map((item) => {
+          const isActive = location === item.href || location.startsWith(item.href + "/");
+          return (
+            <Link key={item.href} href={item.href}>
+              <a className={`flex-1 flex flex-col items-center justify-center gap-0.5 h-full transition-colors ${isActive ? "text-[#3d4e3f]" : "text-[#93A295]"}`}>
+                <span className="w-[22px] h-[22px]">{ICONS[item.icon]}</span>
+                <span className={`text-[9px] font-medium ${isActive ? "text-[#3d4e3f]" : "text-[#93A295]"}`}>{item.label}</span>
+              </a>
+            </Link>
+          );
+        })}
+      </nav>
 
       {/* RIGHT PANEL */}
       {panelOpen && (
