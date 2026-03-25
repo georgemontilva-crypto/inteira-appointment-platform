@@ -73,6 +73,12 @@ export default function ProfessionalDashboard() {
     undefined,
     { enabled: isAuthenticated }
   );
+  const reviews = myReviews;
+
+  const { data: wallet } = trpc.professional.getWallet.useQuery(
+    undefined,
+    { enabled: isAuthenticated }
+  );
 
   const addAvailabilityMutation = trpc.professional.setAvailability.useMutation({
     onSuccess: () => {
@@ -265,19 +271,19 @@ export default function ProfessionalDashboard() {
           </div>
           <div className="grid grid-cols-4 gap-0 border-t border-white/10 pt-4">
             <div className="text-center px-2">
-              <p className="text-lg font-medium text-emerald-300">{profile.hourlyRate ? `$${profile.hourlyRate}` : "—"}</p>
-              <p className="text-[11px] text-white/50 mt-0.5">Tarifa/hr</p>
+              <p className="text-lg font-medium text-emerald-300">${wallet?.balance?.toFixed(0) ?? "0"}</p>
+              <p className="text-[11px] text-white/50 mt-0.5">Balance</p>
             </div>
             <div className="text-center px-2 border-l border-white/10">
-              <p className="text-lg font-medium text-white">{appointments?.filter((a: any) => a.status === "completed").length ?? 0}</p>
+              <p className="text-lg font-medium text-white">{appointments?.filter((a:any) => a.status === "completed").length ?? 0}</p>
               <p className="text-[11px] text-white/50 mt-0.5">Completadas</p>
             </div>
             <div className="text-center px-2 border-l border-white/10">
-              <p className="text-lg font-medium text-emerald-300">{myReviews && myReviews.length > 0 ? (myReviews.reduce((s: number, r: any) => s + r.rating, 0) / myReviews.length).toFixed(1) : "—"}</p>
+              <p className="text-lg font-medium text-emerald-300">{reviews && reviews.length > 0 ? (reviews.reduce((s:number,r:any) => s + r.rating, 0) / reviews.length).toFixed(1) : "—"}</p>
               <p className="text-[11px] text-white/50 mt-0.5">Calificación</p>
             </div>
             <div className="text-center px-2 border-l border-white/10">
-              <p className="text-lg font-medium text-white">{appointments?.filter((a: any) => a.status === "scheduled").length ?? 0}</p>
+              <p className="text-lg font-medium text-white">{appointments?.filter((a:any) => a.status === "scheduled").length ?? 0}</p>
               <p className="text-[11px] text-white/50 mt-0.5">Próximas</p>
             </div>
           </div>
