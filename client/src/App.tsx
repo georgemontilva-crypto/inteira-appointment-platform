@@ -9,7 +9,6 @@ import Home from "./pages/Home";
 import UserDashboard from "./pages/UserDashboard";
 import ProfessionalDashboard from "./pages/ProfessionalDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
-import Specialties from "./pages/Specialties";
 import ProfessionalsList from "./pages/ProfessionalsList";
 import ProfessionalProfile from "./pages/ProfessionalProfile";
 import BookAppointment from "./pages/BookAppointment";
@@ -44,7 +43,6 @@ function Router() {
     <Switch>
       {/* Public routes */}
       <Route path="/" component={Home} />
-      <Route path="/especialidades" component={Specialties} />
       <Route path="/especialidades/:id" component={ProfessionalsList} />
       <Route path="/profesional/:id" component={ProfessionalProfile} />
 

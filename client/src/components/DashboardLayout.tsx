@@ -7,7 +7,6 @@ const NAV_ITEMS = [
   { label: "Inicio",          icon: "home",     href: "/dashboard" },
   { label: "Mis citas",       icon: "calendar", href: "/citas" },
   { label: "Explorar",        icon: "search",   href: "/especialistas" },
-  { label: "Especialidades",  icon: "users",    href: "/especialidades" },
   { label: "Wallet",          icon: "wallet",   href: "/wallet" },
   { label: "Planes",          icon: "star",     href: "/planes" },
   { label: "Notificaciones",  icon: "bell",     href: "/notificaciones", badge: true },
