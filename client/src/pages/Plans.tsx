@@ -1,8 +1,3 @@
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
-import { Link, useLocation } from "wouter";
 import DashboardLayout from "../components/DashboardLayout";
 import { getLoginUrl } from "@/const";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -97,32 +92,9 @@ const FAQ = [
   },
 ];
 
-function FaqItem({ q, a }: { q: string; a: string }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <button
-      onClick={() => setOpen((v) => !v)}
-      className="w-full text-left border border-border rounded-xl p-4 md:p-5 active:scale-[0.99] transition-transform"
-    >
-      <div className="flex items-center justify-between gap-3">
-        <h4 className="font-semibold text-sm">{q}</h4>
-        {open ? (
-          <ChevronUp className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-        ) : (
-          <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-        )}
-      </div>
-      {open && (
-        <p className="text-sm text-muted-foreground mt-3 leading-relaxed">{a}</p>
-      )}
-    </button>
-  );
-}
-
 export default function Plans() {
   const { isAuthenticated, user } = useAuth();
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
-  const [, navigate] = useLocation();
 
   // Detectar retorno de Stripe
   useEffect(() => {
@@ -162,137 +134,73 @@ export default function Plans() {
 
   return (
     <DashboardLayout>
-      <div className="container py-6 md:py-12 space-y-8 md:space-y-12">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>Planes y precios</h1>
-          <p className="text-muted-foreground mt-1.5 text-sm md:text-base">Sin contratos. Cancela cuando quieras.</p>
-        </div>
+      <div className="p-4 md:p-6 max-w-3xl">
+        <h1 className="text-xl font-medium text-[#333333] mb-1">Planes y precios</h1>
+        <p className="text-sm text-[#93A295] mb-6">Sin contratos. Cancela cuando quieras.</p>
 
-        {/* ── Suscripciones ── */}
-        <div>
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-4 md:text-center md:mb-8">
-            Suscripciones Mensuales
-          </p>
-          <div className="grid md:grid-cols-2 gap-4 md:gap-8 md:max-w-3xl md:mx-auto">
-            {PLANS.map((plan) => (
-              <Card
-                key={plan.id}
-                className={`relative border-2 transition-all active:scale-[0.99] ${
-                  plan.popular
-                    ? "border-primary shadow-lg shadow-primary/20 md:scale-105"
-                    : "border-border md:hover:border-primary/30 md:hover:shadow-xl md:hover:-translate-y-1"
-                }`}
+        {/* SUSCRIPCIONES */}
+        <p className="text-[10px] font-medium text-[#93A295] tracking-widest uppercase mb-4">Suscripciones mensuales</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+          {PLANS.map((plan) => (
+            <div key={plan.id} className={`bg-white rounded-2xl p-5 relative ${plan.popular ? "border-2 border-[#607562]" : "border border-[rgba(96,117,98,0.2)]"}`}>
+              {plan.popular && (
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#607562] text-white text-[10px] font-medium px-3 py-1 rounded-full whitespace-nowrap">Más popular</span>
+              )}
+              <p className="text-[15px] font-medium text-[#333333] mb-1">{plan.name}</p>
+              <div className="flex items-baseline gap-1 mb-1">
+                <span className="text-[28px] font-medium text-[#3d4e3f]">{plan.price}</span>
+                <span className="text-sm text-[#93A295]">MXN/mes</span>
+              </div>
+              <span className="inline-block bg-[rgba(96,117,98,0.1)] text-[#607562] text-[10px] font-medium px-2 py-0.5 rounded-full mb-4">{plan.savings}</span>
+              <ul className="space-y-2 mb-5">
+                {plan.features.map((f, i) => (
+                  <li key={i} className="flex items-start gap-2 text-[12px] text-[#555555]">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#607562" strokeWidth="2" strokeLinecap="round" className="flex-shrink-0 mt-0.5"><polyline points="20 6 9 17 4 12"/></svg>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              <button
+                onClick={() => handleSelectPlan(plan.name)}
+                disabled={loadingPlan === plan.name}
+                className={`w-full py-2.5 rounded-xl text-[13px] font-medium transition-opacity cursor-pointer border-none ${plan.popular ? "bg-[#607562] text-white hover:opacity-90" : "bg-white text-[#607562] hover:bg-[#f0f4f0]"}`}
+                style={{ border: plan.popular ? "none" : "0.5px solid rgba(96,117,98,0.4)" }}
               >
-                {plan.popular && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <Badge className="gradient-brand text-white border-0 px-3 py-0.5 text-xs shadow-md">
-                      Mas popular
-                    </Badge>
-                  </div>
-                )}
-                <CardContent className="p-5 md:p-8">
-                  {/* Price row */}
-                  <div className="flex items-start justify-between md:block mb-4">
-                    <div>
-                      <h3 className="text-base md:text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
-                        {plan.name}
-                      </h3>
-                      <div className="flex items-baseline gap-1 mt-1">
-                        <span className="text-2xl md:text-4xl font-bold text-primary" style={{ fontFamily: "Poppins, sans-serif" }}>
-                          {plan.price}
-                        </span>
-                        <span className="text-muted-foreground text-xs md:text-sm">{plan.period}</span>
-                      </div>
-                      <p className="text-xs text-primary font-medium mt-0.5">{plan.savings}</p>
-                    </div>
-                  </div>
-
-                  <ul className="space-y-2 md:space-y-3 mb-5">
-                    {plan.features.map((feature, j) => (
-                      <li key={j} className="flex items-center gap-2 text-xs md:text-sm">
-                        <CheckCircle2 className="w-3.5 h-3.5 md:w-4 md:h-4 text-primary flex-shrink-0" />
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  <Button
-                    onClick={() => handleSelectPlan(plan.name)}
-                    disabled={loadingPlan === plan.name}
-                    className={`w-full text-sm active:scale-95 transition-transform ${
-                      plan.popular
-                        ? "gradient-brand text-white border-0 shadow-md shadow-primary/30"
-                        : "border-primary/30 text-primary hover:bg-primary/5"
-                    }`}
-                    variant={plan.popular ? "default" : "outline"}
-                  >
-                    {loadingPlan === plan.name ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Redirigiendo...
-                      </>
-                    ) : (
-                      `Comenzar con ${plan.name}`
-                    )}
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                {loadingPlan === plan.name ? "Procesando..." : `Comenzar con ${plan.name}`}
+              </button>
+            </div>
+          ))}
         </div>
 
-        {/* ── Compra Individual ── */}
-        <div>
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-4 md:text-center md:mb-8">
-            Compra Individual
-          </p>
-          <div className="grid grid-cols-2 md:grid-cols-2 gap-3 md:gap-6 md:max-w-2xl md:mx-auto">
-            {INDIVIDUAL.map((item) => (
-              <Card
-                key={item.name}
-                className="border border-border active:scale-[0.99] transition-transform md:hover:border-primary/30 md:hover:shadow-md"
+        {/* COMPRA INDIVIDUAL */}
+        <p className="text-[10px] font-medium text-[#93A295] tracking-widest uppercase mb-4">Compra individual</p>
+        <div className="grid grid-cols-2 gap-3 mb-8">
+          {INDIVIDUAL.map((item) => (
+            <div key={item.name} className="bg-white border border-[rgba(96,117,98,0.15)] rounded-xl p-4">
+              <p className="text-[13px] font-medium text-[#333333] mb-1">{item.name}</p>
+              <p className="text-[11px] text-[#93A295] mb-3 leading-relaxed">{item.description}</p>
+              <p className="text-[20px] font-medium text-[#3d4e3f] mb-3">{item.price} <span className="text-[12px] text-[#93A295] font-normal">MXN</span></p>
+              <button
+                onClick={() => handleSelectPlan(item.name)}
+                disabled={loadingPlan === item.name}
+                className="w-full py-2 rounded-lg text-[12px] font-medium bg-white text-[#607562] hover:bg-[#f0f4f0] transition-colors cursor-pointer"
+                style={{ border: "0.5px solid rgba(96,117,98,0.3)" }}
               >
-                <CardContent className="p-4 md:p-6">
-                  <h4 className="font-semibold text-sm md:text-base">{item.name}</h4>
-                  <p className="text-xs text-muted-foreground mt-1">{item.description}</p>
-                  <div className="mt-3 mb-4">
-                    <span className="text-xl md:text-2xl font-bold text-primary" style={{ fontFamily: "Poppins, sans-serif" }}>
-                      {item.price}
-                    </span>
-                    <span className="text-xs text-muted-foreground ml-1">MXN</span>
-                  </div>
-                  <Button
-                    onClick={() => handleSelectPlan(item.name)}
-                    disabled={loadingPlan === item.name}
-                    variant="outline"
-                    className="w-full border-primary/30 text-primary hover:bg-primary/5 text-xs active:scale-95 transition-transform"
-                    size="sm"
-                  >
-                    {loadingPlan === item.name ? (
-                      <>
-                        <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
-                        Redirigiendo...
-                      </>
-                    ) : (
-                      "Comprar sesión"
-                    )}
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                {loadingPlan === item.name ? "Procesando..." : "Comprar sesión"}
+              </button>
+            </div>
+          ))}
         </div>
 
-        {/* ── FAQ ── */}
-        <div className="md:max-w-2xl md:mx-auto">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-4 md:text-center md:mb-8">
-            Preguntas frecuentes
-          </p>
-          <div className="space-y-2 md:space-y-4">
-            {FAQ.map((item, i) => (
-              <FaqItem key={i} q={item.q} a={item.a} />
-            ))}
-          </div>
+        {/* FAQ */}
+        <p className="text-[10px] font-medium text-[#93A295] tracking-widest uppercase mb-4">Preguntas frecuentes</p>
+        <div className="space-y-0">
+          {FAQ.map((item, i) => (
+            <div key={i} className="border-b border-[rgba(96,117,98,0.12)] py-4">
+              <p className="text-[13px] font-medium text-[#333333] mb-2">{item.q}</p>
+              <p className="text-[12px] text-[#666666] leading-relaxed">{item.a}</p>
+            </div>
+          ))}
         </div>
       </div>
     </DashboardLayout>
