@@ -114,6 +114,13 @@ export function registerOAuthRoutes(app: Express) {
         profileImage: userInfo.picture ?? null,
       });
 
+      // 3b. Sobreescribir returnTo según el role real del usuario (solo si viene con /dashboard por defecto)
+      if (returnTo === "/dashboard") {
+        const dbUser = await db.getUserByOpenId(`google:${userInfo.sub}`);
+        if (dbUser?.role === "professional") returnTo = "/panel-profesional";
+        else if (dbUser?.role === "admin") returnTo = "/admin";
+      }
+
       // 4. Crear sesión JWT
       const sessionToken = await sdk.createSessionToken(`google:${userInfo.sub}`, {
         name: userInfo.name ?? userInfo.email,
