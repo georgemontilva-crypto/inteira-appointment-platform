@@ -21,11 +21,80 @@ import {
   Wallet,
   X,
   ThumbsUp,
+  Sparkles,
+  Shield,
+  Brain,
+  Scale,
+  TrendingUp,
+  DollarSign,
+  Mic2,
+  Compass,
+  Heart,
+  Leaf,
+  Apple,
+  GraduationCap,
+  HeartHandshake,
+  HandHeart,
+  Sun,
+  Smile,
+  BookOpen,
+  Briefcase,
+  Globe,
+  Activity,
+  Users,
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { getLoginUrl } from "@/const";
 import DashboardLayout from "../components/DashboardLayout";
+
+const specialtyIcon: Record<string, React.ReactNode> = {
+  "Psicología": <Brain className="w-6 h-6 text-white" />,
+  "Legal": <Scale className="w-6 h-6 text-white" />,
+  "Emprendimiento": <TrendingUp className="w-6 h-6 text-white" />,
+  "Finanzas": <DollarSign className="w-6 h-6 text-white" />,
+  "Idiomas": <Mic2 className="w-6 h-6 text-white" />,
+  "Imagen Personal": <Sparkles className="w-6 h-6 text-white" />,
+  "Vocación": <Compass className="w-6 h-6 text-white" />,
+  "Coaching de vida": <Sun className="w-6 h-6 text-white" />,
+  "Mindfulness y meditación": <Leaf className="w-6 h-6 text-white" />,
+  "Nutrición": <Apple className="w-6 h-6 text-white" />,
+  "Orientación vocacional": <GraduationCap className="w-6 h-6 text-white" />,
+  "Terapia de pareja": <HeartHandshake className="w-6 h-6 text-white" />,
+  "Trabajo social": <HandHeart className="w-6 h-6 text-white" />,
+  "Salud mental": <Brain className="w-6 h-6 text-white" />,
+  "Desarrollo personal": <Smile className="w-6 h-6 text-white" />,
+  "Educación": <BookOpen className="w-6 h-6 text-white" />,
+  "Negocios": <Briefcase className="w-6 h-6 text-white" />,
+  "Idiomas y cultura": <Globe className="w-6 h-6 text-white" />,
+  "Bienestar": <Activity className="w-6 h-6 text-white" />,
+  "Familia": <Heart className="w-6 h-6 text-white" />,
+  "Recursos Humanos": <Users className="w-6 h-6 text-white" />,
+};
+
+const specialtyBg: Record<string, string> = {
+  "Psicología": "bg-[#607562]",
+  "Legal": "bg-[#4a5c4c]",
+  "Emprendimiento": "bg-[#607562]",
+  "Finanzas": "bg-[#4f6651]",
+  "Idiomas": "bg-[#556e57]",
+  "Imagen Personal": "bg-[#607562]",
+  "Vocación": "bg-[#4a5c4c]",
+  "Coaching de vida": "bg-[#607562]",
+  "Mindfulness y meditación": "bg-[#4f6651]",
+  "Nutrición": "bg-[#556e57]",
+  "Orientación vocacional": "bg-[#4a5c4c]",
+  "Terapia de pareja": "bg-[#607562]",
+  "Trabajo social": "bg-[#4f6651]",
+  "Salud mental": "bg-[#607562]",
+  "Desarrollo personal": "bg-[#556e57]",
+  "Educación": "bg-[#4a5c4c]",
+  "Negocios": "bg-[#607562]",
+  "Idiomas y cultura": "bg-[#4f6651]",
+  "Bienestar": "bg-[#556e57]",
+  "Familia": "bg-[#607562]",
+  "Recursos Humanos": "bg-[#4a5c4c]",
+};
 
 const statusColors: Record<string, string> = {
   scheduled: "bg-blue-100 text-blue-700",
@@ -59,6 +128,7 @@ export default function UserDashboard() {
     { enabled: isAuthenticated }
   );
   const { data: wallet } = trpc.user.getWallet.useQuery(undefined, { enabled: isAuthenticated });
+  const { data: specialties } = trpc.specialty.getAll.useQuery(undefined, { staleTime: 300_000 });
 
   // Cancel appointment mutation
   const cancelMutation = trpc.appointment.cancelAppointment.useMutation({
@@ -130,111 +200,7 @@ export default function UserDashboard() {
 
   return (
     <DashboardLayout>
-    <div className="min-h-screen bg-background pb-24 md:pb-8">
-
-      {/* ── Mobile Header ── */}
-      <div className="md:hidden gradient-hero text-white">
-        <div className="px-5 pt-14 pb-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-2xl bg-white/20 flex items-center justify-center text-xl font-bold">
-                {user?.name?.charAt(0) ?? "U"}
-              </div>
-              <div>
-                <p className="text-white/70 text-xs">Bienvenido</p>
-                <h1 className="text-lg font-bold leading-tight" style={{ fontFamily: "Poppins, sans-serif" }}>
-                  {user?.name?.split(" ")[0] ?? "Usuario"}
-                </h1>
-              </div>
-            </div>
-            <button
-              onClick={logout}
-              className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center active:scale-95 transition-transform"
-              aria-label="Cerrar sesión"
-            >
-              <LogOut className="w-4 h-4 text-white" />
-            </button>
-          </div>
-        </div>
-        {/* Stats strip */}
-        <div className="mx-4 mb-0 relative z-10">
-          <div className="bg-white rounded-2xl shadow-xl border border-border/50 grid grid-cols-3 divide-x divide-border -mb-5">
-            <div className="flex flex-col items-center py-3.5">
-              <span className="text-xl font-bold text-primary">{upcomingAppointments.length}</span>
-              <span className="text-[10px] text-muted-foreground mt-0.5">Próximas</span>
-            </div>
-            <div className="flex flex-col items-center py-3.5">
-              <span className="text-xl font-bold text-emerald-600">{completedCount}</span>
-              <span className="text-[10px] text-muted-foreground mt-0.5">Completadas</span>
-            </div>
-            <div className="flex flex-col items-center py-3.5">
-              <span className="text-xl font-bold text-primary">{(wallet?.balance ?? 0).toLocaleString("es-MX")}</span>
-              <span className="text-[10px] text-muted-foreground mt-0.5">Créditos</span>
-            </div>
-          </div>
-        </div>
-        <div className="h-5" />
-      </div>
-
-      {/* ── Desktop Header ── */}
-      <div className="hidden md:block gradient-hero text-white py-8">
-        <div className="container">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center text-2xl font-bold">
-                {user?.name?.charAt(0) ?? "U"}
-              </div>
-              <div>
-                <p className="text-white/70 text-sm">Bienvenido de vuelta</p>
-                <h1 className="text-2xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
-                  {user?.name ?? "Usuario"}
-                </h1>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <Link href="/especialidades">
-                <Button className="bg-white text-primary hover:bg-white/90 font-semibold">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Nueva cita
-                </Button>
-              </Link>
-              <Button variant="ghost" onClick={logout} className="text-white/80 hover:text-white hover:bg-white/10">
-                <LogOut className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Mobile Quick Actions ── */}
-      <div className="md:hidden px-5 pt-8 pb-2">
-        <div className="grid grid-cols-3 gap-2">
-          <Link href="/especialidades">
-            <div className="flex flex-col items-center gap-1.5 p-3 bg-primary/8 rounded-2xl active:scale-95 transition-transform border border-primary/15">
-              <div className="w-9 h-9 rounded-xl gradient-brand flex items-center justify-center">
-                <Plus className="w-4 h-4 text-white" />
-              </div>
-              <span className="text-[10px] font-semibold text-primary text-center leading-tight">Nueva cita</span>
-            </div>
-          </Link>
-          <Link href="/wallet">
-            <div className="flex flex-col items-center gap-1.5 p-3 bg-muted rounded-2xl active:scale-95 transition-transform">
-              <div className="w-9 h-9 rounded-xl bg-secondary/50 flex items-center justify-center">
-                <Wallet className="w-4 h-4 text-primary" />
-              </div>
-              <span className="text-[10px] font-semibold text-muted-foreground text-center leading-tight">Mi wallet</span>
-            </div>
-          </Link>
-          <Link href="/planes">
-            <div className="flex flex-col items-center gap-1.5 p-3 bg-muted rounded-2xl active:scale-95 transition-transform">
-              <div className="w-9 h-9 rounded-xl bg-secondary/50 flex items-center justify-center">
-                <CreditCard className="w-4 h-4 text-primary" />
-              </div>
-              <span className="text-[10px] font-semibold text-muted-foreground text-center leading-tight">Mis planes</span>
-            </div>
-          </Link>
-        </div>
-      </div>
+    <div className="bg-background">
 
       {/* ── Banner: créditos por vencer ── */}
       {wallet && wallet.nextExpiry && (() => {
@@ -254,7 +220,7 @@ export default function UserDashboard() {
                   Úsalos antes del {new Date(wallet.nextExpiry).toLocaleDateString("es-MX", { day: "numeric", month: "long" })} para no perderlos.
                 </p>
               </div>
-              <Link href="/especialidades">
+              <Link href="/dashboard">
                 <Button size="sm" className="bg-amber-500 hover:bg-amber-600 text-white border-0 text-xs h-8 px-3 flex-shrink-0">
                   Agendar ahora
                 </Button>
@@ -358,6 +324,105 @@ export default function UserDashboard() {
           </Card>
         </div>
 
+        {/* ── Acciones rápidas ── */}
+        <div className="mb-6">
+          <h2 className="text-base font-bold text-foreground mb-3" style={{ fontFamily: "Poppins, sans-serif" }}>
+            Acciones rápidas
+          </h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <Link href="/book">
+              <div className="flex items-center gap-3 bg-white rounded-2xl p-4 border border-border/60 shadow-sm hover:shadow-md hover:border-primary/30 active:scale-[0.98] transition-all cursor-pointer group">
+                <div className="w-10 h-10 rounded-xl gradient-brand flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                  <Plus className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Nueva cita</p>
+                  <p className="text-[10px] text-muted-foreground">Agendar ahora</p>
+                </div>
+              </div>
+            </Link>
+            <Link href="/citas">
+              <div className="flex items-center gap-3 bg-white rounded-2xl p-4 border border-border/60 shadow-sm hover:shadow-md hover:border-primary/30 active:scale-[0.98] transition-all cursor-pointer group">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                  <Calendar className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Mis citas</p>
+                  <p className="text-[10px] text-muted-foreground">Ver historial</p>
+                </div>
+              </div>
+            </Link>
+            <Link href="/wallet">
+              <div className="flex items-center gap-3 bg-white rounded-2xl p-4 border border-border/60 shadow-sm hover:shadow-md hover:border-primary/30 active:scale-[0.98] transition-all cursor-pointer group">
+                <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                  <Wallet className="w-5 h-5 text-emerald-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Mi Wallet</p>
+                  <p className="text-[10px] text-muted-foreground">{(wallet?.balance ?? 0).toLocaleString("es-MX")} créditos</p>
+                </div>
+              </div>
+            </Link>
+            <Link href="/planes">
+              <div className="flex items-center gap-3 bg-white rounded-2xl p-4 border border-border/60 shadow-sm hover:shadow-md hover:border-primary/30 active:scale-[0.98] transition-all cursor-pointer group">
+                <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                  <Sparkles className="w-5 h-5 text-amber-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Planes</p>
+                  <p className="text-[10px] text-muted-foreground">Explorar</p>
+                </div>
+              </div>
+            </Link>
+            {user?.role === "admin" && (
+              <Link href="/admin">
+                <div className="bg-red-50 border border-red-200 rounded-xl p-4 hover:bg-red-100 transition-colors cursor-pointer col-span-2 md:col-span-1">
+                  <div className="flex flex-col items-center gap-2 text-center">
+                    <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                      <Shield className="w-5 h-5 text-red-600" />
+                    </div>
+                    <span className="text-sm font-medium text-red-700">Panel Admin</span>
+                  </div>
+                </div>
+              </Link>
+            )}
+          </div>
+        </div>
+
+        {/* ── Explorar especialidades ── */}
+        <div className="mb-6">
+          <h2 className="text-base font-bold text-foreground mb-3" style={{ fontFamily: "Poppins, sans-serif" }}>
+            Explorar especialidades
+          </h2>
+          <div className="flex gap-3 overflow-x-auto pb-2 [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}>
+            {(specialties ?? [
+              { id: 1, name: "Psicología", description: null },
+              { id: 2, name: "Emprendimiento", description: null },
+              { id: 3, name: "Legal", description: null },
+              { id: 4, name: "Finanzas", description: null },
+            ]).map((s) => (
+              <Link key={s.id} href={`/especialidades/${s.id}`} className="flex-shrink-0">
+                <Card className="group cursor-pointer border-border w-[260px] active:scale-[0.99] md:hover:border-primary/40 md:hover:shadow-md transition-all duration-200">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-xl ${specialtyBg[s.name] ?? "bg-[#607562]"} flex items-center justify-center flex-shrink-0 shadow-sm group-hover:scale-105 transition-transform duration-200`}>
+                        {specialtyIcon[s.name] ?? <Compass className="w-5 h-5 text-white" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-sm font-bold text-foreground">{s.name}</h3>
+                        <p className="text-xs text-muted-foreground leading-relaxed line-clamp-1">
+                          {(s as any).description ?? "Consultas con profesionales certificados."}
+                        </p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-muted-foreground/50 flex-shrink-0" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        </div>
+
         <div className="grid lg:grid-cols-3 gap-4 md:gap-6">
           {/* Appointments column */}
           <div className="lg:col-span-2 space-y-3 md:space-y-4">
@@ -384,7 +449,7 @@ export default function UserDashboard() {
                   <Calendar className="w-10 h-10 md:w-12 md:h-12 text-muted-foreground/50 mx-auto mb-3" />
                   <p className="text-muted-foreground font-medium text-sm md:text-base">No tienes citas próximas</p>
                   <p className="text-xs md:text-sm text-muted-foreground mt-1">Agenda tu primera consulta con un especialista</p>
-                  <Link href="/especialidades">
+                  <Link href="/dashboard">
                     <Button className="mt-4 gradient-brand text-white border-0" size="sm">
                       <Plus className="w-4 h-4 mr-2" />
                       Agendar cita
@@ -625,7 +690,7 @@ export default function UserDashboard() {
                 <CardTitle className="text-base">Acciones rápidas</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                <Link href="/especialidades">
+                <Link href="/dashboard">
                   <Button variant="ghost" className="w-full justify-start text-sm h-9 hover:bg-primary/5 hover:text-primary">
                     <Plus className="w-4 h-4 mr-2" />
                     Agendar nueva cita
