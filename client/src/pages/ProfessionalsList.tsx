@@ -79,10 +79,10 @@ export default function ProfessionalsList() {
       {/* Header */}
       <div className="gradient-hero text-white py-12">
         <div className="container">
-          <Link href="/especialidades">
+          <Link href="/dashboard">
             <Button variant="ghost" className="text-white/80 hover:text-white hover:bg-white/10 mb-4 -ml-2">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Especialidades
+              Inicio
             </Button>
           </Link>
           <h1 className="text-4xl font-bold mb-2" style={{ fontFamily: "Poppins, sans-serif" }}>
