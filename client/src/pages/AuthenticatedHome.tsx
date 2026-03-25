@@ -294,7 +294,7 @@ export default function AuthenticatedHome() {
               </Button>
             </Link>
           </div>
-          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-4">
+          <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: "none" }}>
             {(specialties ?? [
               { id: 1, name: "Psicología" },
               { id: 2, name: "Emprendimiento" },
@@ -305,7 +305,7 @@ export default function AuthenticatedHome() {
               const icon = SPECIALTY_ICONS[s.name] ?? <Users className="w-5 h-5" />;
               return (
                 <Link href={`/especialidades/${s.id}`} key={s.id}>
-                  <div className="flex-shrink-0 md:flex-shrink bg-white rounded-2xl border border-border/60 shadow-sm p-4 flex flex-col items-center gap-2 w-24 md:w-auto hover:shadow-md hover:border-primary/20 active:scale-[0.97] transition-all cursor-pointer text-center">
+                  <div className="flex-shrink-0 w-[140px] bg-white rounded-2xl border border-border/60 shadow-sm p-4 flex flex-col items-center gap-2 hover:shadow-md hover:border-primary/20 active:scale-[0.97] transition-all cursor-pointer text-center">
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${colorClass}`}>
                       {icon}
                     </div>
