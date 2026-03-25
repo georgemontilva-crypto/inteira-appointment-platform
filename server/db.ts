@@ -304,25 +304,33 @@ export async function approveProfessional(
 ) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
+  const client = (db as any).$client;
+
+  const query = (sql: string, params: any[]) => new Promise<any[]>((resolve, reject) => {
+    client.execute(sql, params, (err: any, results: any) => {
+      if (err) reject(err);
+      else resolve(Array.isArray(results) ? results : []);
+    });
+  });
 
   // Get userId before updating
-  const proRows = await db
-    .select({ userId: professionals.userId })
-    .from(professionals)
-    .where(eq(professionals.id, professionalId))
-    .limit(1);
-  const userId = proRows[0]?.userId;
+  const rows = await query(
+    "SELECT userId FROM professionals WHERE id = ? LIMIT 1",
+    [professionalId]
+  );
+  const userId = rows[0]?.userId;
 
-  await db
-    .update(professionals)
-    .set({ status: "approved", tier, updatedAt: new Date() })
-    .where(eq(professionals.id, professionalId));
+  const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+  await query(
+    "UPDATE professionals SET status = ?, tier = ?, updatedAt = ? WHERE id = ?",
+    ['approved', tier, now, professionalId]
+  );
 
   if (userId) {
-    await db
-      .update(users)
-      .set({ role: "professional" })
-      .where(eq(users.id, userId));
+    await query(
+      "UPDATE users SET role = ? WHERE id = ?",
+      ['professional', userId]
+    );
   }
 }
 
