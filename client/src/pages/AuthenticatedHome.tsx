@@ -3,6 +3,7 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "wouter";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -24,6 +25,22 @@ import {
   Zap,
   Shield,
   LockOpen,
+  Brain,
+  Scale,
+  DollarSign,
+  Mic2,
+  Compass,
+  Heart,
+  Leaf,
+  Apple,
+  GraduationCap,
+  HeartHandshake,
+  HandHeart,
+  Sun,
+  Smile,
+  Briefcase,
+  Globe,
+  Activity,
 } from "lucide-react";
 import DashboardLayout from "../components/DashboardLayout";
 
@@ -44,6 +61,64 @@ const SPECIALTY_COLORS: Record<string, string> = {
   "Emprendimiento": "bg-amber-100 text-amber-700",
   "Nutrición": "bg-rose-100 text-rose-700",
   "Salud": "bg-teal-100 text-teal-700",
+};
+
+const specialtyIcon: Record<string, React.ReactNode> = {
+  "Psicología": <Brain className="w-6 h-6 text-white" />,
+  "Legal": <Scale className="w-6 h-6 text-white" />,
+  "Emprendimiento": <TrendingUp className="w-6 h-6 text-white" />,
+  "Finanzas": <DollarSign className="w-6 h-6 text-white" />,
+  "Idiomas": <Mic2 className="w-6 h-6 text-white" />,
+  "Imagen Personal": <Sparkles className="w-6 h-6 text-white" />,
+  "Vocación": <Compass className="w-6 h-6 text-white" />,
+  "Coaching de vida": <Sun className="w-6 h-6 text-white" />,
+  "Mindfulness y meditación": <Leaf className="w-6 h-6 text-white" />,
+  "Nutrición": <Apple className="w-6 h-6 text-white" />,
+  "Orientación vocacional": <GraduationCap className="w-6 h-6 text-white" />,
+  "Terapia de pareja": <HeartHandshake className="w-6 h-6 text-white" />,
+  "Trabajo social": <HandHeart className="w-6 h-6 text-white" />,
+  "Salud mental": <Brain className="w-6 h-6 text-white" />,
+  "Desarrollo personal": <Smile className="w-6 h-6 text-white" />,
+  "Educación": <BookOpen className="w-6 h-6 text-white" />,
+  "Negocios": <Briefcase className="w-6 h-6 text-white" />,
+  "Idiomas y cultura": <Globe className="w-6 h-6 text-white" />,
+  "Bienestar": <Activity className="w-6 h-6 text-white" />,
+  "Familia": <Heart className="w-6 h-6 text-white" />,
+  "Recursos Humanos": <Users className="w-6 h-6 text-white" />,
+};
+
+const specialtyBg: Record<string, string> = {
+  "Psicología": "bg-[#607562]",
+  "Legal": "bg-[#4a5c4c]",
+  "Emprendimiento": "bg-[#607562]",
+  "Finanzas": "bg-[#4f6651]",
+  "Idiomas": "bg-[#556e57]",
+  "Imagen Personal": "bg-[#607562]",
+  "Vocación": "bg-[#4a5c4c]",
+  "Coaching de vida": "bg-[#607562]",
+  "Mindfulness y meditación": "bg-[#4f6651]",
+  "Nutrición": "bg-[#556e57]",
+  "Orientación vocacional": "bg-[#4a5c4c]",
+  "Terapia de pareja": "bg-[#607562]",
+  "Trabajo social": "bg-[#4f6651]",
+  "Salud mental": "bg-[#607562]",
+  "Desarrollo personal": "bg-[#556e57]",
+  "Educación": "bg-[#4a5c4c]",
+  "Negocios": "bg-[#607562]",
+  "Idiomas y cultura": "bg-[#4f6651]",
+  "Bienestar": "bg-[#556e57]",
+  "Familia": "bg-[#607562]",
+  "Recursos Humanos": "bg-[#4a5c4c]",
+};
+
+const specialtyDescriptions: Record<string, string> = {
+  "Psicología": "Bienestar mental y emocional con psicólogos certificados.",
+  "Legal": "Asesoría legal en diversas áreas del derecho.",
+  "Emprendimiento": "Asesoría para emprendedores y startups en crecimiento.",
+  "Finanzas": "Consultoría financiera personal y empresarial.",
+  "Idiomas": "Clases con profesores nativos y certificados.",
+  "Imagen Personal": "Consultoría de imagen, estilo y presencia personal.",
+  "Vocación": "Orientación vocacional y desarrollo profesional.",
 };
 
 const statusColors: Record<string, string> = {
@@ -284,57 +359,47 @@ export default function AuthenticatedHome() {
 
         {/* ── Especialidades ── */}
         <div>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-base font-bold text-foreground" style={{ fontFamily: "Poppins, sans-serif" }}>
-              Explorar especialidades
-            </h2>
-            <Link href="/especialidades">
-              <Button variant="ghost" size="sm" className="text-primary text-xs h-7 px-2">
-                Ver todas <ChevronRight className="w-3.5 h-3.5 ml-1" />
-              </Button>
-            </Link>
-          </div>
-          <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: "none" }}>
+          <h2 className="text-base font-bold text-foreground mb-3" style={{ fontFamily: "Poppins, sans-serif" }}>
+            Explorar especialidades
+          </h2>
+          <div className="grid md:grid-cols-2 gap-3">
             {(specialties ?? [
-              { id: 1, name: "Psicología" },
-              { id: 2, name: "Emprendimiento" },
-              { id: 3, name: "Legal" },
-              { id: 4, name: "Finanzas" },
-            ]).slice(0, 8).map((s) => {
-              const n = s.name.toLowerCase();
-              const icon = n.includes("coaching") || n.includes("vida") ? (
-                <svg viewBox="0 0 24 24" fill="none" stroke="#607562" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-[22px] h-[22px]"><path d="M4.5 16.5l-1.5 4.5 4.5-1.5L19 8 17 6 4.5 16.5z"/><path d="M14 4l6 6"/><path d="M5 20l-1-1"/></svg>
-              ) : n.includes("mindfulness") || n.includes("meditación") || n.includes("meditacion") ? (
-                <svg viewBox="0 0 24 24" fill="none" stroke="#607562" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-[22px] h-[22px]"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10"/><path d="M12 2c2 4 2 8 0 12"/><path d="M2 12c4-2 8-2 12 0"/></svg>
-              ) : n.includes("nutrición") || n.includes("nutricion") ? (
-                <svg viewBox="0 0 24 24" fill="none" stroke="#607562" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-[22px] h-[22px]"><path d="M12 2a7 7 0 0 1 7 7c0 5-7 13-7 13S5 14 5 9a7 7 0 0 1 7-7z"/><path d="M12 2c1 2.5 0 5-2 6"/></svg>
-              ) : n.includes("orientación") || n.includes("orientacion") || n.includes("vocacional") ? (
-                <svg viewBox="0 0 24 24" fill="none" stroke="#607562" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-[22px] h-[22px]"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
-              ) : n.includes("psicología") || n.includes("psicologia") || n.includes("mental") ? (
-                <svg viewBox="0 0 24 24" fill="none" stroke="#607562" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-[22px] h-[22px]"><path d="M9.5 2A6.5 6.5 0 0 1 16 8.5c0 2.5-1.5 4.5-3 6l-1 5.5H12l-1-5.5c-1.5-1.5-3-3.5-3-6A6.5 6.5 0 0 1 9.5 2z"/><path d="M12 14.5v1"/><path d="M6.5 8.5h1"/><path d="M16.5 8.5h-1"/></svg>
-              ) : n.includes("pareja") || n.includes("amor") || n.includes("relación") || n.includes("relacion") ? (
-                <svg viewBox="0 0 24 24" fill="none" stroke="#607562" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-[22px] h-[22px]"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-              ) : n.includes("social") || n.includes("habilidades") ? (
-                <svg viewBox="0 0 24 24" fill="none" stroke="#607562" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-[22px] h-[22px]"><path d="M18 11V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h3l3 3 3-3h3a2 2 0 0 0 2-2z"/><path d="M22 13v3a2 2 0 0 1-2 2h-2"/></svg>
-              ) : (
-                <svg viewBox="0 0 24 24" fill="none" stroke="#607562" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-[22px] h-[22px]"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-              );
-              return (
-                <Link href={`/especialidades/${s.id}`} key={s.id}>
-                  <div
-                    className="flex-shrink-0 w-[160px] h-[120px] flex flex-col items-center justify-center gap-2.5 cursor-pointer transition-all active:scale-[0.97]"
-                    style={{ background: "#fff", border: "1px solid rgba(96,117,98,0.15)", borderRadius: "12px", padding: "16px 12px" }}
-                    onMouseEnter={(e) => (e.currentTarget.style.borderColor = "rgba(96,117,98,0.45)")}
-                    onMouseLeave={(e) => (e.currentTarget.style.borderColor = "rgba(96,117,98,0.15)")}
-                  >
-                    <div className="w-[44px] h-[44px] rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "rgba(96,117,98,0.1)" }}>
-                      {icon}
+              { id: 1, name: "Psicología", description: null },
+              { id: 2, name: "Emprendimiento", description: null },
+              { id: 3, name: "Legal", description: null },
+              { id: 4, name: "Finanzas", description: null },
+            ]).map((s) => (
+              <Link key={s.id} href={`/especialidades/${s.id}`}>
+                <Card className="group cursor-pointer border-border active:scale-[0.99] md:hover:border-primary/40 md:hover:shadow-md transition-all duration-200">
+                  <CardContent className="p-4 md:p-5">
+                    <div className="flex items-center gap-3.5">
+                      <div className={`w-12 h-12 rounded-2xl ${specialtyBg[s.name] ?? "bg-[#607562]"} flex items-center justify-center flex-shrink-0 shadow-sm group-hover:scale-105 transition-transform duration-200`}>
+                        {specialtyIcon[s.name] ?? <Compass className="w-6 h-6 text-white" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-sm font-bold text-foreground mb-0.5" style={{ fontFamily: "Poppins, sans-serif" }}>
+                          {s.name}
+                        </h3>
+                        <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
+                          {(s as any).description ?? specialtyDescriptions[s.name] ?? "Consultas especializadas con profesionales certificados."}
+                        </p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-muted-foreground/50 flex-shrink-0 md:hidden" />
                     </div>
-                    <span className="text-center leading-tight" style={{ fontSize: "12px", color: "#333333", fontWeight: 500 }}>{s.name}</span>
-                  </div>
-                </Link>
-              );
-            })}
+                    <div className="hidden md:flex items-center justify-between mt-4 pt-3 border-t border-border">
+                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                        <Users className="w-4 h-4 text-primary" />
+                        <span>Especialistas disponibles</span>
+                      </div>
+                      <span className="flex items-center gap-1 text-sm font-medium text-primary group-hover:underline">
+                        Ver profesionales
+                        <ChevronRight className="w-4 h-4" />
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
           </div>
         </div>
 
