@@ -106,8 +106,6 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
 
         <nav className="hidden md:flex items-center">
           {[
-            { label: "Descubrir",    href: "/especialidades" },
-            { label: "Explorar",     href: "/especialidades" },
             { label: "Especialidades", href: "/especialidades" },
             { label: "Planes",       href: "/planes" },
           ].map((item) => (
