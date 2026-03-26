@@ -78,6 +78,18 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
 
   const count = unreadCount?.count ?? 0;
   const initials = user?.name?.charAt(0)?.toUpperCase() ?? "U";
+  const profileImage = (user as any)?.profileImage ?? null;
+
+  // Componente de avatar reutilizable
+  const UserAvatar = ({ size = "sm" }: { size?: "sm" | "md" | "lg" }) => {
+    const sizeMap = { sm: "w-8 h-8 text-[12px]", md: "w-6 h-6 text-[10px]", lg: "w-14 h-14 text-lg" };
+    const cls = sizeMap[size];
+    return profileImage ? (
+      <img src={profileImage} alt={user?.name ?? "Avatar"} className={`${cls} rounded-full object-cover border-2 border-[rgba(96,117,98,0.3)]`} referrerPolicy="no-referrer" />
+    ) : (
+      <div className={`${cls} rounded-full flex items-center justify-center font-medium text-white border-2 border-[rgba(96,117,98,0.3)]`} style={{ background: "linear-gradient(135deg,#3d4e3f,#607562)" }}>{initials}</div>
+    );
+  };
 
   // Build nav items including role-specific items
   const navItems = [...NAV_ITEMS];
@@ -132,8 +144,8 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
             <Icon name="grid" className="w-[18px] h-[18px]" />
           </button>
           {/* Avatar → profile tab */}
-          <button onClick={() => openPanel("profile")} className="ml-1 w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-medium text-white relative border-2 border-[rgba(96,117,98,0.3)]" style={{ background: "linear-gradient(135deg,#3d4e3f,#607562)" }}>
-            {initials}
+          <button onClick={() => openPanel("profile")} className="ml-1 relative flex-shrink-0">
+            <UserAvatar size="sm" />
             <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-green-400 border-2 border-white" />
           </button>
         </div>
@@ -187,7 +199,7 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
           {/* Footer fixed at bottom */}
           <div className="mt-auto p-2 border-t border-[rgba(96,117,98,0.1)]">
             <div className="flex items-center gap-2 px-2 py-1.5 rounded-[9px] bg-[#F7FAFC] border border-[rgba(96,117,98,0.15)] cursor-pointer" onClick={() => openPanel("profile")}>
-              <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-medium text-white flex-shrink-0" style={{ background: "linear-gradient(135deg,#3d4e3f,#607562)" }}>{initials}</div>
+              <div className="flex-shrink-0"><UserAvatar size="md" /></div>
               <div className="min-w-0">
                 <p className="text-[11px] font-medium text-[#333333] truncate">{user?.name ?? "Usuario"}</p>
                 <p className="text-[9px] text-[#607562]">{user?.role === "admin" ? "Admin" : user?.role === "professional" ? "Profesional" : "Usuario"}</p>
@@ -381,8 +393,8 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
               <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(96,117,98,0.2) transparent" }}>
                 {/* Avatar + info */}
                 <div className="p-5 text-center bg-[#F7FAFC] border-b border-[rgba(96,117,98,0.1)]">
-                  <div className="w-14 h-14 rounded-full flex items-center justify-center text-lg font-semibold text-white mx-auto mb-3 border-2 border-[rgba(96,117,98,0.25)] relative" style={{ background: "linear-gradient(135deg,#3d4e3f,#607562)" }}>
-                    {initials}
+                  <div className="relative w-14 h-14 mx-auto mb-3">
+                    <UserAvatar size="lg" />
                     <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-green-400 border-2 border-white" />
                   </div>
                   <p className="text-sm font-semibold text-[#333333]">{user?.name ?? "Usuario"}</p>

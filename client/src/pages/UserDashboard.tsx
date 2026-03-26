@@ -302,11 +302,25 @@ export default function UserDashboard() {
         <div className="rounded-2xl gradient-hero text-white p-5 relative overflow-hidden shadow-lg">
           <div className="absolute top-0 right-0 w-48 h-48 rounded-full pointer-events-none opacity-10" style={{ background: "white", transform: "translate(30%,-30%)" }} />
           <div className="relative z-10 flex items-start justify-between gap-4 flex-wrap">
-            <div>
-              <p className="text-white/70 text-sm">Bienvenido de vuelta</p>
-              <h1 className="text-2xl font-bold mt-0.5" style={{ fontFamily: "Poppins, sans-serif" }}>
-                Hola, {user?.name?.split(" ")[0] ?? "Usuario"} 👋
-              </h1>
+            <div className="flex items-center gap-3">
+              {(user as any)?.profileImage ? (
+                <img
+                  src={(user as any).profileImage}
+                  alt={user?.name ?? "Avatar"}
+                  className="w-14 h-14 rounded-2xl object-cover border-2 border-white/30 flex-shrink-0 shadow-md"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl font-bold text-white border-2 border-white/30 flex-shrink-0 bg-white/20">
+                  {user?.name?.charAt(0)?.toUpperCase() ?? "U"}
+                </div>
+              )}
+              <div>
+                <p className="text-white/70 text-sm font-medium">Bienvenido de vuelta</p>
+                <h1 className="text-2xl font-bold mt-0.5 text-white" style={{ fontFamily: "Poppins, sans-serif" }}>
+                  Hola, {user?.name?.split(" ")[0] ?? "Usuario"} 👋
+                </h1>
+              </div>
             </div>
             <Button size="sm" className="bg-white/20 hover:bg-white/30 text-white border-0 h-9" onClick={() => navigate("/especialidades")}>
               <Plus className="w-4 h-4 mr-1.5" /> Nueva cita
@@ -314,19 +328,19 @@ export default function UserDashboard() {
           </div>
           <div className="relative z-10 grid grid-cols-2 md:grid-cols-4 gap-2 mt-4">
             <button onClick={() => navigate("/citas")} className="bg-white/10 hover:bg-white/20 transition-colors rounded-xl p-3 text-left">
-              <p className="text-xl font-bold">{upcomingAppointments.length}</p>
+              <p className="text-xl font-bold text-white">{upcomingAppointments.length}</p>
               <p className="text-white/60 text-xs mt-0.5">Próximas</p>
             </button>
             <button onClick={() => navigate("/citas")} className="bg-white/10 hover:bg-white/20 transition-colors rounded-xl p-3 text-left">
-              <p className="text-xl font-bold">{completedCount}</p>
+              <p className="text-xl font-bold text-white">{completedCount}</p>
               <p className="text-white/60 text-xs mt-0.5">Completadas</p>
             </button>
             <button onClick={() => navigate("/wallet")} className="bg-white/10 hover:bg-white/20 transition-colors rounded-xl p-3 text-left">
-              <p className="text-xl font-bold">{creditBalance.toLocaleString("es-MX")}</p>
+              <p className="text-xl font-bold text-white">{creditBalance.toLocaleString("es-MX")}</p>
               <p className="text-white/60 text-xs mt-0.5">Créditos</p>
             </button>
             <button onClick={() => navigate("/suscripcion")} className="bg-white/10 hover:bg-white/20 transition-colors rounded-xl p-3 text-left">
-              <p className="text-sm font-bold truncate leading-tight">{(subscription as any)?.planName ?? "Sin plan"}</p>
+              <p className="text-sm font-bold truncate leading-tight text-white">{(subscription as any)?.planName ?? "Sin plan"}</p>
               <p className="text-white/60 text-xs mt-0.5">Plan activo</p>
             </button>
           </div>
