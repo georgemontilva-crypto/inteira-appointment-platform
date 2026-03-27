@@ -220,18 +220,15 @@ export const appRouter = router({
               (err: any) => err ? reject(err) : resolve()
             );
           });
-          // Si el usuario no tiene nombre aún, guardar el fullName del formulario
+          // Guardar siempre el nombre que el profesional ingresó en el formulario
           if (input.fullName?.trim()) {
-            const currentUser = await db.getUserById(ctx.user.id);
-            if (!currentUser?.name || currentUser.name.trim() === "") {
-              await new Promise<void>((resolve, reject) => {
-                client.execute(
-                  "UPDATE `users` SET `name` = ? WHERE `id` = ?",
-                  [input.fullName!.trim(), ctx.user.id],
-                  (err: any) => err ? reject(err) : resolve()
-                );
-              });
-            }
+            await new Promise<void>((resolve, reject) => {
+              client.execute(
+                "UPDATE `users` SET `name` = ? WHERE `id` = ?",
+                [input.fullName!.trim(), ctx.user.id],
+                (err: any) => err ? reject(err) : resolve()
+              );
+            });
           }
         }
 
