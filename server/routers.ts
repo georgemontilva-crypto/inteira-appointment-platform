@@ -428,6 +428,7 @@ export const appRouter = router({
 
     updateProfile: protectedProcedure
       .input(z.object({
+        name: z.string().optional(),           // nombre del usuario (actualiza users.name)
         bio: z.string().optional(),
         education: z.string().optional(),
         certifications: z.string().optional(),
@@ -466,6 +467,17 @@ export const appRouter = router({
           );
         }
 
+        // Actualizar nombre del usuario si fue provisto
+        if (input.name !== undefined && input.name.trim()) {
+          try {
+            await client.execute(
+              "UPDATE users SET  = ? WHERE id = ?",
+              [input.name.trim(), ctx.user.id]
+            );
+          } catch {
+            // silently ignore
+          }
+        }
         // Try to update languages separately (column may not exist yet)
         if (input.languages !== undefined) {
           try {

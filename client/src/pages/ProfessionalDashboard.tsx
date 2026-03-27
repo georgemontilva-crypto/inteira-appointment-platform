@@ -42,7 +42,7 @@ export default function ProfessionalDashboard() {
   const [newSlot, setNewSlot] = useState({ dayOfWeek: 1, startTime: "09:00", endTime: "17:00" });
   const [editingProfile, setEditingProfile] = useState(false);
   const [profileForm, setProfileForm] = useState({
-    bio: "", education: "", certifications: "",
+    name: "", bio: "", education: "", certifications: "",
     yearsOfExperience: "", hourlyRate: "", languages: "Español",
   });
   const [newBlockedDate, setNewBlockedDate] = useState("");
@@ -885,6 +885,7 @@ export default function ProfessionalDashboard() {
                   size="sm"
                   onClick={() => {
                     setProfileForm({
+                      name: user?.name ?? "",
                       bio: profile.bio ?? "",
                       education: profile.education ?? "",
                       certifications: profile.certifications ?? "",
@@ -903,6 +904,14 @@ export default function ProfessionalDashboard() {
             {editingProfile ? (
               <Card className="border-border">
                 <CardContent className="p-6 space-y-4">
+                  <div>
+                    <Label className="text-xs">Nombre completo</Label>
+                    <Input
+                      value={profileForm.name}
+                      onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
+                      placeholder="Tu nombre completo"
+                    />
+                  </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label className="text-xs">Años de experiencia</Label>

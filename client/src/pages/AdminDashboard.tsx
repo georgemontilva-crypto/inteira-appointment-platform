@@ -383,7 +383,7 @@ export default function AdminDashboard() {
                   const selectedTier = tierSelect[pro.id] ?? "basic";
                   const isBioExpanded = expandedBio[pro.id] ?? false;
                   const avatar = (pro as any).userProfileImage || pro.profilePhoto;
-                  const name = (pro as any).userName ?? `Profesional #${pro.id}`;
+                  const name = (pro as any).userName || (pro as any).userEmail?.split('@')[0] || `Profesional #${pro.id}`;
                   const email = (pro as any).userEmail;
                   const specialtyName = (pro as any).specialtyName;
 
