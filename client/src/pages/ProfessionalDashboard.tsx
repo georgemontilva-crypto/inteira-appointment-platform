@@ -168,6 +168,18 @@ export default function ProfessionalDashboard() {
     onError: () => toast.error("Error al actualizar la cita"),
   });
 
+  // Si hay error FORBIDDEN significa que el rol en la sesión aún no está actualizado.
+  // Hacer logout automático y redirigir al login para refrescar la sesión.
+  const isForbidden = (profileError as any)?.data?.code === "FORBIDDEN";
+  useEffect(() => {
+    if (!isForbidden) return;
+    const timer = setTimeout(async () => {
+      await logout();
+      window.location.href = "/login?returnTo=/panel-profesional";
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [isForbidden]);
+
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -227,18 +239,6 @@ export default function ProfessionalDashboard() {
       </div>
     );
   }
-
-  // Si hay error FORBIDDEN significa que el rol en la sesión aún no está actualizado.
-  // Hacer logout automático y redirigir al login para refrescar la sesión.
-  const isForbidden = (profileError as any)?.data?.code === "FORBIDDEN";
-  useEffect(() => {
-    if (!isForbidden) return;
-    const timer = setTimeout(async () => {
-      await logout();
-      window.location.href = "/login?returnTo=/panel-profesional";
-    }, 2000);
-    return () => clearTimeout(timer);
-  }, [isForbidden]);
 
   if (isForbidden) {
     return (
