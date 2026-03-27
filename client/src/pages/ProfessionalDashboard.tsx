@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
@@ -36,7 +36,8 @@ const statusLabels: Record<string, string> = {
 };
 
 export default function ProfessionalDashboard() {
-  const { user, isAuthenticated, loading } = useAuth();
+  const { user, isAuthenticated, loading, refresh } = useAuth();
+  const utils = trpc.useUtils();
   const [activeTab, setActiveTab] = useState<"citas" | "disponibilidad" | "dias-libres" | "resenas" | "perfil">("citas");
   const [newSlot, setNewSlot] = useState({ dayOfWeek: 1, startTime: "09:00", endTime: "17:00" });
   const [editingProfile, setEditingProfile] = useState(false);
@@ -51,8 +52,25 @@ export default function ProfessionalDashboard() {
 
   const { data: profile, isLoading: loadingProfile, refetch: refetchProfile } = trpc.professional.getProfile.useQuery(
     undefined,
-    { enabled: isAuthenticated }
+    {
+      enabled: isAuthenticated,
+    }
   );
+
+  // Polling cada 10s cuando está pending para detectar aprobación automáticamente
+  useEffect(() => {
+    if (profile?.status !== "pending") return;
+    const interval = setInterval(() => refetchProfile(), 10000);
+    return () => clearInterval(interval);
+  }, [profile?.status]);
+
+  // Cuando el perfil pasa de pending a approved, refrescar auth.me para actualizar el rol en toda la app
+  useEffect(() => {
+    if (profile?.status === "approved") {
+      utils.auth.me.invalidate();
+      refresh();
+    }
+  }, [profile?.status]);
 
   const { data: appointments, isLoading: loadingAppointments, refetch: refetchAppointments } = trpc.professional.getAppointments.useQuery(
     undefined,
@@ -97,10 +115,12 @@ export default function ProfessionalDashboard() {
   });
 
   const updateProfileMutation = trpc.professional.updateProfile.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Perfil actualizado correctamente");
       setEditingProfile(false);
       refetchProfile();
+      await utils.auth.me.invalidate(); // refresca nombre en todo el dashboard
+      refresh();
     },
     onError: (err) => toast.error(err.message ?? "Error al actualizar perfil"),
   });

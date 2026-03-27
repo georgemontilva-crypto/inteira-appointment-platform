@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 
 export default function UserProfile() {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, refresh } = useAuth();
   const utils = trpc.useUtils();
 
   const { data: profile, isLoading: loadingProfile } = trpc.user.getProfile.useQuery(
@@ -49,12 +49,14 @@ export default function UserProfile() {
   }, [profile]);
 
   const updateMutation = trpc.user.updateProfile.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Perfil actualizado correctamente");
-      utils.user.getProfile.invalidate();
+      await utils.user.getProfile.invalidate();
+      await utils.auth.me.invalidate(); // refresca nombre/avatar en todo el dashboard
+      refresh();
       setIsDirty(false);
     },
-    onError: () => toast.error("Error al actualizar el perfil"),
+    onError: (err) => toast.error("Error al actualizar el perfil: " + err.message),
   });
 
   const handleSave = () => {
@@ -93,7 +95,7 @@ export default function UserProfile() {
       <div className="container py-8">
         <div className="flex items-center gap-4 mb-8">
           <div className="w-14 h-14 rounded-2xl gradient-brand flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
-            {profile?.name?.charAt(0)?.toUpperCase() ?? "U"}
+            {(name || profile?.name)?.charAt(0)?.toUpperCase() ?? "U"}
           </div>
           <div>
             <h1 className="text-2xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>

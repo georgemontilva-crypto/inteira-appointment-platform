@@ -88,7 +88,8 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 
     if (cols.has("name")) {
       insertCols.push("name"); insertVals.push(esc(name));
-      updateParts.push(`\`name\` = ${esc(name)}`);
+      // Do NOT overwrite name on update — the user may have changed it via profile settings.
+      // Only set name on INSERT (new user). On duplicate key, keep the existing name in DB.
     }
     if (cols.has("lastSignedIn")) {
       insertCols.push("lastSignedIn"); insertVals.push(`'${lastSignedIn}'`);

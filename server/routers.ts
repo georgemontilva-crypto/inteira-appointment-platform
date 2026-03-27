@@ -93,16 +93,26 @@ export const appRouter = router({
     updateProfile: protectedProcedure
       .input(userProfileUpdateSchema)
       .mutation(async ({ ctx, input }) => {
-        const db_instance = await db.getDb();
-        if (!db_instance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const dbInstance = await db.getDb();
+        if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const client = (dbInstance as any).$client;
 
-        await db_instance
-          .update(users)
-          .set({
-            ...input,
-            updatedAt: new Date(),
-          })
-          .where(eq(users.id, ctx.user.id));
+        // Build dynamic SQL to only update provided fields
+        const setParts: string[] = [];
+        const params: any[] = [];
+
+        if (input.name !== undefined) { setParts.push("`name` = ?"); params.push(input.name); }
+        if (input.phone !== undefined) { setParts.push("`phone` = ?"); params.push(input.phone); }
+        if (input.bio !== undefined) { setParts.push("`bio` = ?"); params.push(input.bio); }
+        if (input.profileImage !== undefined) { setParts.push("`profileImage` = ?"); params.push(input.profileImage); }
+        setParts.push("`updatedAt` = NOW()");
+
+        if (setParts.length > 1) {
+          await client.execute(
+            `UPDATE users SET ${setParts.join(", ")} WHERE id = ?`,
+            [...params, ctx.user.id]
+          );
+        }
 
         return await db.getUserById(ctx.user.id);
       }),
@@ -416,13 +426,39 @@ export const appRouter = router({
 
         const dbInstance = await db.getDb();
         if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const client = (dbInstance as any).$client;
 
-        const { professionals } = await import("../drizzle/schema");
-        const { eq } = await import("drizzle-orm");
-        await dbInstance.update(professionals).set({
-          ...input,
-          updatedAt: new Date(),
-        }).where(eq(professionals.id, professional.id));
+        // Use raw SQL to safely update only the fields provided,
+        // handling the case where 'languages' column may not yet exist in the DB.
+        const setParts: string[] = [];
+        const params: any[] = [];
+        const esc = (v: any) => v;
+
+        if (input.bio !== undefined) { setParts.push("`bio` = ?"); params.push(input.bio); }
+        if (input.education !== undefined) { setParts.push("`education` = ?"); params.push(input.education); }
+        if (input.certifications !== undefined) { setParts.push("`certifications` = ?"); params.push(input.certifications); }
+        if (input.yearsOfExperience !== undefined) { setParts.push("`yearsOfExperience` = ?"); params.push(input.yearsOfExperience); }
+        if (input.hourlyRate !== undefined) { setParts.push("`hourlyRate` = ?"); params.push(input.hourlyRate); }
+        setParts.push("`updatedAt` = NOW()");
+
+        if (setParts.length > 1) {
+          await client.execute(
+            `UPDATE professionals SET ${setParts.join(", ")} WHERE id = ?`,
+            [...params, professional.id]
+          );
+        }
+
+        // Try to update languages separately (column may not exist yet)
+        if (input.languages !== undefined) {
+          try {
+            await client.execute(
+              "UPDATE professionals SET `languages` = ? WHERE id = ?",
+              [input.languages, professional.id]
+            );
+          } catch {
+            // Column doesn't exist yet in DB — silently ignore
+          }
+        }
 
         return { success: true };
       }),
