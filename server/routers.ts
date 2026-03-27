@@ -73,6 +73,7 @@ export const appRouter = router({
   // Auth routes
   auth: router({
     me: publicProcedure.query((opts) => {
+      console.error("[DIAG] user from session:", opts.ctx.user?.email, "role:", opts.ctx.user?.role, "id:", opts.ctx.user?.id);
       return opts.ctx.user;
     }),
     logout: publicProcedure.mutation(({ ctx }) => {
@@ -884,6 +885,21 @@ export const appRouter = router({
         }).catch(() => {});
          return { success: true };
       }),
+
+    diagUser: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "User is not an admin" });
+      }
+      const dbInstance = await db.getDb();
+      if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      const client = (dbInstance as any).$client;
+      const query = (sql: string, params: any[]) => new Promise<any[]>((resolve, reject) => {
+        client.execute(sql, params, (err: any, results: any) => err ? reject(err) : resolve(Array.isArray(results) ? results : []));
+      });
+      const user = await query("SELECT id, email, role FROM users WHERE email = ?", ['memoxgamer1993@gmail.com']);
+      const prof = await query("SELECT id, userId, status, tier FROM professionals WHERE userId = ?", [user[0]?.id]);
+      return { user: user[0], professional: prof[0] };
+    }),
 
     // Sincroniza el rol de todos los profesionales aprobados que aún tienen role='user'
     syncProfessionalRoles: protectedProcedure.mutation(async ({ ctx }) => {
