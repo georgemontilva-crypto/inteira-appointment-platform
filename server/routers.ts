@@ -96,22 +96,20 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         const dbInstance = await db.getDb();
         if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
-        const client = (dbInstance as any).$client;
 
-        // Build dynamic SQL to only update provided fields
+        // Build dynamic SQL using safe string escaping (no callbacks)
+        const esc = (v: any) => v === null ? "NULL" : `'${String(v).replace(/'/g, "''")}'`;
         const setParts: string[] = [];
-        const params: any[] = [];
 
-        if (input.name !== undefined) { setParts.push("`name` = ?"); params.push(input.name); }
-        if (input.phone !== undefined) { setParts.push("`phone` = ?"); params.push(input.phone); }
-        if (input.bio !== undefined) { setParts.push("`bio` = ?"); params.push(input.bio); }
-        if (input.profileImage !== undefined) { setParts.push("`profileImage` = ?"); params.push(input.profileImage); }
+        if (input.name !== undefined) { setParts.push(`\`name\` = ${esc(input.name)}`); }
+        if (input.phone !== undefined) { setParts.push(`\`phone\` = ${esc(input.phone)}`); }
+        if (input.bio !== undefined) { setParts.push(`\`bio\` = ${esc(input.bio)}`); }
+        if (input.profileImage !== undefined) { setParts.push(`\`profileImage\` = ${esc(input.profileImage)}`); }
         setParts.push("`updatedAt` = NOW()");
 
         if (setParts.length > 1) {
-          await client.execute(
-            `UPDATE users SET ${setParts.join(", ")} WHERE id = ?`,
-            [...params, ctx.user.id]
+          await dbInstance.execute(
+            `UPDATE \`users\` SET ${setParts.join(", ")} WHERE \`id\` = ${Number(ctx.user.id)}`
           );
         }
 
@@ -181,10 +179,20 @@ export const appRouter = router({
         // Check if user already registered as professional
         const existing = await db.getProfessionalByUserId(ctx.user.id);
         if (existing) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "User already registered as professional",
-          });
+          // Permitir re-registro solo si fue rechazado (eliminar el registro anterior)
+          if (existing.status === "rejected") {
+            const dbInst = await db.getDb();
+            if (dbInst) {
+              await dbInst.execute(
+                `DELETE FROM \`professionals\` WHERE \`userId\` = ${Number(ctx.user.id)}`
+              );
+            }
+          } else {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "User already registered as professional",
+            });
+          }
         }
 
         // Generate unique placeholder when no cédula required for this specialty
@@ -208,27 +216,16 @@ export const appRouter = router({
           }
         );
 
-        // Actualizar el rol del usuario a 'professional' y guardar el nombre si fue provisto
-        const dbInst = await db.getDb();
-        if (dbInst) {
-          const client = (dbInst as any).$client;
-          // Actualizar rol siempre
-          await new Promise<void>((resolve, reject) => {
-            client.execute(
-              "UPDATE `users` SET `role` = 'professional' WHERE `id` = ?",
-              [ctx.user.id],
-              (err: any) => err ? reject(err) : resolve()
-            );
-          });
+        // Actualizar el rol del usuario a 'pending_professional' y guardar el nombre
+        // Nota: el rol se cambia a 'professional' solo cuando el admin aprueba
+        const dbInst2 = await db.getDb();
+        if (dbInst2) {
           // Guardar siempre el nombre que el profesional ingresó en el formulario
           if (input.fullName?.trim()) {
-            await new Promise<void>((resolve, reject) => {
-              client.execute(
-                "UPDATE `users` SET `name` = ? WHERE `id` = ?",
-                [input.fullName!.trim(), ctx.user.id],
-                (err: any) => err ? reject(err) : resolve()
-              );
-            });
+            const safeName = input.fullName.trim().replace(/'/g, "''");
+            await dbInst2.execute(
+              `UPDATE \`users\` SET \`name\` = '${safeName}' WHERE \`id\` = ${Number(ctx.user.id)}`
+            );
           }
         }
 
@@ -442,45 +439,40 @@ export const appRouter = router({
 
         const dbInstance = await db.getDb();
         if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
-        const client = (dbInstance as any).$client;
 
-        // Use raw SQL to safely update only the fields provided,
-        // handling the case where 'languages' column may not yet exist in the DB.
+        // Use raw SQL with safe string escaping (no callbacks, no placeholders)
+        const esc = (v: any) => v === null ? "NULL" : `'${String(v).replace(/'/g, "''")}'`;
         const setParts: string[] = [];
-        const params: any[] = [];
-        const esc = (v: any) => v;
 
-        if (input.bio !== undefined) { setParts.push("`bio` = ?"); params.push(input.bio); }
-        if (input.education !== undefined) { setParts.push("`education` = ?"); params.push(input.education); }
-        if (input.certifications !== undefined) { setParts.push("`certifications` = ?"); params.push(input.certifications); }
-        if (input.yearsOfExperience !== undefined) { setParts.push("`yearsOfExperience` = ?"); params.push(input.yearsOfExperience); }
-        if (input.hourlyRate !== undefined) { setParts.push("`hourlyRate` = ?"); params.push(input.hourlyRate); }
+        if (input.bio !== undefined) { setParts.push(`\`bio\` = ${esc(input.bio)}`); }
+        if (input.education !== undefined) { setParts.push(`\`education\` = ${esc(input.education)}`); }
+        if (input.certifications !== undefined) { setParts.push(`\`certifications\` = ${esc(input.certifications)}`); }
+        if (input.yearsOfExperience !== undefined) { setParts.push(`\`yearsOfExperience\` = ${Number(input.yearsOfExperience)}`); }
+        if (input.hourlyRate !== undefined) { setParts.push(`\`hourlyRate\` = ${Number(input.hourlyRate)}`); }
         setParts.push("`updatedAt` = NOW()");
 
         if (setParts.length > 1) {
-          await client.execute(
-            `UPDATE professionals SET ${setParts.join(", ")} WHERE id = ?`,
-            [...params, professional.id]
+          await dbInstance.execute(
+            `UPDATE \`professionals\` SET ${setParts.join(", ")} WHERE \`id\` = ${Number(professional.id)}`
           );
         }
 
         // Actualizar nombre del usuario si fue provisto
         if (input.name !== undefined && input.name.trim()) {
           try {
-            await client.execute(
-              "UPDATE users SET  = ? WHERE id = ?",
-              [input.name.trim(), ctx.user.id]
+            await dbInstance.execute(
+              `UPDATE \`users\` SET \`name\` = ${esc(input.name.trim())} WHERE \`id\` = ${Number(ctx.user.id)}`
             );
           } catch {
             // silently ignore
           }
         }
+
         // Try to update languages separately (column may not exist yet)
         if (input.languages !== undefined) {
           try {
-            await client.execute(
-              "UPDATE professionals SET `languages` = ? WHERE id = ?",
-              [input.languages, professional.id]
+            await dbInstance.execute(
+              `UPDATE \`professionals\` SET \`languages\` = ${esc(input.languages)} WHERE \`id\` = ${Number(professional.id)}`
             );
           } catch {
             // Column doesn't exist yet in DB — silently ignore
@@ -890,10 +882,26 @@ export const appRouter = router({
           message: input.reason ?? "Tu solicitud no fue aprobada en esta ocasión.",
           link: "/panel-profesional",
         }).catch(() => {});
-        return { success: true };
+         return { success: true };
       }),
-  }),
 
+    // Sincroniza el rol de todos los profesionales aprobados que aún tienen role='user'
+    syncProfessionalRoles: protectedProcedure.mutation(async ({ ctx }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Only admins can sync roles" });
+      }
+      const dbInst = await db.getDb();
+      if (!dbInst) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      // Update all users who have an approved professional profile but still have role='user'
+      await dbInst.execute(
+        `UPDATE \`users\` u
+         INNER JOIN \`professionals\` p ON p.userId = u.id
+         SET u.role = 'professional'
+         WHERE p.status = 'approved' AND u.role = 'user'`
+      );
+      return { success: true };
+    }),
+  }),
   // Specialty routes
   specialty: router({
     getAll: publicProcedure.query(async () => {

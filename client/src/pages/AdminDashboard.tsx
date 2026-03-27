@@ -12,7 +12,7 @@ import {
   Users, CheckCircle2, XCircle, Clock, Shield, Plus,
   Settings, BarChart3, Award, TrendingUp, Calendar,
   Star, Activity, CreditCard, UserCheck, RefreshCw, Wrench,
-  ChevronDown, ChevronUp, FileText, ExternalLink,
+  ChevronDown, ChevronUp, FileText, ExternalLink, User,
 } from "lucide-react";
 
 // ─── Simple bar chart ────────────────────────────────────────────────────────
@@ -110,6 +110,11 @@ export default function AdminDashboard() {
   const cronMutation = trpc.admin.runCronJobs.useMutation({
     onSuccess: (data) => toast.success(data.message),
     onError: () => toast.error("Error al ejecutar cron jobs"),
+  });
+
+  const syncRolesMutation = trpc.admin.syncProfessionalRoles.useMutation({
+    onSuccess: () => toast.success("Roles de profesionales sincronizados correctamente"),
+    onError: () => toast.error("Error al sincronizar roles"),
   });
 
   const createPlanMutation = trpc.subscriptionPlan.create.useMutation({
@@ -697,6 +702,51 @@ export default function AdminDashboard() {
                     <span className="text-xs text-muted-foreground ml-auto">
                       {new Date(cronMutation.data.executedAt).toLocaleTimeString("es-MX")}
                     </span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Sincronizar roles de profesionales */}
+            <Card className="border-border">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <User className="w-4 h-4 text-primary" />
+                  Sincronizar roles de profesionales
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-start gap-4 p-4 bg-muted/40 rounded-xl">
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <User className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-sm">Sincronizar roles</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Actualiza el rol de todos los profesionales aprobados que aún aparecen como usuarios normales.
+                      Ejecuta esto si un profesional aprobado no puede acceder a su panel.
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    className="gradient-brand text-white border-0 flex-shrink-0"
+                    onClick={() => syncRolesMutation.mutate()}
+                    disabled={syncRolesMutation.isPending}
+                  >
+                    {syncRolesMutation.isPending ? (
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <>
+                        <RefreshCw className="w-4 h-4 mr-1" />
+                        Sincronizar
+                      </>
+                    )}
+                  </Button>
+                </div>
+                {syncRolesMutation.isSuccess && (
+                  <div className="flex items-center gap-2 text-sm text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-xl p-3">
+                    <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                    <span>Roles sincronizados correctamente. Los profesionales afectados deben cerrar sesión y volver a entrar.</span>
                   </div>
                 )}
               </CardContent>
