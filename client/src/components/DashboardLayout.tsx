@@ -92,7 +92,14 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
   };
 
   // Build nav items including role-specific items
-  const navItems = [...NAV_ITEMS];
+  // El href de "Inicio" depende del rol del usuario
+  const homeHref =
+    user?.role === "professional" ? "/panel-profesional" :
+    user?.role === "admin" ? "/admin" :
+    "/dashboard";
+  const navItems = NAV_ITEMS.map((item) =>
+    item.href === "/dashboard" ? { ...item, href: homeHref } : item
+  );
   if (user?.role === "admin") {
     navItems.push({ label: "Admin", icon: "shield", href: "/admin" });
   }

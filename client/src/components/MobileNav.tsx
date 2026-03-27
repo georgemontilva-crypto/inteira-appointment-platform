@@ -15,10 +15,16 @@ const rightItems = [
 
 export default function MobileNav() {
   const [location, navigate] = useLocation();
-  const { isAuthenticated, loading } = useAuth();
+  const { user, isAuthenticated, loading } = useAuth();
 
   // No mostrar el menú si no hay sesión activa
   if (loading || !isAuthenticated) return null;
+
+  // Dashboard href según el rol del usuario
+  const dashboardHref =
+    user?.role === "professional" ? "/panel-profesional" :
+    user?.role === "admin" ? "/admin" :
+    "/dashboard";
 
   const isActive = (href: string) => {
     if (href === "/") return location === "/";
@@ -64,7 +70,7 @@ export default function MobileNav() {
           <button
             onClick={() => {
               if (isAuthenticated) {
-                navigate("/dashboard");
+                navigate(dashboardHref);
               } else {
                 window.location.href = getLoginUrl();
               }

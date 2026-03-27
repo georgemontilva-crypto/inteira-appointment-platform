@@ -4,15 +4,21 @@ import { useEffect } from "react";
 import { useLocation } from "wouter";
 
 export default function Login() {
-  const { isAuthenticated, loading } = useAuth();
+  const { user, isAuthenticated, loading } = useAuth();
   const [, navigate] = useLocation();
 
-  // Si ya está autenticado, redirigir al dashboard
+  // Si ya está autenticado, redirigir al dashboard correcto según el rol
   useEffect(() => {
-    if (!loading && isAuthenticated) {
-      navigate("/dashboard");
+    if (!loading && isAuthenticated && user) {
+      if (user.role === "professional") {
+        navigate("/panel-profesional");
+      } else if (user.role === "admin") {
+        navigate("/admin");
+      } else {
+        navigate("/dashboard");
+      }
     }
-  }, [isAuthenticated, loading, navigate]);
+  }, [isAuthenticated, loading, user, navigate]);
 
   const handleGoogleLogin = () => {
     // Leer returnTo de la URL si existe
