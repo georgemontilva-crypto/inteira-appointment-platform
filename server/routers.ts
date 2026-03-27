@@ -263,6 +263,7 @@ export const appRouter = router({
       }),
 
     getProfile: protectedProcedure.query(async ({ ctx }) => {
+      console.error("[DIAG getProfile] userId:", ctx.user.id, "role:", ctx.user.role);
       if (ctx.user.role !== "professional") {
         throw new TRPCError({
           code: "FORBIDDEN",

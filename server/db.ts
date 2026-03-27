@@ -231,6 +231,7 @@ export async function getProfessionalByUserId(userId: number) {
     ) as any;
     const rows = Array.isArray(result) ? result[0] : [];
     const arr = Array.isArray(rows) ? rows : [];
+    console.error("[DIAG getProfByUserId] userId:", userId, "result[0]:", JSON.stringify(arr[0]));
     return arr[0] ?? undefined;
   } catch (e: any) {
     console.error("[DB] getProfessionalByUserId error:", e?.message);
