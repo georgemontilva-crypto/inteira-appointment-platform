@@ -36,7 +36,7 @@ const statusLabels: Record<string, string> = {
 };
 
 export default function ProfessionalDashboard() {
-  const { user, isAuthenticated, loading, refresh } = useAuth();
+  const { user, isAuthenticated, loading, refresh, logout } = useAuth();
   const utils = trpc.useUtils();
   const [activeTab, setActiveTab] = useState<"citas" | "disponibilidad" | "dias-libres" | "resenas" | "perfil">("citas");
   const [newSlot, setNewSlot] = useState({ dayOfWeek: 1, startTime: "09:00", endTime: "17:00" });
@@ -50,10 +50,11 @@ export default function ProfessionalDashboard() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
-  const { data: profile, isLoading: loadingProfile, refetch: refetchProfile } = trpc.professional.getProfile.useQuery(
+  const { data: profile, isLoading: loadingProfile, refetch: refetchProfile, error: profileError } = trpc.professional.getProfile.useQuery(
     undefined,
     {
       enabled: isAuthenticated,
+      retry: false,
     }
   );
 
@@ -227,6 +228,38 @@ export default function ProfessionalDashboard() {
     );
   }
 
+  // Si hay error FORBIDDEN significa que el rol en la sesión aún no está actualizado.
+  // Redirigir al dashboard normal para que el usuario pueda usar "Sincronizar roles" desde admin
+  // o simplemente cerrar sesión y volver a entrar.
+  if (profileError) {
+    const code = (profileError as any)?.data?.code;
+    if (code === "FORBIDDEN") {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-background px-4">
+          <Card className="max-w-md w-full">
+            <CardContent className="p-8 text-center space-y-4">
+              <AlertCircle className="w-12 h-12 text-amber-500 mx-auto" />
+              <h2 className="text-xl font-bold">Sesión desactualizada</h2>
+              <p className="text-muted-foreground text-sm">
+                Tu cuenta fue aprobada como profesional, pero tu sesión actual aún no refleja el cambio.
+                Cierra sesión y vuelve a entrar para acceder a tu panel.
+              </p>
+              <Button
+                className="w-full gradient-brand text-white border-0"
+                onClick={async () => { await logout(); window.location.href = getLoginUrl(); }}
+              >
+                Cerrar sesión y volver a entrar
+              </Button>
+              <a href="/dashboard">
+                <Button variant="outline" className="w-full mt-2">Ir al dashboard</Button>
+              </a>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+  }
+
   if (!profile) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -237,6 +270,9 @@ export default function ProfessionalDashboard() {
             <p className="text-muted-foreground text-sm">Regístrate como profesional para acceder a este panel.</p>
             <a href="/registro-profesional">
               <Button className="w-full gradient-brand text-white border-0">Registrarme como profesional</Button>
+            </a>
+            <a href="/dashboard">
+              <Button variant="outline" className="w-full">Ir al dashboard</Button>
             </a>
           </CardContent>
         </Card>
