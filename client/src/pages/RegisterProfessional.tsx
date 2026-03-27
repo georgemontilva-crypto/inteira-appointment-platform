@@ -324,6 +324,7 @@ export default function RegisterProfessional() {
         certifications: certificationsUrl,
         yearsOfExperience: form.yearsOfExperience ? parseInt(form.yearsOfExperience) : undefined,
         profilePhoto: profilePhotoUrl,
+        fullName: `${form.firstName.trim()} ${form.lastName.trim()}`.trim() || undefined,
       });
     } catch (err: unknown) {
       toast.error((err as Error).message ?? "Error al subir archivos");

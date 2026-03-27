@@ -57,6 +57,7 @@ const professionalRegistrationSchema = z.object({
   bio: z.string().optional(),
   hourlyRate: z.string().optional(),
   profilePhoto: z.string().url().optional(),
+  fullName: z.string().optional(),           // nombre completo del profesional
 });
 
 const userProfileUpdateSchema = z.object({
@@ -207,14 +208,31 @@ export const appRouter = router({
           }
         );
 
-        // Actualizar el rol del usuario a 'professional' para que pueda acceder a las rutas de profesional
+        // Actualizar el rol del usuario a 'professional' y guardar el nombre si fue provisto
         const dbInst = await db.getDb();
         if (dbInst) {
-          const { users: usersTable } = await import("../drizzle/schema");
-          const { eq: eqOp } = await import("drizzle-orm");
-          await dbInst.update(usersTable)
-            .set({ role: "professional" })
-            .where(eqOp(usersTable.id, ctx.user.id));
+          const client = (dbInst as any).$client;
+          // Actualizar rol siempre
+          await new Promise<void>((resolve, reject) => {
+            client.execute(
+              "UPDATE `users` SET `role` = 'professional' WHERE `id` = ?",
+              [ctx.user.id],
+              (err: any) => err ? reject(err) : resolve()
+            );
+          });
+          // Si el usuario no tiene nombre aún, guardar el fullName del formulario
+          if (input.fullName?.trim()) {
+            const currentUser = await db.getUserById(ctx.user.id);
+            if (!currentUser?.name || currentUser.name.trim() === "") {
+              await new Promise<void>((resolve, reject) => {
+                client.execute(
+                  "UPDATE `users` SET `name` = ? WHERE `id` = ?",
+                  [input.fullName!.trim(), ctx.user.id],
+                  (err: any) => err ? reject(err) : resolve()
+                );
+              });
+            }
+          }
         }
 
         // Notificar al admin principal por email + notificación in-app (fire and forget)
