@@ -39,7 +39,12 @@ const statusLabels: Record<string, string> = {
 export default function ProfessionalDashboard() {
   const { user, isAuthenticated, loading, refresh, logout } = useAuth();
   const utils = trpc.useUtils();
-  const [activeTab, setActiveTab] = useState<"citas" | "disponibilidad" | "dias-libres" | "resenas" | "perfil">("citas");
+  const [activeTab, setActiveTab] = useState<"citas" | "disponibilidad" | "dias-libres" | "resenas" | "perfil" | "ganancias">(() => {
+    if (typeof window === "undefined") return "citas";
+    const hash = window.location.hash.slice(1);
+    const valid = ["citas", "disponibilidad", "dias-libres", "resenas", "perfil", "ganancias"];
+    return (valid.includes(hash) ? hash : "citas") as "citas" | "disponibilidad" | "dias-libres" | "resenas" | "perfil" | "ganancias";
+  });
   const [newSlot, setNewSlot] = useState({ dayOfWeek: 1, startTime: "09:00", endTime: "17:00" });
   const [editingProfile, setEditingProfile] = useState(false);
   const [profileForm, setProfileForm] = useState({
@@ -409,6 +414,7 @@ export default function ProfessionalDashboard() {
           { key: "disponibilidad", label: "Disponibilidad", icon: <Clock className="w-4 h-4" /> },
           { key: "dias-libres", label: "Días libres", icon: <CalendarX className="w-4 h-4" /> },
           { key: "resenas", label: "Reseñas", icon: <Star className="w-4 h-4" />, badge: myReviews?.length },
+          { key: "ganancias", label: "Ganancias", icon: <BarChart3 className="w-4 h-4" /> },
           { key: "perfil", label: "Mi perfil", icon: <User className="w-4 h-4" /> },
         ].map((tab) => (
           <button

@@ -18,22 +18,22 @@ const PRO_NAV_SECTIONS = [
   {
     section: "Mi panel",
     items: [
-      { label: "Mis citas",      icon: "calendar", href: "/panel-profesional" },
-      { label: "Disponibilidad", icon: "clock",    href: "/panel-profesional" },
-      { label: "Reseñas",        icon: "star",     href: "/panel-profesional" },
+      { label: "Mis citas",      icon: "calendar", href: "/panel-profesional#citas",         hash: "#citas" },
+      { label: "Disponibilidad", icon: "clock",    href: "/panel-profesional#disponibilidad", hash: "#disponibilidad" },
+      { label: "Reseñas",        icon: "star",     href: "/panel-profesional#resenas",        hash: "#resenas" },
     ],
   },
   {
     section: "Finanzas",
     items: [
-      { label: "Mis ganancias",  icon: "wallet",   href: "/panel-profesional" },
+      { label: "Mis ganancias",  icon: "wallet",   href: "/panel-profesional#ganancias",      hash: "#ganancias" },
     ],
   },
   {
     section: "Cuenta",
     items: [
-      { label: "Mi perfil",      icon: "user",     href: "/panel-profesional" },
-      { label: "Ir al inicio",   icon: "home",     href: "/dashboard" },
+      { label: "Mi perfil",      icon: "user",     href: "/panel-profesional#perfil",         hash: "#perfil" },
+      { label: "Ir al inicio",   icon: "home",     href: "/dashboard",                        hash: "" },
     ],
   },
 ];
@@ -188,25 +188,29 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
         <aside className="w-[220px] flex-shrink-0 bg-white border-r border-[rgba(96,117,98,0.15)] flex-col hidden md:flex overflow-hidden sticky top-[58px]" style={{ height: "calc(100vh - 58px)" }}>
           <nav className="flex-1 overflow-y-auto p-2.5">
             {user?.role === "professional" ? (
-              /* ── Sidebar profesional ── */
+              /* ── Sidebar profesional — grid 2 col con secciones ── */
               <div className="flex flex-col gap-3">
                 {PRO_NAV_SECTIONS.map((section) => (
                   <div key={section.section}>
                     <p className="text-[9px] font-semibold text-[#93A295] uppercase tracking-widest px-1 mb-1.5">{section.section}</p>
-                    <div className="flex flex-col gap-1">
+                    <div className="grid grid-cols-2 gap-1.5" style={{ gridAutoRows: "minmax(68px, auto)" }}>
                       {section.items.map((item) => {
-                        const isActive = location === item.href || location.startsWith(item.href + "/");
+                        const currentHash = typeof window !== "undefined" ? window.location.hash : "";
+                        const isActive = item.hash ? currentHash === item.hash : location === item.href;
+                        const cellClass = `flex flex-col items-start justify-end p-2.5 rounded-[9px] border min-h-[68px] transition-all cursor-pointer relative ${
+                          isActive
+                            ? "bg-[rgba(96,117,98,0.12)] border-[rgba(96,117,98,0.35)]"
+                            : "bg-[#F7FAFC] border-[rgba(96,117,98,0.15)] hover:bg-[#f0f4f0] hover:border-[rgba(96,117,98,0.3)]"
+                        }`;
                         return (
                           <Link key={item.label} href={item.href}>
-                            <a className={`flex items-center gap-2.5 px-3 py-2.5 rounded-[9px] border transition-all cursor-pointer ${
-                              isActive
-                                ? "bg-[rgba(96,117,98,0.12)] border-[rgba(96,117,98,0.35)]"
-                                : "bg-[#F7FAFC] border-[rgba(96,117,98,0.15)] hover:bg-[#f0f4f0] hover:border-[rgba(96,117,98,0.3)]"
-                            }`}>
-                              <span className={`w-[16px] h-[16px] flex-shrink-0 ${isActive ? "text-[#3d4e3f]" : "text-[#93A295]"}`}>
+                            <a className={cellClass}>
+                              <span className={`w-[18px] h-[18px] mb-1.5 ${isActive ? "text-[#3d4e3f]" : "text-[#93A295]"}`}>
                                 {ICONS[item.icon]}
                               </span>
-                              <span className={`text-[12px] font-medium ${isActive ? "text-[#3d4e3f]" : "text-[#607562]"}`}>{item.label}</span>
+                              <span className={`text-[11px] font-medium leading-tight ${isActive ? "text-[#3d4e3f]" : "text-[#607562]"}`}>
+                                {item.label}
+                              </span>
                             </a>
                           </Link>
                         );
