@@ -14,6 +14,30 @@ const NAV_ITEMS = [
   { label: "Perfil",          icon: "user",     href: "/perfil" },
 ];
 
+const PRO_NAV_SECTIONS = [
+  {
+    section: "Mi panel",
+    items: [
+      { label: "Mis citas",      icon: "calendar", href: "/panel-profesional" },
+      { label: "Disponibilidad", icon: "clock",    href: "/panel-profesional" },
+      { label: "Reseñas",        icon: "star",     href: "/panel-profesional" },
+    ],
+  },
+  {
+    section: "Finanzas",
+    items: [
+      { label: "Mis ganancias",  icon: "wallet",   href: "/panel-profesional" },
+    ],
+  },
+  {
+    section: "Cuenta",
+    items: [
+      { label: "Mi perfil",      icon: "user",     href: "/panel-profesional" },
+      { label: "Ir al inicio",   icon: "home",     href: "/dashboard" },
+    ],
+  },
+];
+
 const ICONS: Record<string, ReactElement> = {
   home: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
   calendar: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
@@ -29,6 +53,7 @@ const ICONS: Record<string, ReactElement> = {
   grid: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><rect x="2" y="2" width="9" height="9" rx="1"/><rect x="13" y="2" width="9" height="9" rx="1"/><rect x="2" y="13" width="9" height="9" rx="1"/><rect x="13" y="13" width="9" height="9" rx="1"/></svg>,
   layers: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>,
   mail: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>,
+  clock: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
 };
 
 function Icon({ name, className = "w-4 h-4" }: { name: string; className?: string }) {
@@ -161,46 +186,77 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
       <div className="flex overflow-hidden" style={{ height: "calc(100vh - 58px)" }}>
         {/* SIDEBAR */}
         <aside className="w-[220px] flex-shrink-0 bg-white border-r border-[rgba(96,117,98,0.15)] flex-col hidden md:flex overflow-hidden sticky top-[58px]" style={{ height: "calc(100vh - 58px)" }}>
-          <nav className="flex-1 overflow-hidden p-2.5">
-            <div className="grid grid-cols-2 gap-1.5" style={{ gridAutoRows: "minmax(68px, auto)" }}>
-              {navItems.map((item) => {
-                const isNotifications = item.href === "#notifications";
-                const isActive = !isNotifications && (location === item.href || location.startsWith(item.href + "/"));
-                const isAdmin = item.icon === "shield" && user?.role === "admin";
-                const cellClass = `flex flex-col items-start justify-end p-2.5 rounded-[9px] border min-h-[68px] transition-all cursor-pointer relative ${
-                  isActive
-                    ? "bg-[rgba(96,117,98,0.12)] border-[rgba(96,117,98,0.35)]"
-                    : isAdmin
-                    ? "bg-[#fff8f7] border-[rgba(180,60,60,0.2)]"
-                    : "bg-[#F7FAFC] border-[rgba(96,117,98,0.15)] hover:bg-[#f0f4f0] hover:border-[rgba(96,117,98,0.3)]"
-                }`;
-                const inner = (
-                  <>
-                    {(item as any).badge && count > 0 && (
-                      <span className="absolute top-1.5 right-1.5 min-w-[14px] h-[14px] bg-red-600 text-white text-[8px] font-bold rounded-full flex items-center justify-center px-0.5">{count > 9 ? "9+" : count}</span>
-                    )}
-                    <span className={`w-[18px] h-[18px] mb-1.5 ${isActive ? "text-[#3d4e3f]" : isAdmin ? "text-[#B43C3C]" : "text-[#93A295]"}`}>
-                      {ICONS[item.icon]}
-                    </span>
-                    <span className={`text-[11px] font-medium leading-tight ${isActive ? "text-[#3d4e3f]" : isAdmin ? "text-[#B43C3C]" : "text-[#607562]"}`}>
-                      {item.label}
-                    </span>
-                  </>
-                );
-                if (isNotifications) {
-                  return (
-                    <button key="notifications" className={cellClass} onClick={() => openPanel("notifications")}>
-                      {inner}
-                    </button>
+          <nav className="flex-1 overflow-y-auto p-2.5">
+            {user?.role === "professional" ? (
+              /* ── Sidebar profesional ── */
+              <div className="flex flex-col gap-3">
+                {PRO_NAV_SECTIONS.map((section) => (
+                  <div key={section.section}>
+                    <p className="text-[9px] font-semibold text-[#93A295] uppercase tracking-widest px-1 mb-1.5">{section.section}</p>
+                    <div className="flex flex-col gap-1">
+                      {section.items.map((item) => {
+                        const isActive = location === item.href || location.startsWith(item.href + "/");
+                        return (
+                          <Link key={item.label} href={item.href}>
+                            <a className={`flex items-center gap-2.5 px-3 py-2.5 rounded-[9px] border transition-all cursor-pointer ${
+                              isActive
+                                ? "bg-[rgba(96,117,98,0.12)] border-[rgba(96,117,98,0.35)]"
+                                : "bg-[#F7FAFC] border-[rgba(96,117,98,0.15)] hover:bg-[#f0f4f0] hover:border-[rgba(96,117,98,0.3)]"
+                            }`}>
+                              <span className={`w-[16px] h-[16px] flex-shrink-0 ${isActive ? "text-[#3d4e3f]" : "text-[#93A295]"}`}>
+                                {ICONS[item.icon]}
+                              </span>
+                              <span className={`text-[12px] font-medium ${isActive ? "text-[#3d4e3f]" : "text-[#607562]"}`}>{item.label}</span>
+                            </a>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              /* ── Sidebar usuario/admin ── */
+              <div className="grid grid-cols-2 gap-1.5" style={{ gridAutoRows: "minmax(68px, auto)" }}>
+                {navItems.map((item) => {
+                  const isNotifications = item.href === "#notifications";
+                  const isActive = !isNotifications && (location === item.href || location.startsWith(item.href + "/"));
+                  const isAdmin = item.icon === "shield" && user?.role === "admin";
+                  const cellClass = `flex flex-col items-start justify-end p-2.5 rounded-[9px] border min-h-[68px] transition-all cursor-pointer relative ${
+                    isActive
+                      ? "bg-[rgba(96,117,98,0.12)] border-[rgba(96,117,98,0.35)]"
+                      : isAdmin
+                      ? "bg-[#fff8f7] border-[rgba(180,60,60,0.2)]"
+                      : "bg-[#F7FAFC] border-[rgba(96,117,98,0.15)] hover:bg-[#f0f4f0] hover:border-[rgba(96,117,98,0.3)]"
+                  }`;
+                  const inner = (
+                    <>
+                      {(item as any).badge && count > 0 && (
+                        <span className="absolute top-1.5 right-1.5 min-w-[14px] h-[14px] bg-red-600 text-white text-[8px] font-bold rounded-full flex items-center justify-center px-0.5">{count > 9 ? "9+" : count}</span>
+                      )}
+                      <span className={`w-[18px] h-[18px] mb-1.5 ${isActive ? "text-[#3d4e3f]" : isAdmin ? "text-[#B43C3C]" : "text-[#93A295]"}`}>
+                        {ICONS[item.icon]}
+                      </span>
+                      <span className={`text-[11px] font-medium leading-tight ${isActive ? "text-[#3d4e3f]" : isAdmin ? "text-[#B43C3C]" : "text-[#607562]"}`}>
+                        {item.label}
+                      </span>
+                    </>
                   );
-                }
-                return (
-                  <Link key={item.href} href={item.href}>
-                    <a className={cellClass}>{inner}</a>
-                  </Link>
-                );
-              })}
-            </div>
+                  if (isNotifications) {
+                    return (
+                      <button key="notifications" className={cellClass} onClick={() => openPanel("notifications")}>
+                        {inner}
+                      </button>
+                    );
+                  }
+                  return (
+                    <Link key={item.href} href={item.href}>
+                      <a className={cellClass}>{inner}</a>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
           </nav>
 
           {/* Footer fixed at bottom */}
