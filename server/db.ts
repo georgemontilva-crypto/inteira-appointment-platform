@@ -463,20 +463,32 @@ export async function createUserSubscription(
 export async function getProfessionalAvailability(professionalId: number) {
   const db = await getDb();
   if (!db) return [];
-
-  return await db
-    .select()
-    .from(professionalAvailability)
-    .where(eq(professionalAvailability.professionalId, professionalId));
+  const client = (db as any).$client;
+  return new Promise<any[]>((resolve, reject) => {
+    client.execute(
+      "SELECT * FROM professionalAvailability WHERE professionalId = ? ORDER BY dayOfWeek, startTime",
+      [professionalId],
+      (err: any, results: any) => {
+        if (err) reject(err);
+        else resolve(Array.isArray(results) ? results : []);
+      }
+    );
+  });
 }
 
 export async function createProfessionalAvailability(
-  data: Partial<ProfessionalAvailability>
+  data: { professionalId: number; dayOfWeek: number; startTime: string; endTime: string; isAvailable?: boolean }
 ) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-
-  return await db.insert(professionalAvailability).values(data as any);
+  const client = (db as any).$client;
+  return new Promise<void>((resolve, reject) => {
+    client.execute(
+      "INSERT INTO professionalAvailability (professionalId, dayOfWeek, startTime, endTime, isAvailable) VALUES (?, ?, ?, ?, ?)",
+      [data.professionalId, data.dayOfWeek, data.startTime, data.endTime, data.isAvailable ?? true],
+      (err: any) => { if (err) reject(err); else resolve(); }
+    );
+  });
 }
 
 // Appointment functions

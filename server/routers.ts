@@ -409,14 +409,14 @@ export const appRouter = router({
         if (!professional) throw new TRPCError({ code: "NOT_FOUND", message: "Professional profile not found" });
         const dbInstance = await db.getDb();
         if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
-        const { professionalAvailability } = await import("../drizzle/schema");
-        const { and, eq } = await import("drizzle-orm");
-        await dbInstance.delete(professionalAvailability).where(
-          and(
-            eq(professionalAvailability.id, input.id),
-            eq(professionalAvailability.professionalId, professional.id)
-          )
-        );
+        const client = (dbInstance as any).$client;
+        await new Promise<void>((resolve, reject) => {
+          client.execute(
+            "DELETE FROM professionalAvailability WHERE id = ? AND professionalId = ?",
+            [input.id, professional.id],
+            (err: any) => { if (err) reject(err); else resolve(); }
+          );
+        });
         return { success: true };
       }),
 
