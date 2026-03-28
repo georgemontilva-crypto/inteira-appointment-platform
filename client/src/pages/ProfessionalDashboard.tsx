@@ -186,6 +186,17 @@ export default function ProfessionalDashboard() {
     return () => clearTimeout(timer);
   }, [isForbidden]);
 
+  useEffect(() => {
+    const handleHash = () => {
+      const hash = window.location.hash.replace('#', '');
+      const valid = ['citas','disponibilidad','dias-libres','resenas','ganancias','perfil'];
+      if (valid.includes(hash)) setActiveTab(hash as any);
+    };
+    handleHash();
+    window.addEventListener('hashchange', handleHash);
+    return () => window.removeEventListener('hashchange', handleHash);
+  }, []);
+
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -585,7 +596,7 @@ export default function ProfessionalDashboard() {
 
         {/* Tab: Disponibilidad */}
         {activeTab === "disponibilidad" && (
-          <div className="space-y-6 max-w-2xl">
+          <div className="space-y-6">
             <div>
               <h2 className="text-xl font-bold mb-2" style={{ fontFamily: "Poppins, sans-serif" }}>
                 Configurar disponibilidad
@@ -688,7 +699,7 @@ export default function ProfessionalDashboard() {
 
         {/* Tab: Días libres */}
         {activeTab === "dias-libres" && (
-          <div className="space-y-6 max-w-2xl">
+          <div className="space-y-6">
             <div>
               <h2 className="text-xl font-bold mb-2" style={{ fontFamily: "Poppins, sans-serif" }}>
                 Días libres y vacaciones
@@ -794,7 +805,7 @@ export default function ProfessionalDashboard() {
 
         {/* Tab: Reseñas */}
         {activeTab === "resenas" && (
-          <div className="space-y-6 max-w-2xl">
+          <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-bold mb-1" style={{ fontFamily: "Poppins, sans-serif" }}>
@@ -875,7 +886,7 @@ export default function ProfessionalDashboard() {
 
         {/* Tab: Ganancias */}
         {activeTab === "ganancias" && (
-          <div className="max-w-2xl space-y-4">
+          <div className="space-y-4">
             <h2 className="text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>Mis ganancias</h2>
             <div className="rounded-2xl border border-dashed border-[rgba(96,117,98,0.3)] bg-[#F7FAFC] p-10 text-center">
               <BarChart3 className="w-10 h-10 text-[#93A295] mx-auto mb-3" />
@@ -887,7 +898,7 @@ export default function ProfessionalDashboard() {
 
         {/* Tab: Perfil */}
         {activeTab === "perfil" && (
-          <div className="max-w-2xl space-y-6">
+          <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
                 Mi perfil profesional
