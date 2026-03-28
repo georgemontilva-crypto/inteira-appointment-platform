@@ -225,14 +225,17 @@ export async function getProfessionalByUserId(userId: number) {
   if (!db) return undefined;
   const client = (db as any).$client;
   try {
-    const result = await client.execute(
-      "SELECT * FROM `professionals` WHERE `userId` = ? LIMIT 1",
-      [userId]
-    ) as any;
-    const rows = Array.isArray(result) ? result[0] : [];
-    const arr = Array.isArray(rows) ? rows : [];
-    console.error("[DIAG getProfByUserId] userId:", userId, "result[0]:", JSON.stringify(arr[0]));
-    return arr[0] ?? undefined;
+    const rows = await new Promise<any[]>((resolve, reject) => {
+      client.execute(
+        "SELECT * FROM professionals WHERE userId = ? LIMIT 1",
+        [userId],
+        (err: any, results: any) => {
+          if (err) reject(err);
+          else resolve(Array.isArray(results) ? results : []);
+        }
+      );
+    });
+    return rows[0] ?? undefined;
   } catch (e: any) {
     console.error("[DB] getProfessionalByUserId error:", e?.message);
     return undefined;
