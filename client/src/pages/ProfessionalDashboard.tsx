@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import DashboardLayout from "../components/DashboardLayout";
 
 const DAYS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
@@ -330,12 +331,12 @@ export default function ProfessionalDashboard() {
   const pastAppointments = appointments?.filter((a) => a.status !== "scheduled") ?? [];
 
   return (
-    <div className="min-h-screen bg-background">
+    <DashboardLayout>
       {/* Header */}
-      <div className="gradient-hero text-white relative overflow-hidden rounded-b-2xl">
+      <div className="gradient-hero text-white relative overflow-hidden rounded-2xl mb-5">
         <div className="absolute top-0 right-0 w-56 h-56 rounded-full pointer-events-none" style={{background:"rgba(255,255,255,0.05)",transform:"translate(30%,-30%)"}} />
         <div className="absolute bottom-0 right-24 w-36 h-36 rounded-full pointer-events-none" style={{background:"rgba(255,255,255,0.04)",transform:"translateY(50%)"}} />
-        <div className="container py-6 relative z-10">
+        <div className="p-5 md:p-6 relative z-10">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
               <div className="relative group">
@@ -401,36 +402,32 @@ export default function ProfessionalDashboard() {
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-border bg-background sticky top-0 z-10 overflow-x-auto">
-        <div className="container">
-          <div className="flex gap-1 min-w-max">
-            {[
-              { key: "citas", label: "Mis citas", icon: <Calendar className="w-4 h-4" /> },
-              { key: "disponibilidad", label: "Disponibilidad", icon: <Clock className="w-4 h-4" /> },
-              { key: "dias-libres", label: "Días libres", icon: <CalendarX className="w-4 h-4" /> },
-              { key: "resenas", label: "Reseñas", icon: <Star className="w-4 h-4" />, badge: myReviews?.length },
-              { key: "perfil", label: "Mi perfil", icon: <User className="w-4 h-4" /> },
-            ].map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key as typeof activeTab)}
-                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-                  activeTab === tab.key
-                    ? "border-primary text-primary"
-                    : "border-transparent text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {tab.icon}
-                {tab.label}
-                {tab.badge !== undefined && tab.badge > 0 && (
-                  <span className="ml-1 bg-primary text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
-                    {tab.badge}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
+      <div className="flex gap-1 overflow-x-auto pb-1 mb-5 [&::-webkit-scrollbar]:hidden" style={{scrollbarWidth:"none"}}>
+        {[
+          { key: "citas", label: "Mis citas", icon: <Calendar className="w-4 h-4" /> },
+          { key: "disponibilidad", label: "Disponibilidad", icon: <Clock className="w-4 h-4" /> },
+          { key: "dias-libres", label: "Días libres", icon: <CalendarX className="w-4 h-4" /> },
+          { key: "resenas", label: "Reseñas", icon: <Star className="w-4 h-4" />, badge: myReviews?.length },
+          { key: "perfil", label: "Mi perfil", icon: <User className="w-4 h-4" /> },
+        ].map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key as typeof activeTab)}
+            className={`flex items-center gap-2 px-3 py-2 rounded-[9px] text-[12px] font-medium whitespace-nowrap transition-all border flex-shrink-0 ${
+              activeTab === tab.key
+                ? "bg-[rgba(96,117,98,0.12)] border-[rgba(96,117,98,0.35)] text-[#3d4e3f]"
+                : "bg-[#F7FAFC] border-[rgba(96,117,98,0.15)] text-[#607562] hover:bg-[#f0f4f0] hover:border-[rgba(96,117,98,0.3)]"
+            }`}
+          >
+            {tab.icon}
+            {tab.label}
+            {tab.badge !== undefined && tab.badge > 0 && (
+              <span className="ml-1 bg-[#607562] text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold">
+                {tab.badge}
+              </span>
+            )}
+          </button>
+        ))}
       </div>
 
       {/* Banner: próxima cita con videollamada */}
@@ -442,7 +439,7 @@ export default function ProfessionalDashboard() {
         const isSoon = msUntil > 0 && msUntil < 60 * 60 * 1000;
         if (!isToday && !isSoon) return null;
         return (
-          <div className="container pt-5">
+          <div className="mb-5">
             <div className="rounded-2xl overflow-hidden border border-primary/30 bg-gradient-to-r from-primary/10 to-emerald-50">
               <div className="flex items-center gap-3 px-4 py-3.5">
                 <div className="w-10 h-10 rounded-xl gradient-brand flex items-center justify-center flex-shrink-0">
@@ -468,7 +465,7 @@ export default function ProfessionalDashboard() {
         );
       })()}
 
-      <div className="container py-8">
+      <div>
 
         {/* Tab: Citas */}
         {activeTab === "citas" && (
@@ -1058,6 +1055,6 @@ export default function ProfessionalDashboard() {
           </div>
         )}
       </div>
-    </div>
+    </DashboardLayout>
   );
 }
