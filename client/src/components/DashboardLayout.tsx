@@ -16,24 +16,20 @@ const NAV_ITEMS = [
 
 const PRO_NAV_SECTIONS = [
   {
-    section: "Mi panel",
+    section: "Panel",
     items: [
-      { label: "Mis citas",      icon: "calendar", href: "/panel-profesional#citas",         hash: "#citas" },
-      { label: "Disponibilidad", icon: "clock",    href: "/panel-profesional#disponibilidad", hash: "#disponibilidad" },
-      { label: "Reseñas",        icon: "star",     href: "/panel-profesional#resenas",        hash: "#resenas" },
-    ],
-  },
-  {
-    section: "Finanzas",
-    items: [
-      { label: "Mis ganancias",  icon: "wallet",   href: "/panel-profesional#ganancias",      hash: "#ganancias" },
+      { label: "Mis citas",      icon: "calendar", href: "/panel-profesional#citas",          hash: "#citas" },
+      { label: "Disponibilidad", icon: "clock",    href: "/panel-profesional#disponibilidad",  hash: "#disponibilidad" },
+      { label: "Días libres",    icon: "calendar", href: "/panel-profesional#dias-libres",     hash: "#dias-libres" },
+      { label: "Reseñas",        icon: "star",     href: "/panel-profesional#resenas",         hash: "#resenas" },
+      { label: "Ganancias",      icon: "wallet",   href: "/panel-profesional#ganancias",       hash: "#ganancias" },
+      { label: "Mi perfil",      icon: "user",     href: "/panel-profesional#perfil",          hash: "#perfil" },
     ],
   },
   {
     section: "Cuenta",
     items: [
-      { label: "Mi perfil",      icon: "user",     href: "/panel-profesional#perfil",         hash: "#perfil" },
-      { label: "Ir al inicio",   icon: "home",     href: "/dashboard",                        hash: "" },
+      { label: "Ir al inicio",   icon: "home",     href: "/dashboard",                         hash: "" },
     ],
   },
 ];

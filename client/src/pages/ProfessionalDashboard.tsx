@@ -407,36 +407,6 @@ export default function ProfessionalDashboard() {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 overflow-x-auto pb-1 mb-5 [&::-webkit-scrollbar]:hidden" style={{scrollbarWidth:"none"}}>
-        {[
-          { key: "citas", label: "Mis citas", icon: <Calendar className="w-4 h-4" /> },
-          { key: "disponibilidad", label: "Disponibilidad", icon: <Clock className="w-4 h-4" /> },
-          { key: "dias-libres", label: "Días libres", icon: <CalendarX className="w-4 h-4" /> },
-          { key: "resenas", label: "Reseñas", icon: <Star className="w-4 h-4" />, badge: myReviews?.length },
-          { key: "ganancias", label: "Ganancias", icon: <BarChart3 className="w-4 h-4" /> },
-          { key: "perfil", label: "Mi perfil", icon: <User className="w-4 h-4" /> },
-        ].map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key as typeof activeTab)}
-            className={`flex items-center gap-2 px-3 py-2 rounded-[9px] text-[12px] font-medium whitespace-nowrap transition-all border flex-shrink-0 ${
-              activeTab === tab.key
-                ? "bg-[rgba(96,117,98,0.12)] border-[rgba(96,117,98,0.35)] text-[#3d4e3f]"
-                : "bg-[#F7FAFC] border-[rgba(96,117,98,0.15)] text-[#607562] hover:bg-[#f0f4f0] hover:border-[rgba(96,117,98,0.3)]"
-            }`}
-          >
-            {tab.icon}
-            {tab.label}
-            {tab.badge !== undefined && tab.badge > 0 && (
-              <span className="ml-1 bg-[#607562] text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold">
-                {tab.badge}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
-
       {/* Banner: próxima cita con videollamada */}
       {(() => {
         const nextWithVideo = upcomingAppointments.find((a) => (a as any).videoCallLink && a.status === "scheduled");
@@ -900,6 +870,18 @@ export default function ProfessionalDashboard() {
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Tab: Ganancias */}
+        {activeTab === "ganancias" && (
+          <div className="max-w-2xl space-y-4">
+            <h2 className="text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>Mis ganancias</h2>
+            <div className="rounded-2xl border border-dashed border-[rgba(96,117,98,0.3)] bg-[#F7FAFC] p-10 text-center">
+              <BarChart3 className="w-10 h-10 text-[#93A295] mx-auto mb-3" />
+              <p className="text-sm font-medium text-[#607562]">Sección de ganancias próximamente</p>
+              <p className="text-xs text-[#93A295] mt-1">Aquí verás tu historial de pagos y retiros.</p>
+            </div>
           </div>
         )}
 
