@@ -49,7 +49,7 @@ export default function ProfessionalDashboard() {
   const [editingProfile, setEditingProfile] = useState(false);
   const [profileForm, setProfileForm] = useState({
     name: "", bio: "", education: "", certifications: "",
-    yearsOfExperience: "", hourlyRate: "", languages: "Español",
+    yearsOfExperience: "", languages: "Español",
   });
   const [newBlockedDate, setNewBlockedDate] = useState("");
   const [newBlockedReason, setNewBlockedReason] = useState("");
@@ -914,7 +914,6 @@ export default function ProfessionalDashboard() {
                       education: profile.education ?? "",
                       certifications: profile.certifications ?? "",
                       yearsOfExperience: profile.yearsOfExperience?.toString() ?? "",
-                      hourlyRate: profile.hourlyRate?.toString() ?? "",
                       languages: (profile as any).languages ?? "Español",
                     });
                     setEditingProfile(true);
@@ -936,25 +935,14 @@ export default function ProfessionalDashboard() {
                       placeholder="Tu nombre completo"
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-xs">Años de experiencia</Label>
-                      <Input
-                        type="number"
-                        value={profileForm.yearsOfExperience}
-                        onChange={(e) => setProfileForm({ ...profileForm, yearsOfExperience: e.target.value })}
-                        placeholder="5"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs">Tarifa por hora (MXN)</Label>
-                      <Input
-                        type="number"
-                        value={profileForm.hourlyRate}
-                        onChange={(e) => setProfileForm({ ...profileForm, hourlyRate: e.target.value })}
-                        placeholder="800"
-                      />
-                    </div>
+                  <div>
+                    <Label className="text-xs">Años de experiencia</Label>
+                    <Input
+                      type="number"
+                      value={profileForm.yearsOfExperience}
+                      onChange={(e) => setProfileForm({ ...profileForm, yearsOfExperience: e.target.value })}
+                      placeholder="5"
+                    />
                   </div>
                   <div>
                     <Label className="text-xs">Idiomas</Label>
@@ -1019,10 +1007,6 @@ export default function ProfessionalDashboard() {
                     <div>
                       <p className="text-muted-foreground text-xs mb-1">Años de experiencia</p>
                       <p className="font-medium">{profile.yearsOfExperience ?? "No especificado"}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground text-xs mb-1">Tarifa por hora</p>
-                      <p className="font-medium">{profile.hourlyRate ? `$${profile.hourlyRate} MXN` : "No especificada"}</p>
                     </div>
                     <div>
                       <p className="text-muted-foreground text-xs mb-1">Estado</p>

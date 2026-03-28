@@ -427,7 +427,6 @@ export const appRouter = router({
         education: z.string().optional(),
         certifications: z.string().optional(),
         yearsOfExperience: z.number().optional(),
-        hourlyRate: z.string().optional(),
         languages: z.string().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
@@ -448,7 +447,6 @@ export const appRouter = router({
         if (input.education !== undefined) { setParts.push(`\`education\` = ${esc(input.education)}`); }
         if (input.certifications !== undefined) { setParts.push(`\`certifications\` = ${esc(input.certifications)}`); }
         if (input.yearsOfExperience !== undefined) { setParts.push(`\`yearsOfExperience\` = ${Number(input.yearsOfExperience)}`); }
-        if (input.hourlyRate !== undefined) { setParts.push(`\`hourlyRate\` = ${Number(input.hourlyRate)}`); }
         setParts.push("`updatedAt` = NOW()");
 
         if (setParts.length > 1) {
