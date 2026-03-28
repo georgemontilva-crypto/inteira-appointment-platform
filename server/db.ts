@@ -556,11 +556,17 @@ export async function getUserAppointments(userId: number) {
 export async function getProfessionalAppointments(professionalId: number) {
   const db = await getDb();
   if (!db) return [];
-
-  return await db
-    .select()
-    .from(appointments)
-    .where(eq(appointments.professionalId, professionalId));
+  const client = (db as any).$client;
+  return new Promise<any[]>((resolve, reject) => {
+    client.execute(
+      "SELECT * FROM appointments WHERE professionalId = ?",
+      [professionalId],
+      (err: any, results: any) => {
+        if (err) { console.error("[DB] getProfessionalAppointments error:", err?.message); resolve([]); }
+        else resolve(Array.isArray(results) ? results : []);
+      }
+    );
+  });
 }
 
 // Review functions

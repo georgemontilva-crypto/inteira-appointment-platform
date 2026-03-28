@@ -33,41 +33,44 @@ export function getAvailableSlots(
   bookedAppointments: Date[] = []
 ): TimeSlot[] {
   const dayOfWeek = date.getDay();
-  const daySchedule = availabilitySchedule.find(
+  const daySchedules = availabilitySchedule.filter(
     (slot) => slot.dayOfWeek === dayOfWeek
   );
 
-  if (!daySchedule) {
+  if (!daySchedules.length) {
     return [];
   }
 
   const slots: TimeSlot[] = [];
-  const [startHour, startMinute] = daySchedule.startTime.split(":").map(Number);
-  const [endHour, endMinute] = daySchedule.endTime.split(":").map(Number);
 
-  let currentTime = new Date(date);
-  currentTime.setHours(startHour, startMinute, 0, 0);
+  for (const daySchedule of daySchedules) {
+    const [startHour, startMinute] = daySchedule.startTime.split(":").map(Number);
+    const [endHour, endMinute] = daySchedule.endTime.split(":").map(Number);
 
-  const endTime = new Date(date);
-  endTime.setHours(endHour, endMinute, 0, 0);
+    let currentTime = new Date(date);
+    currentTime.setHours(startHour, startMinute, 0, 0);
 
-  while (currentTime.getTime() + durationMinutes * 60 * 1000 <= endTime.getTime()) {
-    const slotEnd = new Date(currentTime.getTime() + durationMinutes * 60 * 1000);
+    const endTime = new Date(date);
+    endTime.setHours(endHour, endMinute, 0, 0);
 
-    // Check if slot is available (not booked and respects 4-hour anticipation)
-    const isAvailable =
-      !isSlotBooked(currentTime, slotEnd, bookedAppointments) &&
-      canScheduleAppointment(currentTime);
+    while (currentTime.getTime() + durationMinutes * 60 * 1000 <= endTime.getTime()) {
+      const slotEnd = new Date(currentTime.getTime() + durationMinutes * 60 * 1000);
 
-    if (isAvailable) {
-      slots.push({
-        date: new Date(currentTime),
-        startTime: formatTime(currentTime),
-        endTime: formatTime(slotEnd),
-      });
+      // Check if slot is available (not booked and respects anticipation minimum)
+      const isAvailable =
+        !isSlotBooked(currentTime, slotEnd, bookedAppointments) &&
+        canScheduleAppointment(currentTime);
+
+      if (isAvailable) {
+        slots.push({
+          date: new Date(currentTime),
+          startTime: formatTime(currentTime),
+          endTime: formatTime(slotEnd),
+        });
+      }
+
+      currentTime = new Date(currentTime.getTime() + 85 * 60 * 1000); // 55 min cita + 30 min buffer
     }
-
-    currentTime = new Date(currentTime.getTime() + 30 * 60 * 1000); // 30-minute intervals
   }
 
   return slots;
@@ -82,7 +85,7 @@ function isSlotBooked(
   bookedAppointments: Date[]
 ): boolean {
   return bookedAppointments.some((appointmentTime) => {
-    const appointmentEnd = new Date(appointmentTime.getTime() + 60 * 60 * 1000); // Assuming 1 hour default
+    const appointmentEnd = new Date(appointmentTime.getTime() + 85 * 60 * 1000); // 55 min cita + 30 min buffer
     return (
       (startTime >= appointmentTime && startTime < appointmentEnd) ||
       (endTime > appointmentTime && endTime <= appointmentEnd) ||
