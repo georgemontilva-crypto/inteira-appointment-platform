@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { ReactElement } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "../_core/hooks/useAuth";
@@ -74,6 +74,15 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
   const [location] = useLocation();
   const [panelOpen, setPanelOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<PanelTab>("notifications");
+  const [currentHash, setCurrentHash] = useState(
+    typeof window !== "undefined" ? window.location.hash : ""
+  );
+
+  useEffect(() => {
+    const handleHash = () => setCurrentHash(window.location.hash);
+    window.addEventListener("hashchange", handleHash);
+    return () => window.removeEventListener("hashchange", handleHash);
+  }, []);
 
   const openPanel = (tab: PanelTab) => {
     setActiveTab(tab);
@@ -191,7 +200,6 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
                     <p className="text-[9px] font-semibold text-[#93A295] uppercase tracking-widest px-1 mb-1.5">{section.section}</p>
                     <div className="grid grid-cols-2 gap-1.5" style={{ gridAutoRows: "minmax(68px, auto)" }}>
                       {section.items.map((item) => {
-                        const currentHash = typeof window !== "undefined" ? window.location.hash : "";
                         const isActive = item.hash ? currentHash === item.hash : location === item.href;
                         const cellClass = `flex flex-col items-start justify-end p-2.5 rounded-[9px] border min-h-[68px] transition-all cursor-pointer relative ${
                           isActive
@@ -199,16 +207,24 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
                             : "bg-[#F7FAFC] border-[rgba(96,117,98,0.15)] hover:bg-[#f0f4f0] hover:border-[rgba(96,117,98,0.3)]"
                         }`;
                         return (
-                          <Link key={item.label} href={item.href}>
-                            <a className={cellClass}>
-                              <span className={`w-[18px] h-[18px] mb-1.5 ${isActive ? "text-[#3d4e3f]" : "text-[#93A295]"}`}>
-                                {ICONS[item.icon]}
-                              </span>
-                              <span className={`text-[11px] font-medium leading-tight ${isActive ? "text-[#3d4e3f]" : "text-[#607562]"}`}>
-                                {item.label}
-                              </span>
-                            </a>
-                          </Link>
+                          <a
+                            key={item.label}
+                            className={cellClass}
+                            onClick={() => {
+                              if (item.hash) {
+                                window.location.hash = item.hash;
+                              } else {
+                                window.location.href = item.href;
+                              }
+                            }}
+                          >
+                            <span className={`w-[18px] h-[18px] mb-1.5 ${isActive ? "text-[#3d4e3f]" : "text-[#93A295]"}`}>
+                              {ICONS[item.icon]}
+                            </span>
+                            <span className={`text-[11px] font-medium leading-tight ${isActive ? "text-[#3d4e3f]" : "text-[#607562]"}`}>
+                              {item.label}
+                            </span>
+                          </a>
                         );
                       })}
                     </div>
