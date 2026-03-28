@@ -332,6 +332,7 @@ export default function ProfessionalDashboard() {
 
   return (
     <DashboardLayout>
+      <div className="p-4 md:p-6">
       {/* Header */}
       <div className="gradient-hero text-white relative overflow-hidden rounded-2xl mb-5">
         <div className="absolute top-0 right-0 w-56 h-56 rounded-full pointer-events-none" style={{background:"rgba(255,255,255,0.05)",transform:"translate(30%,-30%)"}} />
@@ -1054,6 +1055,7 @@ export default function ProfessionalDashboard() {
             )}
           </div>
         )}
+      </div>
       </div>
     </DashboardLayout>
   );
