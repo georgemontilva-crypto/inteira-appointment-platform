@@ -60,7 +60,7 @@ export const appointmentRouter = router({
         availability,
         input.durationMinutes,
         bookedTimes,
-        input.timezoneOffset
+        input.timezoneOffset ?? 0
       );
       // Return simple time strings like "09:00", "10:00"
       return slots.map((s) => s.startTime);

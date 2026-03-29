@@ -17,12 +17,12 @@ export interface AvailabilitySlot {
 /**
  * Check if an appointment can be scheduled (30 minutes minimum anticipation)
  */
-export function canScheduleAppointment(appointmentDate: Date, offsetMinutes: number = -300): boolean {
-  const now = new Date();
-  const localNow = new Date(now.getTime() + offsetMinutes * 60 * 1000);
-  const minTime = new Date(localNow.getTime() + 30 * 60 * 1000);
-  const localAppointment = new Date(appointmentDate.getTime() + offsetMinutes * 60 * 1000);
-  return localAppointment > minTime;
+export function canScheduleAppointment(appointmentDate: Date, clientOffsetMinutes: number = 0): boolean {
+  const nowUTC = Date.now();
+  const minTimeUTC = nowUTC + 30 * 60 * 1000;
+  // Convertir el slot (que está en hora local del cliente) a UTC
+  const appointmentUTC = appointmentDate.getTime() - (clientOffsetMinutes * 60 * 1000);
+  return appointmentUTC > minTimeUTC;
 }
 
 /**
@@ -33,7 +33,7 @@ export function getAvailableSlots(
   availabilitySchedule: AvailabilitySlot[],
   durationMinutes: number,
   bookedAppointments: Date[] = [],
-  offsetMinutes: number = -300
+  clientOffsetMinutes: number = 0
 ): TimeSlot[] {
   const dayOfWeek = date.getDay();
   const daySchedules = availabilitySchedule.filter(
@@ -62,7 +62,7 @@ export function getAvailableSlots(
       // Check if slot is available (not booked and respects anticipation minimum)
       const isAvailable =
         !isSlotBooked(currentTime, slotEnd, bookedAppointments) &&
-        canScheduleAppointment(currentTime, offsetMinutes);
+        canScheduleAppointment(currentTime, clientOffsetMinutes);
 
       if (isAvailable) {
         slots.push({
