@@ -900,6 +900,24 @@ export const appRouter = router({
       );
       return { success: true };
     }),
+
+    getProfessionalsBySpecialty: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "User is not an admin" });
+      }
+      const dbInst = await db.getDb();
+      if (!dbInst) return [];
+      const rows = await dbInst.execute(
+        `SELECT s.name, COUNT(p.id) as count
+         FROM specialties s
+         LEFT JOIN professionals p ON p.specialtyId = s.id AND p.status = 'approved'
+         GROUP BY s.id, s.name`
+      );
+      return (rows.rows as { name: string; count: number }[]).map((r) => ({
+        name: r.name,
+        count: Number(r.count),
+      }));
+    }),
   }),
   // Specialty routes
   specialty: router({

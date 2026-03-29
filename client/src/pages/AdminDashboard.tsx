@@ -82,6 +82,7 @@ export default function AdminDashboard() {
   const { data: chartData } = trpc.admin.getAppointmentsByDay.useQuery({ days: 30 }, { enabled: isAuthenticated });
   const { data: recentAppointments } = trpc.admin.getRecentAppointments.useQuery({ limit: 8 }, { enabled: isAuthenticated });
   const { data: topProfessionals } = trpc.admin.getTopProfessionals.useQuery({ limit: 5 }, { enabled: isAuthenticated });
+  const { data: profsBySpecialty } = trpc.admin.getProfessionalsBySpecialty.useQuery(undefined, { enabled: isAuthenticated });
 
   const approveMutation = trpc.admin.approveProfessional.useMutation({
     onSuccess: () => {
@@ -170,11 +171,15 @@ export default function AdminDashboard() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
               { icon: <Users className="w-4 h-4 text-blue-600" />, bg: "bg-blue-100", value: metrics?.totalUsers ?? "—", label: "Usuarios totales" },
-              { icon: <UserCheck className="w-4 h-4 text-primary" />, bg: "bg-primary/10", value: metrics?.activeProfessionals ?? "—", label: "Profesionales activos" },
+              { icon: <UserCheck className="w-4 h-4 text-primary" />, bg: "bg-primary/10", value: metrics?.activeProfessionals ?? "—", label: "Profesionales activos", onClick: () => setActiveTab("profesionales") },
               { icon: <Calendar className="w-4 h-4 text-emerald-600" />, bg: "bg-emerald-100", value: metrics?.appointmentsToday ?? "—", label: "Citas hoy" },
               { icon: <CreditCard className="w-4 h-4 text-purple-600" />, bg: "bg-purple-100", value: metrics?.activeSubscriptions ?? "—", label: "Suscripciones activas" },
             ].map((kpi, i) => (
-              <div key={i} className="flex items-center gap-3">
+              <div
+                key={i}
+                className={`flex items-center gap-3 ${kpi.onClick ? "cursor-pointer hover:bg-muted/50 rounded-xl px-2 -mx-2 transition-colors" : ""}`}
+                onClick={kpi.onClick}
+              >
                 <div className={`w-9 h-9 rounded-xl ${kpi.bg} flex items-center justify-center flex-shrink-0`}>
                   {kpi.icon}
                 </div>
@@ -340,6 +345,28 @@ export default function AdminDashboard() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Profesionales por especialidad */}
+            <div>
+              <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                <Award className="w-4 h-4 text-primary" />
+                Profesionales por especialidad
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                {(profsBySpecialty ?? []).map((s) => (
+                  <Card key={s.name} className="border-border">
+                    <CardContent className="p-4">
+                      <p className="text-sm font-medium truncate">{s.name}</p>
+                      <p className="text-2xl font-bold text-primary mt-1" style={{ fontFamily: "Poppins" }}>{s.count}</p>
+                      <p className="text-[11px] text-muted-foreground">aprobados</p>
+                    </CardContent>
+                  </Card>
+                ))}
+                {(profsBySpecialty ?? []).length === 0 && (
+                  <p className="text-sm text-muted-foreground col-span-full py-4">Sin datos de especialidades</p>
+                )}
+              </div>
+            </div>
           </div>
         )}
 
