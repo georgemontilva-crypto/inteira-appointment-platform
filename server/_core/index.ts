@@ -338,7 +338,7 @@ async function runStartupMigrations() {
           await new Promise<void>((resolve, reject) => {
             client.execute(
               "INSERT INTO creditBatches (userId, amount, remaining, source, expiresAt) VALUES (?, ?, ?, ?, ?)",
-              [userId, 1000, 1000, "test_grant", expStr],
+              [userId, 1000, 1000, "test_20", expStr],
               (err: any) => { if (err) reject(err); else resolve(); }
             );
           });
