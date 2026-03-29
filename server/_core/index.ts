@@ -290,6 +290,20 @@ async function runStartupMigrations() {
     )`).catch(() => {});
     console.log("[Migration] notifications table ready");
 
+    // ── Eliminar FK constraint incorrecto en professionalAvailability ──────────
+    const client = (db as any).$client;
+    await new Promise<void>((resolve) => {
+      client.execute(
+        "ALTER TABLE professionalAvailability DROP FOREIGN KEY professionalAvailability_professionalId_fk",
+        [],
+        (err: any) => {
+          if (err) console.log("[Migration] professionalAvailability FK already removed or not exists:", err?.message);
+          else console.log("[Migration] professionalAvailability FK constraint removed");
+          resolve();
+        }
+      );
+    });
+
     // ── Seed: ensure marketingdedsm@gmail.com has role=admin ──────────────────
     try {
       await db.execute(
