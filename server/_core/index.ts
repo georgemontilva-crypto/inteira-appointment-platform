@@ -304,6 +304,18 @@ async function runStartupMigrations() {
       );
     });
 
+    await new Promise<void>((resolve) => {
+      client.execute(
+        "ALTER TABLE appointments DROP FOREIGN KEY appointments_professionalId_fk",
+        [],
+        (err: any) => {
+          if (err) console.log("[Migration] appointments FK already removed:", err?.message);
+          else console.log("[Migration] appointments professionalId FK removed");
+          resolve();
+        }
+      );
+    });
+
     // ── Seed: ensure marketingdedsm@gmail.com has role=admin ──────────────────
     try {
       await db.execute(

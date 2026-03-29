@@ -16,10 +16,6 @@ import {
 import { format, addMinutes, isBefore, startOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 
-const VIDEO_PROVIDERS = [
-  { value: "zoom", label: "Zoom", icon: "🎥" },
-  { value: "google_meet", label: "Google Meet", icon: "📹" },
-];
 
 export default function BookAppointment() {
   const [, params] = useRoute("/agendar/:id");
@@ -29,7 +25,7 @@ export default function BookAppointment() {
   const { isAuthenticated, loading } = useAuth();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
-  const [videoProvider, setVideoProvider] = useState<"zoom" | "google_meet">("zoom");
+  const videoProvider = "google_meet" as const;
   const [notes, setNotes] = useState("");
   const [policyAccepted, setPolicyAccepted] = useState(false);
   const [step, setStep] = useState<"date" | "time" | "confirm" | "done">("date");
@@ -150,7 +146,7 @@ export default function BookAppointment() {
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <Video className="w-4 h-4 text-primary" />
-                  <span>{videoProvider === "zoom" ? "Zoom" : "Google Meet"}</span>
+                  <span>Google Meet</span>
                 </div>
               </div>
             )}
@@ -291,27 +287,10 @@ export default function BookAppointment() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
                     <Video className="w-5 h-5 text-primary" />
-                    Plataforma de videollamada
+                    Confirmar cita
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
-                    {VIDEO_PROVIDERS.map((provider) => (
-                      <button
-                        key={provider.value}
-                        onClick={() => setVideoProvider(provider.value as "zoom" | "google_meet")}
-                        className={`p-4 rounded-xl border-2 text-left transition-all ${
-                          videoProvider === provider.value
-                            ? "border-primary bg-primary/5"
-                            : "border-border hover:border-primary/30"
-                        }`}
-                      >
-                        <div className="text-2xl mb-1">{provider.icon}</div>
-                        <div className="font-medium text-sm">{provider.label}</div>
-                      </button>
-                    ))}
-                  </div>
-
                   <div>
                     <label className="text-sm font-medium mb-2 block">
                       Notas para el especialista (opcional)
@@ -405,7 +384,7 @@ export default function BookAppointment() {
                       )}
                       <div className="flex items-center gap-2 text-sm">
                         <Video className="w-4 h-4 text-primary" />
-                        <span>{videoProvider === "zoom" ? "Zoom" : "Google Meet"}</span>
+                        <span>Google Meet</span>
                       </div>
                     </div>
                   )}
