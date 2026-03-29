@@ -60,7 +60,7 @@ const STATUS_MAP: Record<string, { label: string; cls: string }> = {
 
 export default function AdminDashboard() {
   const { user, isAuthenticated, loading } = useAuth();
-  const [activeTab, setActiveTab] = useState<"overview" | "profesionales" | "especialidades" | "planes" | "herramientas">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "profesionales" | "activos" | "especialidades" | "planes" | "herramientas">("overview");
   const [rejectReason, setRejectReason] = useState<Record<number, string>>({});
   const [tierSelect, setTierSelect] = useState<Record<number, "basic" | "pro">>({});
   const [expandedBio, setExpandedBio] = useState<Record<number, boolean>>({});
@@ -201,6 +201,7 @@ export default function AdminDashboard() {
             {([
               { key: "overview",        label: "Resumen",        icon: <BarChart3 className="w-4 h-4" /> },
               { key: "profesionales",   label: "Profesionales",  icon: <Users className="w-4 h-4" /> },
+              { key: "activos",         label: "Activos",        icon: <UserCheck className="w-4 h-4" /> },
               { key: "especialidades",  label: "Especialidades", icon: <Award className="w-4 h-4" /> },
               { key: "planes",          label: "Planes",         icon: <Settings className="w-4 h-4" /> },
       { key: "herramientas",    label: "Herramientas",   icon: <Wrench className="w-4 h-4" /> },
@@ -597,54 +598,57 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {/* ── Profesionales activos ── */}
-            <div className="space-y-3 pt-4">
-              <h2 className="text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
-                Profesionales activos
-              </h2>
-              {(activeProfessionals ?? []).length === 0 ? (
-                <Card className="border-border border-dashed">
-                  <CardContent className="p-10 text-center">
-                    <UserCheck className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-                    <p className="text-muted-foreground text-sm">No hay profesionales aprobados aún</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {(activeProfessionals ?? []).map((pro: any) => {
-                    const name = pro.userName || pro.userEmail?.split("@")[0] || `Profesional #${pro.id}`;
-                    const avatar = pro.profilePhoto;
-                    return (
-                      <Card key={pro.id} className="border-border">
-                        <CardContent className="p-4 flex items-start gap-3">
-                          {avatar ? (
-                            <img src={avatar} alt={name} className="w-11 h-11 rounded-xl object-cover flex-shrink-0" />
-                          ) : (
-                            <div className="w-11 h-11 rounded-xl gradient-brand flex items-center justify-center text-white font-bold flex-shrink-0">
-                              {name.charAt(0).toUpperCase()}
-                            </div>
-                          )}
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <p className="font-semibold text-sm truncate">{name}</p>
-                              <Badge className={`border-0 text-[10px] ${pro.tier === "pro" ? "bg-purple-100 text-purple-700" : "bg-emerald-100 text-emerald-700"}`}>
-                                {pro.tier === "pro" ? "Pro" : "Básico"}
-                              </Badge>
-                            </div>
-                            {pro.specialtyName && (
-                              <p className="text-[11px] text-muted-foreground mt-0.5">{pro.specialtyName}</p>
-                            )}
-                            {pro.userEmail && (
-                              <p className="text-[11px] text-muted-foreground truncate">{pro.userEmail}</p>
-                            )}
+          </div>
+        )}
+
+        {/* ══ TAB: ACTIVOS ═══════════════════════════════════════════════════ */}
+        {activeTab === "activos" && (
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
+              Profesionales activos
+            </h2>
+            {(activeProfessionals ?? []).length === 0 ? (
+              <Card className="border-border border-dashed">
+                <CardContent className="p-10 text-center">
+                  <UserCheck className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-muted-foreground text-sm">No hay profesionales aprobados aún</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {(activeProfessionals ?? []).map((pro: any) => {
+                  const name = pro.userName || pro.userEmail?.split("@")[0] || `Profesional #${pro.id}`;
+                  const avatar = pro.profilePhoto;
+                  return (
+                    <Card key={pro.id} className="border-border">
+                      <CardContent className="p-4 flex items-start gap-3">
+                        {avatar ? (
+                          <img src={avatar} alt={name} className="w-11 h-11 rounded-xl object-cover flex-shrink-0" />
+                        ) : (
+                          <div className="w-11 h-11 rounded-xl gradient-brand flex items-center justify-center text-white font-bold flex-shrink-0">
+                            {name.charAt(0).toUpperCase()}
                           </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-semibold text-sm truncate">{name}</p>
+                            <Badge className={`border-0 text-[10px] ${pro.tier === "pro" ? "bg-purple-100 text-purple-700" : "bg-emerald-100 text-emerald-700"}`}>
+                              {pro.tier === "pro" ? "Pro" : "Básico"}
+                            </Badge>
+                          </div>
+                          {pro.specialtyName && (
+                            <p className="text-[11px] text-muted-foreground mt-0.5">{pro.specialtyName}</p>
+                          )}
+                          {pro.userEmail && (
+                            <p className="text-[11px] text-muted-foreground truncate">{pro.userEmail}</p>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
