@@ -316,15 +316,7 @@ export const appRouter = router({
     getBySpecialty: publicProcedure
       .input(z.object({ specialtyId: z.number() }))
       .query(async ({ input }) => {
-        const profs = await db.getProfessionalsBySpecialty(input.specialtyId);
-        // Enrich with user name for display
-        const enriched = await Promise.all(
-          profs.map(async (p) => {
-            const user = await db.getUserById(p.userId);
-            return { ...p, professionalName: user?.name ?? null };
-          })
-        );
-        return enriched;
+        return await db.getProfessionalsBySpecialty(input.specialtyId);
       }),
 
     getAppointments: protectedProcedure.query(async ({ ctx }) => {

@@ -258,16 +258,21 @@ export async function getProfessionalById(id: number) {
 export async function getProfessionalsBySpecialty(specialtyId: number) {
   const db = await getDb();
   if (!db) return [];
-
-  return await db
-    .select()
-    .from(professionals)
-    .where(
-      and(
-        eq(professionals.specialtyId, specialtyId),
-        eq(professionals.status, "approved")
-      )
+  const client = (db as any).$client;
+  return new Promise<any[]>((resolve, reject) => {
+    client.execute(
+      `SELECT p.*, u.name as professionalName, u.email as userEmail, u.profileImage as userProfileImage
+       FROM professionals p
+       LEFT JOIN users u ON p.userId = u.id
+       WHERE p.specialtyId = ? AND p.status = 'approved'
+       ORDER BY u.name ASC`,
+      [specialtyId],
+      (err: any, results: any) => {
+        if (err) { console.error("[DB] getProfessionalsBySpecialty error:", err?.message); resolve([]); }
+        else resolve(Array.isArray(results) ? results : []);
+      }
     );
+  });
 }
 
 export async function getPendingProfessionals() {
