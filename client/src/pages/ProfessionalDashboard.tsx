@@ -110,7 +110,10 @@ export default function ProfessionalDashboard() {
       refetchAvailability();
       toast.success("Disponibilidad actualizada");
     },
-    onError: () => toast.error("Error al actualizar disponibilidad"),
+    onError: (err) => {
+      console.error("[CLIENT setAvailability error]", err.message, err.data);
+      toast.error("Error al actualizar disponibilidad");
+    },
   });
 
   const removeAvailabilityMutation = trpc.professional.removeAvailability.useMutation({

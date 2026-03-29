@@ -383,6 +383,7 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ ctx, input }) => {
+        console.error("[DIAG setAvailability] called, ctx.user:", ctx.user?.id, ctx.user?.role);
         if (ctx.user.role !== "professional") {
           throw new TRPCError({ code: "FORBIDDEN", message: "User is not a professional" });
         }
