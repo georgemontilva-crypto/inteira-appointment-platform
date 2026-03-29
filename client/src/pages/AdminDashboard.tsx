@@ -2,6 +2,7 @@ import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
+import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -162,24 +163,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="gradient-hero text-white py-8">
-        <div className="container">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center">
-              <Shield className="w-7 h-7 text-white" />
-            </div>
-            <div>
-              <p className="text-white/70 text-sm">Panel de administración</p>
-              <h1 className="text-2xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
-                Inteira Admin
-              </h1>
-            </div>
-          </div>
-        </div>
-      </div>
-
+    <DashboardLayout>
       {/* KPI strip */}
       <div className="border-b border-border bg-card">
         <div className="container py-4">
@@ -857,6 +841,6 @@ export default function AdminDashboard() {
           </div>
         )}
       </div>
-    </div>
+    </DashboardLayout>
   );
 }
