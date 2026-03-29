@@ -49,7 +49,7 @@ export const appointmentRouter = router({
         .filter((apt) => apt.status === "scheduled")
         .map((apt) => apt.appointmentDate);
 
-      console.error("[DIAG slots] date:", input.date, "professionalId:", input.professionalId, "availability count:", availability.length, "availability:", JSON.stringify(availability));
+      console.error("[DIAG slots v2] date:", input.date, "professionalId:", input.professionalId, "availability count:", availability.length, "availability:", JSON.stringify(availability));
 
       const dateObj = new Date(input.date + "T12:00:00");
       const slots = getAvailableSlots(
