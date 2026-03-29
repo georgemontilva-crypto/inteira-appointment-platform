@@ -200,8 +200,8 @@ export default function AdminDashboard() {
           <div className="flex gap-1 overflow-x-auto scrollbar-none">
             {([
               { key: "overview",        label: "Resumen",        icon: <BarChart3 className="w-4 h-4" /> },
-              { key: "profesionales",   label: "Profesionales",  icon: <Users className="w-4 h-4" /> },
-              { key: "activos",         label: "Activos",        icon: <UserCheck className="w-4 h-4" /> },
+              { key: "profesionales",   label: "Solicitudes",          icon: <Users className="w-4 h-4" /> },
+              { key: "activos",         label: "Profesionales activos", icon: <UserCheck className="w-4 h-4" /> },
               { key: "especialidades",  label: "Especialidades", icon: <Award className="w-4 h-4" /> },
               { key: "planes",          label: "Planes",         icon: <Settings className="w-4 h-4" /> },
       { key: "herramientas",    label: "Herramientas",   icon: <Wrench className="w-4 h-4" /> },
