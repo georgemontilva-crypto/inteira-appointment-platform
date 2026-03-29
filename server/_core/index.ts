@@ -316,19 +316,27 @@ async function runStartupMigrations() {
 
     // ── Seed: 1000 créditos de prueba a marketingdedsm si tiene menos de 100 ──
     try {
-      const [balRows] = await db.execute(
-        "SELECT COALESCE(SUM(remaining), 0) as bal FROM creditBatches WHERE userId = (SELECT id FROM users WHERE email = 'marketingdedsm@gmail.com')"
+      const [userRows] = await db.execute(
+        "SELECT id FROM users WHERE email = ?",
+        ["marketingdedsm@gmail.com"]
       ) as any;
-      const bal = Number(Array.isArray(balRows) ? balRows[0]?.bal : balRows?.bal) || 0;
-      if (bal < 100) {
-        const exp = new Date();
-        exp.setDate(exp.getDate() + 60);
-        const expStr = exp.toISOString().slice(0, 19).replace("T", " ");
-        await db.execute(
-          "INSERT INTO creditBatches (userId, amount, remaining, source, expiresAt) VALUES ((SELECT id FROM users WHERE email = 'marketingdedsm@gmail.com'), 1000, 1000, 'test_grant', ?)",
-          [expStr]
-        );
-        console.log("[Migration] 1000 créditos de prueba agregados a marketingdedsm");
+      const userId = Array.isArray(userRows) ? userRows[0]?.id : userRows?.id;
+      if (userId) {
+        const [balRows] = await db.execute(
+          "SELECT SUM(remaining) as bal FROM creditBatches WHERE userId = ?",
+          [userId]
+        ) as any;
+        const bal = Number(Array.isArray(balRows) ? balRows[0]?.bal : balRows?.bal) || 0;
+        if (bal < 100) {
+          const exp = new Date();
+          exp.setDate(exp.getDate() + 60);
+          const expStr = exp.toISOString().slice(0, 19).replace("T", " ");
+          await db.execute(
+            "INSERT INTO creditBatches (userId, amount, remaining, source, expiresAt) VALUES (?, ?, ?, ?, ?)",
+            [userId, 1000, 1000, "test_grant", expStr]
+          );
+          console.log("[Migration] 1000 créditos de prueba agregados a marketingdedsm");
+        }
       }
     } catch (credErr: any) {
       console.warn("[Migration] Could not seed test credits:", credErr?.message);
