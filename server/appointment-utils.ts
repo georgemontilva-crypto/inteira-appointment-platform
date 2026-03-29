@@ -17,10 +17,12 @@ export interface AvailabilitySlot {
 /**
  * Check if an appointment can be scheduled (30 minutes minimum anticipation)
  */
-export function canScheduleAppointment(appointmentDate: Date): boolean {
+export function canScheduleAppointment(appointmentDate: Date, offsetMinutes: number = -300): boolean {
   const now = new Date();
-  const minTime = new Date(now.getTime() + 30 * 60 * 1000);
-  return appointmentDate > minTime;
+  const localNow = new Date(now.getTime() + offsetMinutes * 60 * 1000);
+  const minTime = new Date(localNow.getTime() + 30 * 60 * 1000);
+  const localAppointment = new Date(appointmentDate.getTime() + offsetMinutes * 60 * 1000);
+  return localAppointment > minTime;
 }
 
 /**
