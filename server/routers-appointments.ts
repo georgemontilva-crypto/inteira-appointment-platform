@@ -27,6 +27,7 @@ export const appointmentRouter = router({
         professionalId: z.number(),
         date: z.string(), // ISO date string yyyy-MM-dd
         durationMinutes: z.number().optional().default(60),
+        timezoneOffset: z.number().optional().default(-300),
       })
     )
     .query(async ({ input }) => {
@@ -58,7 +59,8 @@ export const appointmentRouter = router({
         dateObj,
         availability,
         input.durationMinutes,
-        bookedTimes
+        bookedTimes,
+        input.timezoneOffset
       );
       // Return simple time strings like "09:00", "10:00"
       return slots.map((s) => s.startTime);

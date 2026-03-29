@@ -32,7 +32,8 @@ export function getAvailableSlots(
   date: Date,
   availabilitySchedule: AvailabilitySlot[],
   durationMinutes: number,
-  bookedAppointments: Date[] = []
+  bookedAppointments: Date[] = [],
+  offsetMinutes: number = -300
 ): TimeSlot[] {
   const dayOfWeek = date.getDay();
   const daySchedules = availabilitySchedule.filter(
@@ -61,7 +62,7 @@ export function getAvailableSlots(
       // Check if slot is available (not booked and respects anticipation minimum)
       const isAvailable =
         !isSlotBooked(currentTime, slotEnd, bookedAppointments) &&
-        canScheduleAppointment(currentTime);
+        canScheduleAppointment(currentTime, offsetMinutes);
 
       if (isAvailable) {
         slots.push({

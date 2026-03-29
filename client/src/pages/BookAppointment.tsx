@@ -49,6 +49,7 @@ export default function BookAppointment() {
     {
       professionalId,
       date: selectedDate ? format(selectedDate, "yyyy-MM-dd") : "",
+      timezoneOffset: new Date().getTimezoneOffset() * -1,
     },
     { enabled: !!selectedDate && professionalId > 0 }
   );
