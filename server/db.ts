@@ -245,14 +245,17 @@ export async function getProfessionalByUserId(userId: number) {
 export async function getProfessionalById(id: number) {
   const db = await getDb();
   if (!db) return undefined;
-
-  const result = await db
-    .select()
-    .from(professionals)
-    .where(eq(professionals.id, id))
-    .limit(1);
-
-  return result.length > 0 ? result[0] : undefined;
+  const client = (db as any).$client;
+  return new Promise<any>((resolve, reject) => {
+    client.execute(
+      "SELECT * FROM professionals WHERE id = ? LIMIT 1",
+      [id],
+      (err: any, results: any) => {
+        if (err) reject(err);
+        else resolve(Array.isArray(results) ? results[0] : undefined);
+      }
+    );
+  });
 }
 
 export async function getProfessionalsBySpecialty(specialtyId: number) {
