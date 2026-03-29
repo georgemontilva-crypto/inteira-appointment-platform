@@ -30,6 +30,8 @@ export const appointmentRouter = router({
       })
     )
     .query(async ({ input }) => {
+      console.log("[SLOTS] Request received - professionalId:", input.professionalId, "date:", input.date);
+
       const professional = await db.getProfessionalById(input.professionalId);
       if (!professional) {
         throw new TRPCError({
@@ -49,7 +51,7 @@ export const appointmentRouter = router({
         .filter((apt) => apt.status === "scheduled")
         .map((apt) => apt.appointmentDate);
 
-      console.error("[DIAG slots v2] date:", input.date, "professionalId:", input.professionalId, "availability count:", availability.length, "availability:", JSON.stringify(availability));
+      console.log("[DIAG slots v2] date:", input.date, "professionalId:", input.professionalId, "availability count:", availability.length, "availability:", JSON.stringify(availability));
 
       const dateObj = new Date(input.date + "T12:00:00");
       const slots = getAvailableSlots(
