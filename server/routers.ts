@@ -918,6 +918,32 @@ export const appRouter = router({
         count: Number(r.count),
       }));
     }),
+
+    getActiveProfessionals: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "User is not an admin" });
+      }
+      const dbInst = await db.getDb();
+      if (!dbInst) return [];
+      const client = (dbInst as any).$client;
+      return new Promise<any[]>((resolve, reject) => {
+        client.execute(
+          `SELECT p.id, p.userId, p.tier, p.specialtyId, p.hourlyRate, p.bio, p.profilePhoto, p.createdAt,
+            u.name as userName, u.email as userEmail,
+            s.name as specialtyName
+           FROM professionals p
+           LEFT JOIN users u ON p.userId = u.id
+           LEFT JOIN specialties s ON p.specialtyId = s.id
+           WHERE p.status = ?
+           ORDER BY u.name ASC`,
+          ['approved'],
+          (err: any, results: any) => {
+            if (err) reject(err);
+            else resolve(Array.isArray(results) ? results : []);
+          }
+        );
+      });
+    }),
   }),
   // Specialty routes
   specialty: router({
