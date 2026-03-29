@@ -492,11 +492,43 @@ export async function createProfessionalAvailability(
 }
 
 // Appointment functions
-export async function createAppointment(data: Partial<Appointment>) {
+export async function createAppointment(data: {
+  userId: number;
+  professionalId: number;
+  specialtyId: number;
+  appointmentDate: Date | string;
+  durationMinutes: number;
+  videoCallType: string;
+  videoCallLink?: string;
+  videoCallId?: string;
+  notes?: string;
+  status?: string;
+}) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-
-  return await db.insert(appointments).values(data as any);
+  const client = (db as any).$client;
+  return new Promise<number>((resolve, reject) => {
+    client.execute(
+      `INSERT INTO appointments (userId, professionalId, specialtyId, appointmentDate, durationMinutes, videoCallType, videoCallLink, videoCallId, notes, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        data.userId,
+        data.professionalId,
+        data.specialtyId,
+        data.appointmentDate,
+        data.durationMinutes,
+        data.videoCallType,
+        data.videoCallLink ?? null,
+        data.videoCallId ?? null,
+        data.notes ?? null,
+        data.status ?? 'scheduled'
+      ],
+      (err: any, results: any) => {
+        if (err) reject(err);
+        else resolve(results?.insertId ?? 0);
+      }
+    );
+  });
 }
 
 export async function getAppointmentById(id: number) {

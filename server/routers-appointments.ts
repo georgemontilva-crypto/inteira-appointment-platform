@@ -139,7 +139,7 @@ export const appointmentRouter = router({
       );
 
       // Create appointment with video call link
-      await db.createAppointment({
+      const newAppointmentId = await db.createAppointment({
         userId: ctx.user.id,
         professionalId: input.professionalId,
         specialtyId: professional.specialtyId,
@@ -153,21 +153,6 @@ export const appointmentRouter = router({
       });
 
       // ── Deduct credits (FIFO) ─────────────────────────────────────────────
-      // Retrieve the newly created appointment ID for the transaction record
-      const dbInst = await db.getDb();
-      let newAppointmentId: number | undefined;
-      if (dbInst) {
-        const { appointments: aptTable } = await import("../drizzle/schema");
-        const { desc, eq: eqOp } = await import("drizzle-orm");
-        const rows = await dbInst
-          .select({ id: aptTable.id })
-          .from(aptTable)
-          .where(eqOp(aptTable.userId, ctx.user.id))
-          .orderBy(desc(aptTable.createdAt))
-          .limit(1);
-        newAppointmentId = rows[0]?.id;
-      }
-
       await consumeCredits(
         ctx.user.id,
         SESSION_CREDIT_COST,
