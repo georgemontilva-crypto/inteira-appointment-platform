@@ -455,6 +455,31 @@ setInterval(async () => {
 // Correr una vez al arrancar (30s para que las migraciones terminen)
 setTimeout(() => retryPendingPayments().catch(console.error), 30000);
 
+// ─── Cron: auto no-show para citas que no fueron completadas ──────────────────
+setInterval(async () => {
+  try {
+    const { getDb } = await import("../db");
+    const db = await getDb();
+    if (!db) return;
+    const client = (db as any).$client;
+    await new Promise<void>((resolve) => {
+      client.execute(
+        `UPDATE appointments SET status = 'no-show', updatedAt = NOW()
+         WHERE status = 'scheduled'
+         AND DATE_ADD(appointmentDate, INTERVAL 55 MINUTE) < NOW()`,
+        [],
+        (err: any) => {
+          if (err) console.error("[Cron] auto-noshow error:", err?.message);
+          else console.log("[Cron] auto-noshow check done");
+          resolve();
+        }
+      );
+    });
+  } catch(e: any) {
+    console.error("[Cron] auto-noshow exception:", e?.message);
+  }
+}, 5 * 60 * 1000);
+
 // ─── Cron: expire timed-out credit batches every hour ─────────────────────────
 const ONE_HOUR_MS = 60 * 60 * 1000;
 setInterval(async () => {

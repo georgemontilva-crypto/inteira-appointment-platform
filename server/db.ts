@@ -166,14 +166,17 @@ export async function getUserByOpenId(openId: string) {
 export async function getUserById(id: number) {
   const db = await getDb();
   if (!db) return undefined;
-  try {
-    const [rows] = await db.execute(`SELECT * FROM \`users\` WHERE \`id\` = ${Number(id)} LIMIT 1`) as any;
-    const arr = Array.isArray(rows) ? rows : [];
-    return arr.length > 0 ? arr[0] : undefined;
-  } catch (error) {
-    console.error("[Database] getUserById error:", error);
-    return undefined;
-  }
+  const client = (db as any).$client;
+  return new Promise<any>((resolve, reject) => {
+    client.execute(
+      "SELECT * FROM users WHERE id = ? LIMIT 1",
+      [id],
+      (err: any, results: any) => {
+        if (err) reject(err);
+        else resolve(Array.isArray(results) ? results[0] : undefined);
+      }
+    );
+  });
 }
 
 export async function getUserByEmail(email: string) {
