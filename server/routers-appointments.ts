@@ -73,8 +73,8 @@ export const appointmentRouter = router({
         professionalId: z.number(),
         appointmentDate: z.string(), // ISO string from frontend
         durationMinutes: z.number().optional().default(60),
-        videoCallType: z.enum(["zoom", "google_meet"]).optional().default("zoom"),
-        videoProvider: z.enum(["zoom", "google_meet"]).optional(),
+        videoCallType: z.enum(["zoom", "google_meet"]).optional().default("google_meet"),
+        videoProvider: z.enum(["zoom", "google_meet"]).optional().default("google_meet"),
         notes: z.string().optional(),
       })
     )

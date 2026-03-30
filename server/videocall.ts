@@ -29,6 +29,7 @@ export async function generateGoogleMeetLink(
   const GOOGLE_REFRESH_TOKEN = process.env.GOOGLE_REFRESH_TOKEN;
 
   if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET && GOOGLE_REFRESH_TOKEN) {
+    console.log("[Meet] Usando credenciales reales de Google");
     try {
       // Use Google Calendar API to create event with Meet link
       const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
@@ -89,6 +90,11 @@ export async function generateGoogleMeetLink(
   }
 
   // Fallback: generate a unique Meet-style link
+  console.log("[Meet] FALLBACK — credenciales faltantes:", {
+    hasClientId: !!GOOGLE_CLIENT_ID,
+    hasSecret: !!GOOGLE_CLIENT_SECRET,
+    hasRefresh: !!GOOGLE_REFRESH_TOKEN,
+  });
   const meetCode = generateMeetCode();
   return {
     type: "google_meet",
