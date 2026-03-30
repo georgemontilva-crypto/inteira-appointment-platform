@@ -400,7 +400,7 @@ export default function ProfessionalDashboard() {
               </div>
             </div>
           </div>
-          <div className="grid grid-cols-4 gap-0 border-t border-white/10 pt-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-0 border-t border-white/10 pt-4">
             <div className="text-center px-2">
               <p className="text-lg font-medium text-emerald-300">${wallet?.wallet?.balance ? parseFloat(String(wallet.wallet.balance)).toFixed(0) : "0"}</p>
               <p className="text-[11px] text-white/50 mt-0.5">Balance</p>
@@ -655,7 +655,7 @@ export default function ProfessionalDashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div>
                     <label className="text-xs font-medium mb-1 block">Día</label>
                     <select

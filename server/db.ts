@@ -1,4 +1,4 @@
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   InsertUser,
@@ -576,7 +576,8 @@ export async function getUserAppointments(userId: number) {
     .from(appointments)
     .leftJoin(professionals, eq(appointments.professionalId, professionals.id))
     .leftJoin(users, eq(professionals.userId, users.id))
-    .where(eq(appointments.userId, userId));
+    .where(eq(appointments.userId, userId))
+    .orderBy(desc(appointments.appointmentDate));
 
   // Enrich each appointment with hasReview flag
   const enriched = await Promise.all(

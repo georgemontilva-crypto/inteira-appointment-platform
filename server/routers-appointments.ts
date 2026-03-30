@@ -399,16 +399,14 @@ export const appointmentRouter = router({
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
       }
 
-      const { appointments } = await import("../drizzle/schema");
-      const { eq } = await import("drizzle-orm");
-
-      await db_instance
-        .update(appointments)
-        .set({
-          status: "completed",
-          updatedAt: new Date(),
-        })
-        .where(eq(appointments.id, input.appointmentId));
+      const client = (db_instance as any).$client;
+      await new Promise<void>((resolve, reject) => {
+        client.execute(
+          "UPDATE appointments SET status = 'completed', updatedAt = NOW() WHERE id = ?",
+          [input.appointmentId],
+          (err: any) => { if (err) reject(err); else resolve(); }
+        );
+      });
 
       // Credit professional earnings
       const { creditProfessionalEarning } = await import("./professionalWallet");

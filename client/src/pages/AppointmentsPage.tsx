@@ -115,8 +115,13 @@ export default function AppointmentsPage() {
 
   type Apt = NonNullable<typeof appointments>[number];
 
-  const upcomingAppointments: Apt[] = appointments?.filter((a) => a.status === "scheduled") ?? [];
-  const pastAppointments: Apt[] = appointments?.filter((a) => a.status !== "scheduled") ?? [];
+  const now = new Date();
+  const upcomingAppointments: Apt[] = appointments?.filter((a) =>
+    a.status === "scheduled" && new Date(a.appointmentDate) > now
+  ) ?? [];
+  const pastAppointments: Apt[] = appointments?.filter((a) =>
+    a.status !== "scheduled" || new Date(a.appointmentDate) <= now
+  ) ?? [];
   const completedCount = appointments?.filter((a) => a.status === "completed").length ?? 0;
   const pendingReviews = pastAppointments.filter(
     (a) => a.status === "completed" && !(a as any).hasReview
