@@ -275,6 +275,12 @@ async function runStartupMigrations() {
     ].join(" ")).catch(() => {});
     console.log("[Migration] withdrawalRequests table ready");
 
+    // Ensure pending_review in appointments status enum
+    await db.execute(
+      "ALTER TABLE `appointments` MODIFY COLUMN `status` ENUM('scheduled','completed','canceled','no-show','pending_review') DEFAULT 'scheduled'"
+    ).catch(() => {});
+    console.log("[Migration] appointments pending_review status ready");
+
     // Ensure notifications table exists
     await db.execute(`CREATE TABLE IF NOT EXISTS \`notifications\` (
       \`id\` int NOT NULL AUTO_INCREMENT,
@@ -455,13 +461,15 @@ setInterval(async () => {
 // Correr una vez al arrancar (30s para que las migraciones terminen)
 setTimeout(() => retryPendingPayments().catch(console.error), 30000);
 
-// ─── Cron: auto no-show para citas que no fueron completadas ──────────────────
+// ─── Cron: auto no-show + auto-complete pending_review cada 5 minutos ─────────
 setInterval(async () => {
   try {
     const { getDb } = await import("../db");
     const db = await getDb();
     if (!db) return;
     const client = (db as any).$client;
+
+    // Check 1: auto no-show para citas scheduled que pasaron 55 min
     await new Promise<void>((resolve) => {
       client.execute(
         `UPDATE appointments SET status = 'no-show', updatedAt = NOW()
@@ -475,6 +483,60 @@ setInterval(async () => {
         }
       );
     });
+
+    // Check 2: auto-completar pending_review con más de 8 horas sin calificar
+    const pendingRows = await new Promise<any[]>((resolve) => {
+      client.execute(
+        `SELECT a.id, a.professionalId, a.userId AS clientUserId, p.tier, p.userId AS profUserId
+         FROM appointments a
+         JOIN professionals p ON p.id = a.professionalId
+         WHERE a.status = 'pending_review'
+         AND DATE_ADD(a.updatedAt, INTERVAL 8 HOUR) < NOW()`,
+        [],
+        (err: any, results: any) => {
+          if (err) { console.error("[Cron] auto-complete select error:", err?.message); resolve([]); }
+          else resolve(Array.isArray(results) ? results : []);
+        }
+      );
+    });
+
+    if (pendingRows.length > 0) {
+      console.log(`[Cron] auto-complete: ${pendingRows.length} pending_review → completing`);
+      const { creditProfessionalEarning } = await import("../professionalWallet");
+      const { createNotification } = await import("../notifications");
+
+      for (const row of pendingRows) {
+        try {
+          await new Promise<void>((resolve) => {
+            client.execute(
+              `INSERT IGNORE INTO reviews (userId, professionalId, appointmentId, rating, comment, isVerified, createdAt, updatedAt)
+               VALUES (?, ?, ?, 5, 'Completada automáticamente', 0, NOW(), NOW())`,
+              [row.clientUserId, row.professionalId, row.id],
+              (err: any) => { if (err) console.error("[Cron] auto-review insert:", err?.message); resolve(); }
+            );
+          });
+          await new Promise<void>((resolve) => {
+            client.execute(
+              "UPDATE appointments SET status = 'completed', updatedAt = NOW() WHERE id = ?",
+              [row.id],
+              (err: any) => { if (err) console.error("[Cron] auto-complete update:", err?.message); resolve(); }
+            );
+          });
+          const { netAmount } = await creditProfessionalEarning(
+            row.professionalId, row.id, (row.tier ?? "basic") as "basic" | "pro"
+          );
+          createNotification({
+            userId: row.profUserId,
+            type: "new_earning",
+            title: "Asesoría completada automáticamente",
+            message: `Una asesoría fue completada automáticamente. Se acreditaron $${netAmount} MXN a tu wallet.`,
+            link: "/profesional/wallet",
+          }).catch(() => {});
+        } catch (rowErr: any) {
+          console.error(`[Cron] auto-complete row ${row.id} error:`, rowErr?.message);
+        }
+      }
+    }
   } catch(e: any) {
     console.error("[Cron] auto-noshow exception:", e?.message);
   }

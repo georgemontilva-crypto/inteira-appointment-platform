@@ -27,12 +27,14 @@ const statusColors: Record<string, { bg: string; text: string; dot: string }> = 
   completed: { bg: "bg-emerald-50", text: "text-emerald-700", dot: "bg-emerald-500" },
   canceled: { bg: "bg-red-50", text: "text-red-600", dot: "bg-red-400" },
   "no-show": { bg: "bg-gray-100", text: "text-gray-500", dot: "bg-gray-400" },
+  pending_review: { bg: "bg-yellow-50", text: "text-yellow-700", dot: "bg-yellow-500" },
 };
 const statusLabels: Record<string, string> = {
   scheduled: "Confirmada",
   completed: "Completada",
   canceled: "Cancelada",
   "no-show": "No asistió",
+  pending_review: "Calificar sesión",
 };
 
 function getDateLabel(date: Date): string {
@@ -84,6 +86,8 @@ export default function AppointmentsPage() {
   const [ratingId, setRatingId] = useState<number | null>(null);
   const [rating, setRating] = useState(5);
   const [ratingComment, setRatingComment] = useState("");
+  const [prRating, setPrRating] = useState(5);
+  const [prComment, setPrComment] = useState("");
 
   const { data: appointments, isLoading } = trpc.user.getAppointments.useQuery(undefined, {
     enabled: isAuthenticated,
@@ -102,6 +106,16 @@ export default function AppointmentsPage() {
     },
   });
 
+  const submitReviewMutation = trpc.appointment.submitReview.useMutation({
+    onSuccess: () => {
+      toast.success("¡Gracias por tu reseña! El pago al profesional ha sido liberado.");
+      setPrRating(5);
+      setPrComment("");
+      utils.user.getAppointments.invalidate();
+    },
+    onError: (err) => toast.error("Error al enviar reseña", { description: err.message }),
+  });
+
   const reviewMutation = trpc.review.create.useMutation({
     onSuccess: () => {
       toast.success("¡Gracias por tu reseña!");
@@ -116,6 +130,7 @@ export default function AppointmentsPage() {
   type Apt = NonNullable<typeof appointments>[number];
 
   const now = new Date();
+  const pendingReviewApt = appointments?.find((a) => a.status === "pending_review") ?? null;
   const upcomingAppointments: Apt[] = appointments?.filter((a) =>
     a.status === "scheduled" && new Date(a.appointmentDate) > now
   ) ?? [];
@@ -509,6 +524,59 @@ export default function AppointmentsPage() {
         {/* Spacer for mobile nav */}
         <div className="h-6 md:h-0" />
       </div>
+
+      {/* ─── Modal obligatorio de reseña pendiente ─── */}
+      {pendingReviewApt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+            <div className="text-center space-y-2">
+              <div
+                className="w-14 h-14 rounded-2xl mx-auto flex items-center justify-center text-white font-bold text-xl"
+                style={{ background: "linear-gradient(135deg,#3d4e3f,#607562)" }}
+              >
+                {((pendingReviewApt as any).professionalName ?? "P").charAt(0).toUpperCase()}
+              </div>
+              <h2 className="text-base font-bold text-[#1a1a1a]">Califica tu sesión</h2>
+              <p className="text-xs text-[#93A295]">
+                Con {(pendingReviewApt as any).professionalName ?? "el especialista"} ·{" "}
+                {format(new Date(pendingReviewApt.appointmentDate), "d 'de' MMMM yyyy", { locale: es })}
+              </p>
+              <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded-xl px-3 py-1.5">
+                El pago al profesional se libera al enviar tu reseña.
+              </p>
+            </div>
+            <div className="flex justify-center">
+              <StarRating value={prRating} onChange={setPrRating} />
+            </div>
+            <textarea
+              value={prComment}
+              onChange={(e) => setPrComment(e.target.value)}
+              placeholder="Comparte tu experiencia (opcional)..."
+              rows={3}
+              className="w-full text-sm border border-[rgba(96,117,98,0.2)] rounded-xl px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-[rgba(96,117,98,0.3)] bg-[#F7FAFC] text-[#333]"
+            />
+            <button
+              className="w-full flex items-center justify-center gap-2 text-sm font-semibold text-white rounded-xl h-10 px-4 transition-opacity hover:opacity-90 disabled:opacity-50"
+              style={{ background: "linear-gradient(135deg,#3d4e3f,#607562)" }}
+              disabled={submitReviewMutation.isPending}
+              onClick={() =>
+                submitReviewMutation.mutate({
+                  appointmentId: pendingReviewApt.id,
+                  rating: prRating,
+                  comment: prComment || undefined,
+                })
+              }
+            >
+              {submitReviewMutation.isPending ? (
+                <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+              ) : (
+                <ThumbsUp className="w-4 h-4" />
+              )}
+              Enviar reseña
+            </button>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 }

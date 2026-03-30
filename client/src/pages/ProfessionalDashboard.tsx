@@ -53,6 +53,7 @@ export default function ProfessionalDashboard() {
   });
   const [newBlockedDate, setNewBlockedDate] = useState("");
   const [newBlockedReason, setNewBlockedReason] = useState("");
+  const [attendanceModal, setAttendanceModal] = useState<any | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
@@ -171,10 +172,18 @@ export default function ProfessionalDashboard() {
 
   const completeMutation = trpc.appointment.completeAppointment.useMutation({
     onSuccess: () => {
-      toast.success("Cita marcada como completada");
+      toast.success("Sesión completada. El usuario debe calificar para liberar el pago.");
       refetchAppointments();
     },
     onError: () => toast.error("Error al actualizar la cita"),
+  });
+
+  const markNoShowMutation = trpc.appointment.markNoShow.useMutation({
+    onSuccess: () => {
+      toast.success("No-show registrado.");
+      refetchAppointments();
+    },
+    onError: () => toast.error("Error al registrar no-show"),
   });
 
   // Si hay error FORBIDDEN significa que el rol en la sesión aún no está actualizado.
@@ -540,15 +549,17 @@ export default function ProfessionalDashboard() {
                                 </Button>
                               </a>
                             )}
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-8 text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-50"
-                              onClick={() => completeMutation.mutate({ appointmentId: apt.id })}
-                            >
-                              <CheckCircle2 className="w-3 h-3 mr-1" />
-                              Completar
-                            </Button>
+                            {new Date(apt.appointmentDate).getTime() + 55 * 60 * 1000 < Date.now() && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8 text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                                onClick={() => setAttendanceModal(apt)}
+                              >
+                                <CheckCircle2 className="w-3 h-3 mr-1" />
+                                Completar
+                              </Button>
+                            )}
                           </div>
                         </div>
                         {apt.notes && (
@@ -1043,6 +1054,55 @@ export default function ProfessionalDashboard() {
         )}
       </div>
       </div>
+
+      {/* ─── Modal de asistencia ─── */}
+      {attendanceModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+            <div className="text-center space-y-1">
+              <div className="w-12 h-12 rounded-xl mx-auto bg-primary/10 flex items-center justify-center text-primary font-bold text-lg">
+                {attendanceModal.userName?.charAt(0) ?? "U"}
+              </div>
+              <h2 className="text-base font-bold mt-2">¿El usuario asistió a la consulta?</h2>
+              <p className="text-xs text-muted-foreground">
+                {attendanceModal.userName ?? `Usuario #${attendanceModal.userId}`} ·{" "}
+                {format(new Date(attendanceModal.appointmentDate), "d MMM yyyy 'a las' HH:mm", { locale: es })}
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <Button
+                className="flex-1 gradient-brand text-white border-0"
+                disabled={completeMutation.isPending || markNoShowMutation.isPending}
+                onClick={() => {
+                  completeMutation.mutate({ appointmentId: attendanceModal.id });
+                  setAttendanceModal(null);
+                }}
+              >
+                <CheckCircle2 className="w-4 h-4 mr-1.5" />
+                Sí asistió
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1 border-red-200 text-red-600 hover:bg-red-50"
+                disabled={completeMutation.isPending || markNoShowMutation.isPending}
+                onClick={() => {
+                  markNoShowMutation.mutate({ appointmentId: attendanceModal.id });
+                  setAttendanceModal(null);
+                }}
+              >
+                <XCircle className="w-4 h-4 mr-1.5" />
+                No asistió
+              </Button>
+            </div>
+            <button
+              className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors py-1"
+              onClick={() => setAttendanceModal(null)}
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 }

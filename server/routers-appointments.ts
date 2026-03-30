@@ -402,6 +402,82 @@ export const appointmentRouter = router({
       const client = (db_instance as any).$client;
       await new Promise<void>((resolve, reject) => {
         client.execute(
+          "UPDATE appointments SET status = 'pending_review', updatedAt = NOW() WHERE id = ?",
+          [input.appointmentId],
+          (err: any) => { if (err) reject(err); else resolve(); }
+        );
+      });
+
+      // Notify user to leave a review
+      createNotification({
+        userId: appointment.userId,
+        type: "info",
+        title: "¡Tu sesión terminó!",
+        message: "Por favor califica tu experiencia para liberar el pago al profesional.",
+        link: "/citas",
+      }).catch(() => {});
+
+      return { success: true };
+    }),
+
+  // Submit review → completes appointment and credits professional
+  submitReview: protectedProcedure
+    .input(z.object({
+      appointmentId: z.number(),
+      rating: z.number().min(1).max(5),
+      comment: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const appointment = await db.getAppointmentById(input.appointmentId);
+      if (!appointment) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Cita no encontrada" });
+      }
+      if (appointment.userId !== ctx.user.id) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "No autorizado" });
+      }
+      if (appointment.status !== "pending_review") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Esta cita no está pendiente de reseña" });
+      }
+
+      const dbInstance = await db.getDb();
+      if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+      const { reviews, professionals } = await import("../drizzle/schema");
+      const { eq } = await import("drizzle-orm");
+
+      // Insert review (idempotent)
+      const existing = await dbInstance
+        .select({ id: reviews.id })
+        .from(reviews)
+        .where(eq(reviews.appointmentId, input.appointmentId))
+        .limit(1);
+
+      if (existing.length === 0) {
+        await dbInstance.insert(reviews).values({
+          professionalId: appointment.professionalId,
+          userId: ctx.user.id,
+          appointmentId: input.appointmentId,
+          rating: input.rating,
+          comment: input.comment ?? null,
+          isVerified: false,
+        });
+
+        // Update professional average rating
+        const allReviews = await db.getProfessionalReviews(appointment.professionalId);
+        if (allReviews.length > 0) {
+          const avg = allReviews.reduce((sum, r) => sum + r.rating, 0) / allReviews.length;
+          await dbInstance.update(professionals).set({
+            averageRating: avg.toFixed(2),
+            totalReviews: allReviews.length,
+            updatedAt: new Date(),
+          }).where(eq(professionals.id, appointment.professionalId));
+        }
+      }
+
+      // Mark appointment as completed
+      const client = (dbInstance as any).$client;
+      await new Promise<void>((resolve, reject) => {
+        client.execute(
           "UPDATE appointments SET status = 'completed', updatedAt = NOW() WHERE id = ?",
           [input.appointmentId],
           (err: any) => { if (err) reject(err); else resolve(); }
@@ -409,15 +485,18 @@ export const appointmentRouter = router({
       });
 
       // Credit professional earnings
+      const professional = await db.getProfessionalById(appointment.professionalId);
+      if (!professional) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Profesional no encontrado" });
+
       const { creditProfessionalEarning } = await import("./professionalWallet");
       const { netAmount } = await creditProfessionalEarning(
-        completingProfessional.id,
+        professional.id,
         input.appointmentId,
-        (completingProfessional.tier ?? "basic") as "basic" | "pro"
+        (professional.tier ?? "basic") as "basic" | "pro"
       );
 
-      // Notify professional (fire and forget)
-      const profUser = await db.getUserById(completingProfessional.userId);
+      // Notify professional
+      const profUser = await db.getUserById(professional.userId);
       if (profUser?.email) {
         const { sendProfessionalEarningNotification } = await import("./email");
         sendProfessionalEarningNotification({
@@ -428,13 +507,54 @@ export const appointmentRouter = router({
         }).catch(() => {});
       }
 
-      // Notificación in-app al profesional
       createNotification({
-        userId: completingProfessional.userId,
+        userId: professional.userId,
         type: "new_earning",
-        title: "Asesoría completada",
-        message: `Has completado una asesoría. Se acreditaron $${netAmount} MXN a tu wallet.`,
+        title: "Reseña recibida",
+        message: `Recibiste una reseña de ${input.rating} estrella${input.rating !== 1 ? "s" : ""}. Se acreditaron $${netAmount} MXN a tu wallet.`,
         link: "/profesional/wallet",
+      }).catch(() => {});
+
+      return { success: true };
+    }),
+
+  // Mark appointment as no-show (professional action)
+  markNoShow: protectedProcedure
+    .input(z.object({ appointmentId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const appointment = await db.getAppointmentById(input.appointmentId);
+      if (!appointment) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Cita no encontrada" });
+      }
+      if (ctx.user.role !== "professional") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Solo profesionales pueden marcar no-show" });
+      }
+      const professional = await db.getProfessionalByUserId(ctx.user.id);
+      if (!professional || appointment.professionalId !== professional.id) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "No autorizado" });
+      }
+      if (appointment.status !== "scheduled") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Solo citas agendadas pueden marcarse como no-show" });
+      }
+
+      const dbInstance = await db.getDb();
+      if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+      const client = (dbInstance as any).$client;
+      await new Promise<void>((resolve, reject) => {
+        client.execute(
+          "UPDATE appointments SET status = 'no-show', updatedAt = NOW() WHERE id = ?",
+          [input.appointmentId],
+          (err: any) => { if (err) reject(err); else resolve(); }
+        );
+      });
+
+      createNotification({
+        userId: appointment.userId,
+        type: "info",
+        title: "No asistencia registrada",
+        message: "El profesional registró que no asististe a tu cita. Contacta soporte si crees que es un error.",
+        link: "/citas",
       }).catch(() => {});
 
       return { success: true };
