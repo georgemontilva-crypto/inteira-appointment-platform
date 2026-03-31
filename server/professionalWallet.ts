@@ -81,26 +81,38 @@ export async function getProfessionalWallet(professionalId: number) {
 export async function getProfessionalEarningsHistory(professionalId: number) {
   const db = await getDb();
   if (!db) return [];
-  const result = await (db as any).$client.execute(
-    `SELECT pe.*, a.appointmentDate
-     FROM professionalEarnings pe
-     LEFT JOIN appointments a ON pe.appointmentId = a.id
-     WHERE pe.professionalId = ?
-     ORDER BY pe.createdAt DESC
-     LIMIT 50`,
-    [professionalId]
-  );
-  return Array.isArray(result) ? (result as any[]) : [];
+  const client = (db as any).$client;
+  return new Promise<any[]>((resolve) => {
+    client.execute(
+      `SELECT pe.*, a.appointmentDate
+       FROM professionalEarnings pe
+       LEFT JOIN appointments a ON pe.appointmentId = a.id
+       WHERE pe.professionalId = ?
+       ORDER BY pe.createdAt DESC
+       LIMIT 50`,
+      [professionalId],
+      (err: any, results: any) => {
+        if (err) { console.error("[wallet] earningsHistory error:", err?.message); resolve([]); }
+        else resolve(Array.isArray(results) ? results : []);
+      }
+    );
+  });
 }
 
 export async function getProfessionalWithdrawals(professionalId: number) {
   const db = await getDb();
   if (!db) return [];
-  const result = await (db as any).$client.execute(
-    `SELECT * FROM withdrawalRequests WHERE professionalId = ? ORDER BY createdAt DESC`,
-    [professionalId]
-  );
-  return Array.isArray(result) ? (result as any[]) : [];
+  const client = (db as any).$client;
+  return new Promise<any[]>((resolve) => {
+    client.execute(
+      `SELECT * FROM withdrawalRequests WHERE professionalId = ? ORDER BY createdAt DESC`,
+      [professionalId],
+      (err: any, results: any) => {
+        if (err) { console.error("[wallet] withdrawals error:", err?.message); resolve([]); }
+        else resolve(Array.isArray(results) ? results : []);
+      }
+    );
+  });
 }
 
 export async function createWithdrawalRequest(
