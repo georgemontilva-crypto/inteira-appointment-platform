@@ -377,7 +377,7 @@ export default function AppointmentsPage() {
   return (
     <DashboardLayout>
       <div className={activeCall ? "flex gap-4 p-4 md:p-6 items-start" : ""}>
-      <div className={activeCall ? "flex-1 min-w-0 p-0" : "p-4 md:p-6"}>
+      <div style={activeCall ? { flex: 1, minWidth: 0 } : {}} className={activeCall ? "p-0" : "p-4 md:p-6"}>
         {/* ── Page Header ── */}
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -492,8 +492,8 @@ export default function AppointmentsPage() {
             )}
           </div>
 
-          {/* ── COLUMNA LATERAL (1/3) ── */}
-          <div className="space-y-4">
+          {/* ── COLUMNA LATERAL (1/3) — hidden when video call active ── */}
+          {!activeCall && <div className="space-y-4">
             {/* Stats card */}
             <div
               className="rounded-2xl p-5 text-white relative overflow-hidden"
@@ -565,7 +565,7 @@ export default function AppointmentsPage() {
                 Cancela con al menos <strong>24 horas</strong> de anticipación para recibir el reembolso completo de tus créditos.
               </p>
             </div>
-          </div>
+          </div>}
         </div>
 
         {/* Spacer for mobile nav */}
@@ -627,7 +627,7 @@ export default function AppointmentsPage() {
 
       {/* ── Video call panel (right column, visible 5 min before start) ── */}
       {activeCall && (
-        <div style={{ width: "380px", height: "600px", flexShrink: 0, position: "sticky", top: "24px" }}>
+        <div style={{ width: "420px", minWidth: "420px", height: "calc(100vh - 120px)", flexShrink: 0, position: "sticky", top: "24px" }}>
           <VideoCallPanel
             roomUrl={activeCall.url}
             appointmentId={activeCall.appointmentId}
