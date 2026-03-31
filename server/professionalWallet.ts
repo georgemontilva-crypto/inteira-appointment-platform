@@ -21,23 +21,29 @@ export async function creditProfessionalEarning(
   const commissionAmount = Math.round(grossAmount * commissionRate * 100) / 100;
   const netAmount = Math.round((grossAmount - commissionAmount) * 100) / 100;
 
-  try {
-    await (db as any).$client.execute(
+  const client = (db as any).$client;
+
+  await new Promise<void>((resolve) => {
+    client.execute(
       `INSERT INTO professionalEarnings
          (professionalId, appointmentId, grossAmount, commissionRate, commissionAmount, netAmount, status)
        VALUES (?, ?, ?, ?, ?, ?, 'credited')`,
-      [professionalId, appointmentId, grossAmount, commissionRate, commissionAmount, netAmount]
+      [professionalId, appointmentId, grossAmount, commissionRate, commissionAmount, netAmount],
+      (err: any) => { if (err && !String(err).includes("Duplicate")) console.error("[wallet] earnings insert:", err?.message); resolve(); }
     );
-  } catch { /* idempotent: ignore duplicate appointmentId */ }
+  });
 
-  await (db as any).$client.execute(
-    `INSERT INTO professionalWallet (professionalId, balance, pendingWithdrawal, totalEarned, totalWithdrawn)
-     VALUES (?, ?, 0, ?, 0)
-     ON DUPLICATE KEY UPDATE
-       balance     = balance     + VALUES(balance),
-       totalEarned = totalEarned + VALUES(totalEarned)`,
-    [professionalId, netAmount, netAmount]
-  );
+  await new Promise<void>((resolve, reject) => {
+    client.execute(
+      `INSERT INTO professionalWallet (professionalId, balance, pendingWithdrawal, totalEarned, totalWithdrawn)
+       VALUES (?, ?, 0, ?, 0)
+       ON DUPLICATE KEY UPDATE
+         balance     = balance     + VALUES(balance),
+         totalEarned = totalEarned + VALUES(totalEarned)`,
+      [professionalId, netAmount, netAmount],
+      (err: any) => { if (err) reject(err); else resolve(); }
+    );
+  });
 
   return { netAmount, commissionAmount };
 }
@@ -59,12 +65,17 @@ export async function chargeProfessionalPenalty(
 export async function getProfessionalWallet(professionalId: number) {
   const db = await getDb();
   if (!db) return null;
-  const result = await (db as any).$client.execute(
-    `SELECT * FROM professionalWallet WHERE professionalId = ? LIMIT 1`,
-    [professionalId]
-  );
-  const rows = Array.isArray(result) ? result : [];
-  return (rows[0] as any) ?? null;
+  const client = (db as any).$client;
+  return new Promise<any>((resolve, reject) => {
+    client.execute(
+      "SELECT * FROM professionalWallet WHERE professionalId = ? LIMIT 1",
+      [professionalId],
+      (err: any, results: any) => {
+        if (err) reject(err);
+        else resolve(Array.isArray(results) ? results[0] ?? null : null);
+      }
+    );
+  });
 }
 
 export async function getProfessionalEarningsHistory(professionalId: number) {

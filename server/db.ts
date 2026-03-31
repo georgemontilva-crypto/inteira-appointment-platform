@@ -594,7 +594,14 @@ export async function getProfessionalAppointments(professionalId: number) {
   const client = (db as any).$client;
   return new Promise<any[]>((resolve, reject) => {
     client.execute(
-      "SELECT * FROM appointments WHERE professionalId = ?",
+      `SELECT a.*,
+        u.name AS userName, u.email AS userEmail, u.profileImage AS userProfileImage,
+        s.name AS specialtyName
+       FROM appointments a
+       LEFT JOIN users u ON a.userId = u.id
+       LEFT JOIN specialties s ON a.specialtyId = s.id
+       WHERE a.professionalId = ?
+       ORDER BY a.appointmentDate DESC`,
       [professionalId],
       (err: any, results: any) => {
         if (err) { console.error("[DB] getProfessionalAppointments error:", err?.message); resolve([]); }

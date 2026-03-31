@@ -335,15 +335,7 @@ export const appRouter = router({
         });
       }
 
-      const apts = await db.getProfessionalAppointments(professional.id);
-      // Enrich with patient name
-      const enriched = await Promise.all(
-        apts.map(async (apt) => {
-          const patient = await db.getUserById(apt.userId);
-          return { ...apt, userName: patient?.name ?? null, userEmail: patient?.email ?? null };
-        })
-      );
-      return enriched;
+      return await db.getProfessionalAppointments(professional.id);
     }),
 
     getAvailability: protectedProcedure.query(async ({ ctx }) => {
