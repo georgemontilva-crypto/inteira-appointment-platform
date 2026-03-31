@@ -128,6 +128,11 @@ export default function ProfessionalDashboard() {
     { enabled: isAuthenticated }
   );
 
+  const { data: earningsHistory } = trpc.professional.getEarningsHistory.useQuery(
+    undefined,
+    { enabled: isAuthenticated && activeTab === "ganancias" }
+  );
+
   const addAvailabilityMutation = trpc.professional.setAvailability.useMutation({
     onSuccess: () => {
       refetchAvailability();
@@ -942,10 +947,51 @@ export default function ProfessionalDashboard() {
         {activeTab === "ganancias" && (
           <div className="space-y-4">
             <h2 className="text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>Mis ganancias</h2>
-            <div className="rounded-2xl border border-dashed border-[rgba(96,117,98,0.3)] bg-[#F7FAFC] p-10 text-center">
-              <BarChart3 className="w-10 h-10 text-[#93A295] mx-auto mb-3" />
-              <p className="text-sm font-medium text-[#607562]">Sección de ganancias próximamente</p>
-              <p className="text-xs text-[#93A295] mt-1">Aquí verás tu historial de pagos y retiros.</p>
+
+            {/* Wallet summary */}
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {[
+                { label: "Balance disponible", value: `$${parseFloat((wallet as any)?.balance ?? "0").toFixed(2)} MXN` },
+                { label: "Total ganado", value: `$${parseFloat((wallet as any)?.totalEarned ?? "0").toFixed(2)} MXN` },
+                { label: "Total retirado", value: `$${parseFloat((wallet as any)?.totalWithdrawn ?? "0").toFixed(2)} MXN` },
+              ].map(({ label, value }) => (
+                <div key={label} className="rounded-2xl border border-[rgba(96,117,98,0.15)] bg-white p-4">
+                  <p className="text-xs text-[#93A295] mb-1">{label}</p>
+                  <p className="text-lg font-bold text-[#2d3a2e]">{value}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Earnings history */}
+            <div className="rounded-2xl border border-[rgba(96,117,98,0.15)] bg-white overflow-hidden">
+              <div className="px-4 py-3 border-b border-[rgba(96,117,98,0.1)]">
+                <p className="text-sm font-semibold text-[#2d3a2e]">Historial de pagos</p>
+              </div>
+              {!earningsHistory || earningsHistory.length === 0 ? (
+                <div className="p-10 text-center">
+                  <BarChart3 className="w-8 h-8 text-[#93A295] mx-auto mb-2" />
+                  <p className="text-sm text-[#93A295]">Aún no tienes ganancias registradas.</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-[rgba(96,117,98,0.08)]">
+                  {(earningsHistory as any[]).map((e) => (
+                    <div key={e.id} className="flex items-center justify-between px-4 py-3">
+                      <div>
+                        <p className="text-sm font-medium text-[#2d3a2e]">Cita #{e.appointmentId}</p>
+                        <p className="text-xs text-[#93A295]">
+                          {e.appointmentDate
+                            ? format(new Date(e.appointmentDate), "d MMM yyyy 'a las' HH:mm", { locale: es })
+                            : "—"}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-bold text-[#607562]">+${parseFloat(e.netAmount).toFixed(2)} MXN</p>
+                        <p className="text-xs text-[#93A295]">Comisión: ${parseFloat(e.commissionAmount).toFixed(2)}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
