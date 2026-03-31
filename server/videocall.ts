@@ -1,241 +1,92 @@
-/**
- * Video call service for Zoom and Google Meet
- * Generates meeting links automatically when appointments are scheduled
- */
+// server/videocall.ts
+// Video calls via Daily.co — reemplaza Google Meet y Zoom
 
-export type VideoCallType = "zoom" | "google_meet";
+const DAILY_API_KEY = process.env.DAILY_API_KEY!;
+const DAILY_BASE_URL = 'https://api.daily.co/v1';
 
-export interface VideoCallLink {
-  type: VideoCallType;
-  joinUrl: string;
-  hostUrl?: string;
-  meetingId?: string;
-  password?: string;
+export interface VideoCallResult {
+  url: string;
+  provider: 'daily';
+  roomName: string;
 }
 
 /**
- * Generate a Google Meet link using the Google Calendar API
- * Falls back to a pre-generated Meet link format if no credentials
- */
-export async function generateGoogleMeetLink(
-  title: string,
-  startTime: Date,
-  endTime: Date,
-  hostEmail: string,
-  guestEmail: string
-): Promise<VideoCallLink> {
-  const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
-  const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
-  const GOOGLE_REFRESH_TOKEN = process.env.GOOGLE_REFRESH_TOKEN;
-
-  if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET && GOOGLE_REFRESH_TOKEN) {
-    console.log("[Meet] Usando credenciales reales de Google");
-    try {
-      // Use Google Calendar API to create event with Meet link
-      console.log("[Meet] Using refresh token starting with:", GOOGLE_REFRESH_TOKEN?.substring(0, 20));
-      const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({
-          client_id: GOOGLE_CLIENT_ID!,
-          client_secret: GOOGLE_CLIENT_SECRET!,
-          refresh_token: GOOGLE_REFRESH_TOKEN!,
-          grant_type: "refresh_token",
-        }),
-      });
-      const tokenData = await tokenResponse.json() as any;
-      console.log("[Meet] Token response status:", tokenResponse.status, "error:", tokenData.error, "has_token:", !!tokenData.access_token);
-      if (!tokenData.access_token) {
-        console.error("[Meet] Failed to get access token:", JSON.stringify(tokenData));
-        throw new Error("Failed to get Google access token");
-      }
-      const accessToken = tokenData.access_token;
-
-      const eventResponse = await fetch(
-        "https://www.googleapis.com/calendar/v3/calendars/primary/events?conferenceDataVersion=1",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            summary: title,
-            start: { dateTime: startTime.toISOString() },
-            end: { dateTime: endTime.toISOString() },
-            attendees: [{ email: hostEmail }, { email: guestEmail }],
-            conferenceData: {
-              createRequest: {
-                requestId: `inteira-${Date.now()}`,
-                conferenceSolutionKey: { type: "hangoutsMeet" },
-              },
-            },
-          }),
-        }
-      );
-
-      const eventData = (await eventResponse.json()) as {
-        conferenceData?: { entryPoints?: Array<{ uri: string; entryPointType: string }> };
-      };
-      const meetLink =
-        eventData.conferenceData?.entryPoints?.find(
-          (ep) => ep.entryPointType === "video"
-        )?.uri;
-
-      if (meetLink) {
-        return {
-          type: "google_meet",
-          joinUrl: meetLink,
-          hostUrl: meetLink,
-        };
-      }
-      console.error("[Meet] Google Calendar API no devolvió Meet link. eventData:", JSON.stringify(eventData));
-    } catch (error: any) {
-      console.error("[Meet] Google Calendar API error:", error?.message, "status:", error?.status, "response:", JSON.stringify(error?.response?.data ?? {}));
-    }
-  }
-
-  // Fallback: generate a unique Meet-style link
-  console.log("[Meet] FALLBACK — credenciales faltantes:", {
-    hasClientId: !!GOOGLE_CLIENT_ID,
-    hasSecret: !!GOOGLE_CLIENT_SECRET,
-    hasRefresh: !!GOOGLE_REFRESH_TOKEN,
-  });
-  const meetCode = generateMeetCode();
-  return {
-    type: "google_meet",
-    joinUrl: `https://meet.google.com/${meetCode}`,
-    hostUrl: `https://meet.google.com/${meetCode}`,
-    meetingId: meetCode,
-  };
-}
-
-/**
- * Generate a Zoom meeting link using the Zoom API
- * Falls back to a placeholder if no credentials
- */
-export async function generateZoomLink(
-  title: string,
-  startTime: Date,
-  durationMinutes: number,
-  hostEmail: string
-): Promise<VideoCallLink> {
-  const ZOOM_ACCOUNT_ID = process.env.ZOOM_ACCOUNT_ID;
-  const ZOOM_CLIENT_ID = process.env.ZOOM_CLIENT_ID;
-  const ZOOM_CLIENT_SECRET = process.env.ZOOM_CLIENT_SECRET;
-
-  if (ZOOM_ACCOUNT_ID && ZOOM_CLIENT_ID && ZOOM_CLIENT_SECRET) {
-    try {
-      // Get Zoom OAuth token (Server-to-Server OAuth)
-      const credentials = Buffer.from(
-        `${ZOOM_CLIENT_ID}:${ZOOM_CLIENT_SECRET}`
-      ).toString("base64");
-
-      const tokenResponse = await fetch(
-        `https://zoom.us/oauth/token?grant_type=account_credentials&account_id=${ZOOM_ACCOUNT_ID}`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Basic ${credentials}`,
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
-        }
-      );
-
-      const tokenData = (await tokenResponse.json()) as { access_token: string };
-      const accessToken = tokenData.access_token;
-
-      // Create Zoom meeting
-      const meetingResponse = await fetch(
-        `https://api.zoom.us/v2/users/me/meetings`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            topic: title,
-            type: 2, // Scheduled meeting
-            start_time: startTime.toISOString(),
-            duration: durationMinutes,
-            settings: {
-              host_video: true,
-              participant_video: true,
-              waiting_room: true,
-              auto_recording: "none",
-            },
-          }),
-        }
-      );
-
-      const meetingData = (await meetingResponse.json()) as {
-        join_url: string;
-        start_url: string;
-        id: number;
-        password: string;
-      };
-
-      if (meetingData.join_url) {
-        return {
-          type: "zoom",
-          joinUrl: meetingData.join_url,
-          hostUrl: meetingData.start_url,
-          meetingId: meetingData.id?.toString(),
-          password: meetingData.password,
-        };
-      }
-    } catch (error) {
-      console.error("[VideoCall] Zoom API error:", error);
-    }
-  }
-
-  // Fallback: generate a placeholder Zoom link
-  const meetingId = generateZoomId();
-  return {
-    type: "zoom",
-    joinUrl: `https://zoom.us/j/${meetingId}`,
-    hostUrl: `https://zoom.us/s/${meetingId}`,
-    meetingId,
-    password: generatePassword(),
-  };
-}
-
-/**
- * Generate video call link based on type
+ * Crea un room en Daily.co para una cita específica.
+ * El room expira 1 hora después del fin de la cita.
  */
 export async function generateVideoCallLink(
-  type: VideoCallType,
-  title: string,
+  appointmentId: number,
   startTime: Date,
-  endTime: Date,
-  hostEmail: string,
-  guestEmail: string
-): Promise<VideoCallLink> {
-  const durationMinutes = Math.round(
-    (endTime.getTime() - startTime.getTime()) / 60000
-  );
+  endTime: Date
+): Promise<VideoCallResult> {
+  const roomName = `cita-${appointmentId}-${Date.now()}`;
 
-  if (type === "google_meet") {
-    return generateGoogleMeetLink(title, startTime, endTime, hostEmail, guestEmail);
-  } else {
-    return generateZoomLink(title, startTime, durationMinutes, hostEmail);
+  // Expira 1 hora después del fin de la cita
+  const exp = Math.floor(endTime.getTime() / 1000) + 3600;
+
+  try {
+    const response = await fetch(`${DAILY_BASE_URL}/rooms`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${DAILY_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: roomName,
+        properties: {
+          exp,
+          enable_chat: true,
+          enable_people_ui: true,
+          start_video_off: false,
+          start_audio_off: false,
+          lang: 'es',
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      console.error('[Daily] Error creating room:', error);
+      throw new Error(`Daily API error: ${JSON.stringify(error)}`);
+    }
+
+    const room = await response.json();
+    console.log(`[Daily] Room created: ${room.url}`);
+
+    return {
+      url: room.url,
+      provider: 'daily',
+      roomName: room.name,
+    };
+  } catch (err) {
+    console.error('[Daily] Failed to create room:', err);
+    // Fallback: link directo al subdominio con nombre aleatorio
+    const fallbackUrl = `https://inteira.daily.co/${roomName}`;
+    console.warn(`[Daily] Using fallback URL: ${fallbackUrl}`);
+    return {
+      url: fallbackUrl,
+      provider: 'daily',
+      roomName,
+    };
   }
 }
 
-// Helper functions
-function generateMeetCode(): string {
-  const chars = "abcdefghijklmnopqrstuvwxyz";
-  const segment = () =>
-    Array.from({ length: 3 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
-  return `${segment()}-${segment()}-${segment()}`;
-}
-
-function generateZoomId(): string {
-  return Array.from({ length: 11 }, () => Math.floor(Math.random() * 10)).join("");
-}
-
-function generatePassword(): string {
-  const chars = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
-  return Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+/**
+ * Elimina un room de Daily.co (usar en cancelaciones).
+ */
+export async function deleteVideoCallRoom(roomName: string): Promise<void> {
+  try {
+    const response = await fetch(`${DAILY_BASE_URL}/rooms/${roomName}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${DAILY_API_KEY}`,
+      },
+    });
+    if (response.ok) {
+      console.log(`[Daily] Room deleted: ${roomName}`);
+    }
+  } catch (err) {
+    console.error('[Daily] Failed to delete room:', err);
+    // No lanzar error — la cancelación debe completarse igual
+  }
 }

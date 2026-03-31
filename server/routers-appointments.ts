@@ -73,14 +73,11 @@ export const appointmentRouter = router({
         professionalId: z.number(),
         appointmentDate: z.string(), // ISO string from frontend
         durationMinutes: z.number().optional().default(60),
-        videoCallType: z.enum(["zoom", "google_meet"]).optional().default("google_meet"),
-        videoProvider: z.enum(["zoom", "google_meet"]).optional().default("google_meet"),
         notes: z.string().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
       const appointmentDateObj = new Date(input.appointmentDate);
-      const videoCallType = input.videoProvider ?? input.videoCallType;
 
       // Validate appointment can be scheduled
       if (!canScheduleAppointment(appointmentDateObj)) {
@@ -135,28 +132,39 @@ export const appointmentRouter = router({
       const userRecord = await db.getUserById(ctx.user.id);
       const specialty = await db.getSpecialtyById(professional.specialtyId);
 
-      const videoCall = await generateVideoCallLink(
-        videoCallType,
-        `Consulta de ${specialty?.name ?? "especialidad"} - Inteira`,
-        appointmentDateObj,
-        appointmentEndDate,
-        professionalUser?.email ?? "",
-        userRecord?.email ?? ""
-      );
-
-      // Create appointment with video call link
+      // Create appointment first to get the real ID for Daily.co room name
       const newAppointmentId = await db.createAppointment({
         userId: ctx.user.id,
         professionalId: input.professionalId,
         specialtyId: professional.specialtyId,
         appointmentDate: appointmentDateObj,
         durationMinutes: input.durationMinutes,
-        videoCallType: videoCallType,
-        videoCallLink: videoCall.joinUrl,
-        videoCallId: videoCall.meetingId,
+        videoCallType: "daily",
+        videoCallLink: undefined,
+        videoCallId: undefined,
         notes: input.notes,
         status: "scheduled",
       });
+
+      // Generate Daily.co room using the real appointment ID
+      const videoCall = await generateVideoCallLink(
+        newAppointmentId,
+        appointmentDateObj,
+        appointmentEndDate
+      );
+
+      // Update appointment row with the video call link
+      const { getDb } = await import("./db");
+      const dbConn = await getDb();
+      if (dbConn) {
+        await new Promise<void>((resolve) => {
+          (dbConn as any).$client.execute(
+            "UPDATE appointments SET videoCallLink = ?, videoCallId = ? WHERE id = ?",
+            [videoCall.url, videoCall.roomName, newAppointmentId],
+            (err: any) => { if (err) console.error("[createAppointment] update video call:", err); resolve(); }
+          );
+        });
+      }
 
       // ── Deduct credits (FIFO) ─────────────────────────────────────────────
       await consumeCredits(
@@ -176,14 +184,14 @@ export const appointmentRouter = router({
           specialty: specialty?.name ?? "Especialidad",
           appointmentDate: appointmentDateObj,
           durationMinutes: input.durationMinutes,
-          videoCallType: videoCallType,
-          videoCallLink: videoCall.joinUrl,
+          videoCallType: "daily",
+          videoCallLink: videoCall.url,
         });
       }
 
       return {
         success: true,
-        videoCallLink: videoCall.joinUrl,
+        videoCallLink: videoCall.url,
         creditsUsed: SESSION_CREDIT_COST,
       };
     }),
