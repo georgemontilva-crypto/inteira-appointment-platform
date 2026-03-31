@@ -40,7 +40,7 @@ export function VideoCallPanel({
   const timeLeft = useCountdown(endTime);
 
   // Construir URL con parámetros para ocultar UI de Daily
-  const embedUrl = `${roomUrl}?embed&showLeaveButton=false&showFullscreenButton=false`;
+  const embedUrl = `${roomUrl}?embed&showLeaveButton=false&showFullscreenButton=false&userName=${encodeURIComponent(professionalName)}`;
 
   const handleLeave = () => {
     onLeave?.();

@@ -55,6 +55,20 @@ export default function ProfessionalDashboard() {
   const [newBlockedDate, setNewBlockedDate] = useState("");
   const [newBlockedReason, setNewBlockedReason] = useState("");
   const [attendanceModal, setAttendanceModal] = useState<any | null>(null);
+  const [nowMs, setNowMs] = useState(Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNowMs(Date.now()), 30_000);
+    return () => clearInterval(id);
+  }, []);
+  const canJoin = (apt: { appointmentDate: string | Date }) =>
+    nowMs >= new Date(apt.appointmentDate).getTime() - 5 * 60 * 1000;
+  const joinCountdown = (apt: { appointmentDate: string | Date }) => {
+    const ms = new Date(apt.appointmentDate).getTime() - 5 * 60 * 1000 - nowMs;
+    if (ms <= 0) return "";
+    const m = Math.floor(ms / 60000);
+    const s = Math.floor((ms % 60000) / 1000);
+    return `${m}:${String(s).padStart(2, "0")}`;
+  };
   const [activeCall, setActiveCall] = useState<{
     url: string;
     appointmentId: number;
@@ -464,8 +478,9 @@ export default function ProfessionalDashboard() {
                 </div>
                 <Button
                   size="sm"
-                  className="gradient-brand text-white border-0 text-xs h-8 px-3 flex-shrink-0 font-semibold"
-                  onClick={() => setActiveCall({
+                  disabled={!canJoin(nextWithVideo)}
+                  className="gradient-brand text-white border-0 text-xs h-8 px-3 flex-shrink-0 font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
+                  onClick={() => canJoin(nextWithVideo) && setActiveCall({
                     url: (nextWithVideo as any).videoCallLink,
                     appointmentId: nextWithVideo.id,
                     professionalName: (nextWithVideo as any).userName ?? `Usuario #${nextWithVideo.userId}`,
@@ -474,7 +489,7 @@ export default function ProfessionalDashboard() {
                   })}
                 >
                   <Video className="w-3 h-3 mr-1" />
-                  Iniciar sesión
+                  {canJoin(nextWithVideo) ? "Iniciar sesión" : `En ${joinCountdown(nextWithVideo)}`}
                 </Button>
               </div>
             </div>
@@ -560,8 +575,9 @@ export default function ProfessionalDashboard() {
                             {apt.videoCallLink && (
                               <Button
                                 size="sm"
-                                className="gradient-brand text-white border-0 h-8 text-xs"
-                                onClick={() => setActiveCall({
+                                disabled={!canJoin(apt)}
+                                className="gradient-brand text-white border-0 h-8 text-xs disabled:opacity-60 disabled:cursor-not-allowed"
+                                onClick={() => canJoin(apt) && setActiveCall({
                                   url: apt.videoCallLink!,
                                   appointmentId: apt.id,
                                   professionalName: (apt as any).userName ?? `Usuario #${apt.userId}`,
@@ -570,7 +586,7 @@ export default function ProfessionalDashboard() {
                                 })}
                               >
                                 <Video className="w-3 h-3 mr-1" />
-                                Unirse
+                                {canJoin(apt) ? "Unirse" : `En ${joinCountdown(apt)}`}
                               </Button>
                             )}
                             {new Date(apt.appointmentDate).getTime() + 55 * 60 * 1000 < Date.now() && (
