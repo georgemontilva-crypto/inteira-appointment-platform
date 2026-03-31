@@ -25,7 +25,7 @@ export default function BookAppointment() {
   const { isAuthenticated, loading } = useAuth();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
-  const videoProvider = "daily" as const;
+
   const [notes, setNotes] = useState("");
   const [policyAccepted, setPolicyAccepted] = useState(false);
   const [step, setStep] = useState<"date" | "time" | "confirm" | "done">("date");
@@ -82,7 +82,6 @@ export default function BookAppointment() {
     bookMutation.mutate({
       professionalId,
       appointmentDate: appointmentDate.toISOString(),
-      videoProvider: videoProvider,
       notes: notes || undefined,
     });
   };

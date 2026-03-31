@@ -891,13 +891,20 @@ export const appRouter = router({
       }
       const dbInst = await db.getDb();
       if (!dbInst) return [];
-      const rows = await dbInst.execute(
-        `SELECT s.name, COUNT(p.id) as count
-         FROM specialties s
-         LEFT JOIN professionals p ON p.specialtyId = s.id AND p.status = 'approved'
-         GROUP BY s.id, s.name`
-      );
-      return (rows.rows as { name: string; count: number }[]).map((r) => ({
+      const rows = await new Promise<{ name: string; count: number }[]>((resolve) => {
+        (dbInst as any).$client.execute(
+          `SELECT s.name, COUNT(p.id) as count
+           FROM specialties s
+           LEFT JOIN professionals p ON p.specialtyId = s.id AND p.status = 'approved'
+           GROUP BY s.id, s.name`,
+          [],
+          (err: any, results: any) => {
+            if (err) { console.error("[admin] getProfessionalsBySpecialty:", err?.message); resolve([]); }
+            else resolve(Array.isArray(results) ? results : []);
+          }
+        );
+      });
+      return rows.map((r) => ({
         name: r.name,
         count: Number(r.count),
       }));
