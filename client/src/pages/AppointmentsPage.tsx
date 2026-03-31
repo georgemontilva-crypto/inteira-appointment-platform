@@ -619,7 +619,6 @@ export default function AppointmentsPage() {
           </div>
         </div>
       )}
-      </div>
 
       {/* ── Video call panel (right column, visible 5 min before start) ── */}
       {activeCall && (
