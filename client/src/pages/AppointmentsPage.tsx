@@ -300,7 +300,7 @@ export default function AppointmentsPage() {
                 {apt.durationMinutes ? ` · ${apt.durationMinutes} min` : ""}
               </p>
               <p className="text-xs text-[#93A295] mt-0.5">
-                350 créditos · {apt.videoCallType === "google_meet" ? "Google Meet" : "Zoom"}
+                350 créditos · Videollamada integrada
               </p>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">

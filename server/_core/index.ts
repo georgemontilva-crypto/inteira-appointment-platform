@@ -281,6 +281,12 @@ async function runStartupMigrations() {
     ).catch(() => {});
     console.log("[Migration] appointments pending_review status ready");
 
+    // Ensure daily in appointments videoCallType enum
+    await db.execute(
+      "ALTER TABLE `appointments` MODIFY COLUMN `videoCallType` ENUM('zoom','google_meet','daily') NOT NULL DEFAULT 'daily'"
+    ).catch(() => {});
+    console.log("[Migration] appointments videoCallType daily ready");
+
     // Ensure notifications table exists
     await db.execute(`CREATE TABLE IF NOT EXISTS \`notifications\` (
       \`id\` int NOT NULL AUTO_INCREMENT,

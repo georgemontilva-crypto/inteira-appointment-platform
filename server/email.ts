@@ -124,7 +124,7 @@ export async function sendAppointmentConfirmation(params: {
       <p><strong>Fecha:</strong> ${dateStr}</p>
       <p><strong>Hora:</strong> ${timeStr}</p>
       <p><strong>Duración:</strong> ${params.durationMinutes} minutos</p>
-      <p><strong>Plataforma:</strong> ${params.videoCallType === "zoom" ? "Zoom" : "Google Meet"}</p>
+      <p><strong>Plataforma:</strong> Daily (videollamada integrada)</p>
     </div>
     <p>Para unirte a tu cita, haz clic en el siguiente enlace:</p>
     <a href="${params.videoCallLink}" class="btn">Unirse a la videollamada</a>
