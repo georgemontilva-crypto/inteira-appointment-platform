@@ -11,12 +11,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import {
   Calendar, Clock, CheckCircle2, User, Video,
-  ExternalLink, Plus, Star, BarChart3, ArrowLeft, AlertCircle, XCircle,
+  Plus, Star, BarChart3, ArrowLeft, AlertCircle, XCircle,
   Camera, Trash2, MessageSquare, CalendarX,
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import DashboardLayout from "../components/DashboardLayout";
+import { VideoCallPanel } from "../components/VideoCallPanel";
 
 const DAYS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
@@ -54,6 +55,13 @@ export default function ProfessionalDashboard() {
   const [newBlockedDate, setNewBlockedDate] = useState("");
   const [newBlockedReason, setNewBlockedReason] = useState("");
   const [attendanceModal, setAttendanceModal] = useState<any | null>(null);
+  const [activeCall, setActiveCall] = useState<{
+    url: string;
+    appointmentId: number;
+    professionalName: string;
+    startTime: Date;
+    endTime: Date;
+  } | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
@@ -360,7 +368,8 @@ export default function ProfessionalDashboard() {
 
   return (
     <DashboardLayout>
-      <div className="p-4 md:p-6">
+      <div className={activeCall ? "flex gap-4 p-4 md:p-6 items-start" : ""}>
+      <div style={activeCall ? { flex: 1, minWidth: 0 } : {}} className={activeCall ? "p-0" : "p-4 md:p-6"}>
       {/* Header */}
       <div className="gradient-hero text-white relative overflow-hidden rounded-2xl mb-5">
         <div className="absolute top-0 right-0 w-56 h-56 rounded-full pointer-events-none" style={{background:"rgba(255,255,255,0.05)",transform:"translate(30%,-30%)"}} />
@@ -453,12 +462,20 @@ export default function ProfessionalDashboard() {
                     {format(new Date(nextWithVideo.appointmentDate), "HH:mm", { locale: es })} · {nextWithVideo.durationMinutes} min
                   </p>
                 </div>
-                <a href={(nextWithVideo as any).videoCallLink} target="_blank" rel="noopener noreferrer">
-                  <Button size="sm" className="gradient-brand text-white border-0 text-xs h-8 px-3 flex-shrink-0 font-semibold">
-                    <Video className="w-3 h-3 mr-1" />
-                    Iniciar sesión
-                  </Button>
-                </a>
+                <Button
+                  size="sm"
+                  className="gradient-brand text-white border-0 text-xs h-8 px-3 flex-shrink-0 font-semibold"
+                  onClick={() => setActiveCall({
+                    url: (nextWithVideo as any).videoCallLink,
+                    appointmentId: nextWithVideo.id,
+                    professionalName: (nextWithVideo as any).userName ?? `Usuario #${nextWithVideo.userId}`,
+                    startTime: new Date(nextWithVideo.appointmentDate),
+                    endTime: new Date(new Date(nextWithVideo.appointmentDate).getTime() + (nextWithVideo.durationMinutes ?? 55) * 60 * 1000),
+                  })}
+                >
+                  <Video className="w-3 h-3 mr-1" />
+                  Iniciar sesión
+                </Button>
               </div>
             </div>
           </div>
@@ -541,13 +558,20 @@ export default function ProfessionalDashboard() {
                           </div>
                           <div className="flex items-center gap-2">
                             {apt.videoCallLink && (
-                              <a href={apt.videoCallLink} target="_blank" rel="noopener noreferrer">
-                                <Button size="sm" className="gradient-brand text-white border-0 h-8 text-xs">
-                                  <Video className="w-3 h-3 mr-1" />
-                                  Unirse
-                                  <ExternalLink className="w-3 h-3 ml-1" />
-                                </Button>
-                              </a>
+                              <Button
+                                size="sm"
+                                className="gradient-brand text-white border-0 h-8 text-xs"
+                                onClick={() => setActiveCall({
+                                  url: apt.videoCallLink!,
+                                  appointmentId: apt.id,
+                                  professionalName: (apt as any).userName ?? `Usuario #${apt.userId}`,
+                                  startTime: new Date(apt.appointmentDate),
+                                  endTime: new Date(new Date(apt.appointmentDate).getTime() + (apt.durationMinutes ?? 55) * 60 * 1000),
+                                })}
+                              >
+                                <Video className="w-3 h-3 mr-1" />
+                                Unirse
+                              </Button>
                             )}
                             {new Date(apt.appointmentDate).getTime() + 55 * 60 * 1000 < Date.now() && (
                               <Button
@@ -1053,6 +1077,20 @@ export default function ProfessionalDashboard() {
           </div>
         )}
       </div>
+      </div>
+
+      {activeCall && (
+        <div style={{ width: "420px", minWidth: "420px", height: "calc(100vh - 120px)", flexShrink: 0, position: "sticky", top: "24px" }}>
+          <VideoCallPanel
+            roomUrl={activeCall.url}
+            appointmentId={activeCall.appointmentId}
+            professionalName={activeCall.professionalName}
+            startTime={activeCall.startTime}
+            endTime={activeCall.endTime}
+            onLeave={() => setActiveCall(null)}
+          />
+        </div>
+      )}
       </div>
 
       {/* ─── Modal de asistencia ─── */}
