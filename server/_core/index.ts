@@ -349,14 +349,14 @@ async function runStartupMigrations() {
           });
         });
         const balRows = await getBal();
-        if ((balRows[0]?.bal ?? 0) < 100) {
+        if ((balRows[0]?.bal ?? 0) < 500) {
           const exp = new Date();
           exp.setDate(exp.getDate() + 60);
           const expStr = exp.toISOString().slice(0, 19).replace("T", " ");
           await new Promise<void>((resolve, reject) => {
             client.execute(
               "INSERT INTO creditBatches (userId, amount, remaining, source, expiresAt) VALUES (?, ?, ?, ?, ?)",
-              [userId, 1000, 1000, "test_20", expStr],
+              [userId, 2000, 2000, "test_20", expStr],
               (err: any) => { if (err) reject(err); else resolve(); }
             );
           });
