@@ -32,6 +32,7 @@ export async function generateGoogleMeetLink(
     console.log("[Meet] Usando credenciales reales de Google");
     try {
       // Use Google Calendar API to create event with Meet link
+      console.log("[Meet] Using refresh token starting with:", GOOGLE_REFRESH_TOKEN?.substring(0, 20));
       const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
