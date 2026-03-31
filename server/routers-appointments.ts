@@ -15,6 +15,7 @@ import {
 } from "./email";
 import { consumeCredits, getUserCreditBalance, addCreditBatch } from "./credits";
 import { createNotification } from "./notifications";
+import { chargeProfessionalPenalty } from "./professionalWallet";
 
 // Credit cost per session type (MXN = credits 1:1)
 const SESSION_CREDIT_COST = 350; // Sesión básica
@@ -231,31 +232,35 @@ export const appointmentRouter = router({
       const canceledByRole = ctx.user.role === "user" ? "user" : "professional";
 
       // Verificar que el profesional es dueño de esta cita (fix bug: professionalId ≠ userId)
+      let userProfessional: Awaited<ReturnType<typeof db.getProfessionalByUserId>> = null;
       if (canceledByRole === "professional") {
-        const userProfessional = await db.getProfessionalByUserId(ctx.user.id);
+        userProfessional = await db.getProfessionalByUserId(ctx.user.id);
         if (!userProfessional || appointment.professionalId !== userProfessional.id) {
           throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized to cancel this appointment" });
         }
       }
 
       let penaltyAmount = 0;
-      let penaltyType: "none" | "partial" | "full" | "credits_lost" = "none";
+      let penaltyType: "none" | "partial" | "late" | "credits_lost" = "none";
 
       if (canceledByRole === "professional") {
         // Profesional cancela: siempre devolver créditos al cliente
         if (appointment.status === "scheduled") {
           await addCreditBatch(appointment.userId, "individual_basic", 350).catch(() => {});
         }
-        // Multa según anticipación
-        if (hoursUntil >= 12) {
+        // Multa en pesos según tier y anticipación (se descuenta del professionalWallet)
+        const isPro = (userProfessional as any)?.tier === "pro";
+        if (hoursUntil > 12) {
           penaltyAmount = 0;
           penaltyType = "none";
-        } else if (hoursUntil >= 4) {
-          penaltyAmount = 75;
-          penaltyType = "partial";
+        } else if (hoursUntil > 5) {
+          // Entre 5 y 12 horas: básico paga $70, pro sin penalización
+          penaltyAmount = isPro ? 0 : 70;
+          penaltyType = isPro ? "none" : "partial";
         } else {
-          penaltyAmount = 150;
-          penaltyType = "full";
+          // 5 horas o menos: básico $150, pro $250
+          penaltyAmount = isPro ? 250 : 150;
+          penaltyType = "late";
         }
       } else {
         // Cliente cancela
@@ -291,13 +296,17 @@ export const appointmentRouter = router({
         );
       });
 
-      // Registrar penalización del profesional si aplica
+      // Registrar penalización del profesional si aplica (descuento en pesos del wallet)
       if (canceledByRole === "professional" && penaltyAmount > 0) {
-        await (db_instance as any).$client.execute(
-          "INSERT INTO professionalPenalties (professionalId, appointmentId, amount, penaltyType, reason) VALUES (?, ?, ?, ?, ?)",
-          [appointment.professionalId, input.appointmentId, penaltyAmount, penaltyType,
-           `Cancelación con ${Math.round(hoursUntil)}h de anticipación`]
-        ).catch(() => {});
+        await chargeProfessionalPenalty(appointment.professionalId, penaltyAmount).catch(() => {});
+        await new Promise<void>((resolve) => {
+          client.execute(
+            "INSERT INTO professionalPenalties (professionalId, appointmentId, amount, penaltyType, reason) VALUES (?, ?, ?, ?, ?)",
+            [appointment.professionalId, input.appointmentId, penaltyAmount, penaltyType,
+             `Cancelación con ${Math.round(hoursUntil)}h de anticipación`],
+            (err: any) => { if (err) console.error("[cancel] penalty insert:", err?.message); resolve(); }
+          );
+        });
       }
 
       // Send cancellation email

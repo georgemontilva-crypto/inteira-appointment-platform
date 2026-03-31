@@ -84,6 +84,7 @@ export default function AppointmentsPage() {
 
   const [tab, setTab] = useState<"upcoming" | "history">("upcoming");
   const [cancelingId, setCancelingId] = useState<number | null>(null);
+  const [confirmCancelId, setConfirmCancelId] = useState<number | null>(null);
   const [ratingId, setRatingId] = useState<number | null>(null);
   const [rating, setRating] = useState(5);
   const [ratingComment, setRatingComment] = useState("");
@@ -256,7 +257,7 @@ export default function AppointmentsPage() {
               <button
                 className="flex items-center gap-1 text-xs font-medium text-red-500 hover:text-red-700 hover:bg-red-50 rounded-xl h-8 px-3 border border-red-100 transition-colors disabled:opacity-50"
                 disabled={cancelingId === apt.id}
-                onClick={() => handleCancel(apt.id)}
+                onClick={() => setConfirmCancelId(apt.id)}
               >
                 {cancelingId === apt.id ? (
                   <span className="animate-spin w-3 h-3 border-2 border-red-400 border-t-transparent rounded-full" />
@@ -571,6 +572,46 @@ export default function AppointmentsPage() {
         {/* Spacer for mobile nav */}
         <div className="h-6 md:h-0" />
       </div>
+
+      {/* ─── Modal confirmación de cancelación ─── */}
+      {confirmCancelId !== null && (() => {
+        const apt = upcomingAppointments.find((a) => a.id === confirmCancelId);
+        if (!apt) return null;
+        const hoursUntil = (new Date(apt.appointmentDate).getTime() - Date.now()) / 3_600_000;
+        const isFree = hoursUntil >= 4;
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+              <h2 className="text-base font-bold text-[#1a1a1a]">¿Cancelar cita?</h2>
+              <p className="text-sm text-[#666] leading-relaxed">
+                {isFree
+                  ? "Podrás cancelar sin costo. Tus créditos serán devueltos."
+                  : "Perderás los 350 créditos de esta sesión. No se realizará ningún cargo adicional a tu tarjeta."}
+              </p>
+              {!isFree && (
+                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
+                  La cita comienza en menos de 4 horas.
+                </p>
+              )}
+              <div className="flex gap-2 pt-1">
+                <button
+                  onClick={() => setConfirmCancelId(null)}
+                  className="flex-1 h-10 rounded-xl border border-[rgba(96,117,98,0.2)] text-sm font-medium text-[#607562] hover:bg-[#f0f4f0] transition-colors"
+                >
+                  Volver
+                </button>
+                <button
+                  onClick={() => { handleCancel(confirmCancelId); setConfirmCancelId(null); }}
+                  className="flex-1 h-10 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                  style={{ background: "linear-gradient(135deg,#7a2020,#9e2a2a)" }}
+                >
+                  Confirmar cancelación
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ─── Modal obligatorio de reseña pendiente ─── */}
       {pendingReviewApt && (

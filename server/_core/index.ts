@@ -281,6 +281,15 @@ async function runStartupMigrations() {
     ).catch(() => {});
     console.log("[Migration] appointments pending_review status ready");
 
+    // Ensure 'late' in penaltyType enums
+    await db.execute(
+      "ALTER TABLE `appointments` MODIFY COLUMN `penaltyType` ENUM('none','partial','full','credits_lost','late')"
+    ).catch(() => {});
+    await db.execute(
+      "ALTER TABLE `professionalPenalties` MODIFY COLUMN `penaltyType` ENUM('partial','full','late') NOT NULL"
+    ).catch(() => {});
+    console.log("[Migration] penaltyType enums updated with 'late'");
+
     // Ensure daily in appointments videoCallType enum
     await db.execute(
       "ALTER TABLE `appointments` MODIFY COLUMN `videoCallType` ENUM('zoom','google_meet','daily') NOT NULL DEFAULT 'daily'"
@@ -476,6 +485,22 @@ setInterval(async () => {
     const client = (db as any).$client;
 
     // Check 1: auto no-show para citas scheduled que pasaron 55 min
+    // Fetch first so we can apply wallet penalties after the UPDATE
+    const noShowCandidates = await new Promise<any[]>((resolve) => {
+      client.execute(
+        `SELECT a.id, a.professionalId, p.tier
+         FROM appointments a
+         JOIN professionals p ON p.id = a.professionalId
+         WHERE a.status = 'scheduled'
+         AND DATE_ADD(a.appointmentDate, INTERVAL 55 MINUTE) < NOW()`,
+        [],
+        (err: any, results: any) => {
+          if (err) { console.error("[Cron] noshow-select error:", err?.message); resolve([]); }
+          else resolve(Array.isArray(results) ? results : []);
+        }
+      );
+    });
+
     await new Promise<void>((resolve) => {
       client.execute(
         `UPDATE appointments SET status = 'no-show', updatedAt = NOW()
@@ -484,11 +509,28 @@ setInterval(async () => {
         [],
         (err: any) => {
           if (err) console.error("[Cron] auto-noshow error:", err?.message);
-          else console.log("[Cron] auto-noshow check done");
+          else console.log(`[Cron] auto-noshow check done (${noShowCandidates.length} rows)`);
           resolve();
         }
       );
     });
+
+    // Apply wallet penalties for no-show: básico $150, pro $500
+    if (noShowCandidates.length > 0) {
+      const { chargeProfessionalPenalty } = await import("../professionalWallet");
+      for (const row of noShowCandidates) {
+        const amount = row.tier === "pro" ? 500 : 150;
+        await chargeProfessionalPenalty(row.professionalId, amount).catch(() => {});
+        await new Promise<void>((resolve) => {
+          client.execute(
+            "INSERT IGNORE INTO professionalPenalties (professionalId, appointmentId, amount, penaltyType, reason) VALUES (?, ?, ?, 'late', 'No-show automático')",
+            [row.professionalId, row.id, amount],
+            (err: any) => { if (err) console.error("[Cron] noshow-penalty insert:", err?.message); resolve(); }
+          );
+        });
+        console.log(`[Cron] No-show penalty $${amount} charged to professional ${row.professionalId} (${row.tier})`);
+      }
+    }
 
     // Check 2: auto-completar pending_review con más de 8 horas sin calificar
     const pendingRows = await new Promise<any[]>((resolve) => {
