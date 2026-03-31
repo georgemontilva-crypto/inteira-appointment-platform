@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { toast } from "sonner";
@@ -19,6 +19,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import DashboardLayout from "../components/DashboardLayout";
+import { VideoCallPanel } from "../components/VideoCallPanel";
 import { useLocation } from "wouter";
 
 /* ─── helpers ─── */
@@ -88,10 +89,47 @@ export default function AppointmentsPage() {
   const [ratingComment, setRatingComment] = useState("");
   const [prRating, setPrRating] = useState(5);
   const [prComment, setPrComment] = useState("");
+  const [activeCall, setActiveCall] = useState<{
+    url: string;
+    appointmentId: number;
+    professionalName: string;
+    startTime: Date;
+    endTime: Date;
+  } | null>(null);
 
   const { data: appointments, isLoading } = trpc.user.getAppointments.useQuery(undefined, {
     enabled: isAuthenticated,
   });
+
+  // Activate video call panel 5 minutes before session start
+  useEffect(() => {
+    const check = () => {
+      if (!appointments) return;
+      const fiveMin = 5 * 60 * 1000;
+      const now = Date.now();
+      const upcoming = appointments.find((a) => {
+        if (a.status !== "scheduled") return false;
+        const start = new Date(a.appointmentDate).getTime();
+        return now >= start - fiveMin && now < start + (((a as any).durationMinutes ?? 60) * 60 * 1000);
+      });
+      if (upcoming && (upcoming as any).videoCallLink) {
+        const start = new Date(upcoming.appointmentDate);
+        const end = new Date(start.getTime() + ((upcoming as any).durationMinutes ?? 60) * 60 * 1000);
+        setActiveCall((prev) =>
+          prev?.appointmentId === upcoming.id ? prev : {
+            url: (upcoming as any).videoCallLink,
+            appointmentId: upcoming.id,
+            professionalName: (upcoming as any).professionalName ?? `Especialista #${upcoming.professionalId}`,
+            startTime: start,
+            endTime: end,
+          }
+        );
+      }
+    };
+    check();
+    const id = setInterval(check, 30_000);
+    return () => clearInterval(id);
+  }, [appointments]);
 
   const cancelMutation = trpc.appointment.cancelAppointment.useMutation({
     onSuccess: () => {
@@ -333,7 +371,8 @@ export default function AppointmentsPage() {
   /* ─── Render ─── */
   return (
     <DashboardLayout>
-      <div className="p-4 md:p-6">
+      <div className={activeCall ? "flex gap-4 p-4 md:p-6 items-start" : ""}>
+      <div className={activeCall ? "flex-1 min-w-0 p-0" : "p-4 md:p-6"}>
         {/* ── Page Header ── */}
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -580,6 +619,22 @@ export default function AppointmentsPage() {
           </div>
         </div>
       )}
+      </div>
+
+      {/* ── Video call panel (right column, visible 5 min before start) ── */}
+      {activeCall && (
+        <div style={{ width: "380px", height: "600px", flexShrink: 0, position: "sticky", top: "24px" }}>
+          <VideoCallPanel
+            roomUrl={activeCall.url}
+            appointmentId={activeCall.appointmentId}
+            professionalName={activeCall.professionalName}
+            startTime={activeCall.startTime}
+            endTime={activeCall.endTime}
+            onLeave={() => setActiveCall(null)}
+          />
+        </div>
+      )}
+      </div>
     </DashboardLayout>
   );
 }
