@@ -145,6 +145,11 @@ export default function AppointmentsPage() {
     },
   });
 
+  const markPendingReviewMutation = trpc.appointment.markAppointmentPendingReview.useMutation({
+    onSuccess: () => utils.user.getAppointments.invalidate(),
+    onError: () => utils.user.getAppointments.invalidate(), // invalidate anyway to sync state
+  });
+
   const submitReviewMutation = trpc.appointment.submitReview.useMutation({
     onSuccess: () => {
       toast.success("¡Gracias por tu reseña! El pago al profesional ha sido liberado.");
@@ -199,6 +204,21 @@ export default function AppointmentsPage() {
   const UpcomingCard = ({ apt }: { apt: Apt }) => {
     const date = new Date(apt.appointmentDate);
     const sc = statusColors["scheduled"];
+    const [nowMs, setNowMs] = useState(Date.now());
+    useEffect(() => {
+      const id = setInterval(() => setNowMs(Date.now()), 1000);
+      return () => clearInterval(id);
+    }, []);
+    const startMs = date.getTime();
+    const msUntilUnlock = startMs - 5 * 60 * 1000 - nowMs;
+    const canJoin = msUntilUnlock <= 0;
+    const countdownStr = (() => {
+      if (canJoin) return "";
+      const totalSec = Math.ceil(msUntilUnlock / 1000);
+      const m = Math.floor(totalSec / 60);
+      const s = totalSec % 60;
+      return `${m}:${String(s).padStart(2, "0")}`;
+    })();
     return (
       <div className="bg-white rounded-2xl border border-[rgba(96,117,98,0.15)] p-4 hover:border-[rgba(96,117,98,0.3)] hover:shadow-sm transition-all">
         <div className="flex items-start gap-3">
@@ -240,18 +260,25 @@ export default function AppointmentsPage() {
             <div className="flex items-center gap-2 mt-3">
               {(apt as any).videoCallLink && (
                 <button
-                  onClick={() => setActiveCall({
+                  disabled={!canJoin}
+                  onClick={() => canJoin && setActiveCall({
                     url: (apt as any).videoCallLink,
                     appointmentId: apt.id,
                     professionalName: (apt as any).professionalName ?? `Especialista #${apt.professionalId}`,
                     startTime: new Date(apt.appointmentDate),
                     endTime: new Date(new Date(apt.appointmentDate).getTime() + ((apt as any).durationMinutes ?? 55) * 60 * 1000),
                   })}
-                  className="flex-1 w-full flex items-center justify-center gap-1.5 text-xs font-semibold text-white rounded-xl h-8 px-3 transition-opacity hover:opacity-90"
-                  style={{ background: "linear-gradient(135deg,#3d4e3f,#607562)" }}
+                  className="flex-1 w-full flex items-center justify-center gap-1.5 text-xs font-semibold text-white rounded-xl h-8 px-3 transition-opacity"
+                  style={{
+                    background: canJoin
+                      ? "linear-gradient(135deg,#3d4e3f,#607562)"
+                      : "#93A295",
+                    opacity: canJoin ? 1 : 0.75,
+                    cursor: canJoin ? "pointer" : "not-allowed",
+                  }}
                 >
                   <Video className="w-3.5 h-3.5" />
-                  Unirse a la sesión
+                  {canJoin ? "Unirse a la sesión" : `Disponible en ${countdownStr}`}
                 </button>
               )}
               <button
@@ -675,7 +702,12 @@ export default function AppointmentsPage() {
             professionalName={activeCall.professionalName}
             startTime={activeCall.startTime}
             endTime={activeCall.endTime}
-            onLeave={() => setActiveCall(null)}
+            onLeave={() => {
+              if (activeCall) {
+                markPendingReviewMutation.mutate({ appointmentId: activeCall.appointmentId });
+              }
+              setActiveCall(null);
+            }}
           />
         </div>
       )}

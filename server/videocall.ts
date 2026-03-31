@@ -35,6 +35,7 @@ export async function generateVideoCallLink(
         name: roomName,
         properties: {
           exp,
+          nbf: Math.floor(startTime.getTime() / 1000) - (5 * 60),
           enable_chat: true,
           enable_people_ui: true,
           start_video_off: false,

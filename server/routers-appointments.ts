@@ -537,6 +537,28 @@ export const appointmentRouter = router({
       return { success: true };
     }),
 
+  // Mark appointment as pending_review when user leaves the video call
+  markAppointmentPendingReview: protectedProcedure
+    .input(z.object({ appointmentId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const appointment = await db.getAppointmentById(input.appointmentId);
+      if (!appointment) throw new TRPCError({ code: "NOT_FOUND", message: "Cita no encontrada" });
+      if (appointment.userId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "No autorizado" });
+
+      const dbInstance = await db.getDb();
+      if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+      await new Promise<void>((resolve, reject) => {
+        (dbInstance as any).$client.execute(
+          "UPDATE appointments SET status = 'pending_review', updatedAt = NOW() WHERE id = ? AND status IN ('scheduled', 'in_progress')",
+          [input.appointmentId],
+          (err: any) => { if (err) reject(err); else resolve(); }
+        );
+      });
+
+      return { success: true };
+    }),
+
   // Mark appointment as no-show (professional action)
   markNoShow: protectedProcedure
     .input(z.object({ appointmentId: z.number() }))

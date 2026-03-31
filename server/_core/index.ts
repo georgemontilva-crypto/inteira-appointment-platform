@@ -484,15 +484,15 @@ setInterval(async () => {
     if (!db) return;
     const client = (db as any).$client;
 
-    // Check 1: auto no-show para citas scheduled que pasaron 55 min
-    // Fetch first so we can apply wallet penalties after the UPDATE
+    // Check 1: auto no-show para citas scheduled sin atender después de 4 horas
+    // El no-show es del USUARIO — el profesional recibe su pago igual
     const noShowCandidates = await new Promise<any[]>((resolve) => {
       client.execute(
         `SELECT a.id, a.professionalId, p.tier
          FROM appointments a
          JOIN professionals p ON p.id = a.professionalId
          WHERE a.status = 'scheduled'
-         AND DATE_ADD(a.appointmentDate, INTERVAL 55 MINUTE) < NOW()`,
+         AND DATE_ADD(a.appointmentDate, INTERVAL 4 HOUR) < NOW()`,
         [],
         (err: any, results: any) => {
           if (err) { console.error("[Cron] noshow-select error:", err?.message); resolve([]); }
@@ -505,7 +505,7 @@ setInterval(async () => {
       client.execute(
         `UPDATE appointments SET status = 'no-show', updatedAt = NOW()
          WHERE status = 'scheduled'
-         AND DATE_ADD(appointmentDate, INTERVAL 55 MINUTE) < NOW()`,
+         AND DATE_ADD(appointmentDate, INTERVAL 4 HOUR) < NOW()`,
         [],
         (err: any) => {
           if (err) console.error("[Cron] auto-noshow error:", err?.message);
@@ -515,20 +515,12 @@ setInterval(async () => {
       );
     });
 
-    // Apply wallet penalties for no-show: básico $150, pro $500
+    // Profesional recibe su pago aunque el usuario no haya asistido
     if (noShowCandidates.length > 0) {
-      const { chargeProfessionalPenalty } = await import("../professionalWallet");
+      const { creditProfessionalEarning } = await import("../professionalWallet");
       for (const row of noShowCandidates) {
-        const amount = row.tier === "pro" ? 500 : 150;
-        await chargeProfessionalPenalty(row.professionalId, amount).catch(() => {});
-        await new Promise<void>((resolve) => {
-          client.execute(
-            "INSERT IGNORE INTO professionalPenalties (professionalId, appointmentId, amount, penaltyType, reason) VALUES (?, ?, ?, 'late', 'No-show automático')",
-            [row.professionalId, row.id, amount],
-            (err: any) => { if (err) console.error("[Cron] noshow-penalty insert:", err?.message); resolve(); }
-          );
-        });
-        console.log(`[Cron] No-show penalty $${amount} charged to professional ${row.professionalId} (${row.tier})`);
+        await creditProfessionalEarning(row.professionalId, row.id, (row.tier ?? "basic") as "basic" | "pro").catch(() => {});
+        console.log(`[Cron] No-show: professional ${row.professionalId} credited for appointment ${row.id}`);
       }
     }
 
