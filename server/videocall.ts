@@ -36,14 +36,18 @@ export async function generateGoogleMeetLink(
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams({
-          client_id: GOOGLE_CLIENT_ID,
-          client_secret: GOOGLE_CLIENT_SECRET,
-          refresh_token: GOOGLE_REFRESH_TOKEN,
+          client_id: GOOGLE_CLIENT_ID!,
+          client_secret: GOOGLE_CLIENT_SECRET!,
+          refresh_token: GOOGLE_REFRESH_TOKEN!,
           grant_type: "refresh_token",
         }),
       });
-
-      const tokenData = (await tokenResponse.json()) as { access_token: string };
+      const tokenData = await tokenResponse.json() as any;
+      console.log("[Meet] Token response status:", tokenResponse.status, "error:", tokenData.error, "has_token:", !!tokenData.access_token);
+      if (!tokenData.access_token) {
+        console.error("[Meet] Failed to get access token:", JSON.stringify(tokenData));
+        throw new Error("Failed to get Google access token");
+      }
       const accessToken = tokenData.access_token;
 
       const eventResponse = await fetch(
