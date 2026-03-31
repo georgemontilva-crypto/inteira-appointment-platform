@@ -558,43 +558,34 @@ export async function getAppointmentById(id: number) {
 export async function getUserAppointments(userId: number) {
   const db = await getDb();
   if (!db) return [];
-
-  const rows = await db
-    .select({
-      id: appointments.id,
-      userId: appointments.userId,
-      professionalId: appointments.professionalId,
-      specialtyId: appointments.specialtyId,
-      appointmentDate: appointments.appointmentDate,
-      durationMinutes: appointments.durationMinutes,
-      status: appointments.status,
-      videoCallType: appointments.videoCallType,
-      videoCallLink: appointments.videoCallLink,
-      notes: appointments.notes,
-      cancellationReason: appointments.cancellationReason,
-      createdAt: appointments.createdAt,
-      professionalName: users.name,
-      professionalSpecialty: professionals.specialtyId,
-    })
-    .from(appointments)
-    .leftJoin(professionals, eq(appointments.professionalId, professionals.id))
-    .leftJoin(users, eq(professionals.userId, users.id))
-    .where(eq(appointments.userId, userId))
-    .orderBy(desc(appointments.appointmentDate));
-
-  // Enrich each appointment with hasReview flag
-  const enriched = await Promise.all(
-    rows.map(async (apt) => {
-      const existingReview = await db
-        .select({ id: reviews.id })
-        .from(reviews)
-        .where(and(eq(reviews.appointmentId, apt.id), eq(reviews.userId, userId)))
-        .limit(1);
-      return { ...apt, hasReview: existingReview.length > 0 };
-    })
-  );
-
-  return enriched;
+  const client = (db as any).$client;
+  return new Promise<any[]>((resolve, reject) => {
+    client.execute(
+      `SELECT
+         a.id, a.userId, a.professionalId, a.specialtyId,
+         a.appointmentDate, a.durationMinutes, a.status,
+         a.videoCallType, a.videoCallLink, a.notes, a.cancellationReason, a.createdAt,
+         pu.name  AS professionalName,
+         p.specialtyId AS professionalSpecialty,
+         CASE WHEN r.id IS NOT NULL THEN 1 ELSE 0 END AS hasReview
+       FROM appointments a
+       LEFT JOIN professionals p  ON a.professionalId = p.id
+       LEFT JOIN users pu          ON p.userId = pu.id
+       LEFT JOIN reviews r         ON r.appointmentId = a.id AND r.userId = a.userId
+       WHERE a.userId = ?
+       ORDER BY a.appointmentDate DESC`,
+      [userId],
+      (err: any, results: any) => {
+        if (err) reject(err);
+        else resolve(
+          (Array.isArray(results) ? results : []).map((row: any) => ({
+            ...row,
+            hasReview: Boolean(row.hasReview),
+          }))
+        );
+      }
+    );
+  });
 }
 
 export async function getProfessionalAppointments(professionalId: number) {

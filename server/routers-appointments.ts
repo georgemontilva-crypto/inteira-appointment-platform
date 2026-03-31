@@ -442,40 +442,46 @@ export const appointmentRouter = router({
       const dbInstance = await db.getDb();
       if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
-      const { reviews, professionals } = await import("../drizzle/schema");
-      const { eq } = await import("drizzle-orm");
+      const client = (dbInstance as any).$client;
 
-      // Insert review (idempotent)
-      const existing = await dbInstance
-        .select({ id: reviews.id })
-        .from(reviews)
-        .where(eq(reviews.appointmentId, input.appointmentId))
-        .limit(1);
+      // Check for existing review (idempotent)
+      const existingRows = await new Promise<any[]>((resolve, reject) => {
+        client.execute(
+          "SELECT id FROM reviews WHERE appointmentId = ? LIMIT 1",
+          [input.appointmentId],
+          (err: any, results: any) => {
+            if (err) reject(err);
+            else resolve(Array.isArray(results) ? results : []);
+          }
+        );
+      });
 
-      if (existing.length === 0) {
-        await dbInstance.insert(reviews).values({
-          professionalId: appointment.professionalId,
-          userId: ctx.user.id,
-          appointmentId: input.appointmentId,
-          rating: input.rating,
-          comment: input.comment ?? null,
-          isVerified: false,
+      if (existingRows.length === 0) {
+        // Insert review
+        await new Promise<void>((resolve, reject) => {
+          client.execute(
+            `INSERT INTO reviews (professionalId, userId, appointmentId, rating, comment, isVerified, createdAt, updatedAt)
+             VALUES (?, ?, ?, ?, ?, 0, NOW(), NOW())`,
+            [appointment.professionalId, ctx.user.id, input.appointmentId, input.rating, input.comment ?? null],
+            (err: any) => { if (err) reject(err); else resolve(); }
+          );
         });
 
-        // Update professional average rating
-        const allReviews = await db.getProfessionalReviews(appointment.professionalId);
-        if (allReviews.length > 0) {
-          const avg = allReviews.reduce((sum, r) => sum + r.rating, 0) / allReviews.length;
-          await dbInstance.update(professionals).set({
-            averageRating: avg.toFixed(2),
-            totalReviews: allReviews.length,
-            updatedAt: new Date(),
-          }).where(eq(professionals.id, appointment.professionalId));
-        }
+        // Update professional average rating in one SQL round-trip
+        await new Promise<void>((resolve) => {
+          client.execute(
+            `UPDATE professionals
+             SET averageRating = (SELECT AVG(rating) FROM reviews WHERE professionalId = ?),
+                 totalReviews  = (SELECT COUNT(*) FROM reviews WHERE professionalId = ?),
+                 updatedAt = NOW()
+             WHERE id = ?`,
+            [appointment.professionalId, appointment.professionalId, appointment.professionalId],
+            (err: any) => { if (err) console.error("[submitReview] avg rating update error:", err?.message); resolve(); }
+          );
+        });
       }
 
       // Mark appointment as completed
-      const client = (dbInstance as any).$client;
       await new Promise<void>((resolve, reject) => {
         client.execute(
           "UPDATE appointments SET status = 'completed', updatedAt = NOW() WHERE id = ?",
