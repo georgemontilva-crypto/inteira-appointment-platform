@@ -463,6 +463,25 @@ async function startServer() {
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
   });
+
+  // TEMP DIAGNOSTIC: log last 10 appointments statuses on startup
+  try {
+    const { getDb } = await import("../db");
+    const diagDb = await getDb();
+    if (diagDb) {
+      const diagClient = (diagDb as any).$client;
+      diagClient.execute(
+        "SELECT id, status, appointmentDate FROM appointments ORDER BY id DESC LIMIT 10",
+        [],
+        (err: any, rows: any) => {
+          if (err) console.error("[DIAG] appointments query error:", err?.message);
+          else console.log("[DIAG] last 10 appointments:", JSON.stringify(rows, null, 2));
+        }
+      );
+    }
+  } catch (e: any) {
+    console.error("[DIAG] startup diagnostic failed:", e?.message);
+  }
 }
 
 startServer().catch(console.error);

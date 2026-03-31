@@ -598,7 +598,8 @@ export async function getProfessionalAppointments(professionalId: number) {
   return new Promise<any[]>((resolve, reject) => {
     client.execute(
       `SELECT a.*,
-        u.name AS userName, u.email AS userEmail, u.profileImage AS userProfileImage,
+        COALESCE(u.name, u.email, CONCAT('Usuario #', a.userId)) AS userName,
+        u.email AS userEmail, u.profileImage AS userProfileImage,
         s.name AS specialtyName
        FROM appointments a
        LEFT JOIN users u ON a.userId = u.id
