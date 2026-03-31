@@ -271,21 +271,17 @@ export const appointmentRouter = router({
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
       }
 
-      const { appointments } = await import("../drizzle/schema");
-      const { eq } = await import("drizzle-orm");
-
-      await db_instance
-        .update(appointments)
-        .set({
-          status: "canceled",
-          canceledAt: new Date(),
-          canceledBy: canceledByRole,
-          cancellationReason: input.reason,
-          penaltyAmount,
-          penaltyType,
-          updatedAt: new Date(),
-        })
-        .where(eq(appointments.id, input.appointmentId));
+      const client = (db_instance as any).$client;
+      await new Promise<void>((resolve, reject) => {
+        client.execute(
+          `UPDATE appointments
+           SET status = 'canceled', canceledAt = NOW(), canceledBy = ?,
+               cancellationReason = ?, penaltyAmount = ?, penaltyType = ?, updatedAt = NOW()
+           WHERE id = ?`,
+          [canceledByRole, input.reason ?? null, penaltyAmount, penaltyType, input.appointmentId],
+          (err: any) => { if (err) reject(err); else resolve(); }
+        );
+      });
 
       // Registrar penalización del profesional si aplica
       if (canceledByRole === "professional" && penaltyAmount > 0) {
