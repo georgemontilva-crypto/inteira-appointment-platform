@@ -84,8 +84,9 @@ export async function generateGoogleMeetLink(
           hostUrl: meetLink,
         };
       }
-    } catch (error) {
-      console.error("[VideoCall] Google Meet API error:", error);
+      console.error("[Meet] Google Calendar API no devolvió Meet link. eventData:", JSON.stringify(eventData));
+    } catch (error: any) {
+      console.error("[Meet] Google Calendar API error:", error?.message, "status:", error?.status, "response:", JSON.stringify(error?.response?.data ?? {}));
     }
   }
 
