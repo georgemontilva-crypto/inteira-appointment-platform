@@ -545,14 +545,17 @@ export async function createAppointment(data: {
 export async function getAppointmentById(id: number) {
   const db = await getDb();
   if (!db) return undefined;
-
-  const result = await db
-    .select()
-    .from(appointments)
-    .where(eq(appointments.id, id))
-    .limit(1);
-
-  return result.length > 0 ? result[0] : undefined;
+  const client = (db as any).$client;
+  return new Promise<any>((resolve, reject) => {
+    client.execute(
+      "SELECT * FROM appointments WHERE id = ? LIMIT 1",
+      [id],
+      (err: any, results: any) => {
+        if (err) reject(err);
+        else resolve(Array.isArray(results) ? results[0] : undefined);
+      }
+    );
+  });
 }
 
 export async function getUserAppointments(userId: number) {
