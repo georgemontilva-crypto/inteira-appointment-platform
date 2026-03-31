@@ -237,16 +237,21 @@ export default function AppointmentsPage() {
 
             {/* Actions */}
             <div className="flex items-center gap-2 mt-3">
-              {apt.videoCallLink && (
-                <a href={apt.videoCallLink} target="_blank" rel="noopener noreferrer" className="flex-1">
-                  <button
-                    className="w-full flex items-center justify-center gap-1.5 text-xs font-semibold text-white rounded-xl h-8 px-3 transition-opacity hover:opacity-90"
-                    style={{ background: "linear-gradient(135deg,#3d4e3f,#607562)" }}
-                  >
-                    <Video className="w-3.5 h-3.5" />
-                    Unirse a la sesión
-                  </button>
-                </a>
+              {(apt as any).videoCallLink && (
+                <button
+                  onClick={() => setActiveCall({
+                    url: (apt as any).videoCallLink,
+                    appointmentId: apt.id,
+                    professionalName: (apt as any).professionalName ?? `Especialista #${apt.professionalId}`,
+                    startTime: new Date(apt.appointmentDate),
+                    endTime: new Date(new Date(apt.appointmentDate).getTime() + ((apt as any).durationMinutes ?? 55) * 60 * 1000),
+                  })}
+                  className="flex-1 w-full flex items-center justify-center gap-1.5 text-xs font-semibold text-white rounded-xl h-8 px-3 transition-opacity hover:opacity-90"
+                  style={{ background: "linear-gradient(135deg,#3d4e3f,#607562)" }}
+                >
+                  <Video className="w-3.5 h-3.5" />
+                  Unirse a la sesión
+                </button>
               )}
               <button
                 className="flex items-center gap-1 text-xs font-medium text-red-500 hover:text-red-700 hover:bg-red-50 rounded-xl h-8 px-3 border border-red-100 transition-colors disabled:opacity-50"
