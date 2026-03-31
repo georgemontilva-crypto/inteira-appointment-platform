@@ -789,23 +789,30 @@ export async function getAppointmentsByDay(days = 30) {
   }));
 }
 
-export async function getRecentAppointments(limit = 10) {
+export async function getRecentAppointments(limit: number = 10) {
   const db = await getDb();
   if (!db) return [];
-
-  return await db
-    .select({
-      id: appointments.id,
-      appointmentDate: appointments.appointmentDate,
-      status: appointments.status,
-      videoCallType: appointments.videoCallType,
-      userId: appointments.userId,
-      professionalId: appointments.professionalId,
-      specialtyId: appointments.specialtyId,
-    })
-    .from(appointments)
-    .orderBy(sql`appointmentDate DESC`)
-    .limit(limit);
+  const client = (db as any).$client;
+  return new Promise<any[]>((resolve, reject) => {
+    client.execute(
+      `SELECT a.id, a.appointmentDate, a.status, a.videoCallType, a.userId, a.professionalId, a.specialtyId,
+        u.name as userName, u.email as userEmail,
+        pu.name as professionalName,
+        s.name as specialtyName
+       FROM appointments a
+       LEFT JOIN users u ON a.userId = u.id
+       LEFT JOIN professionals p ON a.professionalId = p.id
+       LEFT JOIN users pu ON p.userId = pu.id
+       LEFT JOIN specialties s ON a.specialtyId = s.id
+       ORDER BY a.appointmentDate DESC
+       LIMIT ?`,
+      [limit],
+      (err: any, results: any) => {
+        if (err) reject(err);
+        else resolve(Array.isArray(results) ? results : []);
+      }
+    );
+  });
 }
 
 export async function getTopProfessionals(limit = 5) {
