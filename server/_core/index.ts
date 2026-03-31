@@ -382,6 +382,38 @@ async function runStartupMigrations() {
       console.error("[Migration] Could not seed test credits:", e?.message);
     }
 
+    // One-time backfill: credit professionals for no-show appointments that have no earning record
+    try {
+      const noShowUnpaid = await new Promise<any[]>((resolve) => {
+        client.execute(
+          `SELECT a.id, a.professionalId, p.tier
+           FROM appointments a
+           JOIN professionals p ON p.id = a.professionalId
+           WHERE a.status = 'no-show'
+             AND NOT EXISTS (
+               SELECT 1 FROM professionalEarnings pe WHERE pe.appointmentId = a.id
+             )`,
+          [],
+          (err: any, results: any) => {
+            if (err) { console.error("[Migration] noshow-backfill select:", err?.message); resolve([]); }
+            else resolve(Array.isArray(results) ? results : []);
+          }
+        );
+      });
+
+      if (noShowUnpaid.length > 0) {
+        console.log(`[Migration] Backfilling ${noShowUnpaid.length} unpaid no-show appointment(s)`);
+        const { creditProfessionalEarning } = await import("../professionalWallet");
+        for (const row of noShowUnpaid) {
+          await creditProfessionalEarning(row.professionalId, row.id, (row.tier ?? "basic") as "basic" | "pro")
+            .catch((e: any) => console.error(`[Migration] backfill credit apt ${row.id}:`, e?.message));
+          console.log(`[Migration] Backfilled earning for professional ${row.professionalId}, appointment ${row.id}`);
+        }
+      }
+    } catch (e: any) {
+      console.error("[Migration] noshow-backfill failed:", e?.message);
+    }
+
   } catch (err) {
     console.error("[Migration] Startup migration failed:", err);
   }
@@ -463,25 +495,6 @@ async function startServer() {
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
   });
-
-  // TEMP DIAGNOSTIC: log last 10 appointments statuses on startup
-  try {
-    const { getDb } = await import("../db");
-    const diagDb = await getDb();
-    if (diagDb) {
-      const diagClient = (diagDb as any).$client;
-      diagClient.execute(
-        "SELECT id, status, appointmentDate FROM appointments ORDER BY id DESC LIMIT 10",
-        [],
-        (err: any, rows: any) => {
-          if (err) console.error("[DIAG] appointments query error:", err?.message);
-          else console.log("[DIAG] last 10 appointments:", JSON.stringify(rows, null, 2));
-        }
-      );
-    }
-  } catch (e: any) {
-    console.error("[DIAG] startup diagnostic failed:", e?.message);
-  }
 }
 
 startServer().catch(console.error);
