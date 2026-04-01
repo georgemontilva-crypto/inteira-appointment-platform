@@ -626,11 +626,23 @@ export async function createReview(data: Partial<Review>) {
 export async function getProfessionalReviews(professionalId: number) {
   const db = await getDb();
   if (!db) return [];
-
-  return await db
-    .select()
-    .from(reviews)
-    .where(eq(reviews.professionalId, professionalId));
+  const client = (db as any).$client;
+  return new Promise<any[]>((resolve) => {
+    client.execute(
+      `SELECT r.*,
+        COALESCE(u.name, u.email, CONCAT('Usuario #', r.userId)) AS userName,
+        u.profileImage AS userImage
+       FROM reviews r
+       LEFT JOIN users u ON r.userId = u.id
+       WHERE r.professionalId = ?
+       ORDER BY r.createdAt DESC`,
+      [professionalId],
+      (err: any, results: any) => {
+        if (err) { console.error("[DB] getProfessionalReviews error:", err?.message); resolve([]); }
+        else resolve(Array.isArray(results) ? results : []);
+      }
+    );
+  });
 }
 
 // Document functions

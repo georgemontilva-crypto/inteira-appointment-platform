@@ -292,14 +292,7 @@ export const appRouter = router({
         }
 
         const user = await db.getUserById(professional.userId);
-        const rawReviews = await db.getProfessionalReviews(professional.id);
-        // Enrich reviews with reviewer name
-        const reviews = await Promise.all(
-          rawReviews.map(async (r) => {
-            const reviewer = await db.getUserById(r.userId);
-            return { ...r, userName: reviewer?.name ?? "Usuario" };
-          })
-        );
+        const reviews = await db.getProfessionalReviews(professional.id);
 
         return {
           ...professional,
@@ -717,15 +710,7 @@ export const appRouter = router({
     getByProfessional: publicProcedure
       .input(z.object({ professionalId: z.number() }))
       .query(async ({ input }) => {
-        const rawReviews = await db.getProfessionalReviews(input.professionalId);
-        // Enrich with reviewer name
-        const enriched = await Promise.all(
-          rawReviews.map(async (r) => {
-            const reviewer = await db.getUserById(r.userId);
-            return { ...r, userName: reviewer?.name ?? "Usuario" };
-          })
-        );
-        return enriched;
+        return await db.getProfessionalReviews(input.professionalId);
       }),
   }),
 
