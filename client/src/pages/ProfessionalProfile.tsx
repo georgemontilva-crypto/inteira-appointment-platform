@@ -231,6 +231,17 @@ export default function ProfessionalProfile() {
                       ) : (
                         <p className="text-muted-foreground leading-relaxed">{professional.certifications}</p>
                       )}
+                      {professional.licenseNumber && (
+                        <div style={{ display: "flex", alignItems: "center", gap: "12px", padding: "12px", background: "#f7fafc", borderRadius: "10px", border: "1px solid #e0e8e0", marginTop: "12px" }}>
+                          <div style={{ width: "40px", height: "40px", borderRadius: "8px", background: "#eef2ee", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <Shield className="w-5 h-5 text-[#607562]" />
+                          </div>
+                          <div>
+                            <p style={{ fontSize: "12px", color: "#666", margin: 0 }}>Cédula profesional</p>
+                            <p style={{ fontSize: "14px", fontWeight: 500, color: "#333", margin: 0 }}>{professional.licenseNumber}</p>
+                          </div>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 )}
@@ -408,15 +419,22 @@ export default function ProfessionalProfile() {
                   <div className="flex items-start gap-3 p-3 bg-white rounded-xl border border-amber-200">
                     <div className="w-2 h-2 rounded-full bg-amber-500 mt-1.5 flex-shrink-0" />
                     <div>
-                      <p className="text-sm font-semibold text-amber-700">Entre 4 y 12 horas de aviso</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">Multa de 75 créditos ($75 MXN)</p>
+                      <p className="text-sm font-semibold text-amber-700">Entre 5 y 12 horas de aviso</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Penalización de $70 MXN (Básico)</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3 p-3 bg-white rounded-xl border border-red-200">
                     <div className="w-2 h-2 rounded-full bg-red-500 mt-1.5 flex-shrink-0" />
                     <div>
-                      <p className="text-sm font-semibold text-red-700">Menos de 4 horas o No-Show</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">Multa de 150 créditos ($150 MXN)</p>
+                      <p className="text-sm font-semibold text-red-700">5 horas o menos de aviso</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">$150 MXN (Básico) / $250 MXN (Pro)</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 p-3 bg-white rounded-xl border border-red-300">
+                    <div className="w-2 h-2 rounded-full bg-red-700 mt-1.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-semibold text-red-800">No-show (no asistencia)</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">$150 MXN (Básico) / $500 MXN (Pro)</p>
                     </div>
                   </div>
                 </div>
@@ -477,22 +495,6 @@ export default function ProfessionalProfile() {
               </CardContent>
             </Card>
 
-            {/* License */}
-            {professional.licenseNumber && (
-              <Card className="border-border">
-                <CardContent className="p-5">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <Shield className="w-4 h-4 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Cédula profesional</p>
-                      <p className="text-xs text-muted-foreground">{professional.licenseNumber}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
           </div>
         </div>
       </div>
