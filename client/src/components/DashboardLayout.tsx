@@ -96,12 +96,13 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
   const utils = trpc.useUtils();
   const updateUserName = trpc.user.updateUserName.useMutation({
     onSuccess: () => {
+      utils.auth.me.invalidate();
       utils.user.getProfile.invalidate();
       toast.success("¡Nombre guardado!");
     },
     onError: (err) => toast.error(err.message ?? "Error al guardar el nombre"),
   });
-  const needsOnboarding = !!user && (!user.name || user.name.trim() === "");
+  const needsOnboarding = !!user && (!user.name || user.name.trim() === "") && !updateUserName.isSuccess;
 
   const handleSaveName = () => {
     if (!firstName.trim() || !lastName.trim()) {
