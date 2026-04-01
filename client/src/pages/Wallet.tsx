@@ -177,6 +177,12 @@ export default function WalletPage() {
                   <p className="text-sm text-muted-foreground mt-1">
                     Equivale a <strong className="text-foreground">${balance.toLocaleString("es-MX")} MXN</strong>
                   </p>
+                  {(wallet?.reservedCredits ?? 0) > 0 && (
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "8px", fontSize: "13px", color: "#b07800" }}>
+                      <span>⏳</span>
+                      <span>{wallet!.reservedCredits.toLocaleString("es-MX")} créditos retenidos en citas pendientes</span>
+                    </div>
+                  )}
                 </div>
                 <div className="w-14 h-14 rounded-2xl gradient-brand flex items-center justify-center shadow-md">
                   <Wallet className="w-7 h-7 text-white" />

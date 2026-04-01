@@ -159,9 +159,10 @@ export const appRouter = router({
           client.execute(
             `SELECT
               COALESCE(SUM(GREATEST(0, remaining - reservedAmount)), 0) AS balance,
+              COALESCE(SUM(reservedAmount), 0) AS reservedCredits,
               MIN(CASE WHEN remaining > 0 AND expiresAt IS NOT NULL AND expiresAt > NOW() THEN expiresAt END) AS nextExpiry
              FROM creditBatches
-             WHERE userId = ? AND expiredEarly = 0 AND (expiresAt IS NULL OR expiresAt > NOW())`,
+             WHERE userId = ? AND remaining > 0 AND expiredEarly = 0 AND (expiresAt IS NULL OR expiresAt > NOW())`,
             [ctx.user.id],
             (err: any, results: any) => {
               console.log(`[getWallet] q1 balance+expiry: ${Date.now() - t}ms`);
@@ -199,6 +200,7 @@ export const appRouter = router({
 
       return {
         balance: Number(balanceRow?.balance ?? 0),
+        reservedCredits: Number(balanceRow?.reservedCredits ?? 0),
         nextExpiry: balanceRow?.nextExpiry ?? null,
         batches,
         transactions,
