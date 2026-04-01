@@ -166,7 +166,7 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
       {/* TOP BAR */}
       <header className="h-[58px] bg-white border-b border-[rgba(96,117,98,0.15)] flex items-center gap-2 px-4 flex-shrink-0 sticky top-0 z-30">
         <div className="flex items-center gap-2 flex-shrink-0">
-          <img src="/logo-icon.webp" className="h-8 w-auto" alt="Inteira" />
+          <img src={logo} alt="Inteira" style={{ height: "28px", width: "auto", objectFit: "contain" }} />
         </div>
 
         <div className="flex items-center gap-2 bg-[#F7FAFC] border border-[rgba(96,117,98,0.2)] rounded-full px-3 h-[34px] w-[200px] flex-shrink-0 ml-2">
