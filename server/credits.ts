@@ -207,12 +207,15 @@ export async function reserveCredits(
   appointmentId: number,
   description?: string
 ): Promise<{ success: boolean; reserved: number; insufficient?: boolean }> {
+  console.log("[reserveCredits] userId:", userId, "amount:", amount, "appointmentId:", appointmentId);
   const db = await getDb();
   if (!db) return { success: false, reserved: 0, insufficient: false };
   const client = (db as any).$client;
 
   const balance = await getUserCreditBalance(userId);
+  console.log("[reserveCredits] balance:", balance, "needed:", amount);
   if (balance < amount) {
+    console.log("[reserveCredits] insufficient balance, aborting");
     return { success: false, reserved: 0, insufficient: true };
   }
 
@@ -228,6 +231,7 @@ export async function reserveCredits(
       }
     );
   });
+  console.log("[reserveCredits] batches found:", batches.length);
 
   let toReserve = amount;
 
@@ -241,7 +245,13 @@ export async function reserveCredits(
       client.execute(
         `UPDATE creditBatches SET reservedAmount = reservedAmount + ? WHERE id = ?`,
         [reserveFromBatch, batch.id],
-        (err: any) => { if (err) reject(err); else resolve(); }
+        (err: any) => {
+          if (err) reject(err);
+          else {
+            console.log("[reserveCredits] batch updated:", batch.id, "reservedAmount +", reserveFromBatch);
+            resolve();
+          }
+        }
       );
     });
 
@@ -257,6 +267,7 @@ export async function reserveCredits(
     toReserve -= reserveFromBatch;
   }
 
+  console.log("[reserveCredits] done, total reserved:", amount - toReserve);
   return { success: true, reserved: amount - toReserve };
 }
 
