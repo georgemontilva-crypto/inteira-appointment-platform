@@ -460,6 +460,15 @@ async function runStartupMigrations() {
     ).catch(() => {});
     console.log("[Migration] creditBatches.reservedAmount column ready");
 
+    // Add userId indexes for wallet query performance
+    await db.execute(
+      "CREATE INDEX IF NOT EXISTS `creditBatches_userId_idx` ON `creditBatches` (`userId`)"
+    ).catch(() => {});
+    await db.execute(
+      "CREATE INDEX IF NOT EXISTS `creditTransactions_userId_idx` ON `creditTransactions` (`userId`)"
+    ).catch(() => {});
+    console.log("[Migration] creditBatches + creditTransactions userId indexes ready");
+
     // Expand creditTransactions reason enum to include reservation states
     await db.execute(
       "ALTER TABLE `creditTransactions` MODIFY COLUMN `reason` ENUM('purchase','consume','consumed','expire','refund','refunded','reserved') NOT NULL"
