@@ -145,17 +145,9 @@ export default function BookAppointment() {
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <Video className="w-4 h-4 text-primary" />
-                  <span>Google Meet</span>
+                  <span>Videollamada integrada</span>
                 </div>
               </div>
-            )}
-            {confirmedVideoLink && (
-              <a href={confirmedVideoLink} target="_blank" rel="noopener noreferrer" className="block">
-                <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white border-0">
-                  <Video className="w-4 h-4 mr-2" />
-                  Unirse a la videollamada
-                </Button>
-              </a>
             )}
             <div className="flex gap-3">
               <Link href="/dashboard" className="flex-1">
@@ -383,7 +375,7 @@ export default function BookAppointment() {
                       )}
                       <div className="flex items-center gap-2 text-sm">
                         <Video className="w-4 h-4 text-primary" />
-                        <span>Google Meet</span>
+                        <span>Videollamada integrada</span>
                       </div>
                     </div>
                   )}
