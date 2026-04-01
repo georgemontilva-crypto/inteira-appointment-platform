@@ -454,20 +454,21 @@ async function runStartupMigrations() {
     });
 
     // ── Credit reservation system ─────────────────────────────────────────────
-    // Add reservedAmount column to creditBatches (idempotent)
-    await db.execute(
-      "ALTER TABLE `creditBatches` ADD COLUMN IF NOT EXISTS `reservedAmount` INT NOT NULL DEFAULT 0"
-    ).catch(() => {});
-    console.log("[Migration] creditBatches.reservedAmount column ready");
-
-    // Add userId indexes for wallet query performance
-    await db.execute(
-      "CREATE INDEX IF NOT EXISTS `creditBatches_userId_idx` ON `creditBatches` (`userId`)"
-    ).catch(() => {});
-    await db.execute(
-      "CREATE INDEX IF NOT EXISTS `creditTransactions_userId_idx` ON `creditTransactions` (`userId`)"
-    ).catch(() => {});
-    console.log("[Migration] creditBatches + creditTransactions userId indexes ready");
+    // Add reservedAmount column to creditBatches — use INFORMATION_SCHEMA (IF NOT EXISTS not supported on all TiDB versions)
+    try {
+      const [raRows] = await db.execute(
+        `SELECT COUNT(*) as cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'creditBatches' AND COLUMN_NAME = 'reservedAmount'`
+      ) as any;
+      const raExists = Array.isArray(raRows) ? Number(raRows[0]?.cnt) > 0 : Number(raRows?.cnt) > 0;
+      if (!raExists) {
+        await db.execute("ALTER TABLE `creditBatches` ADD COLUMN `reservedAmount` INT NOT NULL DEFAULT 0");
+        console.log("[Migration] creditBatches.reservedAmount column added");
+      } else {
+        console.log("[Migration] creditBatches.reservedAmount column already exists");
+      }
+    } catch (e: any) {
+      console.warn("[Migration] Could not add reservedAmount column:", e?.message);
+    }
 
     // Expand creditTransactions reason enum to include reservation states
     await db.execute(
@@ -480,6 +481,15 @@ async function runStartupMigrations() {
       "ALTER TABLE `creditBatches` MODIFY COLUMN `source` ENUM('plan_basic','plan_pro','individual_basic','individual_premium','admin_grant') NOT NULL"
     ).catch(() => {});
     console.log("[Migration] creditBatches source enum expanded");
+
+    // Add userId indexes for wallet query performance
+    await db.execute(
+      "CREATE INDEX IF NOT EXISTS `creditBatches_userId_idx` ON `creditBatches` (`userId`)"
+    ).catch(() => {});
+    await db.execute(
+      "CREATE INDEX IF NOT EXISTS `creditTransactions_userId_idx` ON `creditTransactions` (`userId`)"
+    ).catch(() => {});
+    console.log("[Migration] creditBatches + creditTransactions userId indexes ready");
 
     // ── One-time fix: reset reservedAmount where it exceeds remaining (invalid state)
     await new Promise<void>((resolve) => {
@@ -715,6 +725,19 @@ setInterval(async () => {
     console.error("[Cron] auto-noshow exception:", e?.message);
   }
 }, 5 * 60 * 1000);
+
+// ─── Keepalive: ping TiDB every 4 minutes to keep connection warm ─────────────
+setInterval(async () => {
+  try {
+    const { getDb } = await import("../db");
+    const db = await getDb();
+    if (!db) return;
+    const client = (db as any).$client;
+    client.execute("SELECT 1", [], (err: any) => {
+      if (err) console.error("[keepalive] ping failed:", err?.message);
+    });
+  } catch (e) {}
+}, 4 * 60 * 1000);
 
 // ─── Cron: expire timed-out credit batches every hour ─────────────────────────
 const ONE_HOUR_MS = 60 * 60 * 1000;
