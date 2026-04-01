@@ -445,6 +445,19 @@ async function runStartupMigrations() {
       );
     });
 
+    // ── Credit reservation system ─────────────────────────────────────────────
+    // Add reservedAmount column to creditBatches (idempotent)
+    await db.execute(
+      "ALTER TABLE `creditBatches` ADD COLUMN IF NOT EXISTS `reservedAmount` INT NOT NULL DEFAULT 0"
+    ).catch(() => {});
+    console.log("[Migration] creditBatches.reservedAmount column ready");
+
+    // Expand creditTransactions reason enum to include reservation states
+    await db.execute(
+      "ALTER TABLE `creditTransactions` MODIFY COLUMN `reason` ENUM('purchase','consume','consumed','expire','refund','refunded','reserved') NOT NULL"
+    ).catch(() => {});
+    console.log("[Migration] creditTransactions reason enum expanded");
+
   } catch (err) {
     console.error("[Migration] Startup migration failed:", err);
   }
@@ -581,7 +594,9 @@ setInterval(async () => {
     // Profesional recibe su pago aunque el usuario no haya asistido
     if (noShowCandidates.length > 0) {
       const { creditProfessionalEarning } = await import("../professionalWallet");
+      const { confirmCredits } = await import("../credits");
       for (const row of noShowCandidates) {
+        await confirmCredits(row.id).catch(() => {});
         await creditProfessionalEarning(row.professionalId, row.id, (row.tier ?? "basic") as "basic" | "pro").catch(() => {});
         console.log(`[Cron] No-show: professional ${row.professionalId} credited for appointment ${row.id}`);
       }
@@ -607,6 +622,7 @@ setInterval(async () => {
       console.log(`[Cron] auto-complete: ${pendingRows.length} pending_review → completing`);
       const { creditProfessionalEarning } = await import("../professionalWallet");
       const { createNotification } = await import("../notifications");
+      const { confirmCredits } = await import("../credits");
 
       for (const row of pendingRows) {
         try {
@@ -618,6 +634,7 @@ setInterval(async () => {
               (err: any) => { if (err) console.error("[Cron] auto-review insert:", err?.message); resolve(); }
             );
           });
+          await confirmCredits(row.id).catch(() => {});
           await new Promise<void>((resolve) => {
             client.execute(
               "UPDATE appointments SET status = 'completed', updatedAt = NOW() WHERE id = ?",

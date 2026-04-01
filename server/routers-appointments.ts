@@ -13,7 +13,7 @@ import {
   sendAppointmentConfirmation,
   sendAppointmentCancellation,
 } from "./email";
-import { consumeCredits, getUserCreditBalance, addCreditBatch } from "./credits";
+import { reserveCredits, confirmCredits, refundCredits, getUserCreditBalance } from "./credits";
 import { createNotification } from "./notifications";
 import { chargeProfessionalPenalty } from "./professionalWallet";
 
@@ -167,11 +167,10 @@ export const appointmentRouter = router({
         });
       }
 
-      // ── Deduct credits (FIFO) ─────────────────────────────────────────────
-      await consumeCredits(
+      // ── Reserve credits (FIFO) — confirmed on review/no-show ────────────
+      await reserveCredits(
         ctx.user.id,
         SESSION_CREDIT_COST,
-        "consume",
         newAppointmentId,
         `Sesión básica con ${professionalUser?.name ?? "especialista"}`
       );
@@ -244,9 +243,9 @@ export const appointmentRouter = router({
       let penaltyType: "none" | "partial" | "late" | "credits_lost" = "none";
 
       if (canceledByRole === "professional") {
-        // Profesional cancela: siempre devolver créditos al cliente
+        // Profesional cancela: siempre devolver los créditos reservados al cliente
         if (appointment.status === "scheduled") {
-          await addCreditBatch(appointment.userId, "individual_basic", 350).catch(() => {});
+          await refundCredits(appointment.userId, input.appointmentId).catch(() => {});
         }
         // Multa en pesos según tier y anticipación (se descuenta del professionalWallet)
         const isPro = (userProfessional as any)?.tier === "pro";
@@ -265,14 +264,17 @@ export const appointmentRouter = router({
       } else {
         // Cliente cancela
         if (hoursUntil >= 4) {
-          // Con suficiente anticipación: devolver créditos
+          // Con suficiente anticipación: devolver créditos reservados
           if (appointment.status === "scheduled") {
-            await addCreditBatch(appointment.userId, "individual_basic", 350).catch(() => {});
+            await refundCredits(appointment.userId, input.appointmentId).catch(() => {});
           }
           penaltyAmount = 0;
           penaltyType = "none";
         } else {
-          // Cancelación tardía: cliente pierde créditos (ya consumidos)
+          // Cancelación tardía: confirmar consumo de créditos reservados (cliente los pierde)
+          if (appointment.status === "scheduled") {
+            await confirmCredits(input.appointmentId).catch(() => {});
+          }
           penaltyAmount = 0;
           penaltyType = "credits_lost";
         }
@@ -494,6 +496,9 @@ export const appointmentRouter = router({
         });
       }
 
+      // Confirm reserved credits (user reviewed → credits finalized as consumed)
+      await confirmCredits(input.appointmentId).catch(() => {});
+
       // Mark appointment as completed
       await new Promise<void>((resolve, reject) => {
         client.execute(
@@ -589,6 +594,9 @@ export const appointmentRouter = router({
           (err: any) => { if (err) reject(err); else resolve(); }
         );
       });
+
+      // Confirm reserved credits (user no-showed → professional gets paid, credits consumed)
+      await confirmCredits(input.appointmentId).catch(() => {});
 
       createNotification({
         userId: appointment.userId,

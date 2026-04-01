@@ -4,7 +4,7 @@
  * Business rules:
  * - Each purchase (plan or individual session) creates a CreditBatch with expiresAt = now + 60 days.
  * - Consumption is FIFO: oldest non-expired batch first.
- * - If a subscription is cancelled, all batches from that subscription expire immediately.
+ * - Credits are RESERVED on booking, CONFIRMED on review/no-show, REFUNDED on cancellation.
  * - Credit value: 1 MXN = 1 credit.
  *   · Sesión Básica   = 350 credits
  *   · Sesión Premium  = 1,250 credits
@@ -13,8 +13,6 @@
  */
 
 import { getDb } from "./db";
-import { creditBatches, creditTransactions } from "../drizzle/schema";
-import { and, eq, gt, asc, sql } from "drizzle-orm";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -29,60 +27,61 @@ export type CreditSource = keyof typeof CREDIT_COSTS;
 
 const SIXTY_DAYS_MS = 60 * 24 * 60 * 60 * 1000;
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-/** Returns the current UTC timestamp as a Date */
-function now(): Date {
-  return new Date();
-}
-
-/** Returns now + 60 days */
 function expiresAt60(): Date {
   return new Date(Date.now() + SIXTY_DAYS_MS);
+}
+
+function toMysqlDatetime(d: Date): string {
+  return d.toISOString().slice(0, 19).replace("T", " ");
 }
 
 // ─── Core Functions ───────────────────────────────────────────────────────────
 
 /**
  * Get the total available credit balance for a user.
- * Only counts batches that: have remaining > 0, are not expired, and not expiredEarly.
+ * Available = SUM(remaining - reservedAmount) for active non-expired batches.
  */
 export async function getUserCreditBalance(userId: number): Promise<number> {
   const db = await getDb();
   if (!db) return 0;
-  const batches = await db
-    .select({ remaining: creditBatches.remaining })
-    .from(creditBatches)
-    .where(
-      and(
-        eq(creditBatches.userId, userId),
-        gt(creditBatches.remaining, 0),
-        eq(creditBatches.expiredEarly, false),
-        gt(creditBatches.expiresAt, now())
-      )
-    );
+  const client = (db as any).$client;
 
-  return batches.reduce((sum: number, b: { remaining: number }) => sum + b.remaining, 0);
+  const rows = await new Promise<any[]>((resolve, reject) => {
+    client.execute(
+      `SELECT COALESCE(SUM(GREATEST(0, remaining - reservedAmount)), 0) AS balance
+       FROM creditBatches
+       WHERE userId = ? AND remaining > 0 AND expiredEarly = 0 AND expiresAt > NOW()`,
+      [userId],
+      (err: any, results: any) => {
+        if (err) reject(err);
+        else resolve(Array.isArray(results) ? results : []);
+      }
+    );
+  });
+
+  return Number(rows[0]?.balance ?? 0);
 }
 
 /**
- * Get all active credit batches for a user, ordered oldest first (FIFO order).
+ * Get all active credit batches for a user, ordered oldest first (FIFO).
  */
 export async function getActiveBatches(userId: number) {
   const db = await getDb();
   if (!db) return [];
-  return db
-    .select()
-    .from(creditBatches)
-    .where(
-      and(
-        eq(creditBatches.userId, userId),
-        gt(creditBatches.remaining, 0),
-        eq(creditBatches.expiredEarly, false),
-        gt(creditBatches.expiresAt, now())
-      )
-    )
-    .orderBy(asc(creditBatches.createdAt)); // FIFO: oldest first
+  const client = (db as any).$client;
+
+  return new Promise<any[]>((resolve, reject) => {
+    client.execute(
+      `SELECT * FROM creditBatches
+       WHERE userId = ? AND remaining > 0 AND expiredEarly = 0 AND expiresAt > NOW()
+       ORDER BY expiresAt ASC`,
+      [userId],
+      (err: any, results: any) => {
+        if (err) reject(err);
+        else resolve(Array.isArray(results) ? results : []);
+      }
+    );
+  });
 }
 
 /**
@@ -91,11 +90,18 @@ export async function getActiveBatches(userId: number) {
 export async function getAllBatches(userId: number) {
   const db = await getDb();
   if (!db) return [];
-  return db
-    .select()
-    .from(creditBatches)
-    .where(eq(creditBatches.userId, userId))
-    .orderBy(asc(creditBatches.createdAt));
+  const client = (db as any).$client;
+
+  return new Promise<any[]>((resolve, reject) => {
+    client.execute(
+      `SELECT * FROM creditBatches WHERE userId = ? ORDER BY createdAt ASC`,
+      [userId],
+      (err: any, results: any) => {
+        if (err) reject(err);
+        else resolve(Array.isArray(results) ? results : []);
+      }
+    );
+  });
 }
 
 /**
@@ -109,35 +115,38 @@ export async function addCreditBatch(
 ): Promise<number> {
   const amount = customAmount ?? CREDIT_COSTS[source];
   const expires = expiresAt60();
+  const expiresStr = toMysqlDatetime(expires);
 
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
+  const client = (db as any).$client;
 
-  const result = await db.insert(creditBatches).values({
-    userId,
-    amount,
-    remaining: amount,
-    source,
-    expiresAt: expires,
-    expiredEarly: false,
+  const batchId = await new Promise<number>((resolve, reject) => {
+    client.execute(
+      `INSERT INTO creditBatches (userId, amount, remaining, reservedAmount, source, expiresAt, expiredEarly)
+       VALUES (?, ?, ?, 0, ?, ?, 0)`,
+      [userId, amount, amount, source, expiresStr],
+      (err: any, result: any) => {
+        if (err) reject(err);
+        else resolve(Number(result?.insertId ?? 0));
+      }
+    );
   });
 
-  const batchId = Number((result as any).insertId ?? 0);
-
-  // Record purchase transaction
-  await db.insert(creditTransactions).values({
-    userId,
-    batchId,
-    delta: amount,
-    reason: "purchase",
-    description: `Compra: ${source} (${amount} créditos, vence ${expires.toLocaleDateString("es-MX")})`,
+  await new Promise<void>((resolve, reject) => {
+    client.execute(
+      `INSERT INTO creditTransactions (userId, batchId, delta, reason, description)
+       VALUES (?, ?, ?, 'purchase', ?)`,
+      [userId, batchId, amount, `Compra: ${source} (${amount} créditos, vence ${expires.toLocaleDateString("es-MX")})`],
+      (err: any) => { if (err) reject(err); else resolve(); }
+    );
   });
 
   return batchId;
 }
 
 /**
- * Consume credits using FIFO policy.
+ * Consume credits using FIFO policy (legacy — use reserveCredits for new bookings).
  * Returns true if successful, false if insufficient balance.
  */
 export async function consumeCredits(
@@ -149,9 +158,9 @@ export async function consumeCredits(
 ): Promise<{ success: boolean; consumed: number; insufficient?: boolean }> {
   const db = await getDb();
   if (!db) return { success: false, consumed: 0, insufficient: false };
+  const client = (db as any).$client;
 
   const balance = await getUserCreditBalance(userId);
-
   if (balance < amount) {
     return { success: false, consumed: 0, insufficient: true };
   }
@@ -161,23 +170,25 @@ export async function consumeCredits(
 
   for (const batch of batches) {
     if (remaining <= 0) break;
+    const available = batch.remaining - (batch.reservedAmount ?? 0);
+    const toConsume = Math.min(available, remaining);
+    if (toConsume <= 0) continue;
 
-    const toConsume = Math.min(batch.remaining, remaining);
+    await new Promise<void>((resolve, reject) => {
+      client.execute(
+        `UPDATE creditBatches SET remaining = remaining - ? WHERE id = ?`,
+        [toConsume, batch.id],
+        (err: any) => { if (err) reject(err); else resolve(); }
+      );
+    });
 
-    // Deduct from this batch
-    await db
-      .update(creditBatches)
-      .set({ remaining: batch.remaining - toConsume })
-      .where(eq(creditBatches.id, batch.id));
-
-    // Record transaction
-    await db.insert(creditTransactions).values({
-      userId,
-      batchId: batch.id,
-      delta: -toConsume,
-      reason,
-      appointmentId,
-      description: description ?? `Consumo de ${toConsume} créditos`,
+    await new Promise<void>((resolve, reject) => {
+      client.execute(
+        `INSERT INTO creditTransactions (userId, batchId, delta, reason, appointmentId, description)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [userId, batch.id, -toConsume, reason, appointmentId ?? null, description ?? `Consumo de ${toConsume} créditos`],
+        (err: any) => { if (err) reject(err); else resolve(); }
+      );
     });
 
     remaining -= toConsume;
@@ -187,12 +198,173 @@ export async function consumeCredits(
 }
 
 /**
+ * Reserve credits (FIFO) — increments reservedAmount without decrementing remaining.
+ * Call confirmCredits() to finalize or refundCredits() to undo.
+ */
+export async function reserveCredits(
+  userId: number,
+  amount: number,
+  appointmentId: number,
+  description?: string
+): Promise<{ success: boolean; reserved: number; insufficient?: boolean }> {
+  const db = await getDb();
+  if (!db) return { success: false, reserved: 0, insufficient: false };
+  const client = (db as any).$client;
+
+  const balance = await getUserCreditBalance(userId);
+  if (balance < amount) {
+    return { success: false, reserved: 0, insufficient: true };
+  }
+
+  const batches = await new Promise<any[]>((resolve, reject) => {
+    client.execute(
+      `SELECT * FROM creditBatches
+       WHERE userId = ? AND (remaining - reservedAmount) > 0 AND expiredEarly = 0 AND expiresAt > NOW()
+       ORDER BY expiresAt ASC`,
+      [userId],
+      (err: any, results: any) => {
+        if (err) reject(err);
+        else resolve(Array.isArray(results) ? results : []);
+      }
+    );
+  });
+
+  let toReserve = amount;
+
+  for (const batch of batches) {
+    if (toReserve <= 0) break;
+    const available = batch.remaining - (batch.reservedAmount ?? 0);
+    const reserveFromBatch = Math.min(available, toReserve);
+    if (reserveFromBatch <= 0) continue;
+
+    await new Promise<void>((resolve, reject) => {
+      client.execute(
+        `UPDATE creditBatches SET reservedAmount = reservedAmount + ? WHERE id = ?`,
+        [reserveFromBatch, batch.id],
+        (err: any) => { if (err) reject(err); else resolve(); }
+      );
+    });
+
+    await new Promise<void>((resolve, reject) => {
+      client.execute(
+        `INSERT INTO creditTransactions (userId, batchId, delta, reason, appointmentId, description)
+         VALUES (?, ?, ?, 'reserved', ?, ?)`,
+        [userId, batch.id, -reserveFromBatch, appointmentId, description ?? `Reserva de ${reserveFromBatch} créditos`],
+        (err: any) => { if (err) reject(err); else resolve(); }
+      );
+    });
+
+    toReserve -= reserveFromBatch;
+  }
+
+  return { success: true, reserved: amount - toReserve };
+}
+
+/**
+ * Confirm reserved credits — converts 'reserved' transactions to 'consumed'
+ * and decrements remaining + reservedAmount from batches.
+ */
+export async function confirmCredits(appointmentId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  const client = (db as any).$client;
+
+  const reservedTxs = await new Promise<any[]>((resolve, reject) => {
+    client.execute(
+      `SELECT * FROM creditTransactions WHERE reason = 'reserved' AND appointmentId = ?`,
+      [appointmentId],
+      (err: any, results: any) => {
+        if (err) reject(err);
+        else resolve(Array.isArray(results) ? results : []);
+      }
+    );
+  });
+
+  if (reservedTxs.length === 0) return;
+
+  for (const tx of reservedTxs) {
+    const toConsume = Math.abs(tx.delta);
+
+    await new Promise<void>((resolve) => {
+      client.execute(
+        `UPDATE creditBatches
+         SET remaining = remaining - ?, reservedAmount = GREATEST(0, reservedAmount - ?)
+         WHERE id = ?`,
+        [toConsume, toConsume, tx.batchId],
+        (err: any) => { if (err) console.error("[confirmCredits] update batch:", err?.message); resolve(); }
+      );
+    });
+
+    await new Promise<void>((resolve) => {
+      client.execute(
+        `UPDATE creditTransactions SET reason = 'consumed' WHERE id = ?`,
+        [tx.id],
+        (err: any) => { if (err) console.error("[confirmCredits] update tx:", err?.message); resolve(); }
+      );
+    });
+  }
+}
+
+/**
+ * Refund reserved credits — releases the reservation without consuming.
+ * Decrements reservedAmount and inserts a positive 'refund' transaction.
+ */
+export async function refundCredits(userId: number, appointmentId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  const client = (db as any).$client;
+
+  const reservedTxs = await new Promise<any[]>((resolve, reject) => {
+    client.execute(
+      `SELECT * FROM creditTransactions WHERE reason = 'reserved' AND appointmentId = ?`,
+      [appointmentId],
+      (err: any, results: any) => {
+        if (err) reject(err);
+        else resolve(Array.isArray(results) ? results : []);
+      }
+    );
+  });
+
+  if (reservedTxs.length === 0) return;
+
+  for (const tx of reservedTxs) {
+    const toRefund = Math.abs(tx.delta);
+
+    await new Promise<void>((resolve) => {
+      client.execute(
+        `UPDATE creditBatches SET reservedAmount = GREATEST(0, reservedAmount - ?) WHERE id = ?`,
+        [toRefund, tx.batchId],
+        (err: any) => { if (err) console.error("[refundCredits] update batch:", err?.message); resolve(); }
+      );
+    });
+
+    await new Promise<void>((resolve) => {
+      client.execute(
+        `UPDATE creditTransactions SET reason = 'refunded' WHERE id = ?`,
+        [tx.id],
+        (err: any) => { if (err) console.error("[refundCredits] update tx:", err?.message); resolve(); }
+      );
+    });
+
+    await new Promise<void>((resolve) => {
+      client.execute(
+        `INSERT INTO creditTransactions (userId, batchId, delta, reason, appointmentId, description)
+         VALUES (?, ?, ?, 'refund', ?, ?)`,
+        [userId, tx.batchId, toRefund, appointmentId, `Reembolso de ${toRefund} créditos (cita #${appointmentId})`],
+        (err: any) => { if (err) console.error("[refundCredits] insert refund tx:", err?.message); resolve(); }
+      );
+    });
+  }
+}
+
+/**
  * Expire all remaining credits for a user immediately (called when subscription is cancelled).
- * Records an "expire" transaction for each affected batch.
  */
 export async function expireAllCredits(userId: number): Promise<number> {
   const db = await getDb();
   if (!db) return 0;
+  const client = (db as any).$client;
+
   const batches = await getActiveBatches(userId);
   let totalExpired = 0;
 
@@ -200,17 +372,21 @@ export async function expireAllCredits(userId: number): Promise<number> {
     if (batch.remaining > 0) {
       totalExpired += batch.remaining;
 
-      await db
-        .update(creditBatches)
-        .set({ remaining: 0, expiredEarly: true })
-        .where(eq(creditBatches.id, batch.id));
+      await new Promise<void>((resolve) => {
+        client.execute(
+          `UPDATE creditBatches SET remaining = 0, reservedAmount = 0, expiredEarly = 1 WHERE id = ?`,
+          [batch.id],
+          (err: any) => { if (err) console.error("[expireAllCredits] update:", err?.message); resolve(); }
+        );
+      });
 
-      await db.insert(creditTransactions).values({
-        userId,
-        batchId: batch.id,
-        delta: -batch.remaining,
-        reason: "expire",
-        description: `Créditos expirados por cancelación de suscripción`,
+      await new Promise<void>((resolve) => {
+        client.execute(
+          `INSERT INTO creditTransactions (userId, batchId, delta, reason, description)
+           VALUES (?, ?, ?, 'expire', ?)`,
+          [userId, batch.id, -batch.remaining, `Créditos expirados por cancelación de suscripción`],
+          (err: any) => { if (err) console.error("[expireAllCredits] insert:", err?.message); resolve(); }
+        );
       });
     }
   }
@@ -222,13 +398,24 @@ export async function expireAllCredits(userId: number): Promise<number> {
  * Get the next expiration date (the soonest expiring active batch).
  */
 export async function getNextExpirationDate(userId: number): Promise<Date | null> {
-  const batches = await getActiveBatches(userId);
-  if (batches.length === 0) return null;
-  // Already ordered by createdAt; find the one with earliest expiresAt
-  const sorted = [...batches].sort(
-    (a, b) => new Date(a.expiresAt).getTime() - new Date(b.expiresAt).getTime()
-  );
-  return new Date(sorted[0].expiresAt);
+  const db = await getDb();
+  if (!db) return null;
+  const client = (db as any).$client;
+
+  const rows = await new Promise<any[]>((resolve, reject) => {
+    client.execute(
+      `SELECT MIN(expiresAt) AS nextExpiry FROM creditBatches
+       WHERE userId = ? AND remaining > 0 AND expiredEarly = 0 AND expiresAt > NOW()`,
+      [userId],
+      (err: any, results: any) => {
+        if (err) reject(err);
+        else resolve(Array.isArray(results) ? results : []);
+      }
+    );
+  });
+
+  const val = rows[0]?.nextExpiry;
+  return val ? new Date(val) : null;
 }
 
 /**
@@ -237,62 +424,62 @@ export async function getNextExpirationDate(userId: number): Promise<Date | null
 export async function getCreditTransactions(userId: number) {
   const db = await getDb();
   if (!db) return [];
-  return db
-    .select()
-    .from(creditTransactions)
-    .where(eq(creditTransactions.userId, userId))
-    .orderBy(sql`${creditTransactions.createdAt} DESC`)
-    .limit(50);
+  const client = (db as any).$client;
+
+  return new Promise<any[]>((resolve, reject) => {
+    client.execute(
+      `SELECT * FROM creditTransactions WHERE userId = ? ORDER BY createdAt DESC LIMIT 50`,
+      [userId],
+      (err: any, results: any) => {
+        if (err) reject(err);
+        else resolve(Array.isArray(results) ? results : []);
+      }
+    );
+  });
 }
 
 /**
  * Expire all batches that have passed their expiresAt date.
  * Called by the server cron job every hour.
- * Returns the number of batches expired.
  */
 export async function expireTimedOutBatches(): Promise<number> {
   const db = await getDb();
   if (!db) return 0;
+  const client = (db as any).$client;
 
-  // Find all batches where expiresAt < now AND remaining > 0 AND not already expired early
-  const expiredBatches = await db
-    .select({
-      id: creditBatches.id,
-      userId: creditBatches.userId,
-      remaining: creditBatches.remaining,
-      expiresAt: creditBatches.expiresAt,
-    })
-    .from(creditBatches)
-    .where(
-      and(
-        gt(creditBatches.remaining, 0),
-        eq(creditBatches.expiredEarly, false)
-      )
+  const expiredBatches = await new Promise<any[]>((resolve, reject) => {
+    client.execute(
+      `SELECT id, userId, remaining FROM creditBatches
+       WHERE remaining > 0 AND expiredEarly = 0 AND expiresAt < NOW()`,
+      [],
+      (err: any, results: any) => {
+        if (err) reject(err);
+        else resolve(Array.isArray(results) ? results : []);
+      }
     );
+  });
 
-  // Filter in JS since Drizzle ORM lt() with Date can vary by driver
-  const now = new Date();
-  const toExpire = expiredBatches.filter(
-    (b) => new Date((b as any).expiresAt ?? 0) < now
-  );
+  if (expiredBatches.length === 0) return 0;
 
-  if (toExpire.length === 0) return 0;
+  for (const batch of expiredBatches) {
+    await new Promise<void>((resolve) => {
+      client.execute(
+        `UPDATE creditBatches SET remaining = 0, reservedAmount = 0, expiredEarly = 0 WHERE id = ?`,
+        [batch.id],
+        (err: any) => { if (err) console.error("[expireTimedOutBatches] update:", err?.message); resolve(); }
+      );
+    });
 
-  for (const batch of toExpire) {
-    await db
-      .update(creditBatches)
-      .set({ remaining: 0, expiredEarly: false, updatedAt: new Date() })
-      .where(eq(creditBatches.id, batch.id));
-
-    await db.insert(creditTransactions).values({
-      userId: batch.userId,
-      batchId: batch.id,
-      delta: -batch.remaining,
-      reason: "expire",
-      description: `Créditos expirados automáticamente (60 días)`,
+    await new Promise<void>((resolve) => {
+      client.execute(
+        `INSERT INTO creditTransactions (userId, batchId, delta, reason, description)
+         VALUES (?, ?, ?, 'expire', ?)`,
+        [batch.userId, batch.id, -batch.remaining, `Créditos expirados automáticamente (60 días)`],
+        (err: any) => { if (err) console.error("[expireTimedOutBatches] insert:", err?.message); resolve(); }
+      );
     });
   }
 
-  console.log(`[Credits] Expired ${toExpire.length} batch(es) automatically.`);
-  return toExpire.length;
+  console.log(`[Credits] Expired ${expiredBatches.length} batch(es) automatically.`);
+  return expiredBatches.length;
 }
