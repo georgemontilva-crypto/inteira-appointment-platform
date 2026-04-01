@@ -414,6 +414,15 @@ async function runStartupMigrations() {
       console.error("[Migration] noshow-backfill failed:", e?.message);
     }
 
+    // Ensure reviews.appointmentId allows NULL (idempotent)
+    await new Promise<void>((resolve) => {
+      client.execute(
+        "ALTER TABLE reviews MODIFY COLUMN appointmentId INT NULL",
+        [],
+        (err: any) => { if (err && !String(err).includes("doesn't exist")) console.error("[Migration] reviews appointmentId nullable:", err?.message); resolve(); }
+      );
+    });
+
   } catch (err) {
     console.error("[Migration] Startup migration failed:", err);
   }

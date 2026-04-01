@@ -306,6 +306,7 @@ export default function ProfessionalProfile() {
                           }
                           createReviewMutation.mutate({
                             professionalId,
+                            appointmentId: undefined,
                             rating: reviewRating,
                             comment: reviewComment || undefined,
                           });
