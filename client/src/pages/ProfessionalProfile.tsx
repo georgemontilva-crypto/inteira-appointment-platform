@@ -191,43 +191,50 @@ export default function ProfessionalProfile() {
               </Card>
             )}
 
-            {/* Education */}
-            {professional.education && (
-              <Card className="border-border">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg flex items-center gap-2" style={{ fontFamily: "Poppins, sans-serif" }}>
-                    <GraduationCap className="w-5 h-5 text-primary" />
-                    Formación académica
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground leading-relaxed">{professional.education}</p>
-                </CardContent>
-              </Card>
-            )}
+            {/* Education + Certifications side by side */}
+            {(professional.education || professional.certifications) && (
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
+                gap: "16px",
+              }}>
+                {professional.education && (
+                  <Card className="border-border">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-lg flex items-center gap-2" style={{ fontFamily: "Poppins, sans-serif" }}>
+                        <GraduationCap className="w-5 h-5 text-primary" />
+                        Formación académica
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-muted-foreground leading-relaxed">{professional.education}</p>
+                    </CardContent>
+                  </Card>
+                )}
 
-            {/* Certifications */}
-            {professional.certifications && (
-              <Card className="border-border">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg flex items-center gap-2" style={{ fontFamily: "Poppins, sans-serif" }}>
-                    <Shield className="w-5 h-5 text-primary" />
-                    Certificaciones
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {professional.certifications?.startsWith("http") ? (
-                    <a href={professional.certifications} target="_blank" rel="noopener noreferrer">
-                      <button className="flex items-center gap-2 px-4 py-2 rounded-lg border border-[#607562] text-[#607562] text-sm hover:bg-[#eef2ee] transition-colors">
-                        <FileText className="w-4 h-4" />
-                        Ver certificado
-                      </button>
-                    </a>
-                  ) : (
-                    <p className="text-muted-foreground leading-relaxed">{professional.certifications}</p>
-                  )}
-                </CardContent>
-              </Card>
+                {professional.certifications && (
+                  <Card className="border-border">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-lg flex items-center gap-2" style={{ fontFamily: "Poppins, sans-serif" }}>
+                        <Shield className="w-5 h-5 text-primary" />
+                        Certificaciones
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {professional.certifications?.startsWith("http") ? (
+                        <a href={professional.certifications} target="_blank" rel="noopener noreferrer">
+                          <button className="flex items-center gap-2 px-4 py-2 rounded-lg border border-[#607562] text-[#607562] text-sm hover:bg-[#eef2ee] transition-colors">
+                            <FileText className="w-4 h-4" />
+                            Ver certificado
+                          </button>
+                        </a>
+                      ) : (
+                        <p className="text-muted-foreground leading-relaxed">{professional.certifications}</p>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
             )}
 
             {/* Reviews section */}
