@@ -355,37 +355,27 @@ async function runStartupMigrations() {
       console.warn("[Migration] Could not set admin role for Adm@inteira.mx:", adminErr?.message);
     }
 
-    // ── Seed: 1000 créditos de prueba a marketingdedsm si tiene menos de 100 ──
+    // ── Seed: créditos de prueba a marketingdedsm — solo si NUNCA ha tenido un batch admin_grant ──
     try {
       const client = (db as any).$client;
-      const getUser = () => new Promise<any[]>((resolve, reject) => {
-        client.execute("SELECT id FROM users WHERE email = ?", ["marketingdedsm@gmail.com"], (err: any, results: any) => {
-          if (err) reject(err); else resolve(Array.isArray(results) ? results : []);
-        });
+      await new Promise<void>((resolve) => {
+        client.execute(
+          `INSERT INTO creditBatches (userId, amount, remaining, reservedAmount, source, expiresAt, createdAt, updatedAt)
+           SELECT u.id, 2000, 2000, 0, 'admin_grant', DATE_ADD(NOW(), INTERVAL 60 DAY), NOW(), NOW()
+           FROM users u
+           WHERE u.email = 'marketingdedsm@gmail.com'
+             AND NOT EXISTS (
+               SELECT 1 FROM creditBatches cb WHERE cb.userId = u.id AND cb.source = 'admin_grant'
+             )`,
+          [],
+          (err: any, result: any) => {
+            if (err) console.warn("[Migration] seed credits marketingdedsm:", err?.message);
+            else if (result?.affectedRows > 0) console.log("[Migration] 2000 créditos de prueba agregados a marketingdedsm");
+            else console.log("[Migration] marketingdedsm ya tiene admin_grant, skipping");
+            resolve();
+          }
+        );
       });
-      const userRows = await getUser();
-      const userId = userRows[0]?.id;
-      if (userId) {
-        const getBal = () => new Promise<any[]>((resolve, reject) => {
-          client.execute("SELECT SUM(remaining) as bal FROM creditBatches WHERE userId = ?", [userId], (err: any, results: any) => {
-            if (err) reject(err); else resolve(Array.isArray(results) ? results : []);
-          });
-        });
-        const balRows = await getBal();
-        if ((balRows[0]?.bal ?? 0) < 500) {
-          const exp = new Date();
-          exp.setDate(exp.getDate() + 60);
-          const expStr = exp.toISOString().slice(0, 19).replace("T", " ");
-          await new Promise<void>((resolve, reject) => {
-            client.execute(
-              "INSERT INTO creditBatches (userId, amount, remaining, source, expiresAt) VALUES (?, ?, ?, ?, ?)",
-              [userId, 2000, 2000, "test_20", expStr],
-              (err: any) => { if (err) reject(err); else resolve(); }
-            );
-          });
-          console.log("[Migration] 1000 créditos de prueba agregados a marketingdedsm");
-        }
-      }
     } catch (e: any) {
       console.error("[Migration] Could not seed test credits:", e?.message);
     }
