@@ -165,10 +165,7 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
       {/* TOP BAR */}
       <header className="h-[58px] bg-white border-b border-[rgba(96,117,98,0.15)] flex items-center gap-2 px-4 flex-shrink-0 sticky top-0 z-30">
         <div className="flex items-center gap-2 flex-shrink-0">
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg,#3d4e3f,#607562)" }}>
-            <Icon name="layers" className="w-3.5 h-3.5 text-white" />
-          </div>
-          <span className="text-sm font-medium text-[#333333] hidden sm:block">Inteira</span>
+          <img src="/logo-icon.webp" className="h-8 w-auto" alt="Inteira" />
         </div>
 
         <div className="flex items-center gap-2 bg-[#F7FAFC] border border-[rgba(96,117,98,0.2)] rounded-full px-3 h-[34px] w-[200px] flex-shrink-0 ml-2">
@@ -299,12 +296,22 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
           </nav>
 
           {/* Footer fixed at bottom */}
-          <div className="mt-auto p-2 border-t border-[rgba(96,117,98,0.1)]">
-            <div className="flex items-center gap-2 px-2 py-1.5 rounded-[9px] bg-[#F7FAFC] border border-[rgba(96,117,98,0.15)] cursor-pointer" onClick={() => openPanel("profile")}>
-              <div className="flex-shrink-0"><UserAvatar size="md" /></div>
-              <div className="min-w-0">
-                <p className="text-[11px] font-medium text-[#333333] truncate">{user?.name ?? "Usuario"}</p>
-                <p className="text-[9px] text-[#607562]">{user?.role === "admin" ? "Admin" : user?.role === "professional" ? "Profesional" : "Usuario"}</p>
+          <div className="mt-auto border-t border-[rgba(96,117,98,0.1)]">
+            <button
+              onClick={logout}
+              className="hover:bg-red-50 hover:text-red-500 transition-colors"
+              style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 12px", width: "100%", border: "none", background: "transparent", color: "#666", fontSize: "13px", cursor: "pointer" }}
+            >
+              <Icon name="logout" className="w-4 h-4" />
+              Cerrar sesión
+            </button>
+            <div className="p-2 border-t border-[rgba(96,117,98,0.1)]">
+              <div className="flex items-center gap-2 px-2 py-1.5 rounded-[9px] bg-[#F7FAFC] border border-[rgba(96,117,98,0.15)] cursor-pointer" onClick={() => openPanel("profile")}>
+                <div className="flex-shrink-0"><UserAvatar size="md" /></div>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-medium text-[#333333] truncate">{user?.name ?? "Usuario"}</p>
+                  <p className="text-[9px] text-[#607562]">{user?.role === "admin" ? "Admin" : user?.role === "professional" ? "Profesional" : "Usuario"}</p>
+                </div>
               </div>
             </div>
           </div>
