@@ -337,7 +337,7 @@ async function runStartupMigrations() {
       );
     });
 
-    // ── Seed: ensure marketingdedsm@gmail.com has role=admin ──────────────────
+    // ── Seed: ensure admin roles ──────────────────────────────────────────────
     try {
       await db.execute(
         "UPDATE `users` SET `role` = 'admin' WHERE `email` = 'marketingdedsm@gmail.com' AND `role` != 'admin'"
@@ -345,6 +345,14 @@ async function runStartupMigrations() {
       console.log("[Migration] Admin role ensured for marketingdedsm@gmail.com");
     } catch (adminErr: any) {
       console.warn("[Migration] Could not set admin role:", adminErr?.message);
+    }
+    try {
+      await db.execute(
+        "UPDATE `users` SET `role` = 'admin' WHERE `email` = 'Adm@inteira.mx' AND `role` != 'admin'"
+      );
+      console.log("[Migration] Admin role ensured for Adm@inteira.mx");
+    } catch (adminErr: any) {
+      console.warn("[Migration] Could not set admin role for Adm@inteira.mx:", adminErr?.message);
     }
 
     // ── Seed: 1000 créditos de prueba a marketingdedsm si tiene menos de 100 ──
