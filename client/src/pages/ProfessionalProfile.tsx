@@ -359,7 +359,7 @@ export default function ProfessionalProfile() {
                               <div className="flex items-center gap-2">
                                 <p className="text-sm font-medium text-foreground">{(review as any).userName ?? "Usuario"}</p>
                                 <StarRating value={review.rating} readonly size="sm" />
-                                {review.isVerified && (
+                                {!!review.isVerified && (
                                   <Badge className="bg-green-100 text-green-700 border-green-200 text-xs px-1.5 py-0">
                                     <CheckCircle2 className="w-2.5 h-2.5 mr-1" />
                                     Verificada
