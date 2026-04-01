@@ -464,50 +464,36 @@ async function runStartupMigrations() {
     ).catch(() => {});
     console.log("[Migration] creditBatches source enum expanded");
 
-    // ── One-time fix: reset reservedAmount for userId=1 (may be stale from pre-reservation era)
+    // ── One-time fix: reset reservedAmount where it exceeds remaining (invalid state)
     await new Promise<void>((resolve) => {
       client.execute(
-        "UPDATE creditBatches SET reservedAmount = 0 WHERE userId = 1",
+        "UPDATE creditBatches SET reservedAmount = 0 WHERE userId = 1 AND reservedAmount > remaining",
         [],
         (err: any) => {
-          if (err) console.error("[Migration] reset reservedAmount userId=1:", err?.message);
-          else console.log("[Migration] reservedAmount reset for userId=1");
+          if (err) console.error("[Migration] reset invalid reservedAmount userId=1:", err?.message);
+          else console.log("[Migration] invalid reservedAmount fixed for userId=1");
           resolve();
         }
       );
     });
 
-    // ── One-time grant: add 2000 admin credits to userId=1 if balance < 100 ──
-    try {
-      const balRows = await new Promise<any[]>((resolve) => {
-        client.execute(
-          "SELECT COALESCE(SUM(remaining - reservedAmount), 0) AS bal FROM creditBatches WHERE userId = 1 AND remaining > 0 AND expiredEarly = 0 AND expiresAt > NOW()",
-          [],
-          (err: any, results: any) => {
-            if (err) { console.error("[Migration] check balance userId=1:", err?.message); resolve([]); }
-            else resolve(Array.isArray(results) ? results : []);
-          }
-        );
-      });
-      const bal = Number(balRows[0]?.bal ?? 0);
-      if (bal < 100) {
-        await new Promise<void>((resolve) => {
-          client.execute(
-            "INSERT INTO creditBatches (userId, amount, remaining, reservedAmount, source, expiresAt, createdAt, updatedAt) VALUES (1, 2000, 2000, 0, 'admin_grant', DATE_ADD(NOW(), INTERVAL 1 YEAR), NOW(), NOW())",
-            [],
-            (err: any) => {
-              if (err) console.error("[Migration] admin grant insert:", err?.message);
-              else console.log("[Migration] 2000 admin credits granted to userId=1");
-              resolve();
-            }
-          );
-        });
-      } else {
-        console.log(`[Migration] userId=1 already has ${bal} credits, no grant needed`);
-      }
-    } catch (e: any) {
-      console.error("[Migration] admin grant failed:", e?.message);
-    }
+    // ── One-time grant: add 2000 credits (60 days) to userId=1 if no active admin_grant exists ──
+    await new Promise<void>((resolve) => {
+      client.execute(
+        `INSERT INTO creditBatches (userId, amount, remaining, reservedAmount, source, expiresAt, createdAt, updatedAt)
+         SELECT 1, 2000, 2000, 0, 'admin_grant', DATE_ADD(NOW(), INTERVAL 60 DAY), NOW(), NOW()
+         WHERE NOT EXISTS (
+           SELECT 1 FROM creditBatches WHERE userId = 1 AND remaining > 0 AND source = 'admin_grant' AND expiresAt > NOW()
+         )`,
+        [],
+        (err: any, result: any) => {
+          if (err) console.error("[Migration] admin grant insert:", err?.message);
+          else if (result?.affectedRows > 0) console.log("[Migration] 2000 admin credits (60d) granted to userId=1");
+          else console.log("[Migration] userId=1 already has an active admin_grant batch, skipping");
+          resolve();
+        }
+      );
+    });
 
   } catch (err) {
     console.error("[Migration] Startup migration failed:", err);
