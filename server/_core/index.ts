@@ -414,6 +414,21 @@ async function runStartupMigrations() {
       console.error("[Migration] noshow-backfill failed:", e?.message);
     }
 
+    // Drop FK reviews_professionalId_fk if it points to a non-existent table
+    try {
+      await new Promise<void>((resolve) => {
+        client.execute(
+          `ALTER TABLE reviews DROP FOREIGN KEY reviews_professionalId_fk`,
+          [],
+          (err: any) => {
+            if (err) console.log("[Migration] reviews FK already removed or not exists:", err.message);
+            else console.log("[Migration] reviews_professionalId_fk removed");
+            resolve();
+          }
+        );
+      });
+    } catch (e) {}
+
     // Ensure reviews.appointmentId allows NULL and drop unique constraint (idempotent)
     await new Promise<void>((resolve) => {
       client.execute(
