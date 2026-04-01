@@ -688,7 +688,7 @@ export const appRouter = router({
         await dbInstance.insert(reviews).values({
           professionalId: input.professionalId,
           userId: ctx.user.id,
-          appointmentId: input.appointmentId ?? null,
+          ...(input.appointmentId != null ? { appointmentId: input.appointmentId } : {}),
           rating: input.rating,
           comment: input.comment ?? null,
           isVerified: false,
