@@ -9,7 +9,7 @@ import { Link, useRoute } from "wouter";
 import DashboardLayout from "../components/DashboardLayout";
 import {
   Star, Award, Clock, CheckCircle2, Calendar,
-  Shield, GraduationCap, MessageSquare, User, FileText,
+  Shield, GraduationCap, MessageSquare, User, FileText, Info,
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -400,46 +400,6 @@ export default function ProfessionalProfile() {
               </CardContent>
             </Card>
 
-            {/* ── Políticas de la plataforma ── */}
-            <Card className="border-amber-200 bg-amber-50/30">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2" style={{ fontFamily: "Poppins, sans-serif" }}>
-                  📋 Políticas de cancelación para expertos
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-start gap-3 p-3 bg-white rounded-xl border border-emerald-200">
-                    <div className="w-2 h-2 rounded-full bg-emerald-500 mt-1.5 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm font-semibold text-emerald-700">Más de 12 horas de aviso</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">Sin penalización</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3 p-3 bg-white rounded-xl border border-amber-200">
-                    <div className="w-2 h-2 rounded-full bg-amber-500 mt-1.5 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm font-semibold text-amber-700">Entre 5 y 12 horas de aviso</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">Penalización de $70 MXN (Básico)</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3 p-3 bg-white rounded-xl border border-red-200">
-                    <div className="w-2 h-2 rounded-full bg-red-500 mt-1.5 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm font-semibold text-red-700">5 horas o menos de aviso</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">$150 MXN (Básico) / $250 MXN (Pro)</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3 p-3 bg-white rounded-xl border border-red-300">
-                    <div className="w-2 h-2 rounded-full bg-red-700 mt-1.5 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm font-semibold text-red-800">No-show (no asistencia)</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">$150 MXN (Básico) / $500 MXN (Pro)</p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
           </div>
 
           {/* Sidebar */}
@@ -492,6 +452,48 @@ export default function ProfessionalProfile() {
                     Agendar cita
                   </Button>
                 </Link>
+              </CardContent>
+            </Card>
+
+            {/* Cancellation policy */}
+            <Card className="border-amber-200 bg-amber-50/30">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2" style={{ fontFamily: "Poppins, sans-serif" }}>
+                  <Info className="w-4 h-4 text-amber-600" />
+                  Política de cancelación
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="flex items-start gap-2.5 p-2.5 bg-white rounded-lg border border-emerald-200">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500 mt-1.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-xs font-semibold text-emerald-700">Más de 12 horas de aviso</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Sin penalización</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2.5 p-2.5 bg-white rounded-lg border border-amber-200">
+                    <div className="w-2 h-2 rounded-full bg-amber-500 mt-1.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-xs font-semibold text-amber-700">Entre 5 y 12 horas de aviso</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Penalización de $70 MXN (Básico)</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2.5 p-2.5 bg-white rounded-lg border border-red-200">
+                    <div className="w-2 h-2 rounded-full bg-red-500 mt-1.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-xs font-semibold text-red-700">5 horas o menos de aviso</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">$150 MXN (Básico) / $250 MXN (Pro)</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2.5 p-2.5 bg-white rounded-lg border border-red-300">
+                    <div className="w-2 h-2 rounded-full bg-red-700 mt-1.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-xs font-semibold text-red-800">No-show (no asistencia)</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">$150 MXN (Básico) / $500 MXN (Pro)</p>
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
