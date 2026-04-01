@@ -649,63 +649,67 @@ export const appRouter = router({
         comment: z.string().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
-        const dbInstance = await db.getDb();
-        if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
-
-        const { reviews } = await import("../drizzle/schema");
-        const { and, eq } = await import("drizzle-orm");
+        const dbConn = await db.getDb();
+        if (!dbConn) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB no disponible" });
+        const client = (dbConn as any).$client;
 
         // Verificar si ya existe un review del mismo usuario para esta cita o profesional
-        if (input.appointmentId) {
-          const existing = await dbInstance.select().from(reviews).where(
-            and(
-              eq(reviews.userId, ctx.user.id),
-              eq(reviews.appointmentId, input.appointmentId)
-            )
-          ).limit(1);
-          if (existing.length > 0) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: "Ya has calificado esta cita anteriormente",
-            });
-          }
-        } else {
-          // Sin appointmentId: verificar que no haya review previo del mismo usuario al mismo profesional
-          const existing = await dbInstance.select().from(reviews).where(
-            and(
-              eq(reviews.userId, ctx.user.id),
-              eq(reviews.professionalId, input.professionalId)
-            )
-          ).limit(1);
-          if (existing.length > 0) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: "Ya has calificado a este profesional anteriormente",
-            });
-          }
-        }
-
-        await dbInstance.insert(reviews).values({
-          professionalId: input.professionalId,
-          userId: ctx.user.id,
-          ...(input.appointmentId != null ? { appointmentId: input.appointmentId } : {}),
-          rating: input.rating,
-          comment: input.comment ?? null,
-          isVerified: false,
+        const duplicateCheck = await new Promise<any[]>((resolve) => {
+          const [sql, params] = input.appointmentId
+            ? [
+                "SELECT id FROM reviews WHERE userId = ? AND appointmentId = ? LIMIT 1",
+                [ctx.user.id, input.appointmentId],
+              ]
+            : [
+                "SELECT id FROM reviews WHERE userId = ? AND professionalId = ? LIMIT 1",
+                [ctx.user.id, input.professionalId],
+              ];
+          client.execute(sql, params, (err: any, results: any) => {
+            if (err) { console.error("[review.create] duplicate check:", err?.message); resolve([]); }
+            else resolve(Array.isArray(results) ? results : []);
+          });
         });
 
-        // Update professional average rating
-        const allReviews = await db.getProfessionalReviews(input.professionalId);
-        if (allReviews.length > 0) {
-          const avg = allReviews.reduce((sum, r) => sum + r.rating, 0) / allReviews.length;
-          const { professionals } = await import("../drizzle/schema");
-          const { eq } = await import("drizzle-orm");
-          await dbInstance.update(professionals).set({
-            averageRating: avg.toFixed(2),
-            totalReviews: allReviews.length,
-            updatedAt: new Date(),
-          }).where(eq(professionals.id, input.professionalId));
+        if (duplicateCheck.length > 0) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: input.appointmentId
+              ? "Ya has calificado esta cita anteriormente"
+              : "Ya has calificado a este profesional anteriormente",
+          });
         }
+
+        // INSERT review
+        await new Promise<void>((resolve, reject) => {
+          client.execute(
+            `INSERT INTO reviews (appointmentId, userId, professionalId, rating, comment, isVerified)
+             VALUES (?, ?, ?, ?, ?, false)`,
+            [
+              input.appointmentId ?? null,
+              ctx.user.id,
+              input.professionalId,
+              input.rating,
+              input.comment ?? null,
+            ],
+            (err: any) => {
+              if (err && !String(err).includes("Duplicate")) reject(err);
+              else resolve();
+            }
+          );
+        });
+
+        // UPDATE professional averageRating + totalReviews
+        await new Promise<void>((resolve) => {
+          client.execute(
+            `UPDATE professionals
+             SET averageRating = (SELECT AVG(rating) FROM reviews WHERE professionalId = ?),
+                 totalReviews  = (SELECT COUNT(*) FROM reviews WHERE professionalId = ?),
+                 updatedAt = NOW()
+             WHERE id = ?`,
+            [input.professionalId, input.professionalId, input.professionalId],
+            (err: any) => { if (err) console.error("[review.create] avg update:", err?.message); resolve(); }
+          );
+        });
 
         return { success: true };
       }),
