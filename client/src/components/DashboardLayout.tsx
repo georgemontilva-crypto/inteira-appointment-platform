@@ -4,6 +4,7 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "../_core/hooks/useAuth";
 import { trpc } from "../lib/trpc";
 import { toast } from "sonner";
+import logo from "../assets/logo.webp";
 
 const NAV_ITEMS = [
   { label: "Inicio",          icon: "home",     href: "/dashboard" },
@@ -211,6 +212,9 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
       <div className="flex overflow-hidden" style={{ height: "calc(100vh - 58px)" }}>
         {/* SIDEBAR */}
         <aside className="w-[220px] flex-shrink-0 bg-white border-r border-[rgba(96,117,98,0.15)] flex-col hidden md:flex overflow-hidden sticky top-[58px]" style={{ height: "calc(100vh - 58px)" }}>
+          <div className="px-4 py-3 border-b border-[rgba(96,117,98,0.1)] flex-shrink-0">
+            <img src={logo} alt="Inteira" style={{ height: "28px", width: "auto", objectFit: "contain" }} />
+          </div>
           <nav className="flex-1 overflow-y-auto p-2.5">
             {user?.role === "professional" ? (
               /* ── Sidebar profesional — grid 2 col con secciones ── */
