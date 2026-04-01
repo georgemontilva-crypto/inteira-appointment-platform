@@ -112,11 +112,23 @@ export default function WalletPage() {
     setBuyingSession(null);
   };
 
-  if (loading || isLoading) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
       </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div style={{ padding: "24px", maxWidth: "900px", display: "flex", flexDirection: "column", gap: "16px" }}>
+          <div style={{ height: "32px", width: "200px", background: "#e8ede8", borderRadius: "8px" }} />
+          <div style={{ height: "120px", background: "#e8ede8", borderRadius: "12px" }} />
+          <div style={{ height: "200px", background: "#e8ede8", borderRadius: "12px" }} />
+        </div>
+      </DashboardLayout>
     );
   }
 

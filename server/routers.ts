@@ -145,13 +145,54 @@ export const appRouter = router({
     }),
     // ── Wallet ──────────────────────────────────────────────────────────
     getWallet: protectedProcedure.query(async ({ ctx }) => {
-      const [balance, batches, nextExpiry, transactions] = await Promise.all([
-        getUserCreditBalance(ctx.user.id),
-        getAllBatches(ctx.user.id),
-        getNextExpirationDate(ctx.user.id),
-        getCreditTransactions(ctx.user.id),
+      const dbConn = await db.getDb();
+      if (!dbConn) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      const client = (dbConn as any).$client;
+
+      const [balanceRow, batches, transactions] = await Promise.all([
+        // balance + nextExpiry en una sola query
+        new Promise<any>((resolve, reject) => {
+          client.execute(
+            `SELECT
+              COALESCE(SUM(GREATEST(0, remaining - reservedAmount)), 0) AS balance,
+              MIN(CASE WHEN remaining > 0 AND expiresAt IS NOT NULL AND expiresAt > NOW() THEN expiresAt END) AS nextExpiry
+             FROM creditBatches
+             WHERE userId = ? AND expiredEarly = 0 AND (expiresAt IS NULL OR expiresAt > NOW())`,
+            [ctx.user.id],
+            (err: any, results: any) => {
+              if (err) reject(err);
+              else resolve(Array.isArray(results) ? results[0] : (results ?? { balance: 0, nextExpiry: null }));
+            }
+          );
+        }),
+        new Promise<any[]>((resolve, reject) => {
+          client.execute(
+            `SELECT * FROM creditBatches WHERE userId = ? ORDER BY createdAt ASC`,
+            [ctx.user.id],
+            (err: any, results: any) => {
+              if (err) reject(err);
+              else resolve(Array.isArray(results) ? results : []);
+            }
+          );
+        }),
+        new Promise<any[]>((resolve, reject) => {
+          client.execute(
+            `SELECT * FROM creditTransactions WHERE userId = ? ORDER BY createdAt DESC LIMIT 50`,
+            [ctx.user.id],
+            (err: any, results: any) => {
+              if (err) reject(err);
+              else resolve(Array.isArray(results) ? results : []);
+            }
+          );
+        }),
       ]);
-      return { balance, batches, nextExpiry, transactions };
+
+      return {
+        balance: Number(balanceRow?.balance ?? 0),
+        nextExpiry: balanceRow?.nextExpiry ?? null,
+        batches,
+        transactions,
+      };
     }),
     buyIndividualSession: protectedProcedure
       .input(
