@@ -443,7 +443,7 @@ export default function ProfessionalDashboard() {
               <p className="text-[11px] text-white/50 mt-0.5">Balance</p>
             </div>
             <div className="text-center px-2 border-l border-white/10">
-              <p className="text-lg font-medium text-white">{appointments?.filter((a:any) => a.status === "completed").length ?? 0}</p>
+              <p className="text-lg font-medium text-white">{appointments?.filter((a:any) => a.status === "completed" || a.status === "no-show" || a.status === "pending_review").length ?? 0}</p>
               <p className="text-[11px] text-white/50 mt-0.5">Completadas</p>
             </div>
             <div className="text-center px-2 border-l border-white/10">
@@ -517,14 +517,14 @@ export default function ProfessionalDashboard() {
               <Card className="border-border">
                 <CardContent className="p-5">
                   <p className="text-2xl font-bold text-emerald-600">
-                    {appointments?.filter((a) => a.status === "completed").length ?? 0}
+                    {appointments?.filter((a) => a.status === "completed" || a.status === "no-show" || a.status === "pending_review").length ?? 0}
                   </p>
                   <p className="text-xs text-muted-foreground">Completadas</p>
                 </CardContent>
               </Card>
               <Card className="border-border">
                 <CardContent className="p-5">
-                  <p className="text-2xl font-bold text-accent">{profile.averageRating ?? "5.0"}</p>
+                  <p className="text-2xl font-bold text-accent">{(profile.totalReviews ?? 0) > 0 ? Number(profile.averageRating).toFixed(1) : "—"}</p>
                   <p className="text-xs text-muted-foreground">Calificación</p>
                 </CardContent>
               </Card>
