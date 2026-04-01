@@ -3,6 +3,7 @@ import type { ReactElement } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "../_core/hooks/useAuth";
 import { trpc } from "../lib/trpc";
+import { toast } from "sonner";
 
 const NAV_ITEMS = [
   { label: "Inicio",          icon: "home",     href: "/dashboard" },
@@ -87,6 +88,27 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
   const openPanel = (tab: PanelTab) => {
     setActiveTab(tab);
     setPanelOpen(true);
+  };
+
+  // Onboarding: name collection
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName]   = useState("");
+  const utils = trpc.useUtils();
+  const updateUserName = trpc.user.updateUserName.useMutation({
+    onSuccess: () => {
+      utils.user.getProfile.invalidate();
+      toast.success("¡Nombre guardado!");
+    },
+    onError: (err) => toast.error(err.message ?? "Error al guardar el nombre"),
+  });
+  const needsOnboarding = !!user && (!user.name || user.name.trim() === "");
+
+  const handleSaveName = () => {
+    if (!firstName.trim() || !lastName.trim()) {
+      toast.error("Por favor ingresa tu nombre y apellido");
+      return;
+    }
+    updateUserName.mutate({ firstName, lastName });
   };
 
   // Notifications
@@ -535,6 +557,36 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Onboarding modal — blocks UI until user sets their name */}
+      {needsOnboarding && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ background: "#fff", borderRadius: "16px", padding: "32px", width: "400px", maxWidth: "90vw" }}>
+            <h2 style={{ fontSize: "20px", fontWeight: 600, color: "#333", marginBottom: "8px" }}>¡Bienvenido a Inteira!</h2>
+            <p style={{ fontSize: "14px", color: "#666", marginBottom: "24px" }}>Para continuar, ingresa tu nombre completo.</p>
+            <input
+              placeholder="Nombre"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: "1px solid #ddd", fontSize: "14px", boxSizing: "border-box" }}
+            />
+            <input
+              placeholder="Apellido"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSaveName()}
+              style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: "1px solid #ddd", fontSize: "14px", boxSizing: "border-box", marginTop: "12px" }}
+            />
+            <button
+              onClick={handleSaveName}
+              disabled={updateUserName.isPending}
+              style={{ marginTop: "20px", width: "100%", background: "#607562", color: "#fff", border: "none", borderRadius: "10px", padding: "12px", fontSize: "15px", fontWeight: 500, cursor: "pointer", opacity: updateUserName.isPending ? 0.7 : 1 }}
+            >
+              {updateUserName.isPending ? "Guardando..." : "Continuar"}
+            </button>
           </div>
         </div>
       )}

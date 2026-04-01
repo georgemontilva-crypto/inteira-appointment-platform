@@ -598,7 +598,7 @@ export async function getProfessionalAppointments(professionalId: number) {
   return new Promise<any[]>((resolve, reject) => {
     client.execute(
       `SELECT a.*,
-        COALESCE(u.name, u.email, CONCAT('Usuario #', a.userId)) AS userName,
+        COALESCE(NULLIF(TRIM(u.name), ''), SUBSTRING_INDEX(u.email, '@', 1), CONCAT('Usuario #', a.userId)) AS userName,
         u.email AS userEmail, u.profileImage AS userProfileImage,
         s.name AS specialtyName
        FROM appointments a
@@ -630,7 +630,7 @@ export async function getProfessionalReviews(professionalId: number) {
   return new Promise<any[]>((resolve) => {
     client.execute(
       `SELECT r.*,
-        COALESCE(u.name, u.email, CONCAT('Usuario #', r.userId)) AS userName,
+        COALESCE(NULLIF(TRIM(u.name), ''), SUBSTRING_INDEX(u.email, '@', 1), CONCAT('Usuario #', r.userId)) AS userName,
         u.profileImage AS userImage
        FROM reviews r
        LEFT JOIN users u ON r.userId = u.id

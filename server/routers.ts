@@ -116,6 +116,23 @@ export const appRouter = router({
         return await db.getUserById(ctx.user.id);
       }),
 
+    updateUserName: protectedProcedure
+      .input(z.object({ firstName: z.string().min(1), lastName: z.string().min(1) }))
+      .mutation(async ({ ctx, input }) => {
+        const fullName = `${input.firstName.trim()} ${input.lastName.trim()}`;
+        const dbConn = await db.getDb();
+        if (!dbConn) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB no disponible" });
+        const client = (dbConn as any).$client;
+        await new Promise<void>((resolve, reject) => {
+          client.execute(
+            "UPDATE users SET name = ?, updatedAt = NOW() WHERE id = ?",
+            [fullName, ctx.user.id],
+            (err: any) => { if (err) reject(err); else resolve(); }
+          );
+        });
+        return { success: true, name: fullName };
+      }),
+
     getSubscription: protectedProcedure.query(async ({ ctx }) => {
       const subscription = await db.getUserSubscription(ctx.user.id);
       if (!subscription) return null;
