@@ -212,15 +212,15 @@ export default function ProfessionalsList() {
                   {/* Avatar & Name */}
                   <div className="flex items-start gap-4 mb-4">
                     <div className="w-16 h-16 rounded-2xl overflow-hidden flex-shrink-0">
-                      {(pro as typeof pro & { profilePhoto?: string | null }).profilePhoto ? (
+                      {((pro as any).profilePhoto || (pro as any).userProfileImage) ? (
                         <img
-                          src={(pro as typeof pro & { profilePhoto?: string | null }).profilePhoto!}
-                          alt={(pro as typeof pro & { professionalName?: string | null }).professionalName ?? "Especialista"}
+                          src={(pro as any).profilePhoto ?? (pro as any).userProfileImage}
+                          alt={(pro as any).professionalName ?? "Especialista"}
                           className="w-full h-full object-cover"
                         />
                       ) : (
                         <div className="w-full h-full gradient-brand flex items-center justify-center text-white text-2xl font-bold">
-                          {((pro as typeof pro & { professionalName?: string | null }).professionalName ?? pro.bio ?? "P").charAt(0).toUpperCase()}
+                          {((pro as any).professionalName ?? pro.bio ?? "P").charAt(0).toUpperCase()}
                         </div>
                       )}
                     </div>
@@ -229,9 +229,17 @@ export default function ProfessionalsList() {
                         {(pro as typeof pro & { professionalName?: string | null }).professionalName ?? `Especialista #${pro.id}`}
                       </h3>
                       <div className="flex items-center gap-1">
-                        <Star className="w-4 h-4 fill-accent text-accent" />
-                        <span className="text-sm font-medium">{pro.averageRating ?? "5.0"}</span>
-                        <span className="text-xs text-muted-foreground">({pro.totalReviews ?? 0} reseñas)</span>
+                        {(pro.totalReviews ?? 0) > 0 ? (
+                          <>
+                            {[1,2,3,4,5].map((s) => (
+                              <Star key={s} className={`w-3.5 h-3.5 ${s <= Math.round(Number(pro.averageRating)) ? "fill-accent text-accent" : "text-muted-foreground/30"}`} />
+                            ))}
+                            <span className="text-sm font-medium ml-0.5">{Number(pro.averageRating).toFixed(1)}</span>
+                            <span className="text-xs text-muted-foreground">({pro.totalReviews} reseñas)</span>
+                          </>
+                        ) : (
+                          <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">Nuevo</span>
+                        )}
                       </div>
                     </div>
                     <Badge className={`border-0 text-xs flex-shrink-0 ${pro.isAvailable ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-600"}`}>
@@ -254,12 +262,10 @@ export default function ProfessionalsList() {
                         <span>{pro.yearsOfExperience} años de experiencia</span>
                       </div>
                     )}
-                    {pro.hourlyRate && (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Clock className="w-4 h-4 text-primary" />
-                        <span>${pro.hourlyRate} MXN / hora</span>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Clock className="w-4 h-4 text-primary" />
+                      <span>$350 MXN / sesión</span>
+                    </div>
                   </div>
 
                   {/* Actions */}

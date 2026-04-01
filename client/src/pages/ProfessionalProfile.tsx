@@ -9,7 +9,7 @@ import { Link, useRoute } from "wouter";
 import DashboardLayout from "../components/DashboardLayout";
 import {
   Star, Award, Clock, CheckCircle2, Calendar,
-  Shield, GraduationCap, MessageSquare, User,
+  Shield, GraduationCap, MessageSquare, User, FileText,
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -122,8 +122,18 @@ export default function ProfessionalProfile() {
         {/* Profile header card */}
         <div className="rounded-2xl border border-border bg-card p-6 mb-8">
           <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
-            <div className="w-20 h-20 rounded-2xl gradient-brand flex items-center justify-center text-white text-3xl font-bold flex-shrink-0">
-              {professional.user?.name?.charAt(0)?.toUpperCase() ?? "P"}
+            <div className="w-20 h-20 rounded-2xl overflow-hidden flex-shrink-0">
+              {(professional.profilePhoto || professional.user?.profileImage) ? (
+                <img
+                  src={(professional.profilePhoto as string) ?? professional.user!.profileImage!}
+                  alt={professional.user?.name ?? "Profesional"}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full gradient-brand flex items-center justify-center text-white text-3xl font-bold">
+                  {professional.user?.name?.charAt(0)?.toUpperCase() ?? "P"}
+                </div>
+              )}
             </div>
             <div className="flex-1">
               <div className="flex flex-wrap items-center gap-3 mb-2">
@@ -149,12 +159,10 @@ export default function ProfessionalProfile() {
                     <span>{professional.yearsOfExperience} años de experiencia</span>
                   </div>
                 )}
-                {professional.hourlyRate && (
-                  <div className="flex items-center gap-1">
-                    <Clock className="w-4 h-4" />
-                    <span>${professional.hourlyRate} MXN / sesión</span>
-                  </div>
-                )}
+                <div className="flex items-center gap-1">
+                  <Clock className="w-4 h-4" />
+                  <span>$350 MXN / sesión</span>
+                </div>
               </div>
             </div>
             <Link href={`/agendar/${professional.id}`}>
@@ -208,7 +216,16 @@ export default function ProfessionalProfile() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-muted-foreground leading-relaxed">{professional.certifications}</p>
+                  {professional.certifications?.startsWith("http") ? (
+                    <a href={professional.certifications} target="_blank" rel="noopener noreferrer">
+                      <button className="flex items-center gap-2 px-4 py-2 rounded-lg border border-[#607562] text-[#607562] text-sm hover:bg-[#eef2ee] transition-colors">
+                        <FileText className="w-4 h-4" />
+                        Ver certificado
+                      </button>
+                    </a>
+                  ) : (
+                    <p className="text-muted-foreground leading-relaxed">{professional.certifications}</p>
+                  )}
                 </CardContent>
               </Card>
             )}
@@ -423,12 +440,10 @@ export default function ProfessionalProfile() {
                       <span className="font-medium">{professional.yearsOfExperience} años</span>
                     </div>
                   )}
-                  {professional.hourlyRate && (
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Tarifa</span>
-                      <span className="font-medium text-primary">${professional.hourlyRate} MXN</span>
-                    </div>
-                  )}
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Tarifa</span>
+                    <span className="font-medium text-primary">$350 MXN / sesión</span>
+                  </div>
 
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Disponibilidad</span>
