@@ -38,8 +38,24 @@ export async function processPayment(stripeSessionId: string, data?: {
     if (!item) {
       if (data) {
         console.warn("[PaymentProcessor] Item no encontrado en DB, procesando con data directa:", stripeSessionId);
-        const { addCreditBatch } = await import("./credits");
-        await addCreditBatch(data.userId, data.productType as CreditSource);
+
+        // Idempotencia: verificar que no se haya acreditado en las últimas 24h
+        const existingBatch = await new Promise<any[]>((resolve) => {
+          client.execute(
+            `SELECT id FROM creditBatches WHERE userId = ? AND source = ? AND createdAt >= DATE_SUB(NOW(), INTERVAL 24 HOUR)`,
+            [data.userId, data.productType],
+            (err: any, results: any) => resolve(Array.isArray(results) ? results : [])
+          );
+        });
+
+        if (existingBatch.length > 0) {
+          console.log(`[PaymentProcessor] Fallback skipped — creditBatch reciente encontrado para userId=${data.userId} source=${data.productType}`);
+        } else {
+          const { addCreditBatch } = await import("./credits");
+          await addCreditBatch(data.userId, data.productType as CreditSource);
+          console.log(`[PaymentProcessor] ✅ ${data.credits} créditos acreditados directamente — userId=${data.userId}`);
+        }
+
         // best-effort: insertar como completado para idempotencia futura
         try {
           await client.execute(
@@ -49,7 +65,6 @@ export async function processPayment(stripeSessionId: string, data?: {
         } catch (e: any) {
           console.warn("[PaymentProcessor] No se pudo registrar en cola:", e?.message);
         }
-        console.log(`[PaymentProcessor] ✅ ${data.credits} créditos acreditados directamente — userId=${data.userId}`);
         return true;
       }
       console.error("[PaymentProcessor] Item no encontrado:", stripeSessionId);

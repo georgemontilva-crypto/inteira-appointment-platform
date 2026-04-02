@@ -500,7 +500,7 @@ async function runStartupMigrations() {
         `INSERT INTO creditBatches (userId, amount, remaining, reservedAmount, source, expiresAt, createdAt, updatedAt)
          SELECT 1, 2000, 2000, 0, 'admin_grant', DATE_ADD(NOW(), INTERVAL 60 DAY), NOW(), NOW()
          WHERE NOT EXISTS (
-           SELECT 1 FROM creditBatches WHERE userId = 1 AND remaining > 0 AND source = 'admin_grant' AND expiresAt > NOW()
+           SELECT 1 FROM creditBatches WHERE userId = 1 AND source = 'admin_grant'
          )`,
         [],
         (err: any, result: any) => {

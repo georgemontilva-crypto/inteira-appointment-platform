@@ -213,7 +213,10 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ ctx, input }) => {
-        // Stripe will handle actual payment; for now we simulate a successful purchase
+        // TODO: En producción esto debe validarse contra Stripe antes de acreditar
+        if (process.env.NODE_ENV === "production") {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Use Stripe checkout para comprar créditos" });
+        }
         const source = input.sessionType as CreditSource;
         const batchId = await addCreditBatch(ctx.user.id, source);
         return {
@@ -230,6 +233,10 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ ctx, input }) => {
+        // TODO: En producción esto debe validarse contra Stripe antes de acreditar
+        if (process.env.NODE_ENV === "production") {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Use Stripe checkout para comprar créditos" });
+        }
         const source = input.planType as CreditSource;
         const batchId = await addCreditBatch(ctx.user.id, source);
         return {
