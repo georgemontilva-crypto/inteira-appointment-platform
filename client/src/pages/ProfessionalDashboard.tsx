@@ -65,9 +65,12 @@ export default function ProfessionalDashboard() {
   const joinCountdown = (apt: { appointmentDate: string | Date }) => {
     const ms = new Date(apt.appointmentDate).getTime() - 5 * 60 * 1000 - nowMs;
     if (ms <= 0) return "";
-    const m = Math.floor(ms / 60000);
-    const s = Math.floor((ms % 60000) / 1000);
-    return `${m}:${String(s).padStart(2, "0")}`;
+    const days = Math.floor(ms / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((ms % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+    if (days > 0) return `${days}d ${hours}h`;
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
   };
   const [activeCall, setActiveCall] = useState<{
     url: string;
