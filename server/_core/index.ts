@@ -469,7 +469,7 @@ async function runStartupMigrations() {
 
     // Expand creditBatches source enum to include admin_grant
     await db.execute(
-      "ALTER TABLE `creditBatches` MODIFY COLUMN `source` ENUM('plan_basic','plan_pro','individual_basic','individual_premium','admin_grant') NOT NULL"
+      "ALTER TABLE `creditBatches` MODIFY COLUMN `source` ENUM('purchase','plan','plan_basic','plan_pro','individual_basic','individual_premium','admin_grant','test_20','bonus','referral') NOT NULL DEFAULT 'purchase'"
     ).catch(() => {});
     console.log("[Migration] creditBatches source enum expanded");
 
@@ -527,6 +527,9 @@ async function startServer() {
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
+  // Trust Railway's proxy for correct IP in rate limiter
+  app.set("trust proxy", 1);
 
   // Rate limiting
   const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, message: "Demasiados intentos" });
