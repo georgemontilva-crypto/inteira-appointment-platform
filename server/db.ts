@@ -134,7 +134,14 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     // Try to update role separately (column may or may not exist)
     if (cols.has("role")) {
       try {
-        await db.execute(`UPDATE \`users\` SET \`role\` = '${role}' WHERE \`openId\` = ${esc(user.openId)} AND \`role\` = 'user'`);
+        const rawClient = (db as any).$client;
+        await new Promise<void>((resolve) => {
+          rawClient.execute(
+            "UPDATE `users` SET `role` = ? WHERE `openId` = ? AND `role` = 'user'",
+            [role, user.openId],
+            (err: any) => { if (err) console.error("[upsertUser] role update:", err?.message); resolve(); }
+          );
+        });
       } catch {
         // ignore
       }

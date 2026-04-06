@@ -30,17 +30,17 @@ import {
 
 // Validation schemas
 const specialtySchema = z.object({
-  name: z.string().min(1),
-  description: z.string().optional(),
-  icon: z.string().optional(),
-  color: z.string().optional(),
+  name: z.string().min(1).max(100),
+  description: z.string().max(1000).optional(),
+  icon: z.string().max(100).optional(),
+  color: z.string().max(50).optional(),
 });
 
 const subscriptionPlanSchema = z.object({
-  name: z.string().min(1),
-  description: z.string().optional(),
-  price: z.string(),
-  currency: z.string().default("MXN"),
+  name: z.string().min(1).max(100),
+  description: z.string().max(1000).optional(),
+  price: z.string().max(20),
+  currency: z.string().max(10).default("MXN"),
   billingPeriod: z.enum(["monthly", "yearly"]),
   maxAppointmentsPerMonth: z.number().optional(),
   maxMinutesPerAppointment: z.number().optional(),
@@ -49,22 +49,22 @@ const subscriptionPlanSchema = z.object({
 
 const professionalRegistrationSchema = z.object({
   specialtyId: z.number(),
-  licenseNumber: z.string().optional(),      // not all specialties require it
-  licenseDocument: z.string().optional(),    // identity doc URL
+  licenseNumber: z.string().max(100).optional(),      // not all specialties require it
+  licenseDocument: z.string().max(500).optional(),    // identity doc URL
   yearsOfExperience: z.number().optional(),
-  education: z.string().optional(),
-  certifications: z.string().optional(),
-  bio: z.string().optional(),
-  hourlyRate: z.string().optional(),
-  profilePhoto: z.string().url().optional(),
-  fullName: z.string().optional(),           // nombre completo del profesional
+  education: z.string().max(1000).optional(),
+  certifications: z.string().max(1000).optional(),
+  bio: z.string().max(1000).optional(),
+  hourlyRate: z.string().max(20).optional(),
+  profilePhoto: z.string().url().max(500).optional(),
+  fullName: z.string().max(100).optional(),           // nombre completo del profesional
 });
 
 const userProfileUpdateSchema = z.object({
-  name: z.string().optional(),
-  phone: z.string().optional(),
-  bio: z.string().optional(),
-  profileImage: z.string().optional(),
+  name: z.string().max(100).optional(),
+  phone: z.string().max(20).optional(),
+  bio: z.string().max(1000).optional(),
+  profileImage: z.string().max(500).optional(),
 });
 
 export const appRouter = router({
@@ -117,7 +117,7 @@ export const appRouter = router({
       }),
 
     updateUserName: protectedProcedure
-      .input(z.object({ firstName: z.string().min(1), lastName: z.string().min(1) }))
+      .input(z.object({ firstName: z.string().min(1).max(100), lastName: z.string().min(1).max(100) }))
       .mutation(async ({ ctx, input }) => {
         const fullName = `${input.firstName.trim()} ${input.lastName.trim()}`;
         const dbConn = await db.getDb();
@@ -477,12 +477,12 @@ export const appRouter = router({
 
     updateProfile: protectedProcedure
       .input(z.object({
-        name: z.string().optional(),           // nombre del usuario (actualiza users.name)
-        bio: z.string().optional(),
-        education: z.string().optional(),
-        certifications: z.string().optional(),
+        name: z.string().max(100).optional(),           // nombre del usuario (actualiza users.name)
+        bio: z.string().max(1000).optional(),
+        education: z.string().max(1000).optional(),
+        certifications: z.string().max(1000).optional(),
         yearsOfExperience: z.number().optional(),
-        languages: z.string().optional(),
+        languages: z.string().max(500).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         if (ctx.user.role !== "professional") {
@@ -589,7 +589,7 @@ export const appRouter = router({
     addBlockedDay: protectedProcedure
       .input(z.object({
         blockedDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Formato debe ser YYYY-MM-DD"),
-        reason: z.string().optional(),
+        reason: z.string().max(255).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         if (ctx.user.role !== "professional") {
@@ -716,12 +716,35 @@ export const appRouter = router({
         professionalId: z.number(),
         appointmentId: z.number().optional(),
         rating: z.number().min(1).max(5),
-        comment: z.string().optional(),
+        comment: z.string().max(2000).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         const dbConn = await db.getDb();
         if (!dbConn) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB no disponible" });
         const client = (dbConn as any).$client;
+
+        // Si viene appointmentId, verificar que pertenece al usuario y está en estado válido
+        if (input.appointmentId) {
+          const apt = await db.getAppointmentById(input.appointmentId);
+          if (!apt || apt.userId !== ctx.user.id) {
+            throw new TRPCError({ code: "FORBIDDEN", message: "Cita no válida" });
+          }
+          if (!["completed", "pending_review", "no-show"].includes(apt.status)) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "Solo puedes reseñar citas completadas" });
+          }
+        }
+
+        // Limitar a 1 reseña por profesional por usuario
+        const existingReview = await new Promise<any[]>((resolve) => {
+          client.execute(
+            "SELECT id FROM reviews WHERE userId = ? AND professionalId = ? LIMIT 1",
+            [ctx.user.id, input.professionalId],
+            (err: any, results: any) => resolve(Array.isArray(results) ? results : [])
+          );
+        });
+        if (existingReview.length > 0) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Ya dejaste una reseña para este profesional" });
+        }
 
         // Verificar si ya existe un review del mismo usuario para esta cita o profesional
         const duplicateCheck = await new Promise<any[]>((resolve) => {

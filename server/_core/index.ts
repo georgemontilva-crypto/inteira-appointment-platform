@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express from "express";
+import rateLimit from "express-rate-limit";
 import { createServer } from "http";
 import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
@@ -526,6 +527,12 @@ async function startServer() {
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
+  // Rate limiting
+  const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, message: "Demasiados intentos" });
+  const apiLimiter = rateLimit({ windowMs: 60 * 1000, max: 60 });
+  app.use("/api/auth", authLimiter);
+  app.use("/api/trpc", apiLimiter);
   // Run startup migrations
   await runStartupMigrations();
   // OAuth callback under /api/oauth/callback

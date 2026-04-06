@@ -27,7 +27,7 @@ export const appointmentRouter = router({
       z.object({
         professionalId: z.number(),
         date: z.string(), // ISO date string yyyy-MM-dd
-        durationMinutes: z.number().optional().default(60),
+        durationMinutes: z.number().min(15).max(480).optional().default(55),
         timezoneOffset: z.number().optional().default(-300),
       })
     )
@@ -73,8 +73,8 @@ export const appointmentRouter = router({
       z.object({
         professionalId: z.number(),
         appointmentDate: z.string(), // ISO string from frontend
-        durationMinutes: z.number().optional().default(60),
-        notes: z.string().optional(),
+        durationMinutes: z.number().min(15).max(480).optional().default(55),
+        notes: z.string().max(2000).optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -201,7 +201,7 @@ export const appointmentRouter = router({
     .input(
       z.object({
         appointmentId: z.number(),
-        reason: z.string().optional(),
+        reason: z.string().max(500).optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -354,14 +354,11 @@ export const appointmentRouter = router({
         });
       }
 
-      if (
-        ctx.user.role === "professional" &&
-        appointment.professionalId !== ctx.user.id
-      ) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Not authorized to view this appointment",
-        });
+      if (ctx.user.role === "professional") {
+        const viewingProfessional = await db.getProfessionalByUserId(ctx.user.id);
+        if (!viewingProfessional || appointment.professionalId !== viewingProfessional.id) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized to view this appointment" });
+        }
       }
 
       const professional = await db.getProfessionalById(
@@ -440,7 +437,7 @@ export const appointmentRouter = router({
     .input(z.object({
       appointmentId: z.number(),
       rating: z.number().min(1).max(5),
-      comment: z.string().optional(),
+      comment: z.string().max(2000).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const appointment = await db.getAppointmentById(input.appointmentId);

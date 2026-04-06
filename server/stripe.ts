@@ -133,7 +133,11 @@ export function registerStripeRoutes(app: Express) {
         // req.body es un Buffer gracias a express.raw()
         event = stripe.webhooks.constructEvent(req.body, signature, webhookSecret);
       } else {
-        // Sin webhook secret (desarrollo local sin Stripe CLI), parsear directamente
+        // Sin webhook secret o sin firma
+        if (process.env.NODE_ENV === "production") {
+          return res.status(400).json({ error: "Webhook signature required in production" });
+        }
+        // Solo en desarrollo acepta sin firma
         console.warn("[Stripe] Webhook sin verificación de firma (solo para desarrollo)");
         const rawBody = req.body instanceof Buffer ? req.body.toString("utf8") : JSON.stringify(req.body);
         event = JSON.parse(rawBody) as Stripe.Event;
@@ -166,7 +170,8 @@ export function registerStripeRoutes(app: Express) {
         productType: CreditSource;
       };
 
-      const RECOVERY_TOKEN = "inteira-recovery-2026-jessie";
+      const RECOVERY_TOKEN = process.env.STRIPE_RECOVERY_TOKEN;
+      if (!RECOVERY_TOKEN) throw new Error('STRIPE_RECOVERY_TOKEN not configured');
       if (token !== RECOVERY_TOKEN) {
         return res.status(403).json({ error: "Token inválido" });
       }
