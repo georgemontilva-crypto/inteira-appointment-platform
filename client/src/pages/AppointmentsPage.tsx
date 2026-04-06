@@ -590,7 +590,7 @@ export default function AppointmentsPage() {
             <div className="bg-[#F7FAFC] rounded-2xl border border-[rgba(96,117,98,0.12)] p-4">
               <p className="text-[10px] text-[#93A295] uppercase tracking-widest font-semibold mb-2">Consejo</p>
               <p className="text-[12px] text-[#607562] leading-relaxed">
-                Cancela con al menos <strong>24 horas</strong> de anticipación para recibir el reembolso completo de tus créditos.
+                Cancela con al menos <strong>4 horas</strong> de anticipación para recibir el reembolso completo de tus créditos.
               </p>
             </div>
           </div>}
