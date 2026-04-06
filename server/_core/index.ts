@@ -467,6 +467,11 @@ async function runStartupMigrations() {
     ).catch(() => {});
     console.log("[Migration] creditTransactions reason enum expanded");
 
+    // Sanitize any source values not in the new enum before modifying the column
+    await db.execute(
+      "UPDATE `creditBatches` SET `source` = 'purchase' WHERE `source` NOT IN ('purchase','plan','plan_basic','plan_pro','individual_basic','individual_premium','admin_grant','test_20','bonus','referral')"
+    ).catch(() => {});
+
     // Expand creditBatches source enum to include admin_grant
     await db.execute(
       "ALTER TABLE `creditBatches` MODIFY COLUMN `source` ENUM('purchase','plan','plan_basic','plan_pro','individual_basic','individual_premium','admin_grant','test_20','bonus','referral') NOT NULL DEFAULT 'purchase'"
