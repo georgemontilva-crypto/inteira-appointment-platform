@@ -55,7 +55,7 @@ export default function TermsOfService() {
               <li>Los créditos tienen una equivalencia de 1 peso mexicano (MXN) por 1 crédito.</li>
               <li>Los créditos adquiridos tienen una vigencia de 60 días naturales a partir de la fecha de compra.</li>
               <li>El consumo de créditos se realiza bajo la política FIFO (primero en entrar, primero en salir).</li>
-              <li>Una sesión básica tiene un costo de 350 créditos; una sesión premium de 1,250 créditos.</li>
+              <li>Una sesión básica tiene un costo de 350 créditos; una sesión premium de 1,500 créditos.</li>
               <li>Los créditos no son transferibles ni canjeables por efectivo.</li>
               <li>Al cancelar una suscripción activa, los créditos acumulados expiran de forma inmediata.</li>
               <li>Los créditos correspondientes a citas canceladas con más de 4 horas de anticipación serán reembolsados a la wallet del usuario.</li>

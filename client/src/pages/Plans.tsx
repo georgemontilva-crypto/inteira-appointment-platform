@@ -68,7 +68,7 @@ const INDIVIDUAL = [
   },
   {
     name: "Sesión Premium",
-    price: "$1,250",
+    price: "$1,500",
     description: "1 sesión · 90 min · Experto de alto nivel",
   },
 ];
@@ -76,7 +76,7 @@ const INDIVIDUAL = [
 const FAQ = [
   {
     q: "¿Qué son los créditos?",
-    a: "Los créditos son la moneda interna de Inteira. Cada sesión consume créditos según su tipo: una sesión básica cuesta 350 créditos y una premium cuesta 1,250 créditos.",
+    a: "Los créditos son la moneda interna de Inteira. Cada sesión consume créditos según su tipo: una sesión básica cuesta 350 créditos y una premium cuesta 1,500 créditos.",
   },
   {
     q: "¿Qué pasa si no uso todos mis créditos?",

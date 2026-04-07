@@ -672,7 +672,7 @@ export default function Home() {
                   <h4 className="font-semibold text-sm md:text-base">Sesión Premium</h4>
                   <p className="text-xs text-muted-foreground mt-1">90 min · Experto top</p>
                   <div className="mt-3">
-                    <span className="text-xl md:text-2xl font-bold text-primary" style={{ fontFamily: "Poppins, sans-serif" }}>$1,250</span>
+                    <span className="text-xl md:text-2xl font-bold text-primary" style={{ fontFamily: "Poppins, sans-serif" }}>$1,500</span>
                     <span className="text-xs text-muted-foreground ml-1">MXN</span>
                   </div>
                   <a href={getLoginUrl()}>

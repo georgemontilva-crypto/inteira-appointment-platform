@@ -253,7 +253,7 @@ export default function WalletPage() {
                 size="sm"
               >
                 <span>{buyingSession === "individual_premium" ? "Redirigiendo..." : "Sesión Premium"}</span>
-                <span className="font-bold">$1,250 MXN</span>
+                <span className="font-bold">$1,500 MXN</span>
               </Button>
               <Link href="/planes">
                 <Button className="w-full gradient-brand text-white border-0 text-xs active:scale-95 transition-transform" size="sm">
