@@ -7,7 +7,7 @@
  * - Credits are RESERVED on booking, CONFIRMED on review/no-show, REFUNDED on cancellation.
  * - Credit value: 1 MXN = 1 credit.
  *   · Sesión Básica   = 350 credits
- *   · Sesión Premium  = 1,250 credits
+ *   · Sesión Premium  = 1,500 credits
  *   · Plan Básico     = 980 credits / month
  *   · Plan Pro        = 2,500 credits / month
  */
@@ -18,7 +18,7 @@ import { getDb } from "./db";
 
 export const CREDIT_COSTS = {
   individual_basic: 350,
-  individual_premium: 1250,
+  individual_premium: 1500,
   plan_basic: 980,
   plan_pro: 2500,
 } as const;

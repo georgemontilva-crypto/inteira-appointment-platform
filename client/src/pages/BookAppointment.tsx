@@ -25,15 +25,22 @@ export default function BookAppointment() {
   const { isAuthenticated, loading } = useAuth();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+  const [sessionType, setSessionType] = useState<"basic" | "premium">("basic");
 
   const [notes, setNotes] = useState("");
   const [policyAccepted, setPolicyAccepted] = useState(false);
   const [step, setStep] = useState<"date" | "time" | "confirm" | "done">("date");
   const [confirmedVideoLink, setConfirmedVideoLink] = useState<string | null>(null);
 
+  const SESSION_INFO = {
+    basic:   { label: "Sesión Básica",   duration: "60 min", credits: 350  },
+    premium: { label: "Sesión Premium",  duration: "90 min", credits: 1500 },
+  } as const;
+  const SESSION_DURATION_MINUTES = { basic: 60, premium: 90 } as const;
+
   // Wallet query for credit balance indicator
   const { data: wallet } = trpc.user.getWallet.useQuery(undefined, { enabled: isAuthenticated });
-  const SESSION_COST = 350;
+  const SESSION_COST = SESSION_INFO[sessionType].credits;
   const hasEnoughCredits = (wallet?.balance ?? 0) >= SESSION_COST;
 
   const { data: professional } = trpc.professional.getById.useQuery(
@@ -45,6 +52,7 @@ export default function BookAppointment() {
     {
       professionalId,
       date: selectedDate ? format(selectedDate, "yyyy-MM-dd") : "",
+      sessionType,
       timezoneOffset: new Date().getTimezoneOffset() * -1,
     },
     { enabled: !!selectedDate && professionalId > 0 }
@@ -60,6 +68,12 @@ export default function BookAppointment() {
       toast.error(err.message ?? "Error al agendar la cita");
     },
   });
+
+  const handleSessionTypeChange = (type: "basic" | "premium") => {
+    setSessionType(type);
+    setSelectedSlot(null);
+    if (selectedDate) setStep("time");
+  };
 
   const handleDateSelect = (date: Date | undefined) => {
     setSelectedDate(date);
@@ -82,6 +96,7 @@ export default function BookAppointment() {
     bookMutation.mutate({
       professionalId,
       appointmentDate: appointmentDate.toISOString(),
+      sessionType,
       notes: notes || undefined,
     });
   };
@@ -204,6 +219,38 @@ export default function BookAppointment() {
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Main flow */}
           <div className="lg:col-span-2">
+            {/* Session type selector */}
+            <Card className="border-border mb-6">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Video className="w-5 h-5 text-primary" />
+                  Tipo de sesión
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                  {(["basic", "premium"] as const).map((type) => {
+                    const info = SESSION_INFO[type];
+                    return (
+                      <div
+                        key={type}
+                        onClick={() => handleSessionTypeChange(type)}
+                        style={{
+                          padding: "16px", borderRadius: "12px", cursor: "pointer",
+                          border: sessionType === type ? "2px solid #607562" : "1px solid #e0e8e0",
+                          background: sessionType === type ? "#eef2ee" : "#fff",
+                        }}
+                      >
+                        <p style={{ fontWeight: 600, color: "#333", margin: 0 }}>{info.label}</p>
+                        <p style={{ fontSize: "13px", color: "#666", margin: "4px 0" }}>{info.duration}</p>
+                        <p style={{ fontSize: "15px", fontWeight: 600, color: "#607562", margin: 0 }}>{info.credits} créditos</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Step 1: Date */}
             <Card className="border-border mb-6">
               <CardHeader>
@@ -360,13 +407,22 @@ export default function BookAppointment() {
                     </div>
                   </div>
 
-                  {selectedDate && (
-                    <div className="bg-primary/5 rounded-xl p-4 space-y-2">
+                  <div className="bg-primary/5 rounded-xl p-4 space-y-2">
                       <p className="text-xs font-semibold text-primary uppercase tracking-wide">Resumen de cita</p>
                       <div className="flex items-center gap-2 text-sm">
-                        <CalendarIcon className="w-4 h-4 text-primary" />
-                        <span>{format(selectedDate, "d 'de' MMMM yyyy", { locale: es })}</span>
+                        <CheckCircle2 className="w-4 h-4 text-primary" />
+                        <span>{SESSION_INFO[sessionType].label}</span>
                       </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <Clock className="w-4 h-4 text-primary" />
+                        <span>{SESSION_INFO[sessionType].duration} · {SESSION_INFO[sessionType].credits} créditos</span>
+                      </div>
+                      {selectedDate && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <CalendarIcon className="w-4 h-4 text-primary" />
+                          <span>{format(selectedDate, "d 'de' MMMM yyyy", { locale: es })}</span>
+                        </div>
+                      )}
                       {selectedSlot && (
                         <div className="flex items-center gap-2 text-sm">
                           <Clock className="w-4 h-4 text-primary" />
@@ -378,7 +434,6 @@ export default function BookAppointment() {
                         <span>Videollamada integrada</span>
                       </div>
                     </div>
-                  )}
 
                   {/* Wallet / credit balance indicator */}
                   {isAuthenticated && (

@@ -17,8 +17,11 @@ import { reserveCredits, confirmCredits, refundCredits, getUserCreditBalance } f
 import { createNotification } from "./notifications";
 import { chargeProfessionalPenalty } from "./professionalWallet";
 
-// Credit cost per session type (MXN = credits 1:1)
-const SESSION_CREDIT_COST = 350; // Sesión básica
+const SESSION_TYPES = {
+  basic:   { credits: 350,  durationMinutes: 60, label: "Sesión Básica" },
+  premium: { credits: 1500, durationMinutes: 90, label: "Sesión Premium" },
+} as const;
+type SessionType = keyof typeof SESSION_TYPES;
 
 export const appointmentRouter = router({
   // Get available slots for a professional on a specific date
@@ -27,12 +30,13 @@ export const appointmentRouter = router({
       z.object({
         professionalId: z.number(),
         date: z.string(), // ISO date string yyyy-MM-dd
-        durationMinutes: z.number().min(15).max(480).optional().default(55),
+        sessionType: z.enum(["basic", "premium"]).optional().default("basic"),
         timezoneOffset: z.number().optional().default(-300),
       })
     )
     .query(async ({ input }) => {
-      console.log("[SLOTS] Request received - professionalId:", input.professionalId, "date:", input.date);
+      const durationMinutes = SESSION_TYPES[input.sessionType].durationMinutes;
+      console.log("[SLOTS] Request received - professionalId:", input.professionalId, "date:", input.date, "sessionType:", input.sessionType);
 
       const professional = await db.getProfessionalById(input.professionalId);
       if (!professional) {
@@ -59,7 +63,7 @@ export const appointmentRouter = router({
       const slots = getAvailableSlots(
         dateObj,
         availability,
-        input.durationMinutes,
+        durationMinutes,
         bookedTimes,
         input.timezoneOffset ?? 0
       );
@@ -73,11 +77,14 @@ export const appointmentRouter = router({
       z.object({
         professionalId: z.number(),
         appointmentDate: z.string(), // ISO string from frontend
-        durationMinutes: z.number().min(15).max(480).optional().default(55),
+        sessionType: z.enum(["basic", "premium"]).optional().default("basic"),
         notes: z.string().max(2000).optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
+      const sessionConfig = SESSION_TYPES[input.sessionType];
+      const durationMinutes = sessionConfig.durationMinutes;
+      const creditCost = sessionConfig.credits;
       const appointmentDateObj = new Date(input.appointmentDate);
 
       // Validate appointment can be scheduled
@@ -104,7 +111,7 @@ export const appointmentRouter = router({
       if (
         !isTimeWithinAvailability(
           appointmentDateObj,
-          input.durationMinutes,
+          durationMinutes,
           availability
         )
       ) {
@@ -116,17 +123,17 @@ export const appointmentRouter = router({
 
       // ── Check credit balance (modelo basado en créditos, no suscripción obligatoria) ──
       const creditBalance = await getUserCreditBalance(ctx.user.id);
-      if (creditBalance < SESSION_CREDIT_COST) {
+      if (creditBalance < creditCost) {
         throw new TRPCError({
           code: "PAYMENT_REQUIRED",
-          message: `Saldo insuficiente. Necesitas ${SESSION_CREDIT_COST} créditos para agendar una sesión básica. Saldo actual: ${creditBalance} créditos. Recarga tu wallet en /wallet.`,
+          message: `Saldo insuficiente. Necesitas ${creditCost} créditos para agendar una ${sessionConfig.label}. Saldo actual: ${creditBalance} créditos. Recarga tu wallet en /wallet.`,
         });
       }
 
       // Create video call link
       const appointmentEndDate = calculateEndTime(
         appointmentDateObj,
-        input.durationMinutes
+        durationMinutes
       );
 
       const professionalUser = await db.getUserById(professional.userId);
@@ -139,7 +146,7 @@ export const appointmentRouter = router({
         professionalId: input.professionalId,
         specialtyId: professional.specialtyId,
         appointmentDate: appointmentDateObj,
-        durationMinutes: input.durationMinutes,
+        durationMinutes,
         videoCallType: "daily",
         videoCallLink: undefined,
         videoCallId: undefined,
@@ -170,9 +177,9 @@ export const appointmentRouter = router({
       // ── Reserve credits (FIFO) — confirmed on review/no-show ────────────
       await reserveCredits(
         ctx.user.id,
-        SESSION_CREDIT_COST,
+        creditCost,
         newAppointmentId,
-        `Sesión básica con ${professionalUser?.name ?? "especialista"}`
+        `${sessionConfig.label} con ${professionalUser?.name ?? "especialista"}`
       );
 
       // Send confirmation email
@@ -183,7 +190,7 @@ export const appointmentRouter = router({
           professionalName: professionalUser?.name ?? "Especialista",
           specialty: specialty?.name ?? "Especialidad",
           appointmentDate: appointmentDateObj,
-          durationMinutes: input.durationMinutes,
+          durationMinutes,
           videoCallType: "daily",
           videoCallLink: videoCall.url,
         });
@@ -192,7 +199,7 @@ export const appointmentRouter = router({
       return {
         success: true,
         videoCallLink: videoCall.url,
-        creditsUsed: SESSION_CREDIT_COST,
+        creditsUsed: creditCost,
       };
     }),
 

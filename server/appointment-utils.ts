@@ -61,7 +61,7 @@ export function getAvailableSlots(
 
       // Check if slot is available (not booked and respects anticipation minimum)
       const isAvailable =
-        !isSlotBooked(currentTime, slotEnd, bookedAppointments) &&
+        !isSlotBooked(currentTime, slotEnd, bookedAppointments, durationMinutes + 30) &&
         canScheduleAppointment(currentTime, clientOffsetMinutes);
 
       if (isAvailable) {
@@ -72,7 +72,7 @@ export function getAvailableSlots(
         });
       }
 
-      currentTime = new Date(currentTime.getTime() + 85 * 60 * 1000); // 55 min cita + 30 min buffer
+      currentTime = new Date(currentTime.getTime() + (durationMinutes + 30) * 60 * 1000); // session + 30 min buffer
     }
   }
 
@@ -85,10 +85,11 @@ export function getAvailableSlots(
 function isSlotBooked(
   startTime: Date,
   endTime: Date,
-  bookedAppointments: Date[]
+  bookedAppointments: Date[],
+  bufferMinutes: number = 90
 ): boolean {
   return bookedAppointments.some((appointmentTime) => {
-    const appointmentEnd = new Date(appointmentTime.getTime() + 85 * 60 * 1000); // 55 min cita + 30 min buffer
+    const appointmentEnd = new Date(appointmentTime.getTime() + bufferMinutes * 60 * 1000);
     return (
       (startTime >= appointmentTime && startTime < appointmentEnd) ||
       (endTime > appointmentTime && endTime <= appointmentEnd) ||
