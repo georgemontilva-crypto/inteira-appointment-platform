@@ -38,9 +38,9 @@ const PRODUCT_PRICES: Record<CreditSource, { amount: number; name: string; descr
     description: "350 créditos · Válidos por 60 días",
   },
   individual_premium: {
-    amount: 125000,      // $1,250 MXN en centavos
+    amount: 150000,      // $1,500 MXN en centavos
     name: "Sesión Premium",
-    description: "1,250 créditos · Válidos por 60 días",
+    description: "1,500 créditos · Válidos por 60 días",
   },
   plan_basic: {
     amount: 98000,       // $980 MXN en centavos

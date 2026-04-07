@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
+import { PRICING } from "@/lib/pricing";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -161,7 +162,7 @@ export default function ProfessionalProfile() {
                 )}
                 <div className="flex items-center gap-1">
                   <Clock className="w-4 h-4" />
-                  <span>$350 MXN / sesión</span>
+                  <span>${PRICING.SESSION_BASIC_MXN} MXN / sesión</span>
                 </div>
               </div>
             </div>
@@ -428,7 +429,7 @@ export default function ProfessionalProfile() {
                   )}
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Tarifa</span>
-                    <span className="font-medium text-primary">$350 MXN / sesión</span>
+                    <span className="font-medium text-primary">${PRICING.SESSION_BASIC_MXN} MXN / sesión</span>
                   </div>
 
                   <div className="flex items-center justify-between text-sm">

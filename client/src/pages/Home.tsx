@@ -1,4 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import { PRICING, PRICING_DISPLAY } from "@/lib/pricing";
 import UserDashboard from "./UserDashboard";
 import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
@@ -590,7 +591,7 @@ export default function Home() {
                     <div>
                       <h3 className="text-base md:text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>Plan Básico</h3>
                       <div className="flex items-baseline gap-1 mt-1">
-                        <span className="text-2xl md:text-4xl font-bold text-primary" style={{ fontFamily: "Poppins, sans-serif" }}>$980</span>
+                        <span className="text-2xl md:text-4xl font-bold text-primary" style={{ fontFamily: "Poppins, sans-serif" }}>${PRICING.PLAN_BASIC_MXN}</span>
                         <span className="text-muted-foreground text-xs md:text-sm">MXN/mes</span>
                       </div>
                     </div>
@@ -622,7 +623,7 @@ export default function Home() {
                     <div>
                       <h3 className="text-base md:text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>Plan Pro</h3>
                       <div className="flex items-baseline gap-1 mt-1">
-                        <span className="text-2xl md:text-4xl font-bold text-primary" style={{ fontFamily: "Poppins, sans-serif" }}>$2,500</span>
+                        <span className="text-2xl md:text-4xl font-bold text-primary" style={{ fontFamily: "Poppins, sans-serif" }}>{PRICING_DISPLAY.PLAN_PRO}</span>
                         <span className="text-muted-foreground text-xs md:text-sm">MXN/mes</span>
                       </div>
                     </div>
@@ -657,7 +658,7 @@ export default function Home() {
                   <h4 className="font-semibold text-sm md:text-base">Sesión Básica</h4>
                   <p className="text-xs text-muted-foreground mt-1">60 min · Zoom o Meet</p>
                   <div className="mt-3">
-                    <span className="text-xl md:text-2xl font-bold text-primary" style={{ fontFamily: "Poppins, sans-serif" }}>$350</span>
+                    <span className="text-xl md:text-2xl font-bold text-primary" style={{ fontFamily: "Poppins, sans-serif" }}>${PRICING.SESSION_BASIC_MXN}</span>
                     <span className="text-xs text-muted-foreground ml-1">MXN</span>
                   </div>
                   <a href={getLoginUrl()}>
@@ -672,7 +673,7 @@ export default function Home() {
                   <h4 className="font-semibold text-sm md:text-base">Sesión Premium</h4>
                   <p className="text-xs text-muted-foreground mt-1">90 min · Experto top</p>
                   <div className="mt-3">
-                    <span className="text-xl md:text-2xl font-bold text-primary" style={{ fontFamily: "Poppins, sans-serif" }}>$1,500</span>
+                    <span className="text-xl md:text-2xl font-bold text-primary" style={{ fontFamily: "Poppins, sans-serif" }}>{PRICING_DISPLAY.SESSION_PREMIUM}</span>
                     <span className="text-xs text-muted-foreground ml-1">MXN</span>
                   </div>
                   <a href={getLoginUrl()}>

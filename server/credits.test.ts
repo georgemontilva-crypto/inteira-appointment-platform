@@ -17,7 +17,7 @@ import { CREDIT_COSTS } from "./credits";
 describe("CREDIT_COSTS", () => {
   it("should have correct MXN values for each session type", () => {
     expect(CREDIT_COSTS.individual_basic).toBe(350);
-    expect(CREDIT_COSTS.individual_premium).toBe(1250);
+    expect(CREDIT_COSTS.individual_premium).toBe(1500);
     expect(CREDIT_COSTS.plan_basic).toBe(980);
     expect(CREDIT_COSTS.plan_pro).toBe(2500);
   });
@@ -171,8 +171,8 @@ describe("Inteira business scenarios", () => {
   });
 
   it("should calculate correct credit value for session types", () => {
-    // A premium session costs 1,250 credits = $1,250 MXN
-    expect(CREDIT_COSTS.individual_premium).toBe(1250);
+    // A premium session costs 1,500 credits = $1,500 MXN
+    expect(CREDIT_COSTS.individual_premium).toBe(1500);
 
     // Plan Pro gives 2,500 credits = $2,500 MXN
     expect(CREDIT_COSTS.plan_pro).toBe(2500);

@@ -1,4 +1,5 @@
 import { trpc } from "@/lib/trpc";
+import { PRICING, PRICING_DISPLAY } from "@/lib/pricing";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -243,7 +244,7 @@ export default function WalletPage() {
                 size="sm"
               >
                 <span>{buyingSession === "individual_basic" ? "Redirigiendo..." : "Sesión Básica"}</span>
-                <span className="font-bold">$350 MXN</span>
+                <span className="font-bold">${PRICING.SESSION_BASIC_MXN} MXN</span>
               </Button>
               <Button
                 onClick={() => handleBuySession("individual_premium")}
@@ -253,7 +254,7 @@ export default function WalletPage() {
                 size="sm"
               >
                 <span>{buyingSession === "individual_premium" ? "Redirigiendo..." : "Sesión Premium"}</span>
-                <span className="font-bold">$1,500 MXN</span>
+                <span className="font-bold">{PRICING_DISPLAY.SESSION_PREMIUM} MXN</span>
               </Button>
               <Link href="/planes">
                 <Button className="w-full gradient-brand text-white border-0 text-xs active:scale-95 transition-transform" size="sm">

@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
+import { PRICING } from "@/lib/pricing";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -264,7 +265,7 @@ export default function ProfessionalsList() {
                     )}
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Clock className="w-4 h-4 text-primary" />
-                      <span>$350 MXN / sesión</span>
+                      <span>${PRICING.SESSION_BASIC_MXN} MXN / sesión</span>
                     </div>
                   </div>
 

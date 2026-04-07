@@ -1,5 +1,6 @@
 import DashboardLayout from "../components/DashboardLayout";
 import { getLoginUrl } from "@/const";
+import { PRICING_DISPLAY } from "@/lib/pricing";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
@@ -30,7 +31,7 @@ const PLANS = [
   {
     id: "basico",
     name: "Plan Básico",
-    price: "$980",
+    price: PRICING_DISPLAY.PLAN_BASIC,
     period: "MXN/mes",
     savings: "Ahorra 30% vs compra individual",
     popular: false,
@@ -45,7 +46,7 @@ const PLANS = [
   {
     id: "pro",
     name: "Plan Pro",
-    price: "$2,500",
+    price: PRICING_DISPLAY.PLAN_PRO,
     period: "MXN/mes",
     savings: "Ahorra 52% vs compra individual",
     popular: true,
@@ -63,12 +64,12 @@ const PLANS = [
 const INDIVIDUAL = [
   {
     name: "Sesión Básica",
-    price: "$350",
+    price: PRICING_DISPLAY.SESSION_BASIC,
     description: "1 sesión · 60 min · Zoom o Meet",
   },
   {
     name: "Sesión Premium",
-    price: "$1,500",
+    price: PRICING_DISPLAY.SESSION_PREMIUM,
     description: "1 sesión · 90 min · Experto de alto nivel",
   },
 ];

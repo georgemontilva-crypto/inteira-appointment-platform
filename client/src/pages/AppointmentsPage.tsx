@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
+import { sessionCostByDuration } from "@/lib/pricing";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { toast } from "sonner";
 import { format, isToday, isTomorrow, differenceInHours } from "date-fns";
@@ -374,7 +375,7 @@ export default function AppointmentsPage() {
                 {apt.durationMinutes ? ` · ${apt.durationMinutes} min` : ""}
               </p>
               <p className="text-xs text-[#93A295] mt-0.5">
-                350 créditos · Videollamada integrada
+                {sessionCostByDuration(apt.durationMinutes)} créditos · Videollamada integrada
               </p>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
@@ -609,6 +610,7 @@ export default function AppointmentsPage() {
         if (!apt) return null;
         const hoursUntil = (new Date(apt.appointmentDate).getTime() - Date.now()) / 3_600_000;
         const isFree = hoursUntil >= 4;
+        const sessionCost = sessionCostByDuration(apt.durationMinutes);
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
@@ -616,7 +618,7 @@ export default function AppointmentsPage() {
               <p className="text-sm text-[#666] leading-relaxed">
                 {isFree
                   ? "Podrás cancelar sin costo. Tus créditos serán devueltos."
-                  : "Perderás los 350 créditos de esta sesión. No se realizará ningún cargo adicional a tu tarjeta."}
+                  : `Perderás los ${sessionCost} créditos de esta sesión. No se realizará ningún cargo adicional a tu tarjeta.`}
               </p>
               {!isFree && (
                 <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">

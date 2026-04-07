@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
+import { PRICING } from "@/lib/pricing";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,8 +34,8 @@ export default function BookAppointment() {
   const [confirmedVideoLink, setConfirmedVideoLink] = useState<string | null>(null);
 
   const SESSION_INFO = {
-    basic:   { label: "Sesión Básica",   duration: "60 min", credits: 350  },
-    premium: { label: "Sesión Premium",  duration: "90 min", credits: 1500 },
+    basic:   { label: "Sesión Básica",   duration: "60 min", credits: PRICING.SESSION_BASIC_MXN  },
+    premium: { label: "Sesión Premium",  duration: "90 min", credits: PRICING.SESSION_PREMIUM_MXN },
   } as const;
   const SESSION_DURATION_MINUTES = { basic: 60, premium: 90 } as const;
 
