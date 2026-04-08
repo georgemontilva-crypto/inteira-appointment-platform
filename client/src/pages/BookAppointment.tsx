@@ -219,7 +219,7 @@ export default function BookAppointment() {
 
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Main flow */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 order-2 lg:order-1">
             {/* Session type selector */}
             <Card className="border-border mb-6">
               <CardHeader>
@@ -252,73 +252,75 @@ export default function BookAppointment() {
               </CardContent>
             </Card>
 
-            {/* Step 1: Date */}
+            {/* Date + Time side by side */}
             <Card className="border-border mb-6">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <CalendarIcon className="w-5 h-5 text-primary" />
-                  Selecciona una fecha
+                  Selecciona fecha y hora
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex justify-center">
-                  <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={handleDateSelect}
-                    disabled={disabledDays}
-                    locale={es}
-                    className="rounded-xl border border-border"
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-6 items-start">
+                  {/* Calendar */}
+                  <div>
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={handleDateSelect}
+                      disabled={disabledDays}
+                      locale={es}
+                      className="rounded-xl border border-border"
+                    />
+                    <p className="text-xs text-muted-foreground text-center mt-3">
+                      Las citas deben agendarse con al menos 30 minutos de anticipación
+                    </p>
+                  </div>
+
+                  {/* Slots */}
+                  <div>
+                    {!selectedDate ? (
+                      <p className="text-sm text-muted-foreground pt-4">
+                        Selecciona una fecha para ver los horarios disponibles
+                      </p>
+                    ) : loadingSlots ? (
+                      <div className="grid grid-cols-2 gap-2">
+                        {[1, 2, 3, 4, 5, 6].map((i) => (
+                          <div key={i} className="h-10 bg-muted animate-pulse rounded-lg" />
+                        ))}
+                      </div>
+                    ) : !availableSlots || availableSlots.length === 0 ? (
+                      <div className="text-center py-8">
+                        <Clock className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
+                        <p className="text-muted-foreground">No hay horarios disponibles para esta fecha</p>
+                        <p className="text-sm text-muted-foreground mt-1">Selecciona otro día</p>
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-sm font-medium text-muted-foreground mb-3">
+                          Horarios para el {format(selectedDate, "d 'de' MMMM", { locale: es })}
+                        </p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {availableSlots.map((slot) => (
+                            <button
+                              key={slot}
+                              onClick={() => handleSlotSelect(slot)}
+                              className={`py-2 px-3 rounded-lg text-sm font-medium transition-all border ${
+                                selectedSlot === slot
+                                  ? "gradient-brand text-white border-transparent shadow-md"
+                                  : "border-border hover:border-primary/50 hover:bg-primary/5 hover:text-primary"
+                              }`}
+                            >
+                              {slot}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
-                <p className="text-xs text-muted-foreground text-center mt-3">
-                  Las citas deben agendarse con al menos 30 minutos de anticipación
-                </p>
               </CardContent>
             </Card>
-
-            {/* Step 2: Time slots */}
-            {selectedDate && (
-              <Card className="border-border mb-6">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <Clock className="w-5 h-5 text-primary" />
-                    Horarios disponibles para el {format(selectedDate, "d 'de' MMMM", { locale: es })}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {loadingSlots ? (
-                    <div className="grid grid-cols-4 gap-2">
-                      {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                        <div key={i} className="h-10 bg-muted animate-pulse rounded-lg" />
-                      ))}
-                    </div>
-                  ) : !availableSlots || availableSlots.length === 0 ? (
-                    <div className="text-center py-8">
-                      <Clock className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
-                      <p className="text-muted-foreground">No hay horarios disponibles para esta fecha</p>
-                      <p className="text-sm text-muted-foreground mt-1">Selecciona otro día</p>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                      {availableSlots.map((slot) => (
-                        <button
-                          key={slot}
-                          onClick={() => handleSlotSelect(slot)}
-                          className={`py-2 px-3 rounded-lg text-sm font-medium transition-all border ${
-                            selectedSlot === slot
-                              ? "gradient-brand text-white border-transparent shadow-md"
-                              : "border-border hover:border-primary/50 hover:bg-primary/5 hover:text-primary"
-                          }`}
-                        >
-                          {slot}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
 
             {/* Step 3: Confirm */}
             {selectedDate && selectedSlot && (
@@ -390,9 +392,9 @@ export default function BookAppointment() {
           </div>
 
           {/* Sidebar: Professional summary */}
-          <div>
+          <div className="order-1 lg:order-2">
             {professional && (
-              <Card className="border-border sticky top-6">
+              <Card className="border-border lg:sticky lg:top-6">
                 <CardContent className="p-6 space-y-4">
                   <div className="flex items-center gap-3">
                     <div className="w-14 h-14 rounded-2xl gradient-brand flex items-center justify-center text-white text-xl font-bold flex-shrink-0">
