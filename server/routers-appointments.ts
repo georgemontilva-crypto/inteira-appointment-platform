@@ -233,6 +233,9 @@ export const appointmentRouter = router({
         });
       }
 
+      console.log('[cancelAppointment] ctx.user.id:', ctx.user.id, 'ctx.user.role:', ctx.user.role);
+      console.log('[cancelAppointment] appointment.userId:', appointment.userId, 'appointment.professionalId:', appointment.professionalId);
+
       // Check authorization (user)
       if (
         ctx.user.role === "user" &&
