@@ -362,22 +362,22 @@ export async function sendProfessionalAppointmentConfirmation(params: {
 
   const content = `
     <p>Hola <strong>${params.professionalName}</strong>,</p>
-    <p>Tienes una nueva cita agendada. Aquí están los detalles:</p>
+    <p>Tienes una <strong>nueva cita reservada</strong>. Un cliente ha agendado una sesión contigo.</p>
     <div class="info-box">
-      <p><strong>Paciente:</strong> ${params.patientName}</p>
+      <p><strong>Cliente:</strong> ${params.patientName}</p>
       <p><strong>Fecha:</strong> ${dateStr}</p>
-      <p><strong>Hora:</strong> ${timeStr}</p>
+      <p><strong>Hora:</strong> ${timeStr} hrs</p>
       <p><strong>Duración:</strong> ${params.durationMinutes} minutos</p>
     </div>
-    <p>Únete a la videollamada desde tu panel o usando el siguiente enlace:</p>
-    <a href="${params.videoCallLink}" class="btn">Unirse a la videollamada</a>
+    <p>Recuerda estar disponible 5 minutos antes del inicio de la sesión.</p>
+    <a href="https://inteira.mx/panel-profesional" class="btn">Ver mi panel</a>
     <div class="divider"></div>
-    <p style="font-size:13px; color:#6b7280;">Recuerda estar disponible 5 minutos antes. Si necesitas cancelar, hazlo con suficiente anticipación para evitar penalizaciones.</p>
+    <p style="font-size:13px; color:#6b7280;">Si necesitas cancelar, hazlo con al menos 12 horas de anticipación para evitar penalizaciones.</p>
   `;
 
   return sendEmail({
     to: params.professionalEmail,
-    subject: `📅 Nueva cita con ${params.patientName} — ${dateStr}`,
+    subject: `📅 Nueva cita reservada — ${params.patientName} · ${dateStr} ${timeStr}`,
     html: baseTemplate(content),
   });
 }
