@@ -233,13 +233,10 @@ export const appointmentRouter = router({
         });
       }
 
-      console.log('[cancelAppointment] ctx.user.id:', ctx.user.id, 'ctx.user.role:', ctx.user.role);
-      console.log('[cancelAppointment] appointment.userId:', appointment.userId, 'appointment.professionalId:', appointment.professionalId);
-
       // Check authorization (user)
       if (
         ctx.user.role === "user" &&
-        appointment.userId !== ctx.user.id
+        Number(appointment.userId) !== Number(ctx.user.id)
       ) {
         throw new TRPCError({
           code: "FORBIDDEN",
@@ -252,9 +249,6 @@ export const appointmentRouter = router({
       const appointmentTime = new Date(appointment.appointmentDate);
       const hoursUntil = (appointmentTime.getTime() - now.getTime()) / (1000 * 60 * 60);
       const canceledByRole = ctx.user.role === "user" ? "user" : "professional";
-
-      console.log('[cancelAppointment] canceledByRole:', canceledByRole);
-      console.log('[cancelAppointment] input:', JSON.stringify(input));
 
       // Verificar que el profesional es dueño de esta cita (fix bug: professionalId ≠ userId)
       let userProfessional: Awaited<ReturnType<typeof db.getProfessionalByUserId>> = null;
@@ -372,7 +366,7 @@ export const appointmentRouter = router({
       // Check authorization
       if (
         ctx.user.role === "user" &&
-        appointment.userId !== ctx.user.id
+        Number(appointment.userId) !== Number(ctx.user.id)
       ) {
         throw new TRPCError({
           code: "FORBIDDEN",
@@ -470,7 +464,7 @@ export const appointmentRouter = router({
       if (!appointment) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Cita no encontrada" });
       }
-      if (appointment.userId !== ctx.user.id) {
+      if (Number(appointment.userId) !== Number(ctx.user.id)) {
         throw new TRPCError({ code: "FORBIDDEN", message: "No autorizado" });
       }
       if (appointment.status !== "pending_review") {
@@ -567,7 +561,7 @@ export const appointmentRouter = router({
     .input(z.object({ appointmentId: z.number() }))
     .mutation(async ({ ctx, input }) => {
       const appointment = await db.getAppointmentById(input.appointmentId);
-      if (!appointment || appointment.userId !== ctx.user.id) {
+      if (!appointment || Number(appointment.userId) !== Number(ctx.user.id)) {
         throw new TRPCError({ code: "FORBIDDEN" });
       }
       // Idempotent: only act on scheduled appointments
@@ -597,7 +591,7 @@ export const appointmentRouter = router({
     .mutation(async ({ ctx, input }) => {
       const appointment = await db.getAppointmentById(input.appointmentId);
       if (!appointment) throw new TRPCError({ code: "NOT_FOUND", message: "Cita no encontrada" });
-      if (appointment.userId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "No autorizado" });
+      if (Number(appointment.userId) !== Number(ctx.user.id)) throw new TRPCError({ code: "FORBIDDEN", message: "No autorizado" });
 
       const dbInstance = await db.getDb();
       if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
