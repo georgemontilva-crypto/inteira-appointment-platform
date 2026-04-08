@@ -220,13 +220,15 @@ export async function sendProfessionalApproval(params: {
   });
 }
 
-// 4. Appointment cancellation
+// 4. Appointment cancellation (to user)
 export async function sendAppointmentCancellation(params: {
   userEmail: string;
   userName: string;
   professionalName: string;
   appointmentDate: Date;
   canceledBy: string;
+  hasRefund: boolean;
+  credits: number;
 }): Promise<boolean> {
   const dateStr = params.appointmentDate.toLocaleDateString("es-MX", {
     weekday: "long",
@@ -238,6 +240,10 @@ export async function sendAppointmentCancellation(params: {
     minute: "2-digit",
   });
 
+  const creditsLine = params.hasRefund
+    ? `<p style="color:#16a34a;">✅ Tus <strong>${params.credits} créditos</strong> retenidos serán restituidos a tu wallet.</p>`
+    : `<p style="color:#dc2626;">❌ Los <strong>${params.credits} créditos</strong> no serán reembolsados (cancelación con menos de 4 horas de anticipación).</p>`;
+
   const content = `
     <p>Hola <strong>${params.userName}</strong>,</p>
     <p>Tu cita ha sido <strong style="color:#EF4444;">cancelada</strong>.</p>
@@ -246,13 +252,54 @@ export async function sendAppointmentCancellation(params: {
       <p><strong>Fecha:</strong> ${dateStr} a las ${timeStr}</p>
       <p><strong>Cancelada por:</strong> ${params.canceledBy}</p>
     </div>
-    <p>Puedes agendar una nueva cita cuando lo desees desde tu panel de usuario.</p>
+    ${creditsLine}
+    <p>Puedes agendar una nueva cita cuando lo desees.</p>
     <a href="https://inteira.mx" class="btn">Agendar nueva cita</a>
   `;
 
   return sendEmail({
     to: params.userEmail,
     subject: `❌ Cita cancelada con ${params.professionalName}`,
+    html: baseTemplate(content),
+  });
+}
+
+// 4b. Appointment cancellation (to professional)
+export async function sendAppointmentCancelledToProfessional(params: {
+  professionalEmail: string;
+  professionalName: string;
+  patientName: string;
+  appointmentDate: Date;
+  canceledBy: "user" | "professional" | "admin";
+}): Promise<boolean> {
+  const dateStr = params.appointmentDate.toLocaleDateString("es-MX", {
+    weekday: "long", year: "numeric", month: "long", day: "numeric",
+  });
+  const timeStr = params.appointmentDate.toLocaleTimeString("es-MX", {
+    hour: "2-digit", minute: "2-digit",
+  });
+
+  const canceledByLabel = params.canceledBy === "user"
+    ? "el cliente"
+    : params.canceledBy === "professional"
+    ? "tú (profesional)"
+    : "el administrador";
+
+  const content = `
+    <p>Hola <strong>${params.professionalName}</strong>,</p>
+    <p>Una cita ha sido <strong style="color:#EF4444;">cancelada</strong> por ${canceledByLabel}.</p>
+    <div class="info-box">
+      <p><strong>Cliente:</strong> ${params.patientName}</p>
+      <p><strong>Fecha:</strong> ${dateStr}</p>
+      <p><strong>Hora:</strong> ${timeStr} hrs</p>
+    </div>
+    <p>El horario quedó disponible nuevamente para nuevas reservas.</p>
+    <a href="https://inteira.mx" class="btn">Ver mi panel</a>
+  `;
+
+  return sendEmail({
+    to: params.professionalEmail,
+    subject: `❌ Cita cancelada — ${params.patientName} · ${dateStr}`,
     html: baseTemplate(content),
   });
 }

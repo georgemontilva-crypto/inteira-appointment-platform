@@ -12,6 +12,7 @@ import { generateVideoCallLink } from "./videocall";
 import {
   sendAppointmentConfirmation,
   sendAppointmentCancellation,
+  sendAppointmentCancelledToProfessional,
   sendProfessionalAppointmentConfirmation,
 } from "./email";
 import { reserveCredits, confirmCredits, refundCredits, getUserCreditBalance } from "./credits";
@@ -331,21 +332,36 @@ export const appointmentRouter = router({
         });
       }
 
-      // Send cancellation email
+      // Send cancellation emails
       const canceledUser = await db.getUserById(appointment.userId);
       const canceledProfessional = await db.getProfessionalById(appointment.professionalId);
       const canceledProfUser = canceledProfessional
         ? await db.getUserById(canceledProfessional.userId)
         : null;
 
+      const hasRefund = canceledByRole === "professional" || hoursUntil >= 4;
+      const sessionCost = ((appointment as any).durationMinutes ?? 60) > 60 ? 1500 : 350;
+
       if (canceledUser?.email) {
-        await sendAppointmentCancellation({
+        sendAppointmentCancellation({
           userEmail: canceledUser.email,
           userName: canceledUser.name ?? "Usuario",
           professionalName: canceledProfUser?.name ?? "Especialista",
-          appointmentDate: appointment.appointmentDate,
-          canceledBy: ctx.user.role === "user" ? "el usuario" : "el profesional",
-        }).catch(() => { /* non-critical */ });
+          appointmentDate: new Date(appointment.appointmentDate),
+          canceledBy: canceledByRole === "user" ? "el usuario" : "el profesional",
+          hasRefund,
+          credits: sessionCost,
+        }).catch(() => {});
+      }
+
+      if (canceledProfUser?.email) {
+        sendAppointmentCancelledToProfessional({
+          professionalEmail: canceledProfUser.email,
+          professionalName: canceledProfUser.name ?? "Especialista",
+          patientName: canceledUser?.name ?? "Usuario",
+          appointmentDate: new Date(appointment.appointmentDate),
+          canceledBy: canceledByRole as "user" | "professional" | "admin",
+        }).catch(() => {});
       }
 
       return { success: true };
