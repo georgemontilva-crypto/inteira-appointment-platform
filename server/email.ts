@@ -3,6 +3,17 @@
  * Uses Resend API (or fallback to console logging in dev)
  */
 
+import { readFileSync } from "fs";
+import { join } from "path";
+
+let LOGO_BASE64 = "";
+try {
+  const logoBuffer = readFileSync(join(process.cwd(), "dist", "public", "logo-horizontal.png"));
+  LOGO_BASE64 = `data:image/png;base64,${logoBuffer.toString("base64")}`;
+} catch {
+  LOGO_BASE64 = "";
+}
+
 export interface EmailData {
   to: string;
   subject: string;
@@ -58,12 +69,11 @@ function baseTemplate(content: string): string {
       <style>
         body { font-family: 'Inter', Arial, sans-serif; background: #f5f7f5; margin: 0; padding: 0; }
         .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(96,117,98,0.12); }
-        .header { background: #607562; padding: 32px 40px; text-align: center; }
-        .header img { height: 40px; }
-        .header h1 { color: white; margin: 12px 0 0; font-size: 22px; font-weight: 600; }
+        .header { background: #607562; padding: 24px 40px; text-align: center; }
+        .header img { height: 38px; width: auto; object-fit: contain; }
         .body { padding: 40px; }
         .body p { color: #374151; line-height: 1.7; margin: 0 0 16px; }
-        .btn { display: inline-block; background: #607562; color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 15px; margin: 20px 0; }
+        .btn { display: inline-block; background: #607562; color: white; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 13px; margin: 20px 0; }
         .info-box { background: #f5f7f5; border-left: 4px solid #607562; padding: 16px 20px; border-radius: 0 8px 8px 0; margin: 20px 0; }
         .info-box p { margin: 4px 0; font-size: 14px; }
         .info-box strong { color: #607562; }
@@ -77,7 +87,10 @@ function baseTemplate(content: string): string {
       <div style="padding: 24px;">
         <div class="container">
           <div class="header">
-            <h1>inteira</h1>
+            ${LOGO_BASE64
+              ? `<img src="${LOGO_BASE64}" alt="Inteira" style="height:38px; width:auto; object-fit:contain;">`
+              : `<span style="color:white; font-size:24px; font-weight:600;">Inteira</span>`
+            }
           </div>
           <div class="body">
             ${content}
@@ -198,7 +211,7 @@ export async function sendProfessionalApproval(params: {
         <p><strong>Estado:</strong> Activo y visible para los usuarios</p>
       </div>
       <p>Ya puedes configurar tu disponibilidad horaria y comenzar a recibir citas. Inicia sesión en tu panel de profesional para completar tu perfil.</p>
-      <a href="https://inteira.mx/profesional/dashboard" class="btn">Ir a mi panel</a>
+      <a href="https://inteira.mx" class="btn">Ir a mi panel</a>
     `
     : `
       <p>Hola <strong>${params.professionalName}</strong>,</p>
@@ -243,7 +256,7 @@ export async function sendAppointmentCancellation(params: {
       <p><strong>Cancelada por:</strong> ${params.canceledBy}</p>
     </div>
     <p>Puedes agendar una nueva cita cuando lo desees desde tu panel de usuario.</p>
-    <a href="https://inteira.mx/especialidades" class="btn">Agendar nueva cita</a>
+    <a href="https://inteira.mx" class="btn">Agendar nueva cita</a>
   `;
 
   return sendEmail({
@@ -268,7 +281,7 @@ export async function sendProfessionalEarningNotification(params: {
       <p><strong>Monto acreditado:</strong> $${params.netAmount.toFixed(2)} MXN</p>
     </div>
     <p>Puedes solicitar un retiro desde tu panel cuando tu saldo sea de al menos $500 MXN.</p>
-    <a href="https://inteira.mx/profesional/wallet" class="btn">Ver mi wallet</a>
+    <a href="https://inteira.mx" class="btn">Ver mi wallet</a>
   `;
 
   return sendEmail({
@@ -308,7 +321,7 @@ export async function sendSubscriptionUpdate(params: {
   const content = `
     <p>Hola <strong>${params.userName}</strong>,</p>
     <p>${msg.body}</p>
-    <a href="https://inteira.mx/dashboard" class="btn">Ir a mi dashboard</a>
+    <a href="https://inteira.mx" class="btn">Ir a mi dashboard</a>
   `;
 
   return sendEmail({
@@ -393,7 +406,7 @@ export async function sendWelcomeEmail(params: {
       <p><strong>3. Conéctate</strong> — Únete a tu sesión por videollamada integrada, sin apps externas.</p>
     </div>
     <p>Tus primeros créditos te esperan. Comienza explorando nuestros especialistas disponibles.</p>
-    <a href="https://inteira.mx/especialidades" class="btn">Explorar especialistas</a>
+    <a href="https://inteira.mx" class="btn">Explorar especialistas</a>
     <div class="divider"></div>
     <p style="font-size:13px; color:#6b7280;">¿Tienes preguntas? Escríbenos a <a href="mailto:soporte@inteira.mx" style="color:#607562;">soporte@inteira.mx</a></p>
   `;
@@ -452,7 +465,7 @@ export async function sendAdminNewUserRegistration(params: {
       <p><strong>Email:</strong> ${params.userEmail}</p>
       <p><strong>Fecha:</strong> ${new Date().toLocaleDateString("es-MX", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
     </div>
-    <a href="https://inteira.mx/admin" class="btn">Ver panel admin</a>
+    <a href="https://inteira.mx" class="btn">Ver panel admin</a>
   `;
 
   const results = await Promise.all(
@@ -508,7 +521,7 @@ export async function sendAdminNewProfessionalRequest(params: {
       <p><strong>Nombre:</strong> ${params.professionalName}</p>
       <p><strong>Email:</strong> ${params.professionalEmail}</p>
     </div>
-    <a href="https://inteira.mx/admin?tab=professionals" class="btn">Revisar solicitud</a>
+    <a href="https://inteira.mx" class="btn">Revisar solicitud</a>
   `;
 
   return sendEmail({
