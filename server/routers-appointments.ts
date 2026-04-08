@@ -226,7 +226,9 @@ export const appointmentRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      console.log('[CANCEL] start - userId:', ctx.user.id, typeof ctx.user.id, 'role:', ctx.user.role);
       const appointment = await db.getAppointmentById(input.appointmentId);
+      console.log('[CANCEL] appointment:', appointment ? `found userId:${appointment.userId} type:${typeof appointment.userId}` : 'NOT FOUND');
       if (!appointment) {
         throw new TRPCError({
           code: "NOT_FOUND",
