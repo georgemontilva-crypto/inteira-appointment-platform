@@ -253,6 +253,9 @@ export const appointmentRouter = router({
       const hoursUntil = (appointmentTime.getTime() - now.getTime()) / (1000 * 60 * 60);
       const canceledByRole = ctx.user.role === "user" ? "user" : "professional";
 
+      console.log('[cancelAppointment] canceledByRole:', canceledByRole);
+      console.log('[cancelAppointment] input:', JSON.stringify(input));
+
       // Verificar que el profesional es dueño de esta cita (fix bug: professionalId ≠ userId)
       let userProfessional: Awaited<ReturnType<typeof db.getProfessionalByUserId>> = null;
       if (canceledByRole === "professional") {
