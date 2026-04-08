@@ -5,6 +5,7 @@ import { createServer } from "http";
 import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
+import { emailAuthRouter } from "./auth-email";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
@@ -518,6 +519,22 @@ async function runStartupMigrations() {
       );
     });
 
+    // Create emailOtps table for email-based OTP authentication
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS \`emailOtps\` (
+        \`id\`        INT AUTO_INCREMENT PRIMARY KEY,
+        \`email\`     VARCHAR(255) NOT NULL,
+        \`code\`      VARCHAR(6)   NOT NULL,
+        \`firstName\` VARCHAR(100),
+        \`lastName\`  VARCHAR(100),
+        \`expiresAt\` DATETIME     NOT NULL,
+        \`used\`      BOOLEAN      DEFAULT FALSE,
+        \`createdAt\` DATETIME     DEFAULT NOW(),
+        INDEX \`idx_email_otp\` (\`email\`)
+      )
+    `).catch(() => {});
+    console.log("[Migration] emailOtps table ready");
+
     // Add reminder15sent column to appointments (tracks 15-min reminder emails)
     try {
       const [r15Rows] = await db.execute(
@@ -561,6 +578,8 @@ async function startServer() {
   await runStartupMigrations();
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
+  // Email OTP auth routes: /api/auth/email/request-otp, /api/auth/email/verify-otp
+  app.use("/api/auth/email", emailAuthRouter);
 
   // ─── File upload: professional profile photo / documents ────────────────────
   app.post("/api/upload/professional-file", async (req, res) => {

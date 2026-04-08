@@ -318,7 +318,29 @@ export async function sendSubscriptionUpdate(params: {
   });
 }
 
-// 7. Professional — appointment confirmation (sent to the professional)
+// 7. OTP verification email
+export async function sendOtpEmail(params: {
+  email: string;
+  firstName: string;
+  code: string;
+}): Promise<boolean> {
+  const content = `
+    <p>Hola <strong>${params.firstName}</strong>,</p>
+    <p>Tu código de verificación para Inteira es:</p>
+    <div style="text-align:center; margin: 32px 0;">
+      <span style="font-size:42px; font-weight:700; letter-spacing:12px; color:#607562; background:#eef2ee; padding:16px 24px; border-radius:12px; display:inline-block;">${params.code}</span>
+    </div>
+    <p style="text-align:center; color:#666; font-size:13px;">Este código expira en <strong>10 minutos</strong>. Si no solicitaste esto, ignora este mensaje.</p>
+  `;
+
+  return sendEmail({
+    to: params.email,
+    subject: `${params.code} es tu código de verificación — Inteira`,
+    html: baseTemplate(content),
+  });
+}
+
+// 8. Professional — appointment confirmation (sent to the professional)
 export async function sendProfessionalAppointmentConfirmation(params: {
   professionalEmail: string;
   professionalName: string;
