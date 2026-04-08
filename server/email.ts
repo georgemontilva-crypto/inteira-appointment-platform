@@ -521,3 +521,30 @@ export async function sendAdminNewProfessionalRequest(params: {
     html: baseTemplate(content),
   });
 }
+
+// 12. Credits debited notification (sent when user joins the video call)
+export async function sendCreditsDebitedEmail(params: {
+  userEmail: string;
+  userName: string;
+  credits: number;
+  appointmentDate: Date;
+}): Promise<boolean> {
+  const dateStr = params.appointmentDate.toLocaleDateString("es-MX", {
+    weekday: "long", year: "numeric", month: "long", day: "numeric",
+  });
+  const content = `
+    <p>Hola <strong>${params.userName}</strong>,</p>
+    <p>Se han debitado <strong>${params.credits} créditos</strong> de tu wallet por tu sesión del ${dateStr}.</p>
+    <div class="info-box">
+      <p><strong>Créditos debitados:</strong> ${params.credits}</p>
+      <p><strong>Fecha de sesión:</strong> ${dateStr}</p>
+    </div>
+    <p>Gracias por usar Inteira. Recuerda calificar a tu especialista al finalizar la sesión.</p>
+    <a href="https://inteira.mx" class="btn">Ver mis citas</a>
+  `;
+  return sendEmail({
+    to: params.userEmail,
+    subject: `💳 ${params.credits} créditos debitados — Inteira`,
+    html: baseTemplate(content),
+  });
+}

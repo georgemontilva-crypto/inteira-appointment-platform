@@ -513,9 +513,6 @@ export const appointmentRouter = router({
         });
       }
 
-      // Confirm reserved credits (user reviewed → credits finalized as consumed)
-      await confirmCredits(input.appointmentId).catch(() => {});
-
       // Mark appointment as completed
       await new Promise<void>((resolve, reject) => {
         client.execute(
@@ -555,6 +552,35 @@ export const appointmentRouter = router({
         message: `Recibiste una reseña de ${input.rating} estrella${input.rating !== 1 ? "s" : ""}. Se acreditaron $${netAmount} MXN a tu wallet.`,
         link: "/profesional/wallet",
       }).catch(() => {});
+
+      return { success: true };
+    }),
+
+  // Called when user clicks "Unirse a la sesión" — confirms credits immediately
+  joinAppointment: protectedProcedure
+    .input(z.object({ appointmentId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const appointment = await db.getAppointmentById(input.appointmentId);
+      if (!appointment || appointment.userId !== ctx.user.id) {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+      // Idempotent: only act on scheduled appointments
+      if (appointment.status !== "scheduled") return { success: true };
+
+      await confirmCredits(input.appointmentId).catch(() => {});
+
+      // Email debit notification (fire-and-forget)
+      const userRecord = await db.getUserById(ctx.user.id).catch(() => null);
+      const sessionCost = (appointment as any).durationMinutes > 60 ? 1500 : 350;
+      if (userRecord?.email) {
+        const { sendCreditsDebitedEmail } = await import("./email");
+        sendCreditsDebitedEmail({
+          userEmail: userRecord.email,
+          userName: userRecord.name ?? "Usuario",
+          credits: sessionCost,
+          appointmentDate: new Date((appointment as any).appointmentDate),
+        }).catch(() => {});
+      }
 
       return { success: true };
     }),

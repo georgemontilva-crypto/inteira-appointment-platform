@@ -103,6 +103,8 @@ export default function AppointmentsPage() {
     enabled: isAuthenticated,
   });
 
+  const joinAppointmentMutation = trpc.appointment.joinAppointment.useMutation();
+
   // Activate video call panel 5 minutes before session start
   useEffect(() => {
     const check = () => {
@@ -265,13 +267,17 @@ export default function AppointmentsPage() {
               {(apt as any).videoCallLink && (
                 <button
                   disabled={!canJoin}
-                  onClick={() => canJoin && setActiveCall({
-                    url: (apt as any).videoCallLink,
-                    appointmentId: apt.id,
-                    professionalName: (apt as any).professionalName ?? `Especialista #${apt.professionalId}`,
-                    startTime: new Date(apt.appointmentDate),
-                    endTime: new Date(new Date(apt.appointmentDate).getTime() + ((apt as any).durationMinutes ?? 55) * 60 * 1000),
-                  })}
+                  onClick={async () => {
+                    if (!canJoin) return;
+                    await joinAppointmentMutation.mutateAsync({ appointmentId: apt.id }).catch(() => {});
+                    setActiveCall({
+                      url: (apt as any).videoCallLink,
+                      appointmentId: apt.id,
+                      professionalName: (apt as any).professionalName ?? `Especialista #${apt.professionalId}`,
+                      startTime: new Date(apt.appointmentDate),
+                      endTime: new Date(new Date(apt.appointmentDate).getTime() + ((apt as any).durationMinutes ?? 55) * 60 * 1000),
+                    });
+                  }}
                   className="flex-1 w-full flex items-center justify-center gap-1.5 text-xs font-semibold text-white rounded-xl h-8 px-3 transition-opacity"
                   style={{
                     background: canJoin

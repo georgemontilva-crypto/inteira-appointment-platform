@@ -668,9 +668,10 @@ setInterval(async () => {
     // El no-show es del USUARIO — el profesional recibe su pago igual
     const noShowCandidates = await new Promise<any[]>((resolve) => {
       client.execute(
-        `SELECT a.id, a.professionalId, p.tier
+        `SELECT a.id, a.professionalId, a.userId, a.appointmentDate, a.durationMinutes, p.tier, u.email AS userEmail, u.name AS userName
          FROM appointments a
          JOIN professionals p ON p.id = a.professionalId
+         JOIN \`users\` u ON u.id = a.userId
          WHERE a.status = 'scheduled'
          AND DATE_ADD(a.appointmentDate, INTERVAL 4 HOUR) < NOW()`,
         [],
@@ -699,10 +700,21 @@ setInterval(async () => {
     if (noShowCandidates.length > 0) {
       const { creditProfessionalEarning } = await import("../professionalWallet");
       const { confirmCredits } = await import("../credits");
+      const { sendCreditsDebitedEmail } = await import("../email");
       for (const row of noShowCandidates) {
         await confirmCredits(row.id).catch(() => {});
         await creditProfessionalEarning(row.professionalId, row.id, (row.tier ?? "basic") as "basic" | "pro").catch(() => {});
         console.log(`[Cron] No-show: professional ${row.professionalId} credited for appointment ${row.id}`);
+        // Notify user their credits were consumed for the no-show
+        if (row.userEmail) {
+          const sessionCost = row.durationMinutes > 60 ? 1500 : 350;
+          sendCreditsDebitedEmail({
+            userEmail: row.userEmail,
+            userName: row.userName ?? "Usuario",
+            credits: sessionCost,
+            appointmentDate: new Date(row.appointmentDate),
+          }).catch(() => {});
+        }
       }
     }
 
