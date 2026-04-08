@@ -118,7 +118,7 @@ const steps = [
   {
     icon: <Video className="w-5 h-5" />,
     title: "Conéctate en línea",
-    description: "Zoom o Google Meet desde cualquier dispositivo.",
+    description: "Videollamada integrada desde cualquier dispositivo.",
   },
 ];
 
@@ -351,7 +351,7 @@ export default function Home() {
             </div>
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <Video className="w-3.5 h-3.5 text-primary" />
-              <span>Zoom & Meet</span>
+              <span>Videollamada integrada</span>
             </div>
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <Clock className="w-3.5 h-3.5 text-primary" />
@@ -397,7 +397,7 @@ export default function Home() {
                   </div>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Video className="w-4 h-4 text-primary" />
-                    <span>Zoom & Google Meet</span>
+                    <span>Videollamada integrada</span>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Clock className="w-4 h-4 text-primary" />
@@ -656,7 +656,7 @@ export default function Home() {
               <Card className="border border-border active:scale-[0.99] transition-transform">
                 <CardContent className="p-4 md:p-6">
                   <h4 className="font-semibold text-sm md:text-base">Sesión Básica</h4>
-                  <p className="text-xs text-muted-foreground mt-1">60 min · Zoom o Meet</p>
+                  <p className="text-xs text-muted-foreground mt-1">60 min · Videollamada integrada</p>
                   <div className="mt-3">
                     <span className="text-xl md:text-2xl font-bold text-primary" style={{ fontFamily: "Poppins, sans-serif" }}>${PRICING.SESSION_BASIC_MXN}</span>
                     <span className="text-xs text-muted-foreground ml-1">MXN</span>

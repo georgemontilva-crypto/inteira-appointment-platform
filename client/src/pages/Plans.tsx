@@ -65,7 +65,7 @@ const INDIVIDUAL = [
   {
     name: "Sesión Básica",
     price: PRICING_DISPLAY.SESSION_BASIC,
-    description: "1 sesión · 60 min · Zoom o Meet",
+    description: "1 sesión · 60 min · Videollamada integrada",
   },
   {
     name: "Sesión Premium",
@@ -92,7 +92,7 @@ const FAQ = [
 const NORMAS = [
   { q: "¿Puedo reprogramar una cita?", a: "Sí, puedes reprogramar con al menos 4 horas de anticipación sin costo." },
   { q: "¿Qué pasa si cancelo tarde?", a: "Las cancelaciones con menos de 4 horas de anticipación consumen el crédito de la sesión." },
-  { q: "¿Cómo se realizan las sesiones?", a: "Las sesiones se realizan por videollamada a través de Zoom o Google Meet, según el especialista." },
+  { q: "¿Cómo se realizan las sesiones?", a: "Las sesiones se realizan por videollamada integrada directamente en la plataforma, sin necesidad de apps externas." },
   { q: "¿Los especialistas están verificados?", a: "Sí, todos los especialistas pasan por un proceso de verificación de credenciales antes de ser aprobados." },
   { q: "¿Puedo solicitar reembolso?", a: "Los créditos no son reembolsables en efectivo, pero pueden usarse en cualquier especialidad disponible." },
 ];
