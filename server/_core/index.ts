@@ -518,6 +518,22 @@ async function runStartupMigrations() {
       );
     });
 
+    // Add reminder15sent column to appointments (tracks 15-min reminder emails)
+    try {
+      const [r15Rows] = await db.execute(
+        `SELECT COUNT(*) as cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'appointments' AND COLUMN_NAME = 'reminder15sent'`
+      ) as any;
+      const r15Exists = Array.isArray(r15Rows) ? Number(r15Rows[0]?.cnt) > 0 : Number(r15Rows?.cnt) > 0;
+      if (!r15Exists) {
+        await db.execute("ALTER TABLE `appointments` ADD COLUMN `reminder15sent` BOOLEAN NOT NULL DEFAULT FALSE");
+        console.log("[Migration] appointments.reminder15sent column added");
+      } else {
+        console.log("[Migration] appointments.reminder15sent column already exists");
+      }
+    } catch (e: any) {
+      console.warn("[Migration] Could not add reminder15sent column:", e?.message);
+    }
+
   } catch (err) {
     console.error("[Migration] Startup migration failed:", err);
   }
@@ -728,6 +744,62 @@ setInterval(async () => {
     }
   } catch(e: any) {
     console.error("[Cron] auto-noshow exception:", e?.message);
+  }
+}, 5 * 60 * 1000);
+
+// ─── Cron: recordatorio 15 min antes — corre cada 5 minutos ──────────────────
+setInterval(async () => {
+  try {
+    const { getDb } = await import("../db");
+    const db = await getDb();
+    if (!db) return;
+    const client = (db as any).$client;
+
+    const upcoming = await new Promise<any[]>((resolve) => {
+      client.execute(
+        `SELECT a.id, a.videoCallLink, a.appointmentDate,
+                u.email AS userEmail, u.name AS userName,
+                pu.name AS professionalName
+         FROM appointments a
+         JOIN users u  ON u.id  = a.userId
+         JOIN professionals p  ON p.id  = a.professionalId
+         JOIN users pu ON pu.id = p.userId
+         WHERE a.status = 'scheduled'
+           AND a.reminder15sent = FALSE
+           AND a.appointmentDate BETWEEN DATE_ADD(NOW(), INTERVAL 10 MINUTE)
+                                     AND DATE_ADD(NOW(), INTERVAL 20 MINUTE)`,
+        [],
+        (err: any, results: any) => {
+          if (err) { console.error("[Cron] reminder15 select error:", err?.message); resolve([]); }
+          else resolve(Array.isArray(results) ? results : []);
+        }
+      );
+    });
+
+    if (upcoming.length > 0) {
+      const { sendAppointmentReminder15min } = await import("../email");
+      for (const row of upcoming) {
+        if (row.userEmail) {
+          await sendAppointmentReminder15min({
+            userEmail: row.userEmail,
+            userName: row.userName ?? "Usuario",
+            professionalName: row.professionalName ?? "Especialista",
+            appointmentDate: new Date(row.appointmentDate),
+            videoCallLink: row.videoCallLink ?? "",
+          }).catch(() => {});
+        }
+        await new Promise<void>((resolve) => {
+          client.execute(
+            "UPDATE appointments SET reminder15sent = TRUE WHERE id = ?",
+            [row.id],
+            (err: any) => { if (err) console.error("[Cron] reminder15 update error:", err?.message); resolve(); }
+          );
+        });
+        console.log(`[Cron] 15-min reminder sent for appointment ${row.id}`);
+      }
+    }
+  } catch (e: any) {
+    console.error("[Cron] reminder15 exception:", e?.message);
   }
 }, 5 * 60 * 1000);
 

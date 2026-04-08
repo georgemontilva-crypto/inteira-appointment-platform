@@ -12,6 +12,7 @@ import { generateVideoCallLink } from "./videocall";
 import {
   sendAppointmentConfirmation,
   sendAppointmentCancellation,
+  sendProfessionalAppointmentConfirmation,
 } from "./email";
 import { reserveCredits, confirmCredits, refundCredits, getUserCreditBalance } from "./credits";
 import { createNotification } from "./notifications";
@@ -182,7 +183,7 @@ export const appointmentRouter = router({
         `${sessionConfig.label} con ${professionalUser?.name ?? "especialista"}`
       );
 
-      // Send confirmation email
+      // Send confirmation email to user
       if (userRecord?.email) {
         await sendAppointmentConfirmation({
           userEmail: userRecord.email,
@@ -194,6 +195,18 @@ export const appointmentRouter = router({
           videoCallType: "daily",
           videoCallLink: videoCall.url,
         });
+      }
+
+      // Send confirmation email to professional
+      if (professionalUser?.email) {
+        sendProfessionalAppointmentConfirmation({
+          professionalEmail: professionalUser.email,
+          professionalName: professionalUser.name ?? "Profesional",
+          patientName: userRecord?.name ?? "Usuario",
+          appointmentDate: appointmentDateObj,
+          durationMinutes,
+          videoCallLink: videoCall.url,
+        }).catch(() => {});
       }
 
       return {

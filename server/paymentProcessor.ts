@@ -100,7 +100,7 @@ export async function processPayment(stripeSessionId: string, data?: {
     }
 
     // Acreditar créditos
-    const { addCreditBatch } = await import("./credits");
+    const { addCreditBatch, CREDIT_COSTS } = await import("./credits");
     await addCreditBatch(item.userId, item.productType as CreditSource);
 
     // Marcar como completado
@@ -110,6 +110,28 @@ export async function processPayment(stripeSessionId: string, data?: {
     );
 
     console.log(`[PaymentProcessor] ✅ ${item.credits} créditos acreditados — userId=${item.userId} productType=${item.productType}`);
+
+    // Enviar email de confirmación de compra (non-blocking)
+    try {
+      const userRows = await new Promise<any[]>((resolve) => {
+        client.execute(
+          "SELECT email, name FROM `users` WHERE id = ? LIMIT 1",
+          [item.userId],
+          (err: any, results: any) => resolve(Array.isArray(results) ? results : [])
+        );
+      });
+      const u = userRows[0];
+      if (u?.email) {
+        const { sendCreditsPurchaseConfirmation } = await import("./email");
+        sendCreditsPurchaseConfirmation({
+          userEmail: u.email,
+          userName: u.name ?? "Usuario",
+          credits: item.credits,
+          priceMXN: CREDIT_COSTS[item.productType as CreditSource] ?? item.credits,
+          expiresAt: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
+        }).catch(() => {});
+      }
+    } catch {}
     return true;
 
   } catch (err: any) {

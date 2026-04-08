@@ -105,6 +105,9 @@ export function registerOAuthRoutes(app: Express) {
       }
 
       // 3. Upsert usuario en la base de datos
+      const existingUser = await db.getUserByOpenId(`google:${userInfo.sub}`).catch(() => null);
+      const isNewUser = !existingUser;
+
       await db.upsertUser({
         openId: `google:${userInfo.sub}`,
         email: userInfo.email,
@@ -119,6 +122,21 @@ export function registerOAuthRoutes(app: Express) {
         const dbUser = await db.getUserByOpenId(`google:${userInfo.sub}`);
         if (dbUser?.role === "professional") returnTo = "/panel-profesional";
         else if (dbUser?.role === "admin") returnTo = "/admin";
+      }
+
+      // 3c. Emails para usuarios nuevos (fire-and-forget)
+      if (isNewUser && userInfo.email) {
+        const { sendWelcomeEmail, sendAdminNewUserRegistration } = await import("../email");
+        sendWelcomeEmail({
+          userEmail: userInfo.email,
+          userName: userInfo.name ?? userInfo.email,
+        }).catch(() => {});
+        const adminEmail = process.env.ADMIN_EMAIL ?? "marketingdedsm@gmail.com";
+        sendAdminNewUserRegistration({
+          userName: userInfo.name ?? userInfo.email,
+          userEmail: userInfo.email,
+          adminEmails: [adminEmail],
+        }).catch(() => {});
       }
 
       // 4. Crear sesión JWT
