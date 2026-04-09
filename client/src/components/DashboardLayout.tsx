@@ -74,6 +74,8 @@ interface DashboardLayoutProps {
 export default function DashboardLayout({ children, title, subtitle, headerRight }: DashboardLayoutProps) {
   const { user, logout } = useAuth();
   const [location, navigate] = useLocation();
+  const isProMode = location.startsWith("/panel-profesional");
+  const isProfessional = user?.role === "professional";
   const [panelOpen, setPanelOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<PanelTab>("notifications");
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -128,7 +130,15 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
 
   // Wallet (for panel tab)
   const { data: walletData } = trpc.user.getWallet.useQuery(undefined, {
-    enabled: !!user && panelOpen,
+    enabled: !!user && panelOpen && !isProMode,
+  });
+
+  // Professional data (for pro mode)
+  const { data: proProfile } = trpc.professional.getProfile.useQuery(undefined, {
+    enabled: isProfessional,
+  });
+  const { data: proWalletData } = trpc.professional.getWallet.useQuery(undefined, {
+    enabled: isProfessional && isProMode && panelOpen,
   });
 
   const count = unreadCount?.count ?? 0;
@@ -162,30 +172,37 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
     navItems.push({ label: "Mi panel", icon: "shield", href: "/panel-profesional" });
   }
 
-  // Drawer grid sections by role
+  // Drawer grid sections — filtered by active mode
   type DrawerItem = { label: string; icon: string; href: string };
   const drawerSections: { section: string; items: DrawerItem[] }[] =
-    user?.role === "professional"
-      ? [
-          {
-            section: "Como cliente",
-            items: [
-              { label: "Inicio",   icon: "home",     href: "/dashboard" },
-              { label: "Mis citas",icon: "calendar", href: "/citas" },
-              { label: "Explorar", icon: "search",   href: "/especialidades" },
-              { label: "Wallet",   icon: "wallet",   href: "/wallet" },
-            ],
-          },
-          {
-            section: "Como profesional",
-            items: [
-              { label: "Panel",          icon: "home",     href: "/panel-profesional" },
-              { label: "Mis citas",      icon: "calendar", href: "/panel-profesional#citas" },
-              { label: "Ganancias",      icon: "wallet",   href: "/panel-profesional#ganancias" },
-              { label: "Disponibilidad", icon: "clock",    href: "/panel-profesional#disponibilidad" },
-            ],
-          },
-        ]
+    isProfessional
+      ? isProMode
+        ? [
+            {
+              section: "Panel profesional",
+              items: [
+                { label: "Inicio",         icon: "home",     href: "/panel-profesional" },
+                { label: "Mis citas",      icon: "calendar", href: "/panel-profesional#citas" },
+                { label: "Ganancias",      icon: "wallet",   href: "/panel-profesional#ganancias" },
+                { label: "Disponibilidad", icon: "clock",    href: "/panel-profesional#disponibilidad" },
+                { label: "Reseñas",        icon: "star",     href: "/panel-profesional#resenas" },
+                { label: "Mi perfil",      icon: "user",     href: "/panel-profesional#perfil" },
+              ],
+            },
+          ]
+        : [
+            {
+              section: "Como cliente",
+              items: [
+                { label: "Inicio",   icon: "home",     href: "/dashboard" },
+                { label: "Mis citas",icon: "calendar", href: "/citas" },
+                { label: "Explorar", icon: "search",   href: "/especialidades" },
+                { label: "Wallet",   icon: "wallet",   href: "/wallet" },
+                { label: "Planes",   icon: "star",     href: "/planes" },
+                { label: "Perfil",   icon: "user",     href: "/perfil" },
+              ],
+            },
+          ]
       : [
           {
             section: "",
@@ -200,8 +217,6 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
             ],
           },
         ];
-
-  const isProMode = location.startsWith("/panel-profesional");
 
   return (
     <div className="flex flex-col min-h-screen bg-[#F7FAFC]">
@@ -424,13 +439,22 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
             style={{ boxShadow: "4px 0 24px rgba(0,0,0,0.15)" }}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Drawer header */}
+            {/* Drawer header — mode-aware */}
             <div style={{ background: "linear-gradient(145deg,#1e2f20,#2d4030)", padding: "24px 20px 20px", flexShrink: 0 }}>
               <div className="flex items-center gap-3">
                 <UserAvatar size="lg" />
                 <div className="min-w-0 flex-1">
                   <p className="text-[15px] font-bold text-white leading-tight truncate">{user?.name ?? "Usuario"}</p>
-                  <p className="text-[11px] mt-0.5 truncate" style={{ color: "rgba(255,255,255,0.5)" }}>{user?.email}</p>
+                  {isProfessional && isProMode ? (
+                    <p className="text-[11px] mt-0.5 truncate" style={{ color: "rgba(255,255,255,0.5)" }}>{(proProfile as any)?.specialty?.name ?? "Especialista"}</p>
+                  ) : (
+                    <p className="text-[11px] mt-0.5 truncate" style={{ color: "rgba(255,255,255,0.5)" }}>{user?.email}</p>
+                  )}
+                  <span className="inline-block mt-1.5 px-2 py-0.5 rounded-full text-[9px] font-semibold uppercase tracking-wider" style={{ background: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.7)" }}>
+                    {isProfessional && isProMode
+                      ? `Profesional · ${(proProfile as any)?.tier === "pro" ? "Pro" : "Básico"}`
+                      : user?.role === "admin" ? "Admin" : "Cliente"}
+                  </span>
                 </div>
                 <button onClick={() => setDrawerOpen(false)} style={{ background: "rgba(255,255,255,0.1)", border: "none", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
                   <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -604,59 +628,106 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
             {/* Tab: Wallet */}
             {activeTab === "wallet" && (
               <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(96,117,98,0.2) transparent" }}>
-                {/* Balance card */}
-                <div className="rounded-2xl p-5 text-white relative overflow-hidden" style={{ background: "linear-gradient(135deg,#0d1f10,#1a2e1a)" }}>
-                  <div className="absolute top-0 right-0 w-36 h-36 rounded-full pointer-events-none" style={{ background: "rgba(255,255,255,0.04)", transform: "translate(40%,-40%)" }} />
-                  <div className="absolute bottom-0 left-0 w-24 h-24 rounded-full pointer-events-none" style={{ background: "rgba(255,255,255,0.03)", transform: "translate(-30%,40%)" }} />
-                  <p className="text-[9px] font-bold uppercase tracking-[0.18em] mb-3" style={{ color: "rgba(255,255,255,0.45)" }}>SALDO DISPONIBLE</p>
-                  <p className="text-4xl font-bold text-white leading-none">
-                    {(walletData?.balance ?? 0).toLocaleString("es-MX")}
-                  </p>
-                  <p className="text-[12px] mt-1 font-medium" style={{ color: "rgba(255,255,255,0.35)" }}>créditos</p>
-                  <p className="text-[10px] mt-3 truncate" style={{ color: "rgba(255,255,255,0.25)" }}>Inteira Wallet · {user?.email}</p>
-                </div>
-
-                {/* Actions */}
-                <div className="grid grid-cols-2 gap-2">
-                  <Link href="/wallet">
-                    <a className="flex flex-col items-center gap-1.5 p-3.5 rounded-xl border hover:bg-[#f0f4f0] transition-colors cursor-pointer text-center" style={{ background: "#F7FAFC", borderColor: "rgba(96,117,98,0.15)" }} onClick={() => setPanelOpen(false)}>
-                      <Icon name="wallet" className="w-4 h-4 text-[#607562]" />
-                      <span className="text-[11px] font-medium text-[#607562]">Ver wallet</span>
-                    </a>
-                  </Link>
-                  <Link href="/planes">
-                    <a className="flex flex-col items-center gap-1.5 p-3.5 rounded-xl border hover:bg-[#f0f4f0] transition-colors cursor-pointer text-center" style={{ background: "#F7FAFC", borderColor: "rgba(96,117,98,0.15)" }} onClick={() => setPanelOpen(false)}>
-                      <Icon name="star" className="w-4 h-4 text-[#607562]" />
-                      <span className="text-[11px] font-medium text-[#607562]">Ver planes</span>
-                    </a>
-                  </Link>
-                </div>
-
-                {/* Recent transactions */}
-                <div>
-                  <p className="text-[10px] text-[#93A295] uppercase tracking-widest font-semibold mb-3">Movimientos recientes</p>
-                  {!walletData?.transactions || walletData.transactions.length === 0 ? (
-                    <p className="text-[12px] text-[#93A295] text-center py-4">Sin movimientos recientes</p>
-                  ) : (
-                    <div className="flex flex-col gap-1.5">
-                      {walletData.transactions.slice(0, 5).map((tx: any) => {
-                        const isPositive = tx.delta > 0;
-                        const reasonLabel: Record<string, string> = { purchase: "Compra", consume: "Consumo", expire: "Vencimiento", refund: "Reembolso" };
-                        return (
-                          <div key={tx.id} className="flex items-center justify-between px-3.5 py-2.5 rounded-xl border" style={{ background: "#F7FAFC", borderColor: "rgba(96,117,98,0.1)" }}>
-                            <div className="min-w-0">
-                              <p className="text-[12px] font-medium text-[#333] truncate">{tx.description || reasonLabel[tx.reason] || tx.reason}</p>
-                              <p className="text-[10px] text-[#93A295]">{new Date(tx.createdAt).toLocaleDateString("es", { day: "numeric", month: "short", year: "numeric" })}</p>
-                            </div>
-                            <span className={`text-[13px] font-bold flex-shrink-0 ml-3 ${isPositive ? "text-emerald-600" : "text-red-500"}`}>
-                              {isPositive ? "+" : ""}{tx.delta}
-                            </span>
-                          </div>
-                        );
-                      })}
+                {isProfessional && isProMode ? (
+                  /* ── Professional earnings wallet ── */
+                  <>
+                    <div className="rounded-2xl p-5 text-white relative overflow-hidden" style={{ background: "linear-gradient(135deg,#0d1f10,#1a2e1a)" }}>
+                      <div className="absolute top-0 right-0 w-36 h-36 rounded-full pointer-events-none" style={{ background: "rgba(255,255,255,0.04)", transform: "translate(40%,-40%)" }} />
+                      <p className="text-[9px] font-bold uppercase tracking-[0.18em] mb-3" style={{ color: "rgba(255,255,255,0.45)" }}>GANANCIAS DISPONIBLES</p>
+                      <p className="text-4xl font-bold text-white leading-none">
+                        ${((proWalletData as any)?.wallet?.availableBalance ?? 0).toLocaleString("es-MX")}
+                      </p>
+                      <p className="text-[12px] mt-1 font-medium" style={{ color: "rgba(255,255,255,0.35)" }}>MXN</p>
+                      <p className="text-[10px] mt-3 truncate" style={{ color: "rgba(255,255,255,0.25)" }}>
+                        Total acumulado: ${((proWalletData as any)?.wallet?.totalEarnings ?? 0).toLocaleString("es-MX")} MXN
+                      </p>
                     </div>
-                  )}
-                </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Link href="/panel-profesional#ganancias">
+                        <a className="flex flex-col items-center gap-1.5 p-3.5 rounded-xl border hover:bg-[#f0f4f0] transition-colors cursor-pointer text-center" style={{ background: "#F7FAFC", borderColor: "rgba(96,117,98,0.15)" }} onClick={() => setPanelOpen(false)}>
+                          <Icon name="wallet" className="w-4 h-4 text-[#607562]" />
+                          <span className="text-[11px] font-medium text-[#607562]">Ver ganancias</span>
+                        </a>
+                      </Link>
+                      <Link href="/panel-profesional#ganancias">
+                        <a className="flex flex-col items-center gap-1.5 p-3.5 rounded-xl border hover:bg-[#f0f4f0] transition-colors cursor-pointer text-center" style={{ background: "#F7FAFC", borderColor: "rgba(96,117,98,0.15)" }} onClick={() => setPanelOpen(false)}>
+                          <Icon name="logout" className="w-4 h-4 text-[#607562]" />
+                          <span className="text-[11px] font-medium text-[#607562]">Retirar</span>
+                        </a>
+                      </Link>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-[#93A295] uppercase tracking-widest font-semibold mb-3">Últimas ganancias</p>
+                      {!(proWalletData as any)?.earnings?.length ? (
+                        <p className="text-[12px] text-[#93A295] text-center py-4">Sin ganancias recientes</p>
+                      ) : (
+                        <div className="flex flex-col gap-1.5">
+                          {((proWalletData as any)?.earnings ?? []).slice(0, 5).map((e: any) => (
+                            <div key={e.id} className="flex items-center justify-between px-3.5 py-2.5 rounded-xl border" style={{ background: "#F7FAFC", borderColor: "rgba(96,117,98,0.1)" }}>
+                              <div className="min-w-0">
+                                <p className="text-[12px] font-medium text-[#333] truncate">{e.description ?? "Sesión completada"}</p>
+                                <p className="text-[10px] text-[#93A295]">{new Date(e.createdAt).toLocaleDateString("es", { day: "numeric", month: "short", year: "numeric" })}</p>
+                              </div>
+                              <span className="text-[13px] font-bold flex-shrink-0 ml-3 text-emerald-600">+${e.netAmount ?? e.amount}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  /* ── User credits wallet ── */
+                  <>
+                    <div className="rounded-2xl p-5 text-white relative overflow-hidden" style={{ background: "linear-gradient(135deg,#0d1f10,#1a2e1a)" }}>
+                      <div className="absolute top-0 right-0 w-36 h-36 rounded-full pointer-events-none" style={{ background: "rgba(255,255,255,0.04)", transform: "translate(40%,-40%)" }} />
+                      <div className="absolute bottom-0 left-0 w-24 h-24 rounded-full pointer-events-none" style={{ background: "rgba(255,255,255,0.03)", transform: "translate(-30%,40%)" }} />
+                      <p className="text-[9px] font-bold uppercase tracking-[0.18em] mb-3" style={{ color: "rgba(255,255,255,0.45)" }}>SALDO DISPONIBLE</p>
+                      <p className="text-4xl font-bold text-white leading-none">
+                        {(walletData?.balance ?? 0).toLocaleString("es-MX")}
+                      </p>
+                      <p className="text-[12px] mt-1 font-medium" style={{ color: "rgba(255,255,255,0.35)" }}>créditos</p>
+                      <p className="text-[10px] mt-3 truncate" style={{ color: "rgba(255,255,255,0.25)" }}>Inteira Wallet · {user?.email}</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Link href="/wallet">
+                        <a className="flex flex-col items-center gap-1.5 p-3.5 rounded-xl border hover:bg-[#f0f4f0] transition-colors cursor-pointer text-center" style={{ background: "#F7FAFC", borderColor: "rgba(96,117,98,0.15)" }} onClick={() => setPanelOpen(false)}>
+                          <Icon name="wallet" className="w-4 h-4 text-[#607562]" />
+                          <span className="text-[11px] font-medium text-[#607562]">Ver wallet</span>
+                        </a>
+                      </Link>
+                      <Link href="/planes">
+                        <a className="flex flex-col items-center gap-1.5 p-3.5 rounded-xl border hover:bg-[#f0f4f0] transition-colors cursor-pointer text-center" style={{ background: "#F7FAFC", borderColor: "rgba(96,117,98,0.15)" }} onClick={() => setPanelOpen(false)}>
+                          <Icon name="star" className="w-4 h-4 text-[#607562]" />
+                          <span className="text-[11px] font-medium text-[#607562]">Ver planes</span>
+                        </a>
+                      </Link>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-[#93A295] uppercase tracking-widest font-semibold mb-3">Movimientos recientes</p>
+                      {!walletData?.transactions || walletData.transactions.length === 0 ? (
+                        <p className="text-[12px] text-[#93A295] text-center py-4">Sin movimientos recientes</p>
+                      ) : (
+                        <div className="flex flex-col gap-1.5">
+                          {walletData.transactions.slice(0, 5).map((tx: any) => {
+                            const isPositive = tx.delta > 0;
+                            const reasonLabel: Record<string, string> = { purchase: "Compra", consume: "Consumo", expire: "Vencimiento", refund: "Reembolso" };
+                            return (
+                              <div key={tx.id} className="flex items-center justify-between px-3.5 py-2.5 rounded-xl border" style={{ background: "#F7FAFC", borderColor: "rgba(96,117,98,0.1)" }}>
+                                <div className="min-w-0">
+                                  <p className="text-[12px] font-medium text-[#333] truncate">{tx.description || reasonLabel[tx.reason] || tx.reason}</p>
+                                  <p className="text-[10px] text-[#93A295]">{new Date(tx.createdAt).toLocaleDateString("es", { day: "numeric", month: "short", year: "numeric" })}</p>
+                                </div>
+                                <span className={`text-[13px] font-bold flex-shrink-0 ml-3 ${isPositive ? "text-emerald-600" : "text-red-500"}`}>
+                                  {isPositive ? "+" : ""}{tx.delta}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
             )}
 
