@@ -361,45 +361,61 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
       {/* RIGHT PANEL */}
       {panelOpen && (
         <div className="fixed inset-0 z-50" onClick={() => setPanelOpen(false)}>
-          <div className="absolute inset-0 bg-black/20" />
+          <div className="absolute inset-0 bg-black/25" style={{ backdropFilter: "blur(2px)" }} />
           <div
-            className="absolute top-2 right-2 bottom-2 w-[300px] bg-white border border-[rgba(96,117,98,0.2)] rounded-xl shadow-xl flex flex-col overflow-hidden"
+            className="absolute top-2 right-2 bottom-2 w-[380px] bg-white flex flex-col overflow-hidden"
+            style={{ borderRadius: "16px", border: "1px solid rgba(96,117,98,0.15)", boxShadow: "0 24px 64px rgba(0,0,0,0.18), 0 4px 16px rgba(96,117,98,0.1)" }}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Panel header: tabs + close */}
-            <div className="flex items-center gap-1 px-2 pt-2 pb-0 border-b border-[rgba(96,117,98,0.12)]">
-              <button
-                onClick={() => setActiveTab("notifications")}
-                className={`flex items-center gap-1.5 px-3 py-2 text-[11px] font-medium border-b-2 transition-colors relative ${activeTab === "notifications" ? "border-[#607562] text-[#3d4e3f]" : "border-transparent text-[#93A295] hover:text-[#607562]"}`}
-              >
-                <Icon name="bell" className="w-3.5 h-3.5" />
-                Notificaciones
-                {count > 0 && <span className="min-w-[14px] h-[14px] bg-red-600 text-white text-[8px] font-bold rounded-full flex items-center justify-center px-0.5">{count > 9 ? "9+" : count}</span>}
-              </button>
-              <button
-                onClick={() => setActiveTab("wallet")}
-                className={`flex items-center gap-1.5 px-3 py-2 text-[11px] font-medium border-b-2 transition-colors ${activeTab === "wallet" ? "border-[#607562] text-[#3d4e3f]" : "border-transparent text-[#93A295] hover:text-[#607562]"}`}
-              >
-                <Icon name="wallet" className="w-3.5 h-3.5" />
-                Wallet
-              </button>
-              <button
-                onClick={() => setActiveTab("profile")}
-                className={`flex items-center gap-1.5 px-3 py-2 text-[11px] font-medium border-b-2 transition-colors ${activeTab === "profile" ? "border-[#607562] text-[#3d4e3f]" : "border-transparent text-[#93A295] hover:text-[#607562]"}`}
-              >
-                <Icon name="user" className="w-3.5 h-3.5" />
-                Perfil
-              </button>
-              <div className="flex-1" />
-              <button onClick={() => setPanelOpen(false)} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[#f0f4f0] text-[#93A295] mb-1">
-                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-              </button>
+            {/* Panel header: dark user section + tabs */}
+            <div style={{ background: "linear-gradient(145deg,#1e2f20,#2d4030)", flexShrink: 0, padding: "20px 20px 0" }}>
+              <div className="flex items-center gap-3 mb-5">
+                <div className="relative flex-shrink-0">
+                  <UserAvatar size="lg" />
+                  <span className="absolute bottom-0.5 right-0.5 w-3 h-3 rounded-full bg-green-400" style={{ border: "2px solid #1e2f20" }} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[15px] font-bold text-white leading-tight truncate">{user?.name ?? "Usuario"}</p>
+                  <p className="text-[11px] mt-0.5 truncate" style={{ color: "rgba(255,255,255,0.45)" }}>{user?.email}</p>
+                  <span className="inline-block mt-2 px-2.5 py-0.5 rounded-full text-[9px] font-semibold uppercase tracking-wider" style={{ background: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.7)" }}>
+                    {user?.role === "admin" ? "Admin" : user?.role === "professional" ? "Profesional" : "Usuario"}
+                  </span>
+                </div>
+                <button
+                  onClick={() => setPanelOpen(false)}
+                  className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors"
+                  style={{ background: "rgba(255,255,255,0.1)" }}
+                >
+                  <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" style={{ color: "rgba(255,255,255,0.6)" }} fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+
+              {/* Tabs */}
+              <div className="flex">
+                {([ { id: "notifications" as PanelTab, icon: "bell", label: "Avisos" }, { id: "wallet" as PanelTab, icon: "wallet", label: "Wallet" }, { id: "profile" as PanelTab, icon: "user", label: "Perfil" } ] as const).map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className="flex items-center justify-center gap-1.5 flex-1 py-2.5 text-[11px] font-medium transition-all"
+                    style={{
+                      color: activeTab === tab.id ? "white" : "rgba(255,255,255,0.4)",
+                      borderBottom: activeTab === tab.id ? "2px solid rgba(255,255,255,0.85)" : "2px solid transparent",
+                    }}
+                  >
+                    <Icon name={tab.icon} className="w-3.5 h-3.5" />
+                    {tab.label}
+                    {tab.id === "notifications" && count > 0 && (
+                      <span className="min-w-[14px] h-[14px] bg-red-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center px-0.5">{count > 9 ? "9+" : count}</span>
+                    )}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Tab: Notifications */}
             {activeTab === "notifications" && (
               <>
-                <div className="flex justify-end px-3 py-2 border-b border-[rgba(96,117,98,0.08)]">
+                <div className="flex justify-end px-4 py-2.5 border-b border-[rgba(96,117,98,0.08)]">
                   {count > 0 && (
                     <button onClick={() => markAllRead.mutate()} className="text-[11px] text-[#607562] hover:underline">
                       Marcar todas como leídas
@@ -408,26 +424,31 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
                 </div>
                 <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(96,117,98,0.2) transparent" }}>
                   {!notifications || notifications.length === 0 ? (
-                    <div className="py-10 text-center text-[12px] text-[#93A295]">No hay notificaciones</div>
+                    <div className="py-14 text-center">
+                      <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3" style={{ background: "rgba(96,117,98,0.07)" }}>
+                        <Icon name="bell" className="w-5 h-5 text-[#93A295]" />
+                      </div>
+                      <p className="text-[13px] text-[#93A295]">No hay notificaciones</p>
+                    </div>
                   ) : (
                     notifications.map((n: any) => (
                       <div
                         key={n.id}
                         onClick={() => { if (!n.isRead) markOneRead.mutate({ id: n.id }); if (n.link) window.location.href = n.link; }}
-                        className={`flex gap-2.5 px-3.5 py-3 border-b border-[rgba(96,117,98,0.08)] cursor-pointer transition-colors ${!n.isRead ? "bg-[#f5f8f5] hover:bg-[#eef3ee]" : "hover:bg-[#F7FAFC]"}`}
+                        className={`flex gap-3 px-4 py-3.5 border-b border-[rgba(96,117,98,0.07)] cursor-pointer transition-colors ${!n.isRead ? "bg-[#f5f8f5] hover:bg-[#eef3ee]" : "hover:bg-[#F7FAFC]"}`}
                       >
-                        <div className="w-7 h-7 rounded-full bg-[rgba(96,117,98,0.1)] flex items-center justify-center flex-shrink-0 mt-0.5 text-[#607562]">
-                          <Icon name="bell" className="w-3.5 h-3.5" />
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 text-[#607562]" style={{ background: "rgba(96,117,98,0.1)" }}>
+                          <Icon name="bell" className="w-4 h-4" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2">
-                            <p className="text-[12px] font-medium text-[#333333] leading-snug">{n.title}</p>
-                            <span className="text-[9px] text-[#93A295] flex-shrink-0">{new Date(n.createdAt).toLocaleDateString("es", { day: "numeric", month: "short" })}</span>
+                            <p className="text-[12px] font-semibold text-[#333333] leading-snug">{n.title}</p>
+                            <span className="text-[9px] text-[#93A295] flex-shrink-0 mt-0.5">{new Date(n.createdAt).toLocaleDateString("es", { day: "numeric", month: "short" })}</span>
                           </div>
-                          <p className="text-[11px] text-[#666666] mt-0.5 leading-snug line-clamp-2">{n.message}</p>
-                          {n.link && <p className="text-[10px] text-[#607562] mt-1">Ver detalles →</p>}
+                          <p className="text-[11px] text-[#666] mt-0.5 leading-snug line-clamp-2">{n.message}</p>
+                          {n.link && <p className="text-[10px] text-[#607562] mt-1 font-medium">Ver detalles →</p>}
                         </div>
-                        {!n.isRead && <div className="w-1.5 h-1.5 rounded-full bg-[#607562] flex-shrink-0 mt-1.5" />}
+                        {!n.isRead && <div className="w-2 h-2 rounded-full bg-[#607562] flex-shrink-0 mt-2" />}
                       </div>
                     ))
                   )}
@@ -439,54 +460,50 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
             {activeTab === "wallet" && (
               <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(96,117,98,0.2) transparent" }}>
                 {/* Balance card */}
-                <div className="rounded-xl p-4 text-white relative overflow-hidden" style={{ background: "linear-gradient(135deg,#3d4e3f,#607562)" }}>
-                  <div className="absolute top-0 right-0 w-24 h-24 rounded-full pointer-events-none" style={{ background: "rgba(255,255,255,0.07)", transform: "translate(30%,-30%)" }} />
-                  <p className="text-[10px] text-white/60 uppercase tracking-widest mb-1">Balance disponible</p>
-                  <p className="text-2xl font-semibold text-white">
-                    {walletData?.balance ?? 0}
-                    <span className="text-sm font-normal text-white/60 ml-1.5">créditos</span>
+                <div className="rounded-2xl p-5 text-white relative overflow-hidden" style={{ background: "linear-gradient(135deg,#0d1f10,#1a2e1a)" }}>
+                  <div className="absolute top-0 right-0 w-36 h-36 rounded-full pointer-events-none" style={{ background: "rgba(255,255,255,0.04)", transform: "translate(40%,-40%)" }} />
+                  <div className="absolute bottom-0 left-0 w-24 h-24 rounded-full pointer-events-none" style={{ background: "rgba(255,255,255,0.03)", transform: "translate(-30%,40%)" }} />
+                  <p className="text-[9px] font-bold uppercase tracking-[0.18em] mb-3" style={{ color: "rgba(255,255,255,0.45)" }}>SALDO DISPONIBLE</p>
+                  <p className="text-4xl font-bold text-white leading-none">
+                    {(walletData?.balance ?? 0).toLocaleString("es-MX")}
                   </p>
-                  <p className="text-[10px] text-white/50 mt-2">Inteira Wallet · {user?.email}</p>
+                  <p className="text-[12px] mt-1 font-medium" style={{ color: "rgba(255,255,255,0.35)" }}>créditos</p>
+                  <p className="text-[10px] mt-3 truncate" style={{ color: "rgba(255,255,255,0.25)" }}>Inteira Wallet · {user?.email}</p>
                 </div>
 
                 {/* Actions */}
                 <div className="grid grid-cols-2 gap-2">
                   <Link href="/wallet">
-                    <a className="flex flex-col items-center gap-1.5 p-3 rounded-[9px] bg-[#F7FAFC] border border-[rgba(96,117,98,0.15)] hover:bg-[#f0f4f0] transition-colors cursor-pointer text-center" onClick={() => setPanelOpen(false)}>
+                    <a className="flex flex-col items-center gap-1.5 p-3.5 rounded-xl border hover:bg-[#f0f4f0] transition-colors cursor-pointer text-center" style={{ background: "#F7FAFC", borderColor: "rgba(96,117,98,0.15)" }} onClick={() => setPanelOpen(false)}>
                       <Icon name="wallet" className="w-4 h-4 text-[#607562]" />
-                      <span className="text-[10px] font-medium text-[#607562]">Ver wallet</span>
+                      <span className="text-[11px] font-medium text-[#607562]">Ver wallet</span>
                     </a>
                   </Link>
                   <Link href="/planes">
-                    <a className="flex flex-col items-center gap-1.5 p-3 rounded-[9px] bg-[#F7FAFC] border border-[rgba(96,117,98,0.15)] hover:bg-[#f0f4f0] transition-colors cursor-pointer text-center" onClick={() => setPanelOpen(false)}>
+                    <a className="flex flex-col items-center gap-1.5 p-3.5 rounded-xl border hover:bg-[#f0f4f0] transition-colors cursor-pointer text-center" style={{ background: "#F7FAFC", borderColor: "rgba(96,117,98,0.15)" }} onClick={() => setPanelOpen(false)}>
                       <Icon name="star" className="w-4 h-4 text-[#607562]" />
-                      <span className="text-[10px] font-medium text-[#607562]">Ver planes</span>
+                      <span className="text-[11px] font-medium text-[#607562]">Ver planes</span>
                     </a>
                   </Link>
                 </div>
 
                 {/* Recent transactions */}
                 <div>
-                  <p className="text-[9px] text-[#93A295] uppercase tracking-widest font-medium mb-2">Movimientos recientes</p>
+                  <p className="text-[10px] text-[#93A295] uppercase tracking-widest font-semibold mb-3">Movimientos recientes</p>
                   {!walletData?.transactions || walletData.transactions.length === 0 ? (
-                    <p className="text-[11px] text-[#93A295] text-center py-4">Sin movimientos recientes</p>
+                    <p className="text-[12px] text-[#93A295] text-center py-4">Sin movimientos recientes</p>
                   ) : (
-                    <div className="flex flex-col gap-1">
+                    <div className="flex flex-col gap-1.5">
                       {walletData.transactions.slice(0, 5).map((tx: any) => {
                         const isPositive = tx.delta > 0;
-                        const reasonLabel: Record<string, string> = {
-                          purchase: "Compra",
-                          consume: "Consumo",
-                          expire: "Vencimiento",
-                          refund: "Reembolso",
-                        };
+                        const reasonLabel: Record<string, string> = { purchase: "Compra", consume: "Consumo", expire: "Vencimiento", refund: "Reembolso" };
                         return (
-                          <div key={tx.id} className="flex items-center justify-between px-3 py-2 rounded-[8px] bg-[#F7FAFC] border border-[rgba(96,117,98,0.1)]">
+                          <div key={tx.id} className="flex items-center justify-between px-3.5 py-2.5 rounded-xl border" style={{ background: "#F7FAFC", borderColor: "rgba(96,117,98,0.1)" }}>
                             <div className="min-w-0">
-                              <p className="text-[11px] font-medium text-[#333333] truncate">{tx.description || reasonLabel[tx.reason] || tx.reason}</p>
-                              <p className="text-[9px] text-[#93A295]">{new Date(tx.createdAt).toLocaleDateString("es", { day: "numeric", month: "short", year: "numeric" })}</p>
+                              <p className="text-[12px] font-medium text-[#333] truncate">{tx.description || reasonLabel[tx.reason] || tx.reason}</p>
+                              <p className="text-[10px] text-[#93A295]">{new Date(tx.createdAt).toLocaleDateString("es", { day: "numeric", month: "short", year: "numeric" })}</p>
                             </div>
-                            <span className={`text-[12px] font-semibold flex-shrink-0 ml-2 ${isPositive ? "text-emerald-600" : "text-red-500"}`}>
+                            <span className={`text-[13px] font-bold flex-shrink-0 ml-3 ${isPositive ? "text-emerald-600" : "text-red-500"}`}>
                               {isPositive ? "+" : ""}{tx.delta}
                             </span>
                           </div>
@@ -500,68 +517,64 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
 
             {/* Tab: Profile */}
             {activeTab === "profile" && (
-              <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(96,117,98,0.2) transparent" }}>
-                {/* Avatar + info */}
-                <div className="p-5 text-center bg-[#F7FAFC] border-b border-[rgba(96,117,98,0.1)]">
-                  <div className="relative w-14 h-14 mx-auto mb-3">
-                    <UserAvatar size="lg" />
-                    <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-green-400 border-2 border-white" />
-                  </div>
-                  <p className="text-sm font-semibold text-[#333333]">{user?.name ?? "Usuario"}</p>
-                  <p className="text-[11px] text-[#93A295] mt-0.5">{user?.email}</p>
-                  <span className="inline-block mt-2 px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-[rgba(96,117,98,0.1)] text-[#3d4e3f] border border-[rgba(96,117,98,0.25)]">
-                    {user?.role === "admin" ? "Admin" : user?.role === "professional" ? "Profesional" : "Usuario"}
-                  </span>
-                </div>
+              <div className="flex-1 overflow-y-auto flex flex-col" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(96,117,98,0.2) transparent" }}>
+                <div className="p-3 flex-1">
+                  <p className="text-[9px] text-[#93A295] uppercase tracking-widest font-semibold px-3 py-2">Cuenta</p>
 
-                {/* Quick links */}
-                <div className="p-3 flex flex-col gap-1">
-                  <Link href="/perfil">
-                    <a className="flex items-center gap-3 px-3 py-2.5 rounded-[9px] hover:bg-[#f0f4f0] transition-colors cursor-pointer" onClick={() => setPanelOpen(false)}>
-                      <Icon name="user" className="w-4 h-4 text-[#607562]" />
-                      <span className="text-[12px] font-medium text-[#333333]">Mi perfil</span>
-                    </a>
-                  </Link>
-                  <Link href="/suscripcion">
-                    <a className="flex items-center gap-3 px-3 py-2.5 rounded-[9px] hover:bg-[#f0f4f0] transition-colors cursor-pointer" onClick={() => setPanelOpen(false)}>
-                      <Icon name="star" className="w-4 h-4 text-[#607562]" />
-                      <span className="text-[12px] font-medium text-[#333333]">Mi suscripción</span>
-                    </a>
-                  </Link>
-                  <button
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[9px] hover:bg-[#f0f4f0] transition-colors cursor-pointer text-left"
-                    onClick={() => { setActiveTab("notifications"); }}
-                  >
-                    <Icon name="bell" className="w-4 h-4 text-[#607562]" />
-                    <span className="text-[12px] font-medium text-[#333333]">Notificaciones</span>
-                    {count > 0 && <span className="ml-auto min-w-[18px] h-[18px] bg-red-600 text-white text-[9px] font-bold rounded-full flex items-center justify-center px-1">{count}</span>}
+                  {[
+                    { href: "/perfil", icon: "user", label: "Mi perfil" },
+                    { href: "/suscripcion", icon: "star", label: "Mi suscripción" },
+                  ].map((item) => (
+                    <Link key={item.href} href={item.href}>
+                      <a className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-[#f0f4f0] transition-colors cursor-pointer mb-0.5" onClick={() => setPanelOpen(false)}>
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "rgba(96,117,98,0.08)" }}>
+                          <Icon name={item.icon} className="w-4 h-4 text-[#607562]" />
+                        </div>
+                        <span className="text-[13px] font-medium text-[#333] flex-1">{item.label}</span>
+                        <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 text-[#ccc]" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+                      </a>
+                    </Link>
+                  ))}
+
+                  <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-[#f0f4f0] transition-colors mb-0.5" onClick={() => setActiveTab("notifications")}>
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "rgba(96,117,98,0.08)" }}>
+                      <Icon name="bell" className="w-4 h-4 text-[#607562]" />
+                    </div>
+                    <span className="text-[13px] font-medium text-[#333] flex-1 text-left">Notificaciones</span>
+                    {count > 0 && <span className="min-w-[18px] h-[18px] bg-red-600 text-white text-[9px] font-bold rounded-full flex items-center justify-center px-1">{count}</span>}
                   </button>
+
                   {user?.role === "admin" && (
                     <Link href="/admin">
-                      <a className="flex items-center gap-3 px-3 py-2.5 rounded-[9px] hover:bg-[#fff0ee] transition-colors cursor-pointer" onClick={() => setPanelOpen(false)}>
-                        <Icon name="shield" className="w-4 h-4 text-red-500" />
-                        <span className="text-[12px] font-medium text-red-600">Panel Admin</span>
+                      <a className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-[#fff0ee] transition-colors cursor-pointer mb-0.5" onClick={() => setPanelOpen(false)}>
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "rgba(180,60,60,0.08)" }}>
+                          <Icon name="shield" className="w-4 h-4 text-red-500" />
+                        </div>
+                        <span className="text-[13px] font-medium text-red-600 flex-1">Panel Admin</span>
+                        <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 text-[#ccc]" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
                       </a>
                     </Link>
                   )}
                   {user?.role === "professional" && (
                     <Link href="/panel-profesional">
-                      <a className="flex items-center gap-3 px-3 py-2.5 rounded-[9px] hover:bg-[#f0f4f0] transition-colors cursor-pointer" onClick={() => setPanelOpen(false)}>
-                        <Icon name="shield" className="w-4 h-4 text-[#607562]" />
-                        <span className="text-[12px] font-medium text-[#333333]">Mi panel profesional</span>
+                      <a className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-[#f0f4f0] transition-colors cursor-pointer mb-0.5" onClick={() => setPanelOpen(false)}>
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "rgba(96,117,98,0.08)" }}>
+                          <Icon name="shield" className="w-4 h-4 text-[#607562]" />
+                        </div>
+                        <span className="text-[13px] font-medium text-[#333] flex-1">Mi panel profesional</span>
+                        <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 text-[#ccc]" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
                       </a>
                     </Link>
                   )}
                 </div>
 
                 {/* Sign out */}
-                <div className="p-3 border-t border-[rgba(96,117,98,0.1)] mt-auto">
-                  <button
-                    onClick={logout}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[9px] hover:bg-[#fff0ee] transition-colors text-left"
-                  >
-                    <Icon name="logout" className="w-4 h-4 text-red-500" />
-                    <span className="text-[12px] font-medium text-red-600">Cerrar sesión</span>
+                <div className="p-3 border-t border-[rgba(96,117,98,0.1)]">
+                  <button onClick={logout} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-[#fff5f5] transition-colors text-left">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "rgba(239,68,68,0.08)" }}>
+                      <Icon name="logout" className="w-4 h-4 text-red-500" />
+                    </div>
+                    <span className="text-[13px] font-medium text-red-500">Cerrar sesión</span>
                   </button>
                 </div>
               </div>
