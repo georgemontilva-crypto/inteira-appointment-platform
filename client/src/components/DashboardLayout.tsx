@@ -317,8 +317,28 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
       <div className="flex overflow-hidden" style={{ height: "calc(100vh - 58px)" }}>
         {/* SIDEBAR */}
         <aside className="w-[220px] flex-shrink-0 bg-white border-r border-[rgba(96,117,98,0.15)] flex-col hidden md:flex overflow-hidden sticky top-[58px]" style={{ height: "calc(100vh - 58px)" }}>
+          {isProfessional && (
+            <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(96,117,98,0.1)' }}>
+              <div style={{ display: 'flex', background: '#eef2ee', borderRadius: 20, padding: 3 }}>
+                <button
+                  onClick={() => navigate('/dashboard')}
+                  style={{ flex: 1, padding: '6px 0', borderRadius: 16, fontSize: 12, fontWeight: 600,
+                    background: !isProMode ? '#607562' : 'transparent',
+                    color: !isProMode ? '#fff' : '#93a295', border: 'none', cursor: 'pointer' }}>
+                  Cliente
+                </button>
+                <button
+                  onClick={() => navigate('/panel-profesional')}
+                  style={{ flex: 1, padding: '6px 0', borderRadius: 16, fontSize: 12, fontWeight: 600,
+                    background: isProMode ? '#607562' : 'transparent',
+                    color: isProMode ? '#fff' : '#93a295', border: 'none', cursor: 'pointer' }}>
+                  Profesional
+                </button>
+              </div>
+            </div>
+          )}
           <nav className="flex-1 overflow-y-auto p-2.5">
-            {user?.role === "professional" ? (
+            {isProfessional && isProMode ? (
               /* ── Sidebar profesional — grid 2 col con secciones ── */
               <div className="flex flex-col gap-3">
                 {PRO_NAV_SECTIONS.map((section) => (
