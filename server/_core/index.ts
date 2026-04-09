@@ -277,6 +277,27 @@ async function runStartupMigrations() {
     ].join(" ")).catch(() => {});
     console.log("[Migration] withdrawalRequests table ready");
 
+    // Ensure withdrawalRequests has paymentMethod, paymentDetails, notes columns
+    const wrExtraCols = [
+      { name: "paymentMethod", definition: "VARCHAR(50) NULL" },
+      { name: "paymentDetails", definition: "TEXT NULL" },
+      { name: "notes",          definition: "TEXT NULL" },
+    ];
+    for (const col of wrExtraCols) {
+      try {
+        const [wrRows] = await db.execute(
+          `SELECT COUNT(*) as cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'withdrawalRequests' AND COLUMN_NAME = '${col.name}'`
+        ) as any;
+        const wrCnt = Array.isArray(wrRows) ? wrRows[0]?.cnt : wrRows?.cnt;
+        if (!wrCnt || Number(wrCnt) === 0) {
+          await db.execute(`ALTER TABLE \`withdrawalRequests\` ADD COLUMN \`${col.name}\` ${col.definition}`);
+          console.log(`[Migration] withdrawalRequests.${col.name} added`);
+        }
+      } catch (e: any) {
+        console.warn(`[Migration] Could not add withdrawalRequests.${col.name}:`, e?.message);
+      }
+    }
+
     // Ensure pending_review in appointments status enum
     await db.execute(
       "ALTER TABLE `appointments` MODIFY COLUMN `status` ENUM('scheduled','completed','canceled','no-show','pending_review') DEFAULT 'scheduled'"

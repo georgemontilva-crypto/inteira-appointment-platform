@@ -55,6 +55,13 @@ export default function ProfessionalDashboard() {
   const [newBlockedDate, setNewBlockedDate] = useState("");
   const [newBlockedReason, setNewBlockedReason] = useState("");
   const [attendanceModal, setAttendanceModal] = useState<any | null>(null);
+  const [withdrawalOpen, setWithdrawalOpen] = useState(false);
+  const [withdrawalForm, setWithdrawalForm] = useState({
+    amount: "",
+    paymentMethod: "clabe" as "clabe" | "binance" | "paypal" | "other",
+    paymentDetails: "",
+    notes: "",
+  });
   const [nowMs, setNowMs] = useState(Date.now());
   useEffect(() => {
     const id = setInterval(() => setNowMs(Date.now()), 30_000);
@@ -131,10 +138,20 @@ export default function ProfessionalDashboard() {
     { enabled: isAuthenticated }
   );
 
-  const { data: earningsHistory } = trpc.professional.getEarningsHistory.useQuery(
+  const { data: earningsHistory, refetch: refetchEarningsHistory } = trpc.professional.getEarningsHistory.useQuery(
     undefined,
     { enabled: isAuthenticated && activeTab === "ganancias" }
   );
+
+  const requestWithdrawalMutation = trpc.professional.requestWithdrawal.useMutation({
+    onSuccess: (data) => {
+      toast.success(data.message);
+      setWithdrawalOpen(false);
+      setWithdrawalForm({ amount: "", paymentMethod: "clabe", paymentDetails: "", notes: "" });
+      refetchEarningsHistory();
+    },
+    onError: (err) => toast.error(err.message ?? "Error al solicitar el retiro"),
+  });
 
   const addAvailabilityMutation = trpc.professional.setAvailability.useMutation({
     onSuccess: () => {
@@ -910,28 +927,93 @@ export default function ProfessionalDashboard() {
         )}
 
         {/* Tab: Ganancias */}
-        {activeTab === "ganancias" && (
+        {activeTab === "ganancias" && (() => {
+          const balance = parseFloat((wallet as any)?.wallet?.balance ?? "0");
+          const pendingWithdrawal = parseFloat((wallet as any)?.wallet?.pendingWithdrawal ?? "0");
+          const withdrawals: any[] = (wallet as any)?.withdrawals ?? [];
+          const hasPending = withdrawals.some((w) => w.status === "pending");
+          const wAmount = parseFloat(withdrawalForm.amount || "0");
+          const wValid = wAmount >= 1000 && wAmount <= balance && withdrawalForm.paymentDetails.trim().length > 0;
+
+          return (
           <div className="space-y-4">
             <h2 className="text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>Mis ganancias</h2>
 
             {/* Wallet summary */}
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               {[
-                { label: "Balance disponible", value: `$${parseFloat((wallet as any)?.balance ?? "0").toFixed(2)} MXN` },
-                { label: "Total ganado", value: `$${parseFloat((wallet as any)?.totalEarned ?? "0").toFixed(2)} MXN` },
-                { label: "Total retirado", value: `$${parseFloat((wallet as any)?.totalWithdrawn ?? "0").toFixed(2)} MXN` },
-              ].map(({ label, value }) => (
+                { label: "Balance disponible", value: `$${balance.toFixed(2)} MXN`, highlight: true },
+                { label: "Total ganado", value: `$${parseFloat((wallet as any)?.wallet?.totalEarned ?? "0").toFixed(2)} MXN`, highlight: false },
+                { label: "Total retirado", value: `$${parseFloat((wallet as any)?.wallet?.totalWithdrawn ?? "0").toFixed(2)} MXN`, highlight: false },
+              ].map(({ label, value, highlight }) => (
                 <div key={label} className="rounded-2xl border border-[rgba(96,117,98,0.15)] bg-white p-4">
                   <p className="text-xs text-[#93A295] mb-1">{label}</p>
-                  <p className="text-lg font-bold text-[#2d3a2e]">{value}</p>
+                  <p className={`text-lg font-bold ${highlight ? "text-[#4ade80]" : "text-[#2d3a2e]"}`}>{value}</p>
                 </div>
               ))}
             </div>
 
+            {/* Withdrawal CTA or pending status */}
+            {hasPending ? (
+              <div className="rounded-2xl border border-yellow-200 bg-yellow-50 px-4 py-3 flex items-center gap-3">
+                <Clock className="w-5 h-5 text-yellow-600 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-yellow-800">Retiro pendiente</p>
+                  <p className="text-xs text-yellow-700">Tienes una solicitud en proceso. Se procesa los lunes.</p>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setWithdrawalOpen(true)}
+                disabled={balance < 1000}
+                className="w-full rounded-2xl border border-[rgba(96,117,98,0.3)] bg-white px-4 py-3 flex items-center justify-between hover:bg-[#f0f4f0] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "rgba(96,117,98,0.1)" }}>
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#607562" strokeWidth="2" strokeLinecap="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                  </div>
+                  <div className="text-left">
+                    <p className="text-sm font-semibold text-[#2d3a2e]">Solicitar retiro</p>
+                    <p className="text-xs text-[#93A295]">{balance < 1000 ? "Mínimo $1,000 MXN para retirar" : `Disponible: $${balance.toFixed(2)} MXN`}</p>
+                  </div>
+                </div>
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#93A295" strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+            )}
+
+            {/* Pending withdrawal amount info */}
+            {pendingWithdrawal > 0 && (
+              <p className="text-xs text-[#93A295] text-center">
+                ${pendingWithdrawal.toFixed(2)} MXN en proceso de retiro
+              </p>
+            )}
+
+            {/* Withdrawal history */}
+            {withdrawals.length > 0 && (
+              <div className="rounded-2xl border border-[rgba(96,117,98,0.15)] bg-white overflow-hidden">
+                <div className="px-4 py-3 border-b border-[rgba(96,117,98,0.1)]">
+                  <p className="text-sm font-semibold text-[#2d3a2e]">Historial de retiros</p>
+                </div>
+                <div className="divide-y divide-[rgba(96,117,98,0.08)]">
+                  {withdrawals.slice(0, 5).map((w: any) => (
+                    <div key={w.id} className="flex items-center justify-between px-4 py-3">
+                      <div>
+                        <p className="text-sm font-medium text-[#2d3a2e]">${parseFloat(w.amount).toFixed(2)} MXN</p>
+                        <p className="text-xs text-[#93A295]">{w.paymentMethod ?? "CLABE"} · {new Date(w.createdAt).toLocaleDateString("es-MX", { day: "numeric", month: "short", year: "numeric" })}</p>
+                      </div>
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${w.status === "paid" ? "bg-green-100 text-green-700" : w.status === "pending" ? "bg-yellow-100 text-yellow-700" : "bg-gray-100 text-gray-600"}`}>
+                        {w.status === "paid" ? "Pagado" : w.status === "pending" ? "Pendiente" : w.status}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Earnings history */}
             <div className="rounded-2xl border border-[rgba(96,117,98,0.15)] bg-white overflow-hidden">
               <div className="px-4 py-3 border-b border-[rgba(96,117,98,0.1)]">
-                <p className="text-sm font-semibold text-[#2d3a2e]">Historial de pagos</p>
+                <p className="text-sm font-semibold text-[#2d3a2e]">Historial de sesiones</p>
               </div>
               {!earningsHistory || earningsHistory.length === 0 ? (
                 <div className="p-10 text-center">
@@ -944,11 +1026,7 @@ export default function ProfessionalDashboard() {
                     <div key={e.id} className="flex items-center justify-between px-4 py-3">
                       <div>
                         <p className="text-sm font-medium text-[#2d3a2e]">Cita #{e.appointmentId}</p>
-                        <p className="text-xs text-[#93A295]">
-                          {e.appointmentDate
-                            ? format(new Date(e.appointmentDate), "d MMM yyyy 'a las' HH:mm", { locale: es })
-                            : "—"}
-                        </p>
+                        <p className="text-xs text-[#93A295]">{e.appointmentDate ? format(new Date(e.appointmentDate), "d MMM yyyy 'a las' HH:mm", { locale: es }) : "—"}</p>
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-bold text-[#607562]">+${parseFloat(e.netAmount).toFixed(2)} MXN</p>
@@ -958,6 +1036,143 @@ export default function ProfessionalDashboard() {
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+          );
+        })()}
+
+        {/* Withdrawal Modal */}
+        {withdrawalOpen && (
+          <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center" onClick={() => setWithdrawalOpen(false)}>
+            <div className="absolute inset-0 bg-black/40" />
+            <div className="relative w-full max-w-md bg-white rounded-t-3xl md:rounded-2xl p-6 space-y-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-bold text-[#2d3a2e]">Solicitar retiro</h3>
+                <button onClick={() => setWithdrawalOpen(false)} className="w-8 h-8 rounded-full bg-[#f0f4f0] flex items-center justify-center">
+                  <XCircle className="w-4 h-4 text-[#607562]" />
+                </button>
+              </div>
+
+              {/* Info banner */}
+              <div className="rounded-xl bg-[#f0f4f0] px-3 py-2 text-xs text-[#607562]">
+                Los retiros se procesan los lunes. El dinero puede tardar hasta <strong>7 días hábiles</strong> en llegar.
+              </div>
+
+              {/* Amount */}
+              <div>
+                <label className="text-xs font-semibold text-[#93A295] uppercase tracking-wider">Monto a retirar (MXN)</label>
+                <input
+                  type="number"
+                  min={1000}
+                  max={parseFloat((wallet as any)?.wallet?.balance ?? "0")}
+                  value={withdrawalForm.amount}
+                  onChange={(e) => setWithdrawalForm({ ...withdrawalForm, amount: e.target.value })}
+                  placeholder="Mínimo $1,000"
+                  className="mt-1 w-full rounded-xl border border-[rgba(96,117,98,0.2)] px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[rgba(96,117,98,0.3)]"
+                />
+                <p className="text-[11px] text-[#93A295] mt-1">Disponible: ${parseFloat((wallet as any)?.wallet?.balance ?? "0").toFixed(2)} MXN</p>
+              </div>
+
+              {/* Payment method */}
+              <div>
+                <label className="text-xs font-semibold text-[#93A295] uppercase tracking-wider">Método de pago</label>
+                <div className="mt-1 grid grid-cols-2 gap-2">
+                  {(["clabe", "binance", "paypal", "other"] as const).map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setWithdrawalForm({ ...withdrawalForm, paymentMethod: m, paymentDetails: "" })}
+                      className="rounded-xl border px-3 py-2 text-sm font-medium transition-colors"
+                      style={{
+                        background: withdrawalForm.paymentMethod === m ? "rgba(96,117,98,0.12)" : "#f7faf7",
+                        borderColor: withdrawalForm.paymentMethod === m ? "#607562" : "rgba(96,117,98,0.2)",
+                        color: withdrawalForm.paymentMethod === m ? "#2d3a2e" : "#607562",
+                      }}
+                    >
+                      {m === "clabe" ? "CLABE" : m === "binance" ? "Binance" : m === "paypal" ? "PayPal" : "Otro"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Dynamic payment details */}
+              {withdrawalForm.paymentMethod === "clabe" && (
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-[#93A295] uppercase tracking-wider">CLABE interbancaria (18 dígitos)</label>
+                  <input
+                    type="text"
+                    maxLength={18}
+                    value={withdrawalForm.paymentDetails}
+                    onChange={(e) => setWithdrawalForm({ ...withdrawalForm, paymentDetails: e.target.value.replace(/\D/g, "").slice(0, 18) })}
+                    placeholder="000000000000000000"
+                    className="w-full rounded-xl border border-[rgba(96,117,98,0.2)] px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[rgba(96,117,98,0.3)]"
+                  />
+                </div>
+              )}
+              {withdrawalForm.paymentMethod === "binance" && (
+                <div>
+                  <label className="text-xs font-semibold text-[#93A295] uppercase tracking-wider">Binance Pay ID o UID</label>
+                  <input
+                    type="text"
+                    value={withdrawalForm.paymentDetails}
+                    onChange={(e) => setWithdrawalForm({ ...withdrawalForm, paymentDetails: e.target.value })}
+                    placeholder="Tu Binance Pay ID"
+                    className="mt-1 w-full rounded-xl border border-[rgba(96,117,98,0.2)] px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[rgba(96,117,98,0.3)]"
+                  />
+                </div>
+              )}
+              {withdrawalForm.paymentMethod === "paypal" && (
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-[#93A295] uppercase tracking-wider">Email de PayPal</label>
+                  <input
+                    type="email"
+                    value={withdrawalForm.paymentDetails}
+                    onChange={(e) => setWithdrawalForm({ ...withdrawalForm, paymentDetails: e.target.value })}
+                    placeholder="tu@email.com"
+                    className="w-full rounded-xl border border-[rgba(96,117,98,0.2)] px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[rgba(96,117,98,0.3)]"
+                  />
+                  <div className="rounded-xl bg-yellow-50 border border-yellow-200 px-3 py-2 text-xs text-yellow-800">
+                    ⚠️ PayPal cobra una comisión del 5.4% que no cubrimos. Recibirás el monto menos esa comisión.
+                  </div>
+                </div>
+              )}
+              {withdrawalForm.paymentMethod === "other" && (
+                <div>
+                  <label className="text-xs font-semibold text-[#93A295] uppercase tracking-wider">Describe el método de pago</label>
+                  <textarea
+                    value={withdrawalForm.paymentDetails}
+                    onChange={(e) => setWithdrawalForm({ ...withdrawalForm, paymentDetails: e.target.value })}
+                    placeholder="Describe cómo quieres recibir tu pago..."
+                    rows={3}
+                    className="mt-1 w-full rounded-xl border border-[rgba(96,117,98,0.2)] px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[rgba(96,117,98,0.3)] resize-none"
+                  />
+                </div>
+              )}
+
+              {/* Optional note */}
+              <div>
+                <label className="text-xs font-semibold text-[#93A295] uppercase tracking-wider">Nota adicional (opcional)</label>
+                <input
+                  type="text"
+                  value={withdrawalForm.notes}
+                  onChange={(e) => setWithdrawalForm({ ...withdrawalForm, notes: e.target.value })}
+                  placeholder="Ej: transferir el lunes por la mañana"
+                  className="mt-1 w-full rounded-xl border border-[rgba(96,117,98,0.2)] px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[rgba(96,117,98,0.3)]"
+                />
+              </div>
+
+              <Button
+                className="w-full gradient-brand text-white border-0 h-11"
+                disabled={!wValid || requestWithdrawalMutation.isPending}
+                onClick={() => requestWithdrawalMutation.mutate({
+                  amount: wAmount,
+                  paymentMethod: withdrawalForm.paymentMethod,
+                  paymentDetails: withdrawalForm.paymentDetails,
+                  notes: withdrawalForm.notes || undefined,
+                })}
+              >
+                {requestWithdrawalMutation.isPending ? "Enviando..." : `Solicitar $${wAmount > 0 ? wAmount.toLocaleString("es-MX") : "—"} MXN`}
+              </Button>
             </div>
           </div>
         )}

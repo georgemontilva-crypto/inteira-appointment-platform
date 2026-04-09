@@ -60,7 +60,7 @@ const STATUS_MAP: Record<string, { label: string; cls: string }> = {
 
 export default function AdminDashboard() {
   const { user, isAuthenticated, loading } = useAuth();
-  const [activeTab, setActiveTab] = useState<"overview" | "profesionales" | "activos" | "especialidades" | "planes" | "herramientas">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "profesionales" | "activos" | "especialidades" | "planes" | "herramientas" | "retiros">("overview");
   const [rejectReason, setRejectReason] = useState<Record<number, string>>({});
   const [tierSelect, setTierSelect] = useState<Record<number, "basic" | "pro">>({});
   const [expandedBio, setExpandedBio] = useState<Record<number, boolean>>({});
@@ -84,6 +84,7 @@ export default function AdminDashboard() {
   const { data: topProfessionals } = trpc.admin.getTopProfessionals.useQuery({ limit: 5 }, { enabled: isAuthenticated });
   const { data: profsBySpecialty } = trpc.admin.getProfessionalsBySpecialty.useQuery(undefined, { enabled: isAuthenticated });
   const { data: activeProfessionals } = trpc.admin.getActiveProfessionals.useQuery(undefined, { enabled: isAuthenticated });
+  const { data: allWithdrawals, refetch: refetchWithdrawals } = trpc.admin.getPendingWithdrawals.useQuery(undefined, { enabled: isAuthenticated });
 
   const approveMutation = trpc.admin.approveProfessional.useMutation({
     onSuccess: () => {
@@ -118,6 +119,14 @@ export default function AdminDashboard() {
   const syncRolesMutation = trpc.admin.syncProfessionalRoles.useMutation({
     onSuccess: () => toast.success("Roles de profesionales sincronizados correctamente"),
     onError: () => toast.error("Error al sincronizar roles"),
+  });
+
+  const approveWithdrawalMutation = trpc.admin.approveWithdrawal.useMutation({
+    onSuccess: () => {
+      refetchWithdrawals();
+      toast.success("Retiro marcado como pagado");
+    },
+    onError: (err) => toast.error(err.message ?? "Error al procesar el retiro"),
   });
 
   const createPlanMutation = trpc.subscriptionPlan.create.useMutation({
@@ -205,6 +214,7 @@ export default function AdminDashboard() {
               { key: "especialidades",  label: "Especialidades", icon: <Award className="w-4 h-4" /> },
               { key: "planes",          label: "Planes",         icon: <Settings className="w-4 h-4" /> },
       { key: "herramientas",    label: "Herramientas",   icon: <Wrench className="w-4 h-4" /> },
+              { key: "retiros",         label: "Retiros",        icon: <CreditCard className="w-4 h-4" /> },
             ] as const).map((tab) => (
               <button
                 key={tab.key}
@@ -220,6 +230,11 @@ export default function AdminDashboard() {
                 {tab.key === "profesionales" && (pendingProfessionals?.length ?? 0) > 0 && (
                   <Badge className="bg-yellow-500 text-white border-0 text-[10px] h-4 px-1 ml-0.5">
                     {pendingProfessionals!.length}
+                  </Badge>
+                )}
+                {tab.key === "retiros" && ((allWithdrawals ?? []).filter((w: any) => w.status === "pending").length > 0) && (
+                  <Badge className="bg-red-500 text-white border-0 text-[10px] h-4 px-1 ml-0.5">
+                    {(allWithdrawals ?? []).filter((w: any) => w.status === "pending").length}
                   </Badge>
                 )}
               </button>
@@ -816,6 +831,89 @@ export default function AdminDashboard() {
                 )}
               </CardContent>
             </Card>
+          </div>
+        )}
+
+        {/* ══ TAB: RETIROS ══════════════════════════════════════════════════ */}
+        {activeTab === "retiros" && (
+          <div className="space-y-6">
+            <h2 className="text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
+              Solicitudes de retiro
+            </h2>
+
+            {/* Pending */}
+            <div className="space-y-3">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Pendientes</p>
+              {(allWithdrawals ?? []).filter((w: any) => w.status === "pending").length === 0 ? (
+                <Card className="border-border border-dashed">
+                  <CardContent className="p-8 text-center">
+                    <CheckCircle2 className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
+                    <p className="text-muted-foreground text-sm">No hay solicitudes pendientes</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                (allWithdrawals ?? []).filter((w: any) => w.status === "pending").map((w: any) => (
+                  <Card key={w.id} className="border-border">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0 space-y-1">
+                          <div className="flex items-center gap-2">
+                            <p className="font-semibold text-sm">{w.professionalName}</p>
+                            <Badge className="bg-yellow-100 text-yellow-700 border-0 text-[10px]">Pendiente</Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground">{w.professionalEmail}</p>
+                          <p className="text-lg font-bold text-primary">${parseFloat(w.amount).toLocaleString("es-MX")} MXN</p>
+                          <div className="text-xs text-muted-foreground space-y-0.5">
+                            <p><span className="font-medium">Método:</span> {w.paymentMethod ?? "CLABE"}</p>
+                            <p><span className="font-medium">Detalles:</span> {w.paymentDetails ?? w.clabe ?? "—"}</p>
+                            {w.notes && <p><span className="font-medium">Nota:</span> {w.notes}</p>}
+                            <p><span className="font-medium">Solicitado:</span> {format(new Date(w.createdAt), "d MMM yyyy 'a las' HH:mm", { locale: es })}</p>
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          className="gradient-brand text-white border-0 flex-shrink-0"
+                          disabled={approveWithdrawalMutation.isPending}
+                          onClick={() => {
+                            if (window.confirm(`¿Confirmar pago de $${parseFloat(w.amount).toLocaleString("es-MX")} MXN a ${w.professionalName}?`)) {
+                              approveWithdrawalMutation.mutate({ withdrawalId: w.id });
+                            }
+                          }}
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
+                          Marcar pagado
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
+
+            {/* History */}
+            {(allWithdrawals ?? []).filter((w: any) => w.status !== "pending").length > 0 && (
+              <div className="space-y-3">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Historial procesados</p>
+                <Card className="border-border">
+                  <CardContent className="p-0 divide-y divide-border">
+                    {(allWithdrawals ?? []).filter((w: any) => w.status !== "pending").map((w: any) => (
+                      <div key={w.id} className="flex items-center justify-between px-4 py-3">
+                        <div>
+                          <p className="text-sm font-medium">{w.professionalName}</p>
+                          <p className="text-xs text-muted-foreground">{w.paymentMethod ?? "CLABE"} · {format(new Date(w.createdAt), "d MMM yyyy", { locale: es })}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-bold">${parseFloat(w.amount).toLocaleString("es-MX")} MXN</p>
+                          <Badge className={`text-[10px] border-0 ${w.status === "paid" ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-600"}`}>
+                            {w.status === "paid" ? "Pagado" : w.status}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              </div>
+            )}
           </div>
         )}
 

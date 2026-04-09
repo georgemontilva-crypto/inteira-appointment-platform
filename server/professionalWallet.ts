@@ -118,7 +118,10 @@ export async function getProfessionalWithdrawals(professionalId: number) {
 export async function createWithdrawalRequest(
   professionalId: number,
   amount: number,
-  clabe: string
+  clabe: string | null,
+  paymentMethod?: string,
+  paymentDetails?: string,
+  notes?: string,
 ): Promise<void> {
   const db = await getDb();
   if (!db) throw new Error("DB not available");
@@ -129,7 +132,47 @@ export async function createWithdrawalRequest(
     [amount, amount, professionalId]
   );
   await (db as any).$client.execute(
-    `INSERT INTO withdrawalRequests (professionalId, amount, clabe) VALUES (?, ?, ?)`,
-    [professionalId, amount, clabe]
+    `INSERT INTO withdrawalRequests (professionalId, amount, clabe, paymentMethod, paymentDetails, notes) VALUES (?, ?, ?, ?, ?, ?)`,
+    [professionalId, amount, clabe ?? null, paymentMethod ?? null, paymentDetails ?? null, notes ?? null]
   );
+}
+
+export async function approveWithdrawalRequest(withdrawalId: number): Promise<{ professionalId: number; amount: number }> {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const client = (db as any).$client;
+
+  const row = await new Promise<any>((resolve, reject) => {
+    client.execute(
+      "SELECT id, professionalId, amount, status FROM withdrawalRequests WHERE id = ? LIMIT 1",
+      [withdrawalId],
+      (err: any, results: any) => {
+        if (err) reject(err);
+        else resolve(Array.isArray(results) ? results[0] ?? null : null);
+      }
+    );
+  });
+
+  if (!row) throw new Error("Withdrawal request not found");
+  if (row.status !== "pending") throw new Error(`Withdrawal already ${row.status}`);
+
+  const amount = parseFloat(row.amount);
+
+  await new Promise<void>((resolve, reject) => {
+    client.execute(
+      "UPDATE withdrawalRequests SET status='paid', processedAt=NOW(), updatedAt=NOW() WHERE id=?",
+      [withdrawalId],
+      (err: any) => { if (err) reject(err); else resolve(); }
+    );
+  });
+
+  await new Promise<void>((resolve, reject) => {
+    client.execute(
+      "UPDATE professionalWallet SET pendingWithdrawal = GREATEST(0, pendingWithdrawal - ?), totalWithdrawn = totalWithdrawn + ? WHERE professionalId = ?",
+      [amount, amount, row.professionalId],
+      (err: any) => { if (err) reject(err); else resolve(); }
+    );
+  });
+
+  return { professionalId: row.professionalId, amount };
 }

@@ -659,7 +659,9 @@ export const appRouter = router({
     requestWithdrawal: protectedProcedure
       .input(z.object({
         amount: z.number().positive(),
-        clabe: z.string().length(18).regex(/^\d{18}$/, "CLABE debe tener 18 dígitos numéricos"),
+        paymentMethod: z.enum(["clabe", "binance", "paypal", "other"]),
+        paymentDetails: z.string().max(1000),
+        notes: z.string().max(500).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         if (ctx.user.role !== "professional") {
@@ -668,27 +670,43 @@ export const appRouter = router({
         const professional = await db.getProfessionalByUserId(ctx.user.id);
         if (!professional) throw new TRPCError({ code: "NOT_FOUND", message: "Professional profile not found" });
 
-        const { getProfessionalWallet, createWithdrawalRequest } = await import("./professionalWallet");
+        const { getProfessionalWallet, createWithdrawalRequest, getProfessionalWithdrawals } = await import("./professionalWallet");
         const wallet = await getProfessionalWallet(professional.id);
         const balance = parseFloat(wallet?.balance ?? "0");
 
-        if (input.amount < 500) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "El retiro mínimo es de $500 MXN",
-          });
+        if (input.amount < 1000) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "El retiro mínimo es de $1,000 MXN" });
         }
         if (input.amount > balance) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: `Saldo insuficiente. Disponible: $${balance.toFixed(2)} MXN`,
-          });
+          throw new TRPCError({ code: "BAD_REQUEST", message: `Saldo insuficiente. Disponible: $${balance.toFixed(2)} MXN` });
         }
 
-        await createWithdrawalRequest(professional.id, input.amount, input.clabe);
+        // Block if there's already a pending withdrawal
+        const existing = await getProfessionalWithdrawals(professional.id);
+        const hasPending = existing.some((w: any) => w.status === "pending");
+        if (hasPending) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Ya tienes una solicitud de retiro pendiente" });
+        }
+
+        const clabe = input.paymentMethod === "clabe" ? input.paymentDetails : null;
+        await createWithdrawalRequest(professional.id, input.amount, clabe, input.paymentMethod, input.paymentDetails, input.notes);
+
+        // Email to admin (fire-and-forget)
+        const profUser = await db.getUserById(professional.userId);
+        const { sendWithdrawalRequestEmail } = await import("./email");
+        sendWithdrawalRequestEmail({
+          adminEmail: process.env.ADMIN_EMAIL ?? "Adm@inteira.mx",
+          professionalName: profUser?.name ?? "Profesional",
+          professionalEmail: profUser?.email ?? "",
+          amount: input.amount,
+          paymentMethod: input.paymentMethod,
+          paymentDetails: input.paymentDetails,
+          notes: input.notes,
+        }).catch(() => {});
+
         return {
           success: true,
-          message: `Solicitud de $${input.amount} MXN enviada. Se procesa en 1–3 días hábiles.`,
+          message: `Solicitud de $${input.amount.toLocaleString("es-MX")} MXN enviada. Se procesa los lunes.`,
         };
       }),
 
@@ -1001,6 +1019,78 @@ export const appRouter = router({
         count: Number(r.count),
       }));
     }),
+
+    getPendingWithdrawals: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+      const dbInst = await db.getDb();
+      if (!dbInst) return [];
+      const client = (dbInst as any).$client;
+      return new Promise<any[]>((resolve) => {
+        client.execute(
+          `SELECT wr.*, u.name as professionalName, u.email as professionalEmail
+           FROM withdrawalRequests wr
+           JOIN professionals p ON p.id = wr.professionalId
+           JOIN users u ON u.id = p.userId
+           ORDER BY wr.createdAt DESC
+           LIMIT 100`,
+          [],
+          (err: any, results: any) => {
+            if (err) { console.error("[admin] getPendingWithdrawals:", err?.message); resolve([]); }
+            else resolve(Array.isArray(results) ? results : []);
+          }
+        );
+      });
+    }),
+
+    approveWithdrawal: protectedProcedure
+      .input(z.object({ withdrawalId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+        const { approveWithdrawalRequest } = await import("./professionalWallet");
+        const { professionalId, amount } = await approveWithdrawalRequest(input.withdrawalId);
+
+        // Look up professional user for notification/email
+        const dbInst = await db.getDb();
+        const profRow = await new Promise<any>((resolve) => {
+          (dbInst as any).$client.execute(
+            "SELECT p.userId, u.name, u.email, p.paymentMethod FROM professionals p JOIN users u ON u.id = p.userId WHERE p.id = ? LIMIT 1",
+            [professionalId],
+            (err: any, results: any) => resolve(Array.isArray(results) ? results[0] ?? null : null)
+          );
+        });
+
+        // Get withdrawal method from the request itself
+        const wrRow = await new Promise<any>((resolve) => {
+          (dbInst as any).$client.execute(
+            "SELECT paymentMethod FROM withdrawalRequests WHERE id = ? LIMIT 1",
+            [input.withdrawalId],
+            (err: any, results: any) => resolve(Array.isArray(results) ? results[0] ?? null : null)
+          );
+        });
+
+        if (profRow?.userId) {
+          createNotification({
+            userId: profRow.userId,
+            type: "new_earning",
+            title: "💸 Retiro procesado",
+            message: `Tu retiro de $${amount.toLocaleString("es-MX")} MXN fue procesado exitosamente.`,
+            link: "/panel-profesional#ganancias",
+            audience: "professional",
+          }).catch(() => {});
+
+          if (profRow.email) {
+            const { sendWithdrawalPaidEmail } = await import("./email");
+            sendWithdrawalPaidEmail({
+              professionalEmail: profRow.email,
+              professionalName: profRow.name ?? "Profesional",
+              amount,
+              paymentMethod: wrRow?.paymentMethod ?? "other",
+            }).catch(() => {});
+          }
+        }
+
+        return { success: true };
+      }),
 
     getActiveProfessionals: protectedProcedure.query(async ({ ctx }) => {
       if (ctx.user.role !== "admin") {

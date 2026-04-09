@@ -595,3 +595,71 @@ export async function sendCreditsDebitedEmail(params: {
     html: baseTemplate(content),
   });
 }
+
+// 13. Withdrawal request notification to admin
+export async function sendWithdrawalRequestEmail(params: {
+  adminEmail: string;
+  professionalName: string;
+  professionalEmail: string;
+  amount: number;
+  paymentMethod: string;
+  paymentDetails: string;
+  notes?: string;
+}): Promise<boolean> {
+  const methodLabels: Record<string, string> = {
+    clabe: "CLABE (transferencia bancaria)",
+    binance: "Binance Pay",
+    paypal: "PayPal",
+    other: "Otro",
+  };
+  const content = `
+    <p>Hola,</p>
+    <p>El profesional <strong>${params.professionalName}</strong> ha solicitado un retiro de fondos.</p>
+    <div class="info-box">
+      <p><strong>Profesional:</strong> ${params.professionalName}</p>
+      <p><strong>Email:</strong> ${params.professionalEmail}</p>
+      <p><strong>Monto solicitado:</strong> $${params.amount.toLocaleString("es-MX")} MXN</p>
+      <p><strong>Método de pago:</strong> ${methodLabels[params.paymentMethod] ?? params.paymentMethod}</p>
+      <p><strong>Detalles de pago:</strong> ${params.paymentDetails}</p>
+      ${params.notes ? `<p><strong>Nota del profesional:</strong> ${params.notes}</p>` : ""}
+      <p><strong>Fecha de solicitud:</strong> ${new Date().toLocaleDateString("es-MX", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
+    </div>
+    <a href="https://inteira.mx/admin" class="btn">Ver panel admin</a>
+  `;
+  return sendEmail({
+    to: params.adminEmail,
+    subject: `💸 Nueva solicitud de retiro — ${params.professionalName} $${params.amount.toLocaleString("es-MX")} MXN`,
+    html: baseTemplate(content),
+  });
+}
+
+// 14. Withdrawal paid confirmation to professional
+export async function sendWithdrawalPaidEmail(params: {
+  professionalEmail: string;
+  professionalName: string;
+  amount: number;
+  paymentMethod: string;
+}): Promise<boolean> {
+  const methodLabels: Record<string, string> = {
+    clabe: "CLABE (transferencia bancaria)",
+    binance: "Binance Pay",
+    paypal: "PayPal",
+    other: "Otro",
+  };
+  const content = `
+    <p>Hola <strong>${params.professionalName}</strong>,</p>
+    <p>Tu solicitud de retiro ha sido procesada exitosamente. 🎉</p>
+    <div class="info-box">
+      <p><strong>Monto pagado:</strong> $${params.amount.toLocaleString("es-MX")} MXN</p>
+      <p><strong>Método utilizado:</strong> ${methodLabels[params.paymentMethod] ?? params.paymentMethod}</p>
+    </div>
+    <p>El dinero puede tardar hasta <strong>7 días hábiles</strong> en llegar dependiendo de tu método de pago.</p>
+    <p>Si tienes alguna pregunta, responde a este correo o contáctanos desde la plataforma.</p>
+    <a href="https://inteira.mx/panel-profesional#ganancias" class="btn">Ver mis ganancias</a>
+  `;
+  return sendEmail({
+    to: params.professionalEmail,
+    subject: `✅ Tu retiro de $${params.amount.toLocaleString("es-MX")} MXN fue procesado — Inteira`,
+    html: baseTemplate(content),
+  });
+}
