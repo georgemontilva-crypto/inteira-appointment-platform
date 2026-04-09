@@ -397,7 +397,7 @@ export default function ProfessionalDashboard() {
         {/* Header con foto y saludo */}
         <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 20 }}>
           <div className="relative group flex-shrink-0">
-            <div className="w-14 h-14 rounded-full overflow-hidden" style={{ border: "2px solid rgba(255,255,255,0.2)" }}>
+            <div className="w-14 h-14 overflow-hidden" style={{ borderRadius: 12, border: "2px solid rgba(255,255,255,0.2)" }}>
               {profile.profilePhoto || (user as any)?.profileImage ? (
                 <img
                   src={profile.profilePhoto ?? (user as any)?.profileImage}
@@ -414,7 +414,7 @@ export default function ProfessionalDashboard() {
             <button
               onClick={() => photoInputRef.current?.click()}
               disabled={uploadingPhoto}
-              className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
+              className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer" style={{ borderRadius: 12 }}
             >
               {uploadingPhoto ? (
                 <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
@@ -502,35 +502,6 @@ export default function ProfessionalDashboard() {
         {/* Tab: Citas */}
         {activeTab === "citas" && (
           <div className="space-y-6">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Card className="border-border">
-                <CardContent className="p-5">
-                  <p className="text-2xl font-bold text-primary">{upcomingAppointments.length}</p>
-                  <p className="text-xs text-muted-foreground">Próximas citas</p>
-                </CardContent>
-              </Card>
-              <Card className="border-border">
-                <CardContent className="p-5">
-                  <p className="text-2xl font-bold text-emerald-600">
-                    {appointments?.filter((a) => a.status === "completed" || a.status === "no-show" || a.status === "pending_review").length ?? 0}
-                  </p>
-                  <p className="text-xs text-muted-foreground">Completadas</p>
-                </CardContent>
-              </Card>
-              <Card className="border-border">
-                <CardContent className="p-5">
-                  <p className="text-2xl font-bold text-accent">{(profile.totalReviews ?? 0) > 0 ? Number(profile.averageRating).toFixed(1) : "—"}</p>
-                  <p className="text-xs text-muted-foreground">Calificación</p>
-                </CardContent>
-              </Card>
-              <Card className="border-border">
-                <CardContent className="p-5">
-                  <p className="text-2xl font-bold text-blue-600">{profile.totalReviews ?? 0}</p>
-                  <p className="text-xs text-muted-foreground">Reseñas</p>
-                </CardContent>
-              </Card>
-            </div>
-
             <div>
               <h2 className="text-xl font-bold mb-4" style={{ fontFamily: "Poppins, sans-serif" }}>
                 Próximas citas
