@@ -145,6 +145,11 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
   const initials = user?.name?.charAt(0)?.toUpperCase() ?? "U";
   const profileImage = (user as any)?.profileImage ?? null;
 
+  // Derived avatar URL — pro profile image in pro mode, user picture otherwise
+  const avatarUrl: string | undefined = (isProMode && isProfessional && (proProfile as any)?.profileImage)
+    ? (proProfile as any).profileImage
+    : (user as any)?.profileImage ?? undefined;
+
   // Componente de avatar reutilizable
   const UserAvatar = ({ size = "sm" }: { size?: "sm" | "md" | "lg" }) => {
     const sizeMap = { sm: "w-8 h-8 text-[12px]", md: "w-6 h-6 text-[10px]", lg: "w-14 h-14 text-lg" };
@@ -174,49 +179,49 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
 
   // Drawer grid sections — filtered by active mode
   type DrawerItem = { label: string; icon: string; href: string };
-  const drawerSections: { section: string; items: DrawerItem[] }[] =
-    isProfessional
-      ? isProMode
-        ? [
-            {
-              section: "Panel profesional",
-              items: [
-                { label: "Inicio",         icon: "home",     href: "/panel-profesional" },
-                { label: "Mis citas",      icon: "calendar", href: "/panel-profesional#citas" },
-                { label: "Ganancias",      icon: "wallet",   href: "/panel-profesional#ganancias" },
-                { label: "Disponibilidad", icon: "clock",    href: "/panel-profesional#disponibilidad" },
-                { label: "Reseñas",        icon: "star",     href: "/panel-profesional#resenas" },
-                { label: "Mi perfil",      icon: "user",     href: "/panel-profesional#perfil" },
-              ],
-            },
-          ]
-        : [
-            {
-              section: "Como cliente",
-              items: [
-                { label: "Inicio",   icon: "home",     href: "/dashboard" },
-                { label: "Mis citas",icon: "calendar", href: "/citas" },
-                { label: "Explorar", icon: "search",   href: "/especialidades" },
-                { label: "Wallet",   icon: "wallet",   href: "/wallet" },
-                { label: "Planes",   icon: "star",     href: "/planes" },
-                { label: "Perfil",   icon: "user",     href: "/perfil" },
-              ],
-            },
-          ]
-      : [
-          {
-            section: "",
-            items: [
-              { label: "Inicio",   icon: "home",     href: "/dashboard" },
-              { label: "Mis citas",icon: "calendar", href: "/citas" },
-              { label: "Explorar", icon: "search",   href: "/especialidades" },
-              { label: "Wallet",   icon: "wallet",   href: "/wallet" },
-              { label: "Planes",   icon: "star",     href: "/planes" },
-              { label: "Perfil",   icon: "user",     href: "/perfil" },
-              ...(user?.role === "admin" ? [{ label: "Admin", icon: "shield", href: "/admin" }] : []),
-            ],
-          },
-        ];
+  const proDrawerSections: { section: string; items: DrawerItem[] }[] = [
+    {
+      section: "Panel profesional",
+      items: [
+        { label: "Inicio",         icon: "home",     href: "/panel-profesional" },
+        { label: "Mis citas",      icon: "calendar", href: "/panel-profesional#citas" },
+        { label: "Ganancias",      icon: "wallet",   href: "/panel-profesional#ganancias" },
+        { label: "Disponibilidad", icon: "clock",    href: "/panel-profesional#disponibilidad" },
+        { label: "Reseñas",        icon: "star",     href: "/panel-profesional#resenas" },
+        { label: "Mi perfil",      icon: "user",     href: "/panel-profesional#perfil" },
+      ],
+    },
+  ];
+  const clientDrawerSections: { section: string; items: DrawerItem[] }[] = [
+    {
+      section: "Como cliente",
+      items: [
+        { label: "Inicio",    icon: "home",     href: "/dashboard" },
+        { label: "Mis citas", icon: "calendar", href: "/citas" },
+        { label: "Explorar",  icon: "search",   href: "/especialidades" },
+        { label: "Wallet",    icon: "wallet",   href: "/wallet" },
+        { label: "Planes",    icon: "star",     href: "/planes" },
+        { label: "Perfil",    icon: "user",     href: "/perfil" },
+      ],
+    },
+  ];
+  const userDrawerSections: { section: string; items: DrawerItem[] }[] = [
+    {
+      section: "",
+      items: [
+        { label: "Inicio",    icon: "home",     href: "/dashboard" },
+        { label: "Mis citas", icon: "calendar", href: "/citas" },
+        { label: "Explorar",  icon: "search",   href: "/especialidades" },
+        { label: "Wallet",    icon: "wallet",   href: "/wallet" },
+        { label: "Planes",    icon: "star",     href: "/planes" },
+        { label: "Perfil",    icon: "user",     href: "/perfil" },
+        ...(user?.role === "admin" ? [{ label: "Admin", icon: "shield", href: "/admin" }] : []),
+      ],
+    },
+  ];
+  const drawerSections = isProfessional
+    ? (isProMode ? proDrawerSections : clientDrawerSections)
+    : userDrawerSections;
 
   return (
     <div className="flex flex-col min-h-screen bg-[#F7FAFC]">
@@ -258,8 +263,8 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
               </button>
             )}
             <button onClick={() => openPanel("profile")} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex" }}>
-              {isProMode && (proProfile as any)?.profileImage ? (
-                <img src={(proProfile as any).profileImage} alt="" className="w-8 h-8 rounded-full object-cover border-2 border-[rgba(96,117,98,0.3)]" referrerPolicy="no-referrer" />
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover border-2 border-[rgba(96,117,98,0.3)]" referrerPolicy="no-referrer" />
               ) : (
                 <UserAvatar size="sm" />
               )}
@@ -446,7 +451,11 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
             {/* Drawer header — mode-aware */}
             <div style={{ background: "linear-gradient(145deg,#1e2f20,#2d4030)", padding: "24px 20px 20px", flexShrink: 0 }}>
               <div className="flex items-center gap-3">
-                <UserAvatar size="lg" />
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt={user?.name ?? "Avatar"} className="w-14 h-14 rounded-full object-cover border-2 border-[rgba(255,255,255,0.25)]" referrerPolicy="no-referrer" />
+                ) : (
+                  <div className="w-14 h-14 rounded-full flex items-center justify-center font-medium text-white border-2 border-[rgba(255,255,255,0.25)] text-lg" style={{ background: "linear-gradient(135deg,#3d4e3f,#607562)" }}>{initials}</div>
+                )}
                 <div className="min-w-0 flex-1">
                   <p className="text-[15px] font-bold text-white leading-tight truncate">{user?.name ?? "Usuario"}</p>
                   {isProfessional && isProMode ? (
