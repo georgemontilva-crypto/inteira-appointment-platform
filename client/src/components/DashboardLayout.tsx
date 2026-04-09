@@ -136,6 +136,7 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
   // Professional data (for pro mode)
   const { data: proProfile } = trpc.professional.getProfile.useQuery(undefined, {
     enabled: isProfessional,
+    staleTime: 5 * 60 * 1000,
   });
   const { data: proWalletData } = trpc.professional.getWallet.useQuery(undefined, {
     enabled: isProfessional && isProMode && panelOpen,
