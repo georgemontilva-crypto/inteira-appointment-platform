@@ -258,7 +258,11 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
               </button>
             )}
             <button onClick={() => openPanel("profile")} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex" }}>
-              <UserAvatar size="sm" />
+              {isProMode && (proProfile as any)?.profileImage ? (
+                <img src={(proProfile as any).profileImage} alt="" className="w-8 h-8 rounded-full object-cover border-2 border-[rgba(96,117,98,0.3)]" referrerPolicy="no-referrer" />
+              ) : (
+                <UserAvatar size="sm" />
+              )}
             </button>
           </div>
         </div>
