@@ -226,9 +226,7 @@ export const appointmentRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      console.log('[CANCEL] start - userId:', ctx.user.id, typeof ctx.user.id, 'role:', ctx.user.role);
       const appointment = await db.getAppointmentById(input.appointmentId);
-      console.log('[CANCEL] appointment:', appointment ? `found userId:${appointment.userId} type:${typeof appointment.userId}` : 'NOT FOUND');
       if (!appointment) {
         throw new TRPCError({
           code: "NOT_FOUND",
@@ -251,16 +249,21 @@ export const appointmentRouter = router({
       const now = new Date();
       const appointmentTime = new Date(appointment.appointmentDate);
       const hoursUntil = (appointmentTime.getTime() - now.getTime()) / (1000 * 60 * 60);
-      const canceledByRole = ctx.user.role === "user" ? "user" : "professional";
+      const canceledByRole =
+        ctx.user.role === "professional" ? "professional" :
+        ctx.user.role === "admin"
+          ? (Number(appointment.userId) === Number(ctx.user.id) ? "user" : "admin")
+          : "user";
 
-      // Verificar que el profesional es dueño de esta cita (fix bug: professionalId ≠ userId)
+      // Verificar que el profesional es dueño de esta cita
       let userProfessional: Awaited<ReturnType<typeof db.getProfessionalByUserId>> = null;
       if (canceledByRole === "professional") {
         userProfessional = await db.getProfessionalByUserId(ctx.user.id);
-        if (!userProfessional || appointment.professionalId !== userProfessional.id) {
+        if (!userProfessional || Number(appointment.professionalId) !== Number(userProfessional.id)) {
           throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized to cancel this appointment" });
         }
       }
+      // Admins pueden cancelar cualquier cita sin validación adicional
 
       let penaltyAmount = 0;
       let penaltyType: "none" | "partial" | "late" | "credits_lost" = "none";
