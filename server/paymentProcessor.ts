@@ -119,6 +119,7 @@ export async function processPayment(stripeSessionId: string, data?: {
       title: "🎉 Créditos acreditados",
       message: `${item.credits} créditos han sido añadidos a tu wallet`,
       link: "/wallet",
+      audience: "user",
     }).catch(() => {});
 
     // Enviar email de confirmación de compra (non-blocking)

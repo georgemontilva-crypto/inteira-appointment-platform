@@ -217,6 +217,7 @@ export const appointmentRouter = router({
         title: "✅ Cita confirmada",
         message: `Tu cita con ${professionalUser?.name ?? "el especialista"} quedó agendada para el ${appointmentDateObj.toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" })}`,
         link: "/citas",
+        audience: "user",
       }).catch(() => {});
       createNotification({
         userId: professional.userId,
@@ -224,6 +225,7 @@ export const appointmentRouter = router({
         title: "📅 Nueva cita agendada",
         message: `${userRecord?.name ?? "Un usuario"} agendó una cita contigo para el ${appointmentDateObj.toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" })}`,
         link: "/panel-profesional",
+        audience: "professional",
       }).catch(() => {});
 
       return {
@@ -393,6 +395,7 @@ export const appointmentRouter = router({
           title: "❌ Cita cancelada",
           message: `Tu cita del ${new Date(appointment.appointmentDate).toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" })} fue cancelada por el especialista`,
           link: "/citas",
+          audience: "all",
         }).catch(() => {});
       }
       if (canceledProfessional && (canceledByRole === "user" || canceledByRole === "admin")) {
@@ -402,6 +405,7 @@ export const appointmentRouter = router({
           title: "❌ Cita cancelada",
           message: `${canceledUser?.name ?? "El usuario"} canceló su cita del ${new Date(appointment.appointmentDate).toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" })}`,
           link: "/panel-profesional",
+          audience: "all",
         }).catch(() => {});
       }
 
@@ -504,6 +508,7 @@ export const appointmentRouter = router({
         title: "¡Tu sesión terminó!",
         message: "Por favor califica tu experiencia para liberar el pago al profesional.",
         link: "/citas",
+        audience: "user",
       }).catch(() => {});
 
       return { success: true };
@@ -608,6 +613,7 @@ export const appointmentRouter = router({
         title: "Reseña recibida",
         message: `Recibiste una reseña de ${input.rating} estrella${input.rating !== 1 ? "s" : ""}. Se acreditaron $${netAmount} MXN a tu wallet.`,
         link: "/profesional/wallet",
+        audience: "professional",
       }).catch(() => {});
 
       return { success: true };
@@ -645,6 +651,7 @@ export const appointmentRouter = router({
         title: "💳 Créditos debitados",
         message: `Se debitaron ${sessionCost} créditos por tu sesión de hoy`,
         link: "/wallet",
+        audience: "user",
       }).catch(() => {});
 
       return { success: true };
@@ -712,6 +719,7 @@ export const appointmentRouter = router({
         title: "No asistencia registrada",
         message: "El profesional registró que no asististe a tu cita. Contacta soporte si crees que es un error.",
         link: "/citas",
+        audience: "user",
       }).catch(() => {});
 
       return { success: true };

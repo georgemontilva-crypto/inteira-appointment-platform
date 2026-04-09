@@ -313,6 +313,24 @@ async function runStartupMigrations() {
     )`).catch(() => {});
     console.log("[Migration] notifications table ready");
 
+    // Ensure notifications.audience column exists
+    try {
+      const [audCols] = await db.execute(
+        "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'notifications' AND COLUMN_NAME = 'audience'"
+      ) as any;
+      const audExists = Array.isArray(audCols) ? audCols.length > 0 : false;
+      if (!audExists) {
+        await db.execute(
+          "ALTER TABLE `notifications` ADD COLUMN `audience` ENUM('user','professional','all') NOT NULL DEFAULT 'user'"
+        );
+        console.log("[Migration] notifications.audience column added");
+      } else {
+        console.log("[Migration] notifications.audience column already exists");
+      }
+    } catch (audErr: any) {
+      console.warn("[Migration] Could not add notifications.audience column:", audErr?.message);
+    }
+
     // ── Eliminar FK constraint incorrecto en professionalAvailability ──────────
     const client = (db as any).$client;
     await new Promise<void>((resolve) => {
@@ -788,6 +806,7 @@ setInterval(async () => {
           title: "⚠️ Cita no completada",
           message: "No asististe a tu cita. Los créditos han sido debitados.",
           link: "/citas",
+          audience: "user",
         }).catch(() => {});
       }
     }
@@ -841,6 +860,7 @@ setInterval(async () => {
             title: "Asesoría completada automáticamente",
             message: `Una asesoría fue completada automáticamente. Se acreditaron $${netAmount} MXN a tu wallet.`,
             link: "/profesional/wallet",
+            audience: "professional",
           }).catch(() => {});
         } catch (rowErr: any) {
           console.error(`[Cron] auto-complete row ${row.id} error:`, rowErr?.message);

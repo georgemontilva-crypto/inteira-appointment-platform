@@ -329,6 +329,7 @@ export const appRouter = router({
                 title: "Nueva solicitud de profesional",
                 message: `${user?.name ?? "Un usuario"} ha enviado una solicitud para ser profesional.`,
                 link: "/admin?tab=professionals",
+                audience: "user",
               });
             }
           } catch (err: any) {
@@ -913,6 +914,7 @@ export const appRouter = router({
           title: "¡Solicitud aprobada!",
           message: "Tu solicitud para ser profesional en Inteira fue aprobada. Ya puedes recibir citas.",
           link: "/dashboard",
+          audience: "professional",
         }).catch(() => {});
 
         return { success: true };
@@ -953,6 +955,7 @@ export const appRouter = router({
           title: "Solicitud no aprobada",
           message: input.reason ?? "Tu solicitud no fue aprobada en esta ocasión.",
           link: "/panel-profesional",
+          audience: "professional",
         }).catch(() => {});
          return { success: true };
       }),
@@ -1126,14 +1129,18 @@ export const appRouter = router({
 
   // Notifications routes
   notifications: router({
-    getAll: protectedProcedure.query(async ({ ctx }) => {
-      return await getUnreadNotifications(ctx.user.id);
-    }),
+    getAll: protectedProcedure
+      .input(z.object({ audience: z.enum(["user", "professional", "all"]).default("user") }).optional())
+      .query(async ({ ctx, input }) => {
+        return await getUnreadNotifications(ctx.user.id, input?.audience ?? "user");
+      }),
 
-    getUnreadCount: protectedProcedure.query(async ({ ctx }) => {
-      const count = await getUnreadCount(ctx.user.id);
-      return { count };
-    }),
+    getUnreadCount: protectedProcedure
+      .input(z.object({ audience: z.enum(["user", "professional", "all"]).default("user") }).optional())
+      .query(async ({ ctx, input }) => {
+        const count = await getUnreadCount(ctx.user.id, input?.audience ?? "user");
+        return { count };
+      }),
 
     markAllRead: protectedProcedure.mutation(async ({ ctx }) => {
       await markAllRead(ctx.user.id);

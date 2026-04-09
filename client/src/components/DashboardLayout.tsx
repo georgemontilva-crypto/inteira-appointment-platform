@@ -116,15 +116,16 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
     updateUserName.mutate({ firstName, lastName });
   };
 
-  // Notifications
-  const { data: unreadCount } = trpc.notifications.getUnreadCount.useQuery(undefined, {
-    enabled: !!user,
-    refetchInterval: 30000,
-  });
-  const { data: notifications } = trpc.notifications.getAll.useQuery(undefined, {
-    enabled: !!user,
-    refetchInterval: 30000,
-  });
+  // Notifications — filtered by active mode
+  const notifAudience = isProMode && isProfessional ? "professional" : "user";
+  const { data: unreadCount } = trpc.notifications.getUnreadCount.useQuery(
+    { audience: notifAudience },
+    { enabled: !!user, refetchInterval: 30000 }
+  );
+  const { data: notifications } = trpc.notifications.getAll.useQuery(
+    { audience: notifAudience },
+    { enabled: !!user, refetchInterval: 30000 }
+  );
   const markAllRead = trpc.notifications.markAllRead.useMutation({ onSuccess: () => {} });
   const markOneRead = trpc.notifications.markRead.useMutation({ onSuccess: () => {} });
 
@@ -147,9 +148,9 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
   const initials = user?.name?.charAt(0)?.toUpperCase() ?? "U";
   const profileImage = (user as any)?.profileImage ?? null;
 
-  // Derived avatar URL — pro profile image in pro mode, user picture otherwise
-  const avatarUrl: string | undefined = (isProMode && isProfessional && (proProfile as any)?.profileImage)
-    ? (proProfile as any).profileImage
+  // Derived avatar URL — pro profile photo in pro mode, user picture otherwise
+  const avatarUrl: string | undefined = (isProMode && isProfessional && ((proProfile as any)?.profilePhoto ?? (proProfile as any)?.profileImage))
+    ? ((proProfile as any).profilePhoto ?? (proProfile as any).profileImage)
     : (user as any)?.profileImage ?? undefined;
 
   // Componente de avatar reutilizable
@@ -555,8 +556,8 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
             <div style={{ background: "linear-gradient(145deg,#1e2f20,#2d4030)", flexShrink: 0, padding: "20px 20px 0" }}>
               <div className="flex items-center gap-3 mb-5">
                 <div className="relative flex-shrink-0">
-                  {isProMode && isProfessional && (proProfile as any)?.profileImage ? (
-                    <img src={(proProfile as any).profileImage} style={{ width: 56, height: 56, borderRadius: "50%", objectFit: "cover" }} referrerPolicy="no-referrer" />
+                  {isProMode && isProfessional && ((proProfile as any)?.profilePhoto ?? (proProfile as any)?.profileImage) ? (
+                    <img src={(proProfile as any).profilePhoto ?? (proProfile as any).profileImage} style={{ width: 56, height: 56, borderRadius: "50%", objectFit: "cover" }} referrerPolicy="no-referrer" />
                   ) : (
                     <UserAvatar size="lg" />
                   )}
