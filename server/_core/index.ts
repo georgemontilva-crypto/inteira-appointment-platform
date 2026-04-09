@@ -551,26 +551,34 @@ async function runStartupMigrations() {
       console.warn("[Migration] Could not add reminder15sent column:", e?.message);
     }
 
-    // Add cancellation columns to appointments if missing
-    try {
+    // Cancellation columns — one by one to avoid multi-column IF NOT EXISTS issues
+    const cancelCols = [
+      { name: "canceledAt",          def: "DATETIME NULL" },
+      { name: "canceledBy",          def: "VARCHAR(50) NULL" },
+      { name: "cancellationReason",  def: "TEXT NULL" },
+      { name: "penaltyAmount",       def: "DECIMAL(10,2) NULL DEFAULT 0" },
+      { name: "penaltyType",         def: "VARCHAR(50) NULL DEFAULT 'none'" },
+    ];
+    for (const col of cancelCols) {
       await new Promise<void>((resolve) => {
         client.execute(
-          `ALTER TABLE appointments
-           ADD COLUMN IF NOT EXISTS canceledAt DATETIME NULL,
-           ADD COLUMN IF NOT EXISTS canceledBy VARCHAR(50) NULL,
-           ADD COLUMN IF NOT EXISTS cancellationReason TEXT NULL,
-           ADD COLUMN IF NOT EXISTS penaltyAmount DECIMAL(10,2) NULL DEFAULT 0,
-           ADD COLUMN IF NOT EXISTS penaltyType VARCHAR(50) NULL DEFAULT 'none'`,
-          [],
-          (err: any) => {
-            if (err) console.warn("[Migration] cancellation columns:", err?.message);
-            else console.log("[Migration] appointments cancellation columns ready");
-            resolve();
+          `SELECT COUNT(*) as cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'appointments' AND COLUMN_NAME = ?`,
+          [col.name],
+          (err: any, results: any) => {
+            const cnt = Number(Array.isArray(results) ? results[0]?.cnt : results?.cnt);
+            if (cnt > 0) { resolve(); return; }
+            client.execute(
+              `ALTER TABLE appointments ADD COLUMN \`${col.name}\` ${col.def}`,
+              [],
+              (err2: any) => {
+                if (err2) console.warn(`[Migration] appointments.${col.name}:`, err2?.message);
+                else console.log(`[Migration] appointments.${col.name} added`);
+                resolve();
+              }
+            );
           }
         );
       });
-    } catch (e: any) {
-      console.warn("[Migration] Could not add cancellation columns:", e?.message);
     }
 
   } catch (err) {
