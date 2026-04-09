@@ -589,17 +589,25 @@ async function runStartupMigrations() {
           resolve();
         });
       });
+      // Ensure billingPeriod enum supports 'once'
+      await new Promise<void>((resolve) => {
+        client.execute(
+          "ALTER TABLE `subscriptionPlans` MODIFY COLUMN `billingPeriod` ENUM('monthly','yearly','once') NOT NULL",
+          [],
+          (err: any) => { if (err) console.warn("[Migration] billingPeriod enum:", err?.message); resolve(); }
+        );
+      });
       const plans = [
-        { name: "Plan Básico",    price: 980,  billingPeriod: "monthly", credits: 980,  sessionsPerMonth: 4, minutesPerSession: 60 },
-        { name: "Plan Pro",       price: 2500, billingPeriod: "monthly", credits: 2500, sessionsPerMonth: 6, minutesPerSession: 60 },
-        { name: "Sesión Básica",  price: 350,  billingPeriod: "once",    credits: 350,  sessionsPerMonth: 1, minutesPerSession: 60 },
-        { name: "Sesión Premium", price: 1500, billingPeriod: "once",    credits: 1500, sessionsPerMonth: 1, minutesPerSession: 90 },
+        { name: "Plan Básico",    price: 980,  billingPeriod: "monthly", maxAppointmentsPerMonth: 4, maxMinutesPerAppointment: 60, sortOrder: 1 },
+        { name: "Plan Pro",       price: 2500, billingPeriod: "monthly", maxAppointmentsPerMonth: 6, maxMinutesPerAppointment: 60, sortOrder: 2 },
+        { name: "Sesión Básica",  price: 350,  billingPeriod: "once",    maxAppointmentsPerMonth: 1, maxMinutesPerAppointment: 60, sortOrder: 3 },
+        { name: "Sesión Premium", price: 1500, billingPeriod: "once",    maxAppointmentsPerMonth: 1, maxMinutesPerAppointment: 90, sortOrder: 4 },
       ];
       for (const plan of plans) {
         await new Promise<void>((resolve) => {
           client.execute(
-            `INSERT INTO subscriptionPlans (name, price, billingPeriod, credits, sessionsPerMonth, minutesPerSession, stripePriceId, isActive, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, '', 1, NOW(), NOW())`,
-            [plan.name, plan.price, plan.billingPeriod, plan.credits, plan.sessionsPerMonth, plan.minutesPerSession],
+            `INSERT INTO subscriptionPlans (name, price, billingPeriod, maxAppointmentsPerMonth, maxMinutesPerAppointment, sortOrder, stripePriceId, isActive, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, '', 1, NOW(), NOW())`,
+            [plan.name, plan.price, plan.billingPeriod, plan.maxAppointmentsPerMonth, plan.maxMinutesPerAppointment, plan.sortOrder],
             (err: any) => { if (err) console.warn("[Migration] plan insert:", err?.message); resolve(); }
           );
         });
