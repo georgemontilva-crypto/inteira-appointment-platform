@@ -162,28 +162,26 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
     navItems.push({ label: "Mi panel", icon: "shield", href: "/panel-profesional" });
   }
 
-  // Drawer nav item renderer
-  const renderDrawerItem = ({ label, href, hash }: { label: string; href?: string; hash?: string }) => {
-    const isActive = hash ? currentHash === hash : href ? location === href || location.startsWith(href + "/") : false;
-    const inner = (
-      <span className="flex items-center px-3 py-2.5 rounded-xl transition-colors w-full" style={{ background: isActive ? "rgba(96,117,98,0.1)" : "transparent" }}>
-        <span className="text-[13px] font-medium" style={{ color: isActive ? "#3d4e3f" : "#333" }}>{label}</span>
-      </span>
-    );
-    if (hash) {
-      return (
-        <button key={label} className="w-full text-left" style={{ border: "none", background: "transparent", cursor: "pointer" }}
-          onClick={() => { window.location.hash = hash; setDrawerOpen(false); }}>
-          {inner}
-        </button>
-      );
-    }
-    return (
-      <Link key={label} href={href!}>
-        <a onClick={() => setDrawerOpen(false)} className="block">{inner}</a>
-      </Link>
-    );
-  };
+  // Drawer grid items by role
+  const drawerItems: { label: string; icon: string; href: string }[] =
+    user?.role === "professional"
+      ? [
+          { label: "Inicio",         icon: "home",     href: "/panel-profesional" },
+          { label: "Mis citas",      icon: "calendar", href: "/panel-profesional#citas" },
+          { label: "Ganancias",      icon: "wallet",   href: "/panel-profesional#ganancias" },
+          { label: "Disponibilidad", icon: "clock",    href: "/panel-profesional#disponibilidad" },
+          { label: "Reseñas",        icon: "star",     href: "/panel-profesional#resenas" },
+          { label: "Mi perfil",      icon: "user",     href: "/panel-profesional#perfil" },
+        ]
+      : [
+          { label: "Inicio",   icon: "home",     href: "/dashboard" },
+          { label: "Mis citas",icon: "calendar", href: "/citas" },
+          { label: "Explorar", icon: "search",   href: "/especialidades" },
+          { label: "Wallet",   icon: "wallet",   href: "/wallet" },
+          { label: "Planes",   icon: "star",     href: "/planes" },
+          { label: "Perfil",   icon: "user",     href: "/perfil" },
+          ...(user?.role === "admin" ? [{ label: "Admin", icon: "shield", href: "/admin" }] : []),
+        ];
 
   return (
     <div className="flex flex-col min-h-screen bg-[#F7FAFC]">
@@ -399,40 +397,41 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
               </div>
             </div>
 
-            {/* Drawer nav */}
-            <div className="flex-1 overflow-y-auto p-3">
-              {user?.role === "professional" ? (
-                <>
-                  <p className="text-[9px] font-semibold text-[#93A295] uppercase tracking-widest px-3 py-2">Panel</p>
-                  {[
-                    { label: "🏠 Inicio",          href: "/panel-profesional" },
-                    { label: "📅 Mis citas",        hash: "#citas" },
-                    { label: "💰 Ganancias",        hash: "#ganancias" },
-                    { label: "📆 Disponibilidad",   hash: "#disponibilidad" },
-                    { label: "⭐ Reseñas",          hash: "#resenas" },
-                  ].map(renderDrawerItem)}
-                  <p className="text-[9px] font-semibold text-[#93A295] uppercase tracking-widest px-3 py-2 mt-3">Cuenta</p>
-                  {[
-                    { label: "👤 Mi perfil", hash: "#perfil" },
-                  ].map(renderDrawerItem)}
-                </>
-              ) : (
-                <>
-                  <p className="text-[9px] font-semibold text-[#93A295] uppercase tracking-widest px-3 py-2">Principal</p>
-                  {[
-                    { label: "🏠 Inicio",                  href: "/dashboard" },
-                    { label: "📅 Mis citas",               href: "/citas" },
-                    { label: "🔍 Explorar especialistas",  href: "/especialidades" },
-                  ].map(renderDrawerItem)}
-                  <p className="text-[9px] font-semibold text-[#93A295] uppercase tracking-widest px-3 py-2 mt-3">Cuenta</p>
-                  {[
-                    { label: "👛 Mi wallet",  href: "/wallet" },
-                    { label: "📋 Planes",     href: "/planes" },
-                    { label: "👤 Mi perfil",  href: "/perfil" },
-                    ...(user?.role === "admin" ? [{ label: "🛡️ Admin", href: "/admin" }] : []),
-                  ].map(renderDrawerItem)}
-                </>
-              )}
+            {/* Drawer nav — grid 2 columns */}
+            <div className="flex-1 overflow-y-auto" style={{ padding: "12px 16px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                {drawerItems.map((item) => {
+                  const hrefBase = item.href.split("#")[0];
+                  const hrefHash = item.href.includes("#") ? "#" + item.href.split("#")[1] : null;
+                  const isActive = hrefHash
+                    ? currentHash === hrefHash
+                    : location === hrefBase || location.startsWith(hrefBase + "/");
+                  return (
+                    <a
+                      key={item.label}
+                      href={item.href}
+                      onClick={(e) => { e.preventDefault(); window.location.href = item.href; setDrawerOpen(false); }}
+                      style={{
+                        background: isActive ? "rgba(96,117,98,0.12)" : "#f7faf7",
+                        borderRadius: 12,
+                        padding: "16px 8px",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: 8,
+                        border: `1px solid ${isActive ? "rgba(96,117,98,0.35)" : "rgba(96,117,98,0.12)"}`,
+                        cursor: "pointer",
+                        textDecoration: "none",
+                      }}
+                    >
+                      <span style={{ color: isActive ? "#3d4e3f" : "#607562", width: 20, height: 20, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                        {ICONS[item.icon]}
+                      </span>
+                      <span style={{ fontSize: 12, fontWeight: 500, color: isActive ? "#3d4e3f" : "#333", textAlign: "center", lineHeight: 1.3 }}>{item.label}</span>
+                    </a>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Sign out */}
@@ -457,10 +456,14 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
         <div className="fixed inset-0 z-50" onClick={() => setPanelOpen(false)}>
           <div className="absolute inset-0 bg-black/25" style={{ backdropFilter: "blur(2px)" }} />
           <div
-            className="absolute inset-0 md:inset-auto md:top-2 md:right-2 md:bottom-2 w-full md:w-[380px] bg-white flex flex-col overflow-hidden md:rounded-[16px]"
+            className="absolute bottom-0 left-0 right-0 h-[85vh] md:inset-auto md:top-2 md:right-2 md:bottom-2 md:w-[380px] md:h-auto bg-white flex flex-col overflow-hidden rounded-t-[20px] md:rounded-[16px]"
             style={{ border: "1px solid rgba(96,117,98,0.15)", boxShadow: "0 24px 64px rgba(0,0,0,0.18), 0 4px 16px rgba(96,117,98,0.1)" }}
             onClick={(e) => e.stopPropagation()}
           >
+            {/* Pill handle — mobile only */}
+            <div className="md:hidden" style={{ flexShrink: 0, paddingTop: 12 }}>
+              <div style={{ width: 40, height: 4, background: "#e0e8e0", borderRadius: 2, margin: "0 auto" }} />
+            </div>
             {/* Panel header: dark user section + tabs */}
             <div style={{ background: "linear-gradient(145deg,#1e2f20,#2d4030)", flexShrink: 0, padding: "20px 20px 0" }}>
               <div className="flex items-center gap-3 mb-5">
