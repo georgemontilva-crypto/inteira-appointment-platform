@@ -373,6 +373,7 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
             { label: "Disponibilidad", icon: "clock",    hash: "#disponibilidad" },
             { label: "Más",            icon: "user",     panel: "profile" },
           ];
+          console.log('[MobileNav] user role:', user?.role, 'user:', user?.id);
           const items = user?.role === "professional" ? proItems : user?.role === "admin" ? adminItems : userItems;
           const btnBase = "flex-1 flex flex-col items-center justify-center gap-0.5 h-full";
           return items.map((item) => {
