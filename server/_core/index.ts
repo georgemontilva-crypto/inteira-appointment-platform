@@ -581,6 +581,21 @@ async function runStartupMigrations() {
       });
     }
 
+    // Update plan prices to match current pricing
+    try {
+      await new Promise<void>((resolve) => {
+        client.execute(
+          `UPDATE subscriptionPlans SET price = 1500 WHERE name LIKE '%Premium%' OR name LIKE '%Individual%' AND price = 1250`,
+          [],
+          (err: any, result: any) => {
+            if (err) console.warn("[Migration] update premium price:", err?.message);
+            else if (result?.affectedRows > 0) console.log("[Migration] Premium plan price updated to 1500");
+            resolve();
+          }
+        );
+      });
+    } catch (e: any) {}
+
   } catch (err) {
     console.error("[Migration] Startup migration failed:", err);
   }
