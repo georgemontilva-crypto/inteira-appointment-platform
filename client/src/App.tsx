@@ -18,7 +18,6 @@ import TermsOfService from "./pages/TermsOfService";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import UserProfile from "./pages/UserProfile";
 import Subscription from "./pages/Subscription";
-import MobileNav from "./components/MobileNav";
 import Login from "./pages/Login";
 import SpecialtiesPage from "./pages/SpecialtiesPage";
 import AppointmentsPage from "./pages/AppointmentsPage";
@@ -77,7 +76,6 @@ function App() {
         <TooltipProvider>
           <Toaster richColors position="top-right" />
           <Router />
-          <MobileNav />
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>
