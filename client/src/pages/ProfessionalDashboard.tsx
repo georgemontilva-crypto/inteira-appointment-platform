@@ -405,6 +405,11 @@ export default function ProfessionalDashboard() {
   const upcomingAppointments = appointments?.filter((a) => a.status === "scheduled") ?? [];
   const pastAppointments = appointments?.filter((a) => a.status !== "scheduled") ?? [];
 
+  // Withdrawal modal derived values — must be at component level (used outside ganancias IIFE)
+  const wAmount = parseFloat(withdrawalForm.amount || "0");
+  const wBalance = parseFloat((wallet as any)?.wallet?.balance ?? "0");
+  const wValid = wAmount >= 1000 && wAmount <= wBalance && withdrawalForm.paymentDetails.trim().length > 0;
+
   return (
     <DashboardLayout>
       <div className={activeCall ? "flex gap-4 p-4 md:p-6 items-start" : ""}>
@@ -932,9 +937,6 @@ export default function ProfessionalDashboard() {
           const pendingWithdrawal = parseFloat((wallet as any)?.wallet?.pendingWithdrawal ?? "0");
           const withdrawals: any[] = (wallet as any)?.withdrawals ?? [];
           const hasPending = withdrawals.some((w) => w.status === "pending");
-          const wAmount = parseFloat(withdrawalForm.amount || "0");
-          const wValid = wAmount >= 1000 && wAmount <= balance && withdrawalForm.paymentDetails.trim().length > 0;
-
           return (
           <div className="space-y-4">
             <h2 className="text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>Mis ganancias</h2>
@@ -1064,13 +1066,13 @@ export default function ProfessionalDashboard() {
                 <input
                   type="number"
                   min={1000}
-                  max={parseFloat((wallet as any)?.wallet?.balance ?? "0")}
+                  max={wBalance}
                   value={withdrawalForm.amount}
                   onChange={(e) => setWithdrawalForm({ ...withdrawalForm, amount: e.target.value })}
                   placeholder="Mínimo $1,000"
                   className="mt-1 w-full rounded-xl border border-[rgba(96,117,98,0.2)] px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[rgba(96,117,98,0.3)]"
                 />
-                <p className="text-[11px] text-[#93A295] mt-1">Disponible: ${parseFloat((wallet as any)?.wallet?.balance ?? "0").toFixed(2)} MXN</p>
+                <p className="text-[11px] text-[#93A295] mt-1">Disponible: ${wBalance.toFixed(2)} MXN</p>
               </div>
 
               {/* Payment method */}
