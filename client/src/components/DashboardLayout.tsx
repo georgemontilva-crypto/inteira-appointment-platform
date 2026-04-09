@@ -139,7 +139,8 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
     staleTime: 5 * 60 * 1000,
   });
   const { data: proWalletData } = trpc.professional.getWallet.useQuery(undefined, {
-    enabled: isProfessional && isProMode && panelOpen,
+    enabled: isProfessional && isProMode,
+    staleTime: 60_000,
   });
 
   const count = unreadCount?.count ?? 0;
@@ -659,11 +660,11 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
                       <div className="absolute top-0 right-0 w-36 h-36 rounded-full pointer-events-none" style={{ background: "rgba(255,255,255,0.04)", transform: "translate(40%,-40%)" }} />
                       <p className="text-[9px] font-bold uppercase tracking-[0.18em] mb-3" style={{ color: "rgba(255,255,255,0.45)" }}>GANANCIAS DISPONIBLES</p>
                       <p className="text-4xl font-bold text-white leading-none">
-                        ${((proWalletData as any)?.wallet?.availableBalance ?? 0).toLocaleString("es-MX")}
+                        ${(parseFloat((proWalletData as any)?.wallet?.balance ?? "0") || 0).toLocaleString("es-MX")}
                       </p>
                       <p className="text-[12px] mt-1 font-medium" style={{ color: "rgba(255,255,255,0.35)" }}>MXN</p>
                       <p className="text-[10px] mt-3 truncate" style={{ color: "rgba(255,255,255,0.25)" }}>
-                        Total acumulado: ${((proWalletData as any)?.wallet?.totalEarnings ?? 0).toLocaleString("es-MX")} MXN
+                        Total acumulado: ${(parseFloat((proWalletData as any)?.wallet?.totalEarned ?? "0") || 0).toLocaleString("es-MX")} MXN
                       </p>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
