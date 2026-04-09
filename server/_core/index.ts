@@ -581,51 +581,32 @@ async function runStartupMigrations() {
       });
     }
 
-    // Seed subscription plans if table is empty
+    // Reset subscription plans to correct values
     try {
-      const existingPlans = await new Promise<any[]>((resolve) => {
-        client.execute("SELECT COUNT(*) as cnt FROM subscriptionPlans", [], (err: any, results: any) => {
-          resolve(Array.isArray(results) ? results : []);
+      await new Promise<void>((resolve) => {
+        client.execute("DELETE FROM subscriptionPlans", [], (err: any) => {
+          if (err) console.warn("[Migration] delete plans:", err?.message);
+          resolve();
         });
       });
-      const count = Number(existingPlans[0]?.cnt ?? 0);
-      if (count === 0) {
-        const plans = [
-          { name: "Plan Básico",     price: 980,  billingPeriod: "monthly", credits: 980,  sessionsPerMonth: 4, minutesPerSession: 60, stripePriceId: "" },
-          { name: "Plan Pro",        price: 2500, billingPeriod: "monthly", credits: 2500, sessionsPerMonth: 6, minutesPerSession: 60, stripePriceId: "" },
-          { name: "Sesión Básica",   price: 350,  billingPeriod: "once",    credits: 350,  sessionsPerMonth: 1, minutesPerSession: 60, stripePriceId: "" },
-          { name: "Sesión Premium",  price: 1500, billingPeriod: "once",    credits: 1500, sessionsPerMonth: 1, minutesPerSession: 90, stripePriceId: "" },
-        ];
-        for (const plan of plans) {
-          await new Promise<void>((resolve) => {
-            client.execute(
-              `INSERT INTO subscriptionPlans (name, price, billingPeriod, credits, sessionsPerMonth, minutesPerSession, stripePriceId, isActive, createdAt, updatedAt)
-               VALUES (?, ?, ?, ?, ?, ?, ?, 1, NOW(), NOW())`,
-              [plan.name, plan.price, plan.billingPeriod, plan.credits, plan.sessionsPerMonth, plan.minutesPerSession, plan.stripePriceId],
-              (err: any) => {
-                if (err) console.warn("[Migration] plan insert:", err?.message);
-                resolve();
-              }
-            );
-          });
-        }
-        console.log("[Migration] subscription plans seeded");
-      } else {
-        // Update Sesión Premium price if still at 1250
+      const plans = [
+        { name: "Plan Básico",    price: 980,  billingPeriod: "monthly", credits: 980,  sessionsPerMonth: 4, minutesPerSession: 60 },
+        { name: "Plan Pro",       price: 2500, billingPeriod: "monthly", credits: 2500, sessionsPerMonth: 6, minutesPerSession: 60 },
+        { name: "Sesión Básica",  price: 350,  billingPeriod: "once",    credits: 350,  sessionsPerMonth: 1, minutesPerSession: 60 },
+        { name: "Sesión Premium", price: 1500, billingPeriod: "once",    credits: 1500, sessionsPerMonth: 1, minutesPerSession: 90 },
+      ];
+      for (const plan of plans) {
         await new Promise<void>((resolve) => {
           client.execute(
-            `UPDATE subscriptionPlans SET price = 1500, credits = 1500, minutesPerSession = 90 WHERE name LIKE '%Premium%' AND price = 1250`,
-            [],
-            (err: any, result: any) => {
-              if (err) console.warn("[Migration] premium price update:", err?.message);
-              else if ((result as any)?.affectedRows > 0) console.log("[Migration] Sesión Premium price updated to 1500");
-              resolve();
-            }
+            `INSERT INTO subscriptionPlans (name, price, billingPeriod, credits, sessionsPerMonth, minutesPerSession, stripePriceId, isActive, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, '', 1, NOW(), NOW())`,
+            [plan.name, plan.price, plan.billingPeriod, plan.credits, plan.sessionsPerMonth, plan.minutesPerSession],
+            (err: any) => { if (err) console.warn("[Migration] plan insert:", err?.message); resolve(); }
           );
         });
       }
+      console.log("[Migration] subscription plans reset to correct values");
     } catch (e: any) {
-      console.warn("[Migration] subscription plans seed:", e?.message);
+      console.warn("[Migration] reset plans:", e?.message);
     }
 
   } catch (err) {
