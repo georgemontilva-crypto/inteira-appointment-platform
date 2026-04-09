@@ -551,6 +551,28 @@ async function runStartupMigrations() {
       console.warn("[Migration] Could not add reminder15sent column:", e?.message);
     }
 
+    // Add cancellation columns to appointments if missing
+    try {
+      await new Promise<void>((resolve) => {
+        client.execute(
+          `ALTER TABLE appointments
+           ADD COLUMN IF NOT EXISTS canceledAt DATETIME NULL,
+           ADD COLUMN IF NOT EXISTS canceledBy VARCHAR(50) NULL,
+           ADD COLUMN IF NOT EXISTS cancellationReason TEXT NULL,
+           ADD COLUMN IF NOT EXISTS penaltyAmount DECIMAL(10,2) NULL DEFAULT 0,
+           ADD COLUMN IF NOT EXISTS penaltyType VARCHAR(50) NULL DEFAULT 'none'`,
+          [],
+          (err: any) => {
+            if (err) console.warn("[Migration] cancellation columns:", err?.message);
+            else console.log("[Migration] appointments cancellation columns ready");
+            resolve();
+          }
+        );
+      });
+    } catch (e: any) {
+      console.warn("[Migration] Could not add cancellation columns:", e?.message);
+    }
+
   } catch (err) {
     console.error("[Migration] Startup migration failed:", err);
   }
