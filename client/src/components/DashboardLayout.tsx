@@ -231,11 +231,11 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
           {user?.role === "professional" ? (
             <div style={{ display: "flex", background: "#f0f4f0", borderRadius: 20, padding: 2 }}>
               <button
-                onClick={() => navigate("/dashboard")}
+                onClick={() => { console.log('[Switcher] clicking Cliente, current location:', location); navigate("/dashboard"); console.log('[Switcher] after navigate'); }}
                 style={{ padding: "4px 12px", borderRadius: 18, fontSize: 12, fontWeight: 500, background: !isProMode ? "#607562" : "transparent", color: !isProMode ? "#fff" : "#607562", border: "none", cursor: "pointer" }}
               >Cliente</button>
               <button
-                onClick={() => navigate("/panel-profesional")}
+                onClick={() => { console.log('[Switcher] clicking Profesional, current location:', location); navigate("/panel-profesional"); console.log('[Switcher] after navigate'); }}
                 style={{ padding: "4px 12px", borderRadius: 18, fontSize: 12, fontWeight: 500, background: isProMode ? "#607562" : "transparent", color: isProMode ? "#fff" : "#607562", border: "none", cursor: "pointer" }}
               >Profesional</button>
             </div>
