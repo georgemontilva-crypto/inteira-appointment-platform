@@ -210,6 +210,22 @@ export const appointmentRouter = router({
         }).catch(() => {});
       }
 
+      // In-app notifications
+      createNotification({
+        userId: ctx.user.id,
+        type: "appointment_confirmed",
+        title: "✅ Cita confirmada",
+        message: `Tu cita con ${professionalUser?.name ?? "el especialista"} quedó agendada para el ${appointmentDateObj.toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" })}`,
+        link: "/citas",
+      }).catch(() => {});
+      createNotification({
+        userId: professional.userId,
+        type: "new_appointment",
+        title: "📅 Nueva cita agendada",
+        message: `${userRecord?.name ?? "Un usuario"} agendó una cita contigo para el ${appointmentDateObj.toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" })}`,
+        link: "/panel-profesional",
+      }).catch(() => {});
+
       return {
         success: true,
         videoCallLink: videoCall.url,
@@ -366,6 +382,26 @@ export const appointmentRouter = router({
           patientName: canceledUser?.name ?? "Usuario",
           appointmentDate: new Date(appointment.appointmentDate),
           canceledBy: canceledByRole as "user" | "professional" | "admin",
+        }).catch(() => {});
+      }
+
+      // In-app notifications
+      if (canceledByRole === "professional" || canceledByRole === "admin") {
+        createNotification({
+          userId: appointment.userId,
+          type: "appointment_cancelled",
+          title: "❌ Cita cancelada",
+          message: `Tu cita del ${new Date(appointment.appointmentDate).toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" })} fue cancelada por el especialista`,
+          link: "/citas",
+        }).catch(() => {});
+      }
+      if (canceledProfessional && (canceledByRole === "user" || canceledByRole === "admin")) {
+        createNotification({
+          userId: canceledProfessional.userId,
+          type: "appointment_cancelled",
+          title: "❌ Cita cancelada",
+          message: `${canceledUser?.name ?? "El usuario"} canceló su cita del ${new Date(appointment.appointmentDate).toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" })}`,
+          link: "/panel-profesional",
         }).catch(() => {});
       }
 
@@ -602,6 +638,14 @@ export const appointmentRouter = router({
           appointmentDate: new Date((appointment as any).appointmentDate),
         }).catch(() => {});
       }
+
+      createNotification({
+        userId: ctx.user.id,
+        type: "credits_debited",
+        title: "💳 Créditos debitados",
+        message: `Se debitaron ${sessionCost} créditos por tu sesión de hoy`,
+        link: "/wallet",
+      }).catch(() => {});
 
       return { success: true };
     }),

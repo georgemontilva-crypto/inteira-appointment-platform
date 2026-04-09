@@ -759,6 +759,7 @@ setInterval(async () => {
       const { creditProfessionalEarning } = await import("../professionalWallet");
       const { confirmCredits } = await import("../credits");
       const { sendCreditsDebitedEmail } = await import("../email");
+      const { createNotification } = await import("../notifications");
       for (const row of noShowCandidates) {
         await confirmCredits(row.id).catch(() => {});
         await creditProfessionalEarning(row.professionalId, row.id, (row.tier ?? "basic") as "basic" | "pro").catch(() => {});
@@ -773,6 +774,13 @@ setInterval(async () => {
             appointmentDate: new Date(row.appointmentDate),
           }).catch(() => {});
         }
+        createNotification({
+          userId: row.userId,
+          type: "no_show",
+          title: "⚠️ Cita no completada",
+          message: "No asististe a tu cita. Los créditos han sido debitados.",
+          link: "/citas",
+        }).catch(() => {});
       }
     }
 

@@ -111,6 +111,16 @@ export async function processPayment(stripeSessionId: string, data?: {
 
     console.log(`[PaymentProcessor] ✅ ${item.credits} créditos acreditados — userId=${item.userId} productType=${item.productType}`);
 
+    // In-app notification (fire-and-forget)
+    const { createNotification } = await import("./notifications");
+    createNotification({
+      userId: item.userId,
+      type: "credits_purchased",
+      title: "🎉 Créditos acreditados",
+      message: `${item.credits} créditos han sido añadidos a tu wallet`,
+      link: "/wallet",
+    }).catch(() => {});
+
     // Enviar email de confirmación de compra (non-blocking)
     try {
       const userRows = await new Promise<any[]>((resolve) => {
