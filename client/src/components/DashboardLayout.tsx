@@ -554,14 +554,24 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
             <div style={{ background: "linear-gradient(145deg,#1e2f20,#2d4030)", flexShrink: 0, padding: "20px 20px 0" }}>
               <div className="flex items-center gap-3 mb-5">
                 <div className="relative flex-shrink-0">
-                  <UserAvatar size="lg" />
+                  {isProMode && isProfessional && (proProfile as any)?.profileImage ? (
+                    <img src={(proProfile as any).profileImage} style={{ width: 56, height: 56, borderRadius: "50%", objectFit: "cover" }} referrerPolicy="no-referrer" />
+                  ) : (
+                    <UserAvatar size="lg" />
+                  )}
                   <span className="absolute bottom-0.5 right-0.5 w-3 h-3 rounded-full bg-green-400" style={{ border: "2px solid #1e2f20" }} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-[15px] font-bold text-white leading-tight truncate">{user?.name ?? "Usuario"}</p>
-                  <p className="text-[11px] mt-0.5 truncate" style={{ color: "rgba(255,255,255,0.45)" }}>{user?.email}</p>
-                  <span className="inline-block mt-2 px-2.5 py-0.5 rounded-full text-[9px] font-semibold uppercase tracking-wider" style={{ background: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.7)" }}>
-                    {user?.role === "admin" ? "Admin" : user?.role === "professional" ? "Profesional" : "Usuario"}
+                  <p style={{ fontWeight: 600, fontSize: 16, color: "#fff", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {isProMode && isProfessional ? ((proProfile as any)?.name ?? user?.name) : user?.name}
+                  </p>
+                  <p style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", margin: "2px 0 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {isProMode && isProfessional ? ((proProfile as any)?.specialty?.name ?? "Especialista") : user?.email}
+                  </p>
+                  <span style={{ display: "inline-block", marginTop: 6, background: "rgba(255,255,255,0.15)", color: "#fff", fontSize: 11, padding: "2px 10px", borderRadius: 20, fontWeight: 600 }}>
+                    {isProMode && isProfessional
+                      ? `PROFESIONAL · ${(proProfile as any)?.tier === "pro" ? "PRO" : "BÁSICO"}`
+                      : user?.role?.toUpperCase()}
                   </span>
                 </div>
                 <button
