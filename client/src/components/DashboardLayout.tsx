@@ -162,26 +162,46 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
     navItems.push({ label: "Mi panel", icon: "shield", href: "/panel-profesional" });
   }
 
-  // Drawer grid items by role
-  const drawerItems: { label: string; icon: string; href: string }[] =
+  // Drawer grid sections by role
+  type DrawerItem = { label: string; icon: string; href: string };
+  const drawerSections: { section: string; items: DrawerItem[] }[] =
     user?.role === "professional"
       ? [
-          { label: "Inicio",         icon: "home",     href: "/panel-profesional" },
-          { label: "Mis citas",      icon: "calendar", href: "/panel-profesional#citas" },
-          { label: "Ganancias",      icon: "wallet",   href: "/panel-profesional#ganancias" },
-          { label: "Disponibilidad", icon: "clock",    href: "/panel-profesional#disponibilidad" },
-          { label: "Reseñas",        icon: "star",     href: "/panel-profesional#resenas" },
-          { label: "Mi perfil",      icon: "user",     href: "/panel-profesional#perfil" },
+          {
+            section: "Como cliente",
+            items: [
+              { label: "Inicio",   icon: "home",     href: "/dashboard" },
+              { label: "Mis citas",icon: "calendar", href: "/citas" },
+              { label: "Explorar", icon: "search",   href: "/especialidades" },
+              { label: "Wallet",   icon: "wallet",   href: "/wallet" },
+            ],
+          },
+          {
+            section: "Como profesional",
+            items: [
+              { label: "Panel",          icon: "home",     href: "/panel-profesional" },
+              { label: "Mis citas",      icon: "calendar", href: "/panel-profesional#citas" },
+              { label: "Ganancias",      icon: "wallet",   href: "/panel-profesional#ganancias" },
+              { label: "Disponibilidad", icon: "clock",    href: "/panel-profesional#disponibilidad" },
+            ],
+          },
         ]
       : [
-          { label: "Inicio",   icon: "home",     href: "/dashboard" },
-          { label: "Mis citas",icon: "calendar", href: "/citas" },
-          { label: "Explorar", icon: "search",   href: "/especialidades" },
-          { label: "Wallet",   icon: "wallet",   href: "/wallet" },
-          { label: "Planes",   icon: "star",     href: "/planes" },
-          { label: "Perfil",   icon: "user",     href: "/perfil" },
-          ...(user?.role === "admin" ? [{ label: "Admin", icon: "shield", href: "/admin" }] : []),
+          {
+            section: "",
+            items: [
+              { label: "Inicio",   icon: "home",     href: "/dashboard" },
+              { label: "Mis citas",icon: "calendar", href: "/citas" },
+              { label: "Explorar", icon: "search",   href: "/especialidades" },
+              { label: "Wallet",   icon: "wallet",   href: "/wallet" },
+              { label: "Planes",   icon: "star",     href: "/planes" },
+              { label: "Perfil",   icon: "user",     href: "/perfil" },
+              ...(user?.role === "admin" ? [{ label: "Admin", icon: "shield", href: "/admin" }] : []),
+            ],
+          },
         ];
+
+  const isProMode = location.startsWith("/panel-profesional");
 
   return (
     <div className="flex flex-col min-h-screen bg-[#F7FAFC]">
@@ -192,15 +212,36 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
           <button onClick={() => setDrawerOpen(true)} style={{ background: "none", border: "none", cursor: "pointer", padding: 4, color: "#607562", display: "flex" }}>
             <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
           </button>
-          <img src={logo} alt="Inteira" style={{ height: "24px", width: "auto", objectFit: "contain" }} />
+          {/* Center: mode switcher for professional, logo otherwise */}
+          {user?.role === "professional" ? (
+            <div style={{ display: "flex", background: "#f0f4f0", borderRadius: 20, padding: 2 }}>
+              <button
+                onClick={() => navigate("/dashboard")}
+                style={{ padding: "4px 12px", borderRadius: 18, fontSize: 12, fontWeight: 500, background: !isProMode ? "#607562" : "transparent", color: !isProMode ? "#fff" : "#607562", border: "none", cursor: "pointer" }}
+              >Cliente</button>
+              <button
+                onClick={() => navigate("/panel-profesional")}
+                style={{ padding: "4px 12px", borderRadius: 18, fontSize: 12, fontWeight: 500, background: isProMode ? "#607562" : "transparent", color: isProMode ? "#fff" : "#607562", border: "none", cursor: "pointer" }}
+              >Profesional</button>
+            </div>
+          ) : (
+            <img src={logo} alt="Inteira" style={{ height: "24px", width: "auto", objectFit: "contain" }} />
+          )}
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
             <button onClick={() => openPanel("notifications")} style={{ position: "relative", background: "none", border: "none", cursor: "pointer", color: "#607562", padding: 0, display: "flex" }}>
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
               {count > 0 && <span style={{ position: "absolute", top: -4, right: -4, width: 8, height: 8, borderRadius: "50%", background: "#ef4444" }} />}
             </button>
-            <button onClick={() => navigate("/especialidades")} style={{ background: "#607562", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", border: "none", cursor: "pointer" }}>
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            </button>
+            {/* CTA: clock for pro mode, + otherwise */}
+            {user?.role === "professional" && isProMode ? (
+              <button onClick={() => { window.location.href = "/panel-profesional#disponibilidad"; }} style={{ background: "#607562", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", border: "none", cursor: "pointer" }}>
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              </button>
+            ) : (
+              <button onClick={() => navigate("/especialidades")} style={{ background: "#607562", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", border: "none", cursor: "pointer" }}>
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              </button>
+            )}
             <button onClick={() => openPanel("profile")} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex" }}>
               <UserAvatar size="sm" />
             </button>
@@ -397,41 +438,48 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
               </div>
             </div>
 
-            {/* Drawer nav — grid 2 columns */}
+            {/* Drawer nav — sectioned grid 2 columns */}
             <div className="flex-1 overflow-y-auto" style={{ padding: "12px 16px" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                {drawerItems.map((item) => {
-                  const hrefBase = item.href.split("#")[0];
-                  const hrefHash = item.href.includes("#") ? "#" + item.href.split("#")[1] : null;
-                  const isActive = hrefHash
-                    ? currentHash === hrefHash
-                    : location === hrefBase || location.startsWith(hrefBase + "/");
-                  return (
-                    <a
-                      key={item.label}
-                      href={item.href}
-                      onClick={(e) => { e.preventDefault(); window.location.href = item.href; setDrawerOpen(false); }}
-                      style={{
-                        background: isActive ? "rgba(96,117,98,0.12)" : "#f7faf7",
-                        borderRadius: 12,
-                        padding: "16px 8px",
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        gap: 8,
-                        border: `1px solid ${isActive ? "rgba(96,117,98,0.35)" : "rgba(96,117,98,0.12)"}`,
-                        cursor: "pointer",
-                        textDecoration: "none",
-                      }}
-                    >
-                      <span style={{ color: isActive ? "#3d4e3f" : "#607562", width: 20, height: 20, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
-                        {ICONS[item.icon]}
-                      </span>
-                      <span style={{ fontSize: 12, fontWeight: 500, color: isActive ? "#3d4e3f" : "#333", textAlign: "center", lineHeight: 1.3 }}>{item.label}</span>
-                    </a>
-                  );
-                })}
-              </div>
+              {drawerSections.map((sec, si) => (
+                <div key={sec.section || si} style={{ marginBottom: sec.section ? 20 : 0 }}>
+                  {sec.section && (
+                    <p style={{ fontSize: 9, fontWeight: 600, color: "#93A295", textTransform: "uppercase", letterSpacing: "0.12em", padding: "0 4px 8px" }}>{sec.section}</p>
+                  )}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    {sec.items.map((item) => {
+                      const hrefBase = item.href.split("#")[0];
+                      const hrefHash = item.href.includes("#") ? "#" + item.href.split("#")[1] : null;
+                      const isActive = hrefHash
+                        ? currentHash === hrefHash
+                        : location === hrefBase || location.startsWith(hrefBase + "/");
+                      return (
+                        <a
+                          key={item.label + item.href}
+                          href={item.href}
+                          onClick={(e) => { e.preventDefault(); window.location.href = item.href; setDrawerOpen(false); }}
+                          style={{
+                            background: isActive ? "rgba(96,117,98,0.12)" : "#f7faf7",
+                            borderRadius: 12,
+                            padding: "16px 8px",
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            gap: 8,
+                            border: `1px solid ${isActive ? "rgba(96,117,98,0.35)" : "rgba(96,117,98,0.12)"}`,
+                            cursor: "pointer",
+                            textDecoration: "none",
+                          }}
+                        >
+                          <span style={{ color: isActive ? "#3d4e3f" : "#607562", width: 20, height: 20, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                            {ICONS[item.icon]}
+                          </span>
+                          <span style={{ fontSize: 12, fontWeight: 500, color: isActive ? "#3d4e3f" : "#333", textAlign: "center", lineHeight: 1.3 }}>{item.label}</span>
+                        </a>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
 
             {/* Sign out */}
