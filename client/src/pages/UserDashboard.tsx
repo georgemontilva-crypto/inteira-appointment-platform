@@ -222,15 +222,6 @@ export default function UserDashboard() {
   });
 
   // ── Loading / Auth guards ──────────────────────────────────────────────
-  // Redirigir profesionales y admins a su dashboard correspondiente
-  if (!loading && user?.role === "professional") {
-    navigate("/panel-profesional");
-    return null;
-  }
-  if (!loading && user?.role === "admin") {
-    navigate("/admin");
-    return null;
-  }
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
