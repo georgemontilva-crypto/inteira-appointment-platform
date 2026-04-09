@@ -73,9 +73,10 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayout({ children, title, subtitle, headerRight }: DashboardLayoutProps) {
   const { user, logout } = useAuth();
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
   const [panelOpen, setPanelOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<PanelTab>("notifications");
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [currentHash, setCurrentHash] = useState(
     typeof window !== "undefined" ? window.location.hash : ""
   );
@@ -161,51 +162,89 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
     navItems.push({ label: "Mi panel", icon: "shield", href: "/panel-profesional" });
   }
 
+  // Drawer nav item renderer
+  const renderDrawerItem = ({ label, href, hash }: { label: string; href?: string; hash?: string }) => {
+    const isActive = hash ? currentHash === hash : href ? location === href || location.startsWith(href + "/") : false;
+    const inner = (
+      <span className="flex items-center px-3 py-2.5 rounded-xl transition-colors w-full" style={{ background: isActive ? "rgba(96,117,98,0.1)" : "transparent" }}>
+        <span className="text-[13px] font-medium" style={{ color: isActive ? "#3d4e3f" : "#333" }}>{label}</span>
+      </span>
+    );
+    if (hash) {
+      return (
+        <button key={label} className="w-full text-left" style={{ border: "none", background: "transparent", cursor: "pointer" }}
+          onClick={() => { window.location.hash = hash; setDrawerOpen(false); }}>
+          {inner}
+        </button>
+      );
+    }
+    return (
+      <Link key={label} href={href!}>
+        <a onClick={() => setDrawerOpen(false)} className="block">{inner}</a>
+      </Link>
+    );
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-[#F7FAFC]">
       {/* TOP BAR */}
-      <header className="h-[58px] bg-white border-b border-[rgba(96,117,98,0.15)] flex items-center gap-2 px-4 flex-shrink-0 sticky top-0 z-30">
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <img src={logo} alt="Inteira" style={{ height: "28px", width: "auto", objectFit: "contain" }} />
+      <header className="bg-white border-b border-[rgba(96,117,98,0.15)] flex-shrink-0 sticky top-0 z-30">
+        {/* MOBILE TOPBAR */}
+        <div className="md:hidden flex items-center justify-between px-4 h-14">
+          <button onClick={() => setDrawerOpen(true)} style={{ background: "none", border: "none", cursor: "pointer", padding: 4, color: "#607562", display: "flex" }}>
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          </button>
+          <img src={logo} alt="Inteira" style={{ height: "24px", width: "auto", objectFit: "contain" }} />
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <button onClick={() => openPanel("notifications")} style={{ position: "relative", background: "none", border: "none", cursor: "pointer", color: "#607562", padding: 0, display: "flex" }}>
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+              {count > 0 && <span style={{ position: "absolute", top: -4, right: -4, width: 8, height: 8, borderRadius: "50%", background: "#ef4444" }} />}
+            </button>
+            <button onClick={() => navigate("/especialidades")} style={{ background: "#607562", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", border: "none", cursor: "pointer" }}>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+            <button onClick={() => openPanel("profile")} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex" }}>
+              <UserAvatar size="sm" />
+            </button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2 bg-[#F7FAFC] border border-[rgba(96,117,98,0.2)] rounded-full px-3 h-[34px] w-[200px] flex-shrink-0 ml-2">
-          <Icon name="search" className="w-3.5 h-3.5 text-[#93A295]" />
-          <input className="bg-transparent border-none outline-none text-[13px] text-[#333333] w-full placeholder:text-[#93A295]" placeholder="Buscar especialistas..." />
-        </div>
-
-        <nav className="hidden md:flex items-center">
-          {[
-            { label: "Especialidades", href: "/especialidades" },
-            { label: "Planes",       href: "/planes" },
-          ].map((item) => (
-            <Link key={item.label} href={item.href}>
-              <a className="px-3 h-[58px] flex items-center text-[13px] font-medium text-[#93A295] hover:text-[#3d4e3f] cursor-pointer border-b-2 border-transparent hover:border-[#607562] transition-colors whitespace-nowrap">{item.label}</a>
-            </Link>
-          ))}
-        </nav>
-
-        <div className="flex-1" />
-
-        <div className="flex items-center gap-1">
-          {/* Bell → notifications tab */}
-          <button onClick={() => openPanel("notifications")} className="relative w-9 h-9 rounded-full flex items-center justify-center hover:bg-[#f0f4f0] transition-colors text-[#607562]">
-            <Icon name="bell" className="w-[18px] h-[18px]" />
-            {count > 0 && <span className="absolute top-0.5 right-0.5 min-w-[15px] h-[15px] bg-red-600 text-white text-[8px] font-bold rounded-full flex items-center justify-center px-0.5">{count > 9 ? "9+" : count}</span>}
-          </button>
-          {/* Wallet → wallet tab */}
-          <button onClick={() => openPanel("wallet")} className="relative w-9 h-9 rounded-full flex items-center justify-center hover:bg-[#f0f4f0] transition-colors text-[#607562]">
-            <Icon name="wallet" className="w-[18px] h-[18px]" />
-          </button>
-          {/* Grid → notifications tab */}
-          <button onClick={() => openPanel("notifications")} className="relative w-9 h-9 rounded-full flex items-center justify-center hover:bg-[#f0f4f0] transition-colors text-[#607562]">
-            <Icon name="grid" className="w-[18px] h-[18px]" />
-          </button>
-          {/* Avatar → profile tab */}
-          <button onClick={() => openPanel("profile")} className="ml-1 relative flex-shrink-0">
-            <UserAvatar size="sm" />
-            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-green-400 border-2 border-white" />
-          </button>
+        {/* DESKTOP TOPBAR */}
+        <div className="hidden md:flex items-center gap-2 px-4 h-[58px]">
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <img src={logo} alt="Inteira" style={{ height: "28px", width: "auto", objectFit: "contain" }} />
+          </div>
+          <div className="flex items-center gap-2 bg-[#F7FAFC] border border-[rgba(96,117,98,0.2)] rounded-full px-3 h-[34px] w-[200px] flex-shrink-0 ml-2">
+            <Icon name="search" className="w-3.5 h-3.5 text-[#93A295]" />
+            <input className="bg-transparent border-none outline-none text-[13px] text-[#333333] w-full placeholder:text-[#93A295]" placeholder="Buscar especialistas..." />
+          </div>
+          <nav className="flex items-center">
+            {[
+              { label: "Especialidades", href: "/especialidades" },
+              { label: "Planes", href: "/planes" },
+            ].map((item) => (
+              <Link key={item.label} href={item.href}>
+                <a className="px-3 h-[58px] flex items-center text-[13px] font-medium text-[#93A295] hover:text-[#3d4e3f] cursor-pointer border-b-2 border-transparent hover:border-[#607562] transition-colors whitespace-nowrap">{item.label}</a>
+              </Link>
+            ))}
+          </nav>
+          <div className="flex-1" />
+          <div className="flex items-center gap-1">
+            <button onClick={() => openPanel("notifications")} className="relative w-9 h-9 rounded-full flex items-center justify-center hover:bg-[#f0f4f0] transition-colors text-[#607562]">
+              <Icon name="bell" className="w-[18px] h-[18px]" />
+              {count > 0 && <span className="absolute top-0.5 right-0.5 min-w-[15px] h-[15px] bg-red-600 text-white text-[8px] font-bold rounded-full flex items-center justify-center px-0.5">{count > 9 ? "9+" : count}</span>}
+            </button>
+            <button onClick={() => openPanel("wallet")} className="relative w-9 h-9 rounded-full flex items-center justify-center hover:bg-[#f0f4f0] transition-colors text-[#607562]">
+              <Icon name="wallet" className="w-[18px] h-[18px]" />
+            </button>
+            <button onClick={() => openPanel("notifications")} className="relative w-9 h-9 rounded-full flex items-center justify-center hover:bg-[#f0f4f0] transition-colors text-[#607562]">
+              <Icon name="grid" className="w-[18px] h-[18px]" />
+            </button>
+            <button onClick={() => openPanel("profile")} className="ml-1 relative flex-shrink-0">
+              <UserAvatar size="sm" />
+              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-green-400 border-2 border-white" />
+            </button>
+          </div>
         </div>
       </header>
 
@@ -319,7 +358,7 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
         </aside>
 
         {/* MAIN CONTENT */}
-        <main className="flex-1 overflow-y-auto min-w-0 pb-20 md:pb-0">
+        <main className="flex-1 overflow-y-auto min-w-0">
           {(title || headerRight) && (
             <div className="bg-gradient-to-br from-[#3d4e3f] to-[#607562] px-6 py-5 relative overflow-hidden flex-shrink-0">
               <div className="absolute top-0 right-0 w-40 h-40 rounded-full pointer-events-none" style={{ background: "rgba(255,255,255,0.05)", transform: "translate(30%,-30%)" }} />
@@ -337,90 +376,81 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
         </main>
       </div>
 
-      {/* MOBILE BOTTOM NAV */}
-      <nav
-        className="md:hidden"
-        style={{
-          position: "fixed", bottom: 0, left: 0, right: 0,
-          height: "64px",
-          background: "#fff",
-          borderTop: "1px solid rgba(96,117,98,0.15)",
-          display: "flex", alignItems: "center",
-          zIndex: 50,
-          paddingBottom: "env(safe-area-inset-bottom)",
-        }}
-      >
-        {(() => {
-          type MobileItem = { label: string; icon: string; href?: string; hash?: string; panel?: PanelTab; special?: boolean; badge?: boolean };
-          const userItems: MobileItem[] = [
-            { label: "Inicio",     icon: "home",     href: "/dashboard" },
-            { label: "Mis citas",  icon: "calendar", href: "/citas" },
-            { label: "Nueva cita", icon: "search",   href: "/especialidades", special: true },
-            { label: "Avisos",     icon: "bell",     panel: "notifications", badge: true },
-            { label: "Perfil",     icon: "user",     panel: "profile" },
-          ];
-          const adminItems: MobileItem[] = [
-            { label: "Inicio",     icon: "home",     href: "/dashboard" },
-            { label: "Mis citas",  icon: "calendar", href: "/citas" },
-            { label: "Nueva cita", icon: "search",   href: "/especialidades", special: true },
-            { label: "Admin",      icon: "shield",   href: "/admin" },
-            { label: "Perfil",     icon: "user",     panel: "profile" },
-          ];
-          const proItems: MobileItem[] = [
-            { label: "Inicio",         icon: "home",     href: "/panel-profesional" },
-            { label: "Mis citas",      icon: "calendar", hash: "#citas" },
-            { label: "Ganancias",      icon: "wallet",   hash: "#ganancias" },
-            { label: "Disponibilidad", icon: "clock",    hash: "#disponibilidad" },
-            { label: "Más",            icon: "user",     panel: "profile" },
-          ];
-          console.log('[MobileNav] user role:', user?.role, 'user:', user?.id);
-          const items = user?.role === "professional" ? proItems : user?.role === "admin" ? adminItems : userItems;
-          const btnBase = "flex-1 flex flex-col items-center justify-center gap-0.5 h-full";
-          return items.map((item) => {
-            const isActive = item.hash
-              ? currentHash === item.hash
-              : item.href
-              ? location === item.href || location.startsWith(item.href + "/")
-              : false;
-            const iconEl = item.special ? (
-              <span style={{ width: 38, height: 38, borderRadius: "50%", background: "#607562", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <span style={{ width: 20, height: 20, color: "#fff", display: "inline-flex" }}>{ICONS[item.icon]}</span>
-              </span>
-            ) : (
-              <span style={{ position: "relative", display: "inline-flex" }}>
-                <span style={{ width: 34, height: 28, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, background: isActive ? "#eef2ee" : "transparent" }}>
-                  <span style={{ width: 20, height: 20, display: "inline-flex", color: isActive ? "#607562" : "#93A295" }}>{ICONS[item.icon]}</span>
-                </span>
-                {item.badge && count > 0 && (
-                  <span style={{ position: "absolute", top: -2, right: -2, width: 8, height: 8, borderRadius: "50%", background: "#ef4444" }} />
-                )}
-              </span>
-            );
-            const label = !item.special && (
-              <span style={{ fontSize: 9, fontWeight: 500, color: isActive ? "#607562" : "#93A295" }}>{item.label}</span>
-            );
-            if (item.panel) {
-              return (
-                <button key={item.label} className={btnBase} style={{ border: "none", background: "transparent", cursor: "pointer" }} onClick={() => openPanel(item.panel!)}>
-                  {iconEl}{label}
+      {/* MOBILE DRAWER */}
+      {drawerOpen && (
+        <div className="md:hidden fixed inset-0 z-[60]" onClick={() => setDrawerOpen(false)}>
+          <div className="absolute inset-0 bg-black/40" style={{ backdropFilter: "blur(2px)" }} />
+          <div
+            className="absolute top-0 left-0 bottom-0 w-[280px] bg-white flex flex-col overflow-hidden"
+            style={{ boxShadow: "4px 0 24px rgba(0,0,0,0.15)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Drawer header */}
+            <div style={{ background: "linear-gradient(145deg,#1e2f20,#2d4030)", padding: "24px 20px 20px", flexShrink: 0 }}>
+              <div className="flex items-center gap-3">
+                <UserAvatar size="lg" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-[15px] font-bold text-white leading-tight truncate">{user?.name ?? "Usuario"}</p>
+                  <p className="text-[11px] mt-0.5 truncate" style={{ color: "rgba(255,255,255,0.5)" }}>{user?.email}</p>
+                </div>
+                <button onClick={() => setDrawerOpen(false)} style={{ background: "rgba(255,255,255,0.1)", border: "none", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
-              );
-            }
-            if (item.hash) {
-              return (
-                <button key={item.label} className={btnBase} style={{ border: "none", background: "transparent", cursor: "pointer" }} onClick={() => { window.location.hash = item.hash!; }}>
-                  {iconEl}{label}
-                </button>
-              );
-            }
-            return (
-              <Link key={item.label} href={item.href!}>
-                <a className={btnBase}>{iconEl}{label}</a>
-              </Link>
-            );
-          });
-        })()}
-      </nav>
+              </div>
+            </div>
+
+            {/* Drawer nav */}
+            <div className="flex-1 overflow-y-auto p-3">
+              {user?.role === "professional" ? (
+                <>
+                  <p className="text-[9px] font-semibold text-[#93A295] uppercase tracking-widest px-3 py-2">Panel</p>
+                  {[
+                    { label: "🏠 Inicio",          href: "/panel-profesional" },
+                    { label: "📅 Mis citas",        hash: "#citas" },
+                    { label: "💰 Ganancias",        hash: "#ganancias" },
+                    { label: "📆 Disponibilidad",   hash: "#disponibilidad" },
+                    { label: "⭐ Reseñas",          hash: "#resenas" },
+                  ].map(renderDrawerItem)}
+                  <p className="text-[9px] font-semibold text-[#93A295] uppercase tracking-widest px-3 py-2 mt-3">Cuenta</p>
+                  {[
+                    { label: "👤 Mi perfil", hash: "#perfil" },
+                  ].map(renderDrawerItem)}
+                </>
+              ) : (
+                <>
+                  <p className="text-[9px] font-semibold text-[#93A295] uppercase tracking-widest px-3 py-2">Principal</p>
+                  {[
+                    { label: "🏠 Inicio",                  href: "/dashboard" },
+                    { label: "📅 Mis citas",               href: "/citas" },
+                    { label: "🔍 Explorar especialistas",  href: "/especialidades" },
+                  ].map(renderDrawerItem)}
+                  <p className="text-[9px] font-semibold text-[#93A295] uppercase tracking-widest px-3 py-2 mt-3">Cuenta</p>
+                  {[
+                    { label: "👛 Mi wallet",  href: "/wallet" },
+                    { label: "📋 Planes",     href: "/planes" },
+                    { label: "👤 Mi perfil",  href: "/perfil" },
+                    ...(user?.role === "admin" ? [{ label: "🛡️ Admin", href: "/admin" }] : []),
+                  ].map(renderDrawerItem)}
+                </>
+              )}
+            </div>
+
+            {/* Sign out */}
+            <div className="p-3 border-t border-[rgba(96,117,98,0.1)]">
+              <button
+                onClick={() => { logout(); setDrawerOpen(false); }}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-[#fff5f5] transition-colors"
+                style={{ border: "none", background: "transparent", cursor: "pointer" }}
+              >
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "rgba(239,68,68,0.08)" }}>
+                  <Icon name="logout" className="w-4 h-4 text-red-500" />
+                </div>
+                <span className="text-[13px] font-medium text-red-500">Cerrar sesión</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* RIGHT PANEL */}
       {panelOpen && (
