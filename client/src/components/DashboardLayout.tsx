@@ -319,7 +319,7 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
         </aside>
 
         {/* MAIN CONTENT */}
-        <main className="flex-1 overflow-y-auto min-w-0 pb-16 md:pb-0">
+        <main className="flex-1 overflow-y-auto min-w-0 pb-20 md:pb-0">
           {(title || headerRight) && (
             <div className="bg-gradient-to-br from-[#3d4e3f] to-[#607562] px-6 py-5 relative overflow-hidden flex-shrink-0">
               <div className="absolute top-0 right-0 w-40 h-40 rounded-full pointer-events-none" style={{ background: "rgba(255,255,255,0.05)", transform: "translate(30%,-30%)" }} />
@@ -338,24 +338,87 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
       </div>
 
       {/* MOBILE BOTTOM NAV */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-[rgba(96,117,98,0.18)] flex items-center z-40">
-        {[
-          { label: "Inicio",   icon: "home",     href: "/dashboard" },
-          { label: "Citas",    icon: "calendar", href: "/citas" },
-          { label: "Explorar", icon: "search",   href: "/especialidades" },
-          { label: "Planes",   icon: "star",     href: "/planes" },
-          { label: "Perfil",   icon: "user",     href: "/perfil" },
-        ].map((item) => {
-          const isActive = location === item.href || location.startsWith(item.href + "/");
-          return (
-            <Link key={item.href} href={item.href}>
-              <a className={`flex-1 flex flex-col items-center justify-center gap-0.5 h-full transition-colors ${isActive ? "text-[#3d4e3f]" : "text-[#93A295]"}`}>
-                <span className="w-[22px] h-[22px]">{ICONS[item.icon]}</span>
-                <span className={`text-[9px] font-medium ${isActive ? "text-[#3d4e3f]" : "text-[#93A295]"}`}>{item.label}</span>
-              </a>
-            </Link>
-          );
-        })}
+      <nav
+        className="md:hidden"
+        style={{
+          position: "fixed", bottom: 0, left: 0, right: 0,
+          height: "64px",
+          background: "#fff",
+          borderTop: "1px solid rgba(96,117,98,0.15)",
+          display: "flex", alignItems: "center",
+          zIndex: 50,
+          paddingBottom: "env(safe-area-inset-bottom)",
+        }}
+      >
+        {(() => {
+          type MobileItem = { label: string; icon: string; href?: string; hash?: string; panel?: PanelTab; special?: boolean; badge?: boolean };
+          const userItems: MobileItem[] = [
+            { label: "Inicio",     icon: "home",     href: "/dashboard" },
+            { label: "Mis citas",  icon: "calendar", href: "/citas" },
+            { label: "Nueva cita", icon: "search",   href: "/especialidades", special: true },
+            { label: "Avisos",     icon: "bell",     panel: "notifications", badge: true },
+            { label: "Perfil",     icon: "user",     panel: "profile" },
+          ];
+          const adminItems: MobileItem[] = [
+            { label: "Inicio",     icon: "home",     href: "/dashboard" },
+            { label: "Mis citas",  icon: "calendar", href: "/citas" },
+            { label: "Nueva cita", icon: "search",   href: "/especialidades", special: true },
+            { label: "Admin",      icon: "shield",   href: "/admin" },
+            { label: "Perfil",     icon: "user",     panel: "profile" },
+          ];
+          const proItems: MobileItem[] = [
+            { label: "Inicio",         icon: "home",     href: "/panel-profesional" },
+            { label: "Mis citas",      icon: "calendar", hash: "#citas" },
+            { label: "Ganancias",      icon: "wallet",   hash: "#ganancias" },
+            { label: "Disponibilidad", icon: "clock",    hash: "#disponibilidad" },
+            { label: "Más",            icon: "user",     panel: "profile" },
+          ];
+          const items = user?.role === "professional" ? proItems : user?.role === "admin" ? adminItems : userItems;
+          const btnBase = "flex-1 flex flex-col items-center justify-center gap-0.5 h-full";
+          return items.map((item) => {
+            const isActive = item.hash
+              ? currentHash === item.hash
+              : item.href
+              ? location === item.href || location.startsWith(item.href + "/")
+              : false;
+            const iconEl = item.special ? (
+              <span style={{ width: 38, height: 38, borderRadius: "50%", background: "#607562", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <span style={{ width: 20, height: 20, color: "#fff", display: "inline-flex" }}>{ICONS[item.icon]}</span>
+              </span>
+            ) : (
+              <span style={{ position: "relative", display: "inline-flex" }}>
+                <span style={{ width: 34, height: 28, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, background: isActive ? "#eef2ee" : "transparent" }}>
+                  <span style={{ width: 20, height: 20, display: "inline-flex", color: isActive ? "#607562" : "#93A295" }}>{ICONS[item.icon]}</span>
+                </span>
+                {item.badge && count > 0 && (
+                  <span style={{ position: "absolute", top: -2, right: -2, width: 8, height: 8, borderRadius: "50%", background: "#ef4444" }} />
+                )}
+              </span>
+            );
+            const label = !item.special && (
+              <span style={{ fontSize: 9, fontWeight: 500, color: isActive ? "#607562" : "#93A295" }}>{item.label}</span>
+            );
+            if (item.panel) {
+              return (
+                <button key={item.label} className={btnBase} style={{ border: "none", background: "transparent", cursor: "pointer" }} onClick={() => openPanel(item.panel!)}>
+                  {iconEl}{label}
+                </button>
+              );
+            }
+            if (item.hash) {
+              return (
+                <button key={item.label} className={btnBase} style={{ border: "none", background: "transparent", cursor: "pointer" }} onClick={() => { window.location.hash = item.hash!; }}>
+                  {iconEl}{label}
+                </button>
+              );
+            }
+            return (
+              <Link key={item.label} href={item.href!}>
+                <a className={btnBase}>{iconEl}{label}</a>
+              </Link>
+            );
+          });
+        })()}
       </nav>
 
       {/* RIGHT PANEL */}
@@ -363,8 +426,8 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
         <div className="fixed inset-0 z-50" onClick={() => setPanelOpen(false)}>
           <div className="absolute inset-0 bg-black/25" style={{ backdropFilter: "blur(2px)" }} />
           <div
-            className="absolute top-2 right-2 bottom-2 w-[380px] bg-white flex flex-col overflow-hidden"
-            style={{ borderRadius: "16px", border: "1px solid rgba(96,117,98,0.15)", boxShadow: "0 24px 64px rgba(0,0,0,0.18), 0 4px 16px rgba(96,117,98,0.1)" }}
+            className="absolute inset-0 md:inset-auto md:top-2 md:right-2 md:bottom-2 w-full md:w-[380px] bg-white flex flex-col overflow-hidden md:rounded-[16px]"
+            style={{ border: "1px solid rgba(96,117,98,0.15)", boxShadow: "0 24px 64px rgba(0,0,0,0.18), 0 4px 16px rgba(96,117,98,0.1)" }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Panel header: dark user section + tabs */}
