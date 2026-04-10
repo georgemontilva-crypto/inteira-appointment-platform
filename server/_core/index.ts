@@ -656,6 +656,44 @@ async function runStartupMigrations() {
       console.warn("[Migration] reset plans:", e?.message);
     }
 
+    // One-time fix: restore withdrawn balance for memoxgamer1993@gmail.com
+    try {
+      await new Promise<void>((resolve) => {
+        client.execute(
+          `UPDATE professionalWallet pw
+           JOIN professionals p ON pw.professionalId = p.id
+           JOIN users u ON p.userId = u.id
+           SET pw.balance = pw.balance + (
+             SELECT COALESCE(SUM(wr.amount), 0)
+             FROM withdrawalRequests wr
+             WHERE wr.professionalId = p.id AND wr.status = 'pending'
+           ),
+           pw.pendingWithdrawal = 0
+           WHERE u.email = 'memoxgamer1993@gmail.com'`,
+          [],
+          (err: any, result: any) => {
+            if (err) console.warn('[Migration] restore balance:', err?.message);
+            else console.log('[Migration] Professional balance restored for memoxgamer1993@gmail.com');
+            resolve();
+          }
+        );
+      });
+      // Also cancel pending withdrawals so they don't block future requests
+      await new Promise<void>((resolve) => {
+        client.execute(
+          `UPDATE withdrawalRequests wr
+           JOIN professionals p ON wr.professionalId = p.id
+           JOIN users u ON p.userId = u.id
+           SET wr.status = 'cancelled'
+           WHERE u.email = 'memoxgamer1993@gmail.com' AND wr.status = 'pending'`,
+          [],
+          (err: any) => { resolve(); }
+        );
+      });
+    } catch (e: any) {
+      console.warn('[Migration] restore balance error:', e?.message);
+    }
+
   } catch (err) {
     console.error("[Migration] Startup migration failed:", err);
   }
