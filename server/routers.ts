@@ -701,8 +701,21 @@ export const appRouter = router({
           audience: "professional",
         }).catch(() => {});
 
-        // Email to admin (fire-and-forget)
+        // Notification to admin(s)
         const profUser = await db.getUserById(professional.userId);
+        const admins = await db.getAdminUsers();
+        for (const admin of admins) {
+          createNotification({
+            userId: admin.id,
+            type: "withdrawal_requested",
+            title: "💸 Nueva solicitud de retiro",
+            message: `${profUser?.name ?? "Un profesional"} solicitó un retiro de $${input.amount.toLocaleString("es-MX")} MXN.`,
+            link: "/admin#retiros",
+            audience: "user",
+          }).catch(() => {});
+        }
+
+        // Email to admin (fire-and-forget)
         const { sendWithdrawalRequestEmail } = await import("./email");
         sendWithdrawalRequestEmail({
           adminEmail: process.env.ADMIN_EMAIL ?? "Adm@inteira.mx",

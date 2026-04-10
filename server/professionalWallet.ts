@@ -125,14 +125,10 @@ export async function createWithdrawalRequest(
 ): Promise<void> {
   const db = await getDb();
   if (!db) throw new Error("DB not available");
+  // Do NOT touch the wallet balance here — deduction happens only on approval
   await (db as any).$client.execute(
-    `UPDATE professionalWallet
-     SET balance = balance - ?, pendingWithdrawal = pendingWithdrawal + ?
-     WHERE professionalId = ?`,
-    [amount, amount, professionalId]
-  );
-  await (db as any).$client.execute(
-    `INSERT INTO withdrawalRequests (professionalId, amount, clabe, paymentMethod, paymentDetails, notes) VALUES (?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO withdrawalRequests (professionalId, amount, clabe, paymentMethod, paymentDetails, notes, status, requestedAt)
+     VALUES (?, ?, ?, ?, ?, ?, 'pending', NOW())`,
     [professionalId, amount, clabe ?? null, paymentMethod ?? null, paymentDetails ?? null, notes ?? null]
   );
 }
@@ -168,7 +164,10 @@ export async function approveWithdrawalRequest(withdrawalId: number): Promise<{ 
 
   await new Promise<void>((resolve, reject) => {
     client.execute(
-      "UPDATE professionalWallet SET pendingWithdrawal = GREATEST(0, pendingWithdrawal - ?), totalWithdrawn = totalWithdrawn + ? WHERE professionalId = ?",
+      `UPDATE professionalWallet
+       SET balance = GREATEST(0, balance - ?),
+           totalWithdrawn = totalWithdrawn + ?
+       WHERE professionalId = ?`,
       [amount, amount, row.professionalId],
       (err: any) => { if (err) reject(err); else resolve(); }
     );
