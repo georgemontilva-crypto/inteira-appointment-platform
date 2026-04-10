@@ -691,6 +691,16 @@ export const appRouter = router({
         const clabe = input.paymentMethod === "clabe" ? input.paymentDetails : null;
         await createWithdrawalRequest(professional.id, input.amount, clabe, input.paymentMethod, input.paymentDetails, input.notes);
 
+        // Notification to professional
+        createNotification({
+          userId: ctx.user.id,
+          type: "withdrawal_requested",
+          title: "💸 Solicitud de retiro enviada",
+          message: `Tu solicitud de retiro por $${input.amount} MXN fue recibida. Se procesa los lunes.`,
+          link: "/panel-profesional#ganancias",
+          audience: "professional",
+        }).catch(() => {});
+
         // Email to admin (fire-and-forget)
         const profUser = await db.getUserById(professional.userId);
         const { sendWithdrawalRequestEmail } = await import("./email");
@@ -702,7 +712,9 @@ export const appRouter = router({
           paymentMethod: input.paymentMethod,
           paymentDetails: input.paymentDetails,
           notes: input.notes,
-        }).catch(() => {});
+        })
+          .then(() => console.log("[Withdrawal] Email sent to admin"))
+          .catch((err) => console.error("[Withdrawal] Email error:", err?.message));
 
         return {
           success: true,
