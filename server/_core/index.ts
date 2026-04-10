@@ -656,10 +656,9 @@ async function runStartupMigrations() {
       console.warn("[Migration] reset plans:", e?.message);
     }
 
-    // One-time fix v2: restore balance for memoxgamer1993@gmail.com
-    // Uses JOIN+derived table (avoids correlated subquery MySQL issues).
-    // Targets 'cancelled' status because the previous migration attempt already
-    // cancelled the 'pending' records without successfully restoring the balance.
+    // One-time fix v3: recalculate balance from scratch for memoxgamer1993@gmail.com
+    // Previous attempts failed because withdrawalRequests had no matching rows.
+    // Source of truth: SUM(professionalEarnings.netAmount) - SUM(paid withdrawals)
     try {
       await new Promise<void>((resolve) => {
         client.execute(
@@ -667,36 +666,31 @@ async function runStartupMigrations() {
            JOIN professionals p ON pw.professionalId = p.id
            JOIN users u ON p.userId = u.id
            JOIN (
-             SELECT wr.professionalId, COALESCE(SUM(wr.amount), 0) AS totalToRestore
+             SELECT pe.professionalId, COALESCE(SUM(pe.netAmount), 0) AS totalEarned
+             FROM professionalEarnings pe
+             GROUP BY pe.professionalId
+           ) earnings ON earnings.professionalId = p.id
+           LEFT JOIN (
+             SELECT wr.professionalId, COALESCE(SUM(wr.amount), 0) AS totalPaid
              FROM withdrawalRequests wr
-             WHERE wr.status IN ('cancelled', 'pending')
+             WHERE wr.status = 'paid'
              GROUP BY wr.professionalId
-           ) sums ON sums.professionalId = p.id
-           SET pw.balance = pw.balance + sums.totalToRestore,
+           ) paid ON paid.professionalId = p.id
+           SET pw.balance      = earnings.totalEarned - COALESCE(paid.totalPaid, 0),
+               pw.totalEarned  = earnings.totalEarned,
+               pw.totalWithdrawn = COALESCE(paid.totalPaid, 0),
                pw.pendingWithdrawal = 0
            WHERE u.email = 'memoxgamer1993@gmail.com'`,
           [],
           (err: any, result: any) => {
-            if (err) console.warn('[Migration] restore balance v2:', err?.message);
-            else console.log('[Migration] balance restored v2 for memoxgamer1993@gmail.com', result);
+            if (err) console.warn('[Migration] restore balance v3:', err?.message);
+            else console.log('[Migration] balance restored v3 for memoxgamer1993@gmail.com', JSON.stringify(result));
             resolve();
           }
         );
       });
-      // Cancel any remaining pending withdrawals
-      await new Promise<void>((resolve) => {
-        client.execute(
-          `UPDATE withdrawalRequests wr
-           JOIN professionals p ON wr.professionalId = p.id
-           JOIN users u ON p.userId = u.id
-           SET wr.status = 'cancelled'
-           WHERE u.email = 'memoxgamer1993@gmail.com' AND wr.status = 'pending'`,
-          [],
-          (err: any) => { resolve(); }
-        );
-      });
     } catch (e: any) {
-      console.warn('[Migration] restore balance v2 error:', e?.message);
+      console.warn('[Migration] restore balance v3 error:', e?.message);
     }
 
   } catch (err) {
