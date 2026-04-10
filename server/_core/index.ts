@@ -656,29 +656,34 @@ async function runStartupMigrations() {
       console.warn("[Migration] reset plans:", e?.message);
     }
 
-    // One-time fix: restore withdrawn balance for memoxgamer1993@gmail.com
+    // One-time fix v2: restore balance for memoxgamer1993@gmail.com
+    // Uses JOIN+derived table (avoids correlated subquery MySQL issues).
+    // Targets 'cancelled' status because the previous migration attempt already
+    // cancelled the 'pending' records without successfully restoring the balance.
     try {
       await new Promise<void>((resolve) => {
         client.execute(
           `UPDATE professionalWallet pw
            JOIN professionals p ON pw.professionalId = p.id
            JOIN users u ON p.userId = u.id
-           SET pw.balance = pw.balance + (
-             SELECT COALESCE(SUM(wr.amount), 0)
+           JOIN (
+             SELECT wr.professionalId, COALESCE(SUM(wr.amount), 0) AS totalToRestore
              FROM withdrawalRequests wr
-             WHERE wr.professionalId = p.id AND wr.status = 'pending'
-           ),
-           pw.pendingWithdrawal = 0
+             WHERE wr.status IN ('cancelled', 'pending')
+             GROUP BY wr.professionalId
+           ) sums ON sums.professionalId = p.id
+           SET pw.balance = pw.balance + sums.totalToRestore,
+               pw.pendingWithdrawal = 0
            WHERE u.email = 'memoxgamer1993@gmail.com'`,
           [],
           (err: any, result: any) => {
-            if (err) console.warn('[Migration] restore balance:', err?.message);
-            else console.log('[Migration] Professional balance restored for memoxgamer1993@gmail.com');
+            if (err) console.warn('[Migration] restore balance v2:', err?.message);
+            else console.log('[Migration] balance restored v2 for memoxgamer1993@gmail.com', result);
             resolve();
           }
         );
       });
-      // Also cancel pending withdrawals so they don't block future requests
+      // Cancel any remaining pending withdrawals
       await new Promise<void>((resolve) => {
         client.execute(
           `UPDATE withdrawalRequests wr
@@ -691,7 +696,7 @@ async function runStartupMigrations() {
         );
       });
     } catch (e: any) {
-      console.warn('[Migration] restore balance error:', e?.message);
+      console.warn('[Migration] restore balance v2 error:', e?.message);
     }
 
   } catch (err) {
