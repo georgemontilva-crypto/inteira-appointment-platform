@@ -233,7 +233,7 @@ export default function ProfessionalsList() {
                         {(pro.totalReviews ?? 0) > 0 ? (
                           <>
                             {[1,2,3,4,5].map((s) => (
-                              <Star key={s} className={`w-3.5 h-3.5 ${s <= Math.round(Number(pro.averageRating)) ? "fill-accent text-accent" : "text-muted-foreground/30"}`} />
+                              <Star key={s} className="w-3.5 h-3.5" style={s <= Math.round(Number(pro.averageRating)) ? { color: '#f59e0b', fill: '#f59e0b' } : { color: 'rgba(0,0,0,0.15)' }} />
                             ))}
                             <span className="text-sm font-medium ml-0.5">{Number(pro.averageRating).toFixed(1)}</span>
                             <span className="text-xs text-muted-foreground">({pro.totalReviews} reseñas)</span>
