@@ -280,6 +280,39 @@ export default function ProfessionalProfile() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-6">
+                {/* Rating summary */}
+                {totalReviews > 0 && (
+                  <div className="flex items-start gap-6 p-4 bg-muted/30 rounded-xl">
+                    <div style={{ textAlign: 'center', padding: '16px 0 12px', flexShrink: 0, minWidth: '90px' }}>
+                      <p style={{ fontSize: '48px', fontWeight: 700, color: '#333', margin: 0, lineHeight: 1 }}>
+                        {rating > 0 ? rating.toFixed(1) : '—'}
+                      </p>
+                      <div style={{ display: 'flex', justifyContent: 'center', gap: '3px', margin: '8px 0' }}>
+                        {[1,2,3,4,5].map(s => (
+                          <span key={s} style={{ fontSize: '20px', color: s <= Math.round(rating) ? '#f59e0b' : '#e5e7eb' }}>★</span>
+                        ))}
+                      </div>
+                      <p style={{ fontSize: '13px', color: '#999', margin: 0 }}>
+                        {totalReviews > 0 ? `${totalReviews} reseña${totalReviews !== 1 ? 's' : ''}` : 'Sin reseñas aún'}
+                      </p>
+                    </div>
+                    <div className="flex-1 space-y-1.5">
+                      {ratingCounts.map(({ star, count }) => (
+                        <div key={star} className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground w-4">{star}</span>
+                          <Star className="w-3 h-3 text-[#F59E0B] fill-[#F59E0B] flex-shrink-0" />
+                          <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-[#F59E0B] rounded-full transition-all"
+                              style={{ width: totalReviews > 0 ? `${(count / totalReviews) * 100}%` : "0%" }}
+                            />
+                          </div>
+                          <span className="text-xs text-muted-foreground w-4">{count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Write review form */}
                 {showReviewForm && isAuthenticated && (
