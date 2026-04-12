@@ -273,12 +273,18 @@ export default function ProfessionalProfile() {
                 {/* Rating summary */}
                 {totalReviews > 0 && (
                   <div className="flex items-start gap-6 p-4 bg-muted/30 rounded-xl">
-                    <div className="text-center flex-shrink-0">
-                      <div className="text-5xl font-bold text-foreground" style={{ fontFamily: "Poppins, sans-serif" }}>
-                        {rating.toFixed(1)}
+                    <div style={{ textAlign: 'center', padding: '16px 0 12px', flexShrink: 0 }}>
+                      <p style={{ fontSize: '48px', fontWeight: 700, color: '#333', margin: 0, lineHeight: 1 }}>
+                        {rating > 0 ? rating.toFixed(1) : '—'}
+                      </p>
+                      <div style={{ display: 'flex', justifyContent: 'center', gap: '3px', margin: '8px 0' }}>
+                        {[1,2,3,4,5].map(s => (
+                          <span key={s} style={{ fontSize: '20px', color: s <= Math.round(rating) ? '#f59e0b' : '#e5e7eb' }}>★</span>
+                        ))}
                       </div>
-                      <StarRating value={Math.round(rating)} readonly size="sm" />
-                      <p className="text-xs text-muted-foreground mt-1">{totalReviews} reseñas</p>
+                      <p style={{ fontSize: '13px', color: '#999', margin: 0 }}>
+                        {totalReviews > 0 ? `${totalReviews} reseña${totalReviews !== 1 ? 's' : ''}` : 'Sin reseñas aún'}
+                      </p>
                     </div>
                     <div className="flex-1 space-y-1.5">
                       {ratingCounts.map(({ star, count }) => (
