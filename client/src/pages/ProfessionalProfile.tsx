@@ -149,10 +149,20 @@ export default function ProfessionalProfile() {
                 )}
               </div>
               <div className="flex flex-wrap items-center gap-4 text-muted-foreground text-sm">
-                <div className="flex items-center gap-1.5">
-                  <StarRating value={Math.round(rating)} readonly size="sm" />
-                  <span className="font-semibold text-foreground">{rating > 0 ? rating.toFixed(1) : "Nuevo"}</span>
-                  <span>({totalReviews} {totalReviews === 1 ? "reseña" : "reseñas"})</span>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ display: 'flex', gap: '2px' }}>
+                      {[1,2,3,4,5].map(s => (
+                        <span key={s} style={{ fontSize: '16px', color: s <= Math.round(rating) ? '#f59e0b' : '#e5e7eb' }}>★</span>
+                      ))}
+                    </div>
+                    <span style={{ fontWeight: 700, fontSize: '15px', color: '#333' }}>
+                      {rating > 0 ? rating.toFixed(1) : 'Nuevo'}
+                    </span>
+                    <span style={{ fontSize: '13px', color: '#999' }}>
+                      ({totalReviews} {totalReviews === 1 ? 'reseña' : 'reseñas'})
+                    </span>
+                  </div>
                 </div>
                 {professional.yearsOfExperience && (
                   <div className="flex items-center gap-1">
