@@ -887,44 +887,67 @@ export default function ProfessionalDashboard() {
                 </CardContent>
               </Card>
             ) : (
-              <div className="space-y-4">
+              <div style={{
+                display: 'flex',
+                gap: '12px',
+                overflowX: 'auto',
+                paddingBottom: '8px',
+                scrollbarWidth: 'none',
+              }}
+              className="scrollbar-none"
+              >
                 {myReviews.map((review) => (
-                  <Card key={review.id} className="border-border">
-                    <CardContent className="p-5">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
-                            {(review as any).userName?.charAt(0) ?? "U"}
-                          </div>
-                          <div>
-                            <p className="font-semibold text-sm">{(review as any).userName ?? "Paciente"}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {format(new Date(review.createdAt), "d 'de' MMMM yyyy", { locale: es })}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-0.5 flex-shrink-0">
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <Star
-                              key={star}
-                              className={`w-4 h-4 ${star <= review.rating ? "text-yellow-400 fill-yellow-400" : "text-gray-300"}`}
-                            />
-                          ))}
-                        </div>
+                  <div key={review.id} style={{
+                    minWidth: '220px',
+                    maxWidth: '220px',
+                    background: '#fff',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(96,117,98,0.12)',
+                    padding: '16px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                    flexShrink: 0,
+                  }}>
+                    {/* Header: foto + nombre + fecha */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{
+                        width: '36px', height: '36px', borderRadius: '50%',
+                        background: '#eef2ee',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '14px', fontWeight: 600, color: '#607562',
+                        flexShrink: 0,
+                        overflow: 'hidden',
+                      }}>
+                        {(review as any).userImage
+                          ? <img src={(review as any).userImage} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          : ((review as any).userName?.[0] ?? 'U').toUpperCase()
+                        }
                       </div>
-                      {review.comment && (
-                        <p className="text-sm text-muted-foreground mt-3 leading-relaxed">
-                          "{review.comment}"
+                      <div style={{ minWidth: 0 }}>
+                        <p style={{ fontSize: '13px', fontWeight: 600, color: '#333', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {(review as any).userName ?? 'Usuario'}
                         </p>
-                      )}
-                      {review.isVerified && (
-                        <div className="flex items-center gap-1 mt-2">
-                          <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                          <span className="text-xs text-emerald-600">Sesión verificada</span>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
+                        <p style={{ fontSize: '11px', color: '#999', margin: 0 }}>
+                          {new Date(review.createdAt).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </p>
+                      </div>
+                    </div>
+                    {/* Estrellas */}
+                    <div style={{ display: 'flex', gap: '2px' }}>
+                      {[1,2,3,4,5].map(s => (
+                        <span key={s} style={{ color: s <= review.rating ? '#f59e0b' : '#e5e7eb', fontSize: '14px' }}>★</span>
+                      ))}
+                    </div>
+                    {/* Comentario */}
+                    {review.comment && (
+                      <p style={{ fontSize: '12px', color: '#555', margin: 0, lineHeight: 1.5,
+                        display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden'
+                      } as React.CSSProperties}>
+                        {review.comment}
+                      </p>
+                    )}
+                  </div>
                 ))}
               </div>
             )}
