@@ -283,7 +283,7 @@ export default function ProfessionalProfile() {
                 {/* Rating summary */}
                 {totalReviews > 0 && (
                   <div className="flex items-start gap-6 p-4 bg-muted/30 rounded-xl">
-                    <div style={{ textAlign: 'center', padding: '16px 0 12px', flexShrink: 0 }}>
+                    <div style={{ textAlign: 'center', padding: '16px 0 12px', flexShrink: 0, minWidth: '90px' }}>
                       <p style={{ fontSize: '48px', fontWeight: 700, color: '#333', margin: 0, lineHeight: 1 }}>
                         {rating > 0 ? rating.toFixed(1) : '—'}
                       </p>
