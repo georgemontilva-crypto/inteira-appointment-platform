@@ -127,7 +127,12 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       `ON DUPLICATE KEY UPDATE ${updateParts.join(", ")}`,
     ].join(" ");
 
-    await db.execute(insertSQL, [...insertParams, ...updateParams]);
+    const client = (db as any).$client;
+    await new Promise<void>((resolve, reject) => {
+      client.execute(insertSQL, [...insertParams, ...updateParams], (err: any) => {
+        if (err) reject(err); else resolve();
+      });
+    });
 
     // Try to update role separately (column may or may not exist)
     if (cols.has("role")) {
@@ -158,9 +163,13 @@ export async function getUserByOpenId(openId: string) {
   }
 
   try {
-    const [rows] = await db.execute("SELECT * FROM `users` WHERE `openId` = ? LIMIT 1", [openId]) as any;
-    const arr = Array.isArray(rows) ? rows : [];
-    return arr.length > 0 ? arr[0] : undefined;
+    const client = (db as any).$client;
+    const rows = await new Promise<any[]>((resolve, reject) => {
+      client.execute("SELECT * FROM `users` WHERE `openId` = ? LIMIT 1", [openId], (err: any, results: any) => {
+        if (err) reject(err); else resolve(Array.isArray(results) ? results : []);
+      });
+    });
+    return rows.length > 0 ? rows[0] : undefined;
   } catch (error) {
     console.error("[Database] getUserByOpenId error:", error);
     return undefined;
@@ -187,9 +196,13 @@ export async function getUserByEmail(email: string) {
   const db = await getDb();
   if (!db) return undefined;
   try {
-    const [rows] = await db.execute("SELECT * FROM `users` WHERE `email` = ? LIMIT 1", [email]) as any;
-    const arr = Array.isArray(rows) ? rows : [];
-    return arr.length > 0 ? arr[0] : undefined;
+    const client = (db as any).$client;
+    const rows = await new Promise<any[]>((resolve, reject) => {
+      client.execute("SELECT * FROM `users` WHERE `email` = ? LIMIT 1", [email], (err: any, results: any) => {
+        if (err) reject(err); else resolve(Array.isArray(results) ? results : []);
+      });
+    });
+    return rows.length > 0 ? rows[0] : undefined;
   } catch (error) {
     console.error("[Database] getUserByEmail error:", error);
     return undefined;
