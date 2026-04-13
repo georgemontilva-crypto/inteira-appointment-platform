@@ -35,9 +35,9 @@ export default function BookAppointment() {
 
   const SESSION_INFO = {
     basic:   { label: "Sesión Básica",   duration: "60 min", credits: PRICING.SESSION_BASIC_MXN  },
-    premium: { label: "Sesión Premium",  duration: "90 min", credits: PRICING.SESSION_PREMIUM_MXN },
+    premium: { label: "Sesión Premium",  duration: "60 min", credits: PRICING.SESSION_PREMIUM_MXN },
   } as const;
-  const SESSION_DURATION_MINUTES = { basic: 60, premium: 90 } as const;
+  const SESSION_DURATION_MINUTES = { basic: 60, premium: 60 } as const;
 
   // Wallet query for credit balance indicator
   const { data: wallet } = trpc.user.getWallet.useQuery(undefined, { enabled: isAuthenticated });

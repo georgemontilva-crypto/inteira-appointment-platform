@@ -21,9 +21,29 @@ import { chargeProfessionalPenalty } from "./professionalWallet";
 
 const SESSION_TYPES = {
   basic:   { credits: 350,  durationMinutes: 60, label: "Sesión Básica" },
-  premium: { credits: 1500, durationMinutes: 90, label: "Sesión Premium" },
+  premium: { credits: 1500, durationMinutes: 60, label: "Sesión Premium" },
 } as const;
 type SessionType = keyof typeof SESSION_TYPES;
+
+// Since both session types are now 60 min, durationMinutes alone can't distinguish them.
+// This helper queries creditTransactions to find the original credit cost of an appointment.
+async function getAppointmentCreditCost(appointmentId: number): Promise<number> {
+  const dbInst = await db.getDb();
+  if (!dbInst) return 0;
+  const client = (dbInst as any).$client;
+  return new Promise<number>((resolve) => {
+    client.execute(
+      `SELECT COALESCE(SUM(ABS(delta)), 0) as total
+       FROM creditTransactions
+       WHERE appointmentId = ? AND reason IN ('reserved', 'consumed', 'refunded')`,
+      [appointmentId],
+      (err: any, results: any) => {
+        if (err) { resolve(0); return; }
+        resolve(Number(Array.isArray(results) ? results[0]?.total : 0) || 0);
+      }
+    );
+  });
+}
 
 export const appointmentRouter = router({
   // Get available slots for a professional on a specific date
@@ -362,7 +382,7 @@ export const appointmentRouter = router({
         : null;
 
       const hasRefund = canceledByRole === "professional" || hoursUntil >= 4;
-      const sessionCost = ((appointment as any).durationMinutes ?? 60) > 60 ? 1500 : 350;
+      const sessionCost = await getAppointmentCreditCost(input.appointmentId) || 350;
 
       if (canceledUser?.email) {
         sendAppointmentCancellation({
@@ -578,7 +598,8 @@ export const appointmentRouter = router({
         if (!professional) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Profesional no encontrado" });
 
         const { creditProfessionalEarning } = await import("./professionalWallet");
-        const sessionType = (appointment as any).durationMinutes > 60 ? "premium" : "basic";
+        const sessionCreditCost = await getAppointmentCreditCost(input.appointmentId);
+        const sessionType = sessionCreditCost >= 1500 ? "premium" : "basic";
         const { netAmount } = await creditProfessionalEarning(
           professional.id,
           input.appointmentId,
@@ -635,7 +656,7 @@ export const appointmentRouter = router({
 
       // Email debit notification (fire-and-forget)
       const userRecord = await db.getUserById(ctx.user.id).catch(() => null);
-      const sessionCost = (appointment as any).durationMinutes > 60 ? 1500 : 350;
+      const sessionCost = await getAppointmentCreditCost(input.appointmentId) || 350;
       if (userRecord?.email) {
         const { sendCreditsDebitedEmail } = await import("./email");
         sendCreditsDebitedEmail({

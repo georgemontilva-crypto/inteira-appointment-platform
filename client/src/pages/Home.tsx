@@ -671,7 +671,7 @@ export default function Home() {
               <Card className="border border-border active:scale-[0.99] transition-transform">
                 <CardContent className="p-4 md:p-6">
                   <h4 className="font-semibold text-sm md:text-base">Sesión Premium</h4>
-                  <p className="text-xs text-muted-foreground mt-1">90 min · Experto top</p>
+                  <p className="text-xs text-muted-foreground mt-1">60 min · Experto top</p>
                   <div className="mt-3">
                     <span className="text-xl md:text-2xl font-bold text-primary" style={{ fontFamily: "Poppins, sans-serif" }}>{PRICING_DISPLAY.SESSION_PREMIUM}</span>
                     <span className="text-xs text-muted-foreground ml-1">MXN</span>

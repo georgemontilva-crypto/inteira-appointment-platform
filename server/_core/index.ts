@@ -693,7 +693,7 @@ async function runStartupMigrations() {
         { name: "Plan Básico",    price: 980,  billingPeriod: "monthly", maxAppointmentsPerMonth: 4, maxMinutesPerAppointment: 60, sortOrder: 1 },
         { name: "Plan Pro",       price: 2500, billingPeriod: "monthly", maxAppointmentsPerMonth: 6, maxMinutesPerAppointment: 60, sortOrder: 2 },
         { name: "Sesión Básica",  price: 350,  billingPeriod: "once",    maxAppointmentsPerMonth: 1, maxMinutesPerAppointment: 60, sortOrder: 3 },
-        { name: "Sesión Premium", price: 1500, billingPeriod: "once",    maxAppointmentsPerMonth: 1, maxMinutesPerAppointment: 90, sortOrder: 4 },
+        { name: "Sesión Premium", price: 1500, billingPeriod: "once",    maxAppointmentsPerMonth: 1, maxMinutesPerAppointment: 60, sortOrder: 4 },
       ];
       for (const plan of plans) {
         await new Promise<void>((resolve) => {
