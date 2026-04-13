@@ -1090,8 +1090,22 @@ export const appRouter = router({
       }))
       .mutation(async ({ ctx, input }) => {
         if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
-        const { approveWithdrawalRequest } = await import("./professionalWallet");
-        const { professionalId, amount } = await approveWithdrawalRequest(input.withdrawalId);
+
+        console.log("[Withdrawal:approve] START withdrawalId:", input.withdrawalId,
+          "| attachmentName:", input.attachmentName ?? "(none)",
+          "| attachmentMimeType:", input.attachmentMimeType ?? "(none)",
+          "| attachmentBase64 length:", input.attachmentBase64?.length ?? 0);
+
+        let professionalId: number;
+        let amount: number;
+        try {
+          const { approveWithdrawalRequest } = await import("./professionalWallet");
+          ({ professionalId, amount } = await approveWithdrawalRequest(input.withdrawalId));
+          console.log("[Withdrawal:approve] DB updated — professionalId:", professionalId, "amount:", amount);
+        } catch (err: any) {
+          console.error("[Withdrawal:approve] approveWithdrawalRequest FAILED:", err?.message, err?.stack);
+          throw err;
+        }
 
         // Look up professional user for notification/email
         const dbInst = await db.getDb();
@@ -1099,18 +1113,26 @@ export const appRouter = router({
           (dbInst as any).$client.execute(
             "SELECT p.userId, u.name, u.email, p.paymentMethod FROM professionals p JOIN users u ON u.id = p.userId WHERE p.id = ? LIMIT 1",
             [professionalId],
-            (err: any, results: any) => resolve(Array.isArray(results) ? results[0] ?? null : null)
+            (err: any, results: any) => {
+              if (err) console.error("[Withdrawal:approve] profRow query error:", err?.message);
+              resolve(Array.isArray(results) ? results[0] ?? null : null);
+            }
           );
         });
+        console.log("[Withdrawal:approve] profRow:", profRow ? `name=${profRow.name} email=${profRow.email}` : "null");
 
         // Get withdrawal method from the request itself
         const wrRow = await new Promise<any>((resolve) => {
           (dbInst as any).$client.execute(
             "SELECT paymentMethod FROM withdrawalRequests WHERE id = ? LIMIT 1",
             [input.withdrawalId],
-            (err: any, results: any) => resolve(Array.isArray(results) ? results[0] ?? null : null)
+            (err: any, results: any) => {
+              if (err) console.error("[Withdrawal:approve] wrRow query error:", err?.message);
+              resolve(Array.isArray(results) ? results[0] ?? null : null);
+            }
           );
         });
+        console.log("[Withdrawal:approve] wrRow paymentMethod:", wrRow?.paymentMethod ?? "(null)");
 
         if (profRow?.userId) {
           createNotification({
@@ -1131,6 +1153,9 @@ export const appRouter = router({
           ? { base64: input.attachmentBase64, name: input.attachmentName, mimeType: input.attachmentMimeType ?? "application/octet-stream" }
           : undefined;
 
+        console.log("[Withdrawal:approve] Pre-email check — profEmail:", profEmail || "(empty)",
+          "| attachment:", attachment ? `${attachment.name} (${attachment.mimeType}, ${attachment.base64.length} base64 chars)` : "(none)");
+
         if (profEmail) {
           // Email to professional (with attachment if provided)
           sendWithdrawalPaidEmail({
@@ -1140,8 +1165,8 @@ export const appRouter = router({
             paymentMethod,
             attachment,
           })
-            .then((ok) => console.log(`[Withdrawal] Paid email to professional ${ok ? "sent to " + profEmail : "failed (Resend returned false)"}`))
-            .catch((err) => console.error("[Withdrawal] Paid email error:", err?.message));
+            .then((ok) => console.log(`[Withdrawal:approve] Professional email ${ok ? "SENT to " + profEmail : "FAILED — Resend returned false"}`))
+            .catch((err) => console.error("[Withdrawal:approve] Professional email THREW:", err));
 
           // Confirmation email to admin (with attachment as well)
           const adminEmail = process.env.ADMIN_EMAIL ?? "Adm@inteira.mx";
@@ -1152,12 +1177,13 @@ export const appRouter = router({
             paymentMethod,
             attachment,
           })
-            .then((ok) => console.log(`[Withdrawal] Admin confirmation email ${ok ? "sent" : "failed (Resend returned false)"}`))
-            .catch((err) => console.error("[Withdrawal] Admin confirmation email error:", err?.message));
+            .then((ok) => console.log(`[Withdrawal:approve] Admin email ${ok ? "SENT to " + adminEmail : "FAILED — Resend returned false"}`))
+            .catch((err) => console.error("[Withdrawal:approve] Admin email THREW:", err));
         } else {
-          console.warn("[Withdrawal] No professional email found for professionalId:", professionalId, "— skipping emails");
+          console.warn("[Withdrawal:approve] profEmail is empty for professionalId:", professionalId, "— SKIPPING all emails");
         }
 
+        console.log("[Withdrawal:approve] END — returning success");
         return { success: true };
       }),
 
