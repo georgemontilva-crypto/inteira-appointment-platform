@@ -574,14 +574,22 @@ export default function ProfessionalDashboard() {
                   {upcomingAppointments.map((apt) => (
                     <div
                       key={apt.id}
-                      className="min-w-[200px] md:min-w-[220px] flex-shrink-0 rounded-xl border border-border bg-card hover:shadow-md transition-shadow"
+                      className="min-w-[75vw] sm:min-w-[260px] lg:min-w-[280px] flex-shrink-0 rounded-xl border border-border bg-card hover:shadow-md transition-shadow"
                     >
                       <div className="py-2 px-3">
                         {/* Top row: avatar + name + countdown badge */}
                         <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold text-sm flex-shrink-0">
-                            {(apt as any).userName?.charAt(0)?.toUpperCase() ?? "U"}
-                          </div>
+                          {(apt as any).userProfileImage ? (
+                            <img
+                              src={(apt as any).userProfileImage}
+                              alt={(apt as any).userName ?? ""}
+                              className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+                            />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm flex-shrink-0">
+                              {(apt as any).userName?.charAt(0)?.toUpperCase() ?? "U"}
+                            </div>
+                          )}
                           <p className="font-semibold text-sm truncate flex-1">
                             {(apt as any).userName ?? `Usuario #${apt.userId}`}
                           </p>
