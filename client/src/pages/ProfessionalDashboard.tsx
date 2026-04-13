@@ -13,6 +13,7 @@ import {
   Calendar, Clock, CheckCircle2, User, Video,
   Plus, Star, BarChart3, ArrowLeft, AlertCircle, XCircle,
   Camera, Trash2, MessageSquare, CalendarX,
+  ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -405,6 +406,11 @@ export default function ProfessionalDashboard() {
   const upcomingAppointments = appointments?.filter((a) => a.status === "scheduled") ?? [];
   const pastAppointments = appointments?.filter((a) => a.status !== "scheduled") ?? [];
 
+  const carouselRef = useRef<HTMLDivElement>(null);
+  const scrollCarousel = (dir: "left" | "right") => {
+    carouselRef.current?.scrollBy({ left: dir === "left" ? -220 : 220, behavior: "smooth" });
+  };
+
   // Withdrawal modal derived values — must be at component level (used outside ganancias IIFE)
   const wAmount = parseFloat(withdrawalForm.amount || "0");
   const wBalance = parseFloat((wallet as any)?.wallet?.balance ?? "0");
@@ -525,15 +531,32 @@ export default function ProfessionalDashboard() {
         {activeTab === "citas" && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-xl font-bold mb-4" style={{ fontFamily: "Poppins, sans-serif" }}>
-                Próximas citas
-              </h2>
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
+                  Próximas citas
+                </h2>
+                {upcomingAppointments.length > 0 && (
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => scrollCarousel("left")}
+                      className="w-7 h-7 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => scrollCarousel("right")}
+                      className="w-7 h-7 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
+
               {loadingAppointments ? (
-                <div className="space-y-3">
-                  {[1, 2].map((i) => (
-                    <Card key={i} className="animate-pulse border-border">
-                      <CardContent className="p-5 h-20" />
-                    </Card>
+                <div className="flex gap-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="min-w-[200px] h-[72px] rounded-xl border border-border bg-muted/40 animate-pulse flex-shrink-0" />
                   ))}
                 </div>
               ) : upcomingAppointments.length === 0 ? (
@@ -544,32 +567,47 @@ export default function ProfessionalDashboard() {
                   </CardContent>
                 </Card>
               ) : (
-                <div className="space-y-3">
+                <div
+                  ref={carouselRef}
+                  className="flex gap-3 overflow-x-auto scroll-smooth pb-1"
+                  style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+                >
                   {upcomingAppointments.map((apt) => (
-                    <Card key={apt.id} className="border-border hover:shadow-md transition-shadow">
-                      <CardContent className="p-5">
-                        <div className="flex items-center justify-between gap-4">
-                          <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold text-lg">
-                              {(apt as any).userName?.charAt(0) ?? "U"}
-                            </div>
-                            <div>
-                              <p className="font-semibold text-sm">{(apt as any).userName ?? `Usuario #${apt.userId}`}</p>
-                              <div className="flex items-center gap-2 mt-1">
-                                <Clock className="w-3 h-3 text-muted-foreground" />
-                                <span className="text-xs text-muted-foreground">
-                                  {format(new Date(apt.appointmentDate), "d MMM yyyy 'a las' HH:mm", { locale: es })}
-                                </span>
-                                <span className="text-xs text-muted-foreground">· {apt.durationMinutes} min</span>
-                              </div>
-                            </div>
+                    <div
+                      key={apt.id}
+                      className="min-w-[200px] md:min-w-[220px] flex-shrink-0 rounded-xl border border-border bg-card hover:shadow-md transition-shadow"
+                    >
+                      <div className="py-2 px-3">
+                        {/* Top row: avatar + name + countdown badge */}
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold text-sm flex-shrink-0">
+                            {(apt as any).userName?.charAt(0)?.toUpperCase() ?? "U"}
                           </div>
-                          <div className="flex items-center gap-2">
+                          <p className="font-semibold text-sm truncate flex-1">
+                            {(apt as any).userName ?? `Usuario #${apt.userId}`}
+                          </p>
+                          <span className="text-[10px] font-medium text-primary bg-primary/10 rounded-full px-2 py-0.5 flex-shrink-0 whitespace-nowrap">
+                            {canJoin(apt) ? "¡Ahora!" : `En ${joinCountdown(apt)}`}
+                          </span>
+                        </div>
+
+                        {/* Bottom row: date + duration */}
+                        <div className="flex items-center gap-1.5 mt-1.5 ml-10">
+                          <Clock className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                          <span className="text-xs text-muted-foreground truncate">
+                            {format(new Date(apt.appointmentDate), "d MMM · HH:mm", { locale: es })}
+                          </span>
+                          <span className="text-xs text-muted-foreground flex-shrink-0">· {apt.durationMinutes}m</span>
+                        </div>
+
+                        {/* Action buttons */}
+                        {(apt.videoCallLink || new Date(apt.appointmentDate).getTime() + 55 * 60 * 1000 < Date.now()) && (
+                          <div className="flex gap-1.5 mt-2 ml-10">
                             {apt.videoCallLink && (
                               <Button
                                 size="sm"
                                 disabled={!canJoin(apt)}
-                                className="gradient-brand text-white border-0 h-8 text-xs disabled:opacity-60 disabled:cursor-not-allowed"
+                                className="gradient-brand text-white border-0 h-6 text-[11px] px-2 disabled:opacity-60 disabled:cursor-not-allowed"
                                 onClick={() => canJoin(apt) && setActiveCall({
                                   url: apt.videoCallLink!,
                                   appointmentId: apt.id,
@@ -579,14 +617,14 @@ export default function ProfessionalDashboard() {
                                 })}
                               >
                                 <Video className="w-3 h-3 mr-1" />
-                                {canJoin(apt) ? "Unirse" : `En ${joinCountdown(apt)}`}
+                                {canJoin(apt) ? "Unirse" : "Unirse"}
                               </Button>
                             )}
                             {new Date(apt.appointmentDate).getTime() + 55 * 60 * 1000 < Date.now() && (
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className="h-8 text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                                className="h-6 text-[11px] px-2 border-emerald-300 text-emerald-700 hover:bg-emerald-50"
                                 onClick={() => setAttendanceModal(apt)}
                               >
                                 <CheckCircle2 className="w-3 h-3 mr-1" />
@@ -594,14 +632,9 @@ export default function ProfessionalDashboard() {
                               </Button>
                             )}
                           </div>
-                        </div>
-                        {apt.notes && (
-                          <p className="text-xs text-muted-foreground mt-3 p-2 bg-muted rounded-lg">
-                            <strong>Notas:</strong> {apt.notes}
-                          </p>
                         )}
-                      </CardContent>
-                    </Card>
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}
