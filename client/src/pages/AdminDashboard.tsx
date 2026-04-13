@@ -813,7 +813,7 @@ export default function AdminDashboard() {
                   <CardTitle className="text-base">Especialidades actuales</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-2">
+                  <div className="space-y-2 max-h-[520px] overflow-y-auto pr-1">
                     {(specialties ?? []).map((s: any) => (
                       <div key={s.id} className="rounded-xl border border-border overflow-hidden">
                         <div className="flex items-center justify-between p-3 bg-primary/5">
