@@ -62,6 +62,7 @@ export default function AdminDashboard() {
   const { user, isAuthenticated, loading } = useAuth();
   const [activeTab, setActiveTab] = useState<"overview" | "profesionales" | "activos" | "especialidades" | "planes" | "herramientas" | "retiros">("overview");
   const [rejectReason, setRejectReason] = useState<Record<number, string>>({});
+  const [paymentProof, setPaymentProof] = useState<Record<number, string>>({});
   const [tierSelect, setTierSelect] = useState<Record<number, "basic" | "pro">>({});
   const [expandedBio, setExpandedBio] = useState<Record<number, boolean>>({});
   const [newSpecialty, setNewSpecialty] = useState({ name: "", description: "" });
@@ -870,19 +871,31 @@ export default function AdminDashboard() {
                             <p><span className="font-medium">Solicitado:</span> {format(new Date(w.createdAt), "d MMM yyyy 'a las' HH:mm", { locale: es })}</p>
                           </div>
                         </div>
-                        <Button
-                          size="sm"
-                          className="gradient-brand text-white border-0 flex-shrink-0"
-                          disabled={approveWithdrawalMutation.isPending}
-                          onClick={() => {
-                            if (window.confirm(`¿Confirmar pago de $${parseFloat(w.amount).toLocaleString("es-MX")} MXN a ${w.professionalName}?`)) {
-                              approveWithdrawalMutation.mutate({ withdrawalId: w.id });
-                            }
-                          }}
-                        >
-                          <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
-                          Marcar pagado
-                        </Button>
+                        <div className="flex flex-col gap-2 flex-shrink-0">
+                          <input
+                            type="text"
+                            placeholder="Comprobante (URL o referencia, opcional)"
+                            value={paymentProof[w.id] ?? ""}
+                            onChange={(e) => setPaymentProof((prev) => ({ ...prev, [w.id]: e.target.value }))}
+                            className="text-xs border border-border rounded px-2 py-1 w-52 bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+                          />
+                          <Button
+                            size="sm"
+                            className="gradient-brand text-white border-0"
+                            disabled={approveWithdrawalMutation.isPending}
+                            onClick={() => {
+                              if (window.confirm(`¿Confirmar pago de $${parseFloat(w.amount).toLocaleString("es-MX")} MXN a ${w.professionalName}?`)) {
+                                approveWithdrawalMutation.mutate({
+                                  withdrawalId: w.id,
+                                  paymentProof: paymentProof[w.id] || undefined,
+                                });
+                              }
+                            }}
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
+                            Marcar pagado
+                          </Button>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>

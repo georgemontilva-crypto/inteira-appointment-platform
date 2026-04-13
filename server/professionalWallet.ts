@@ -160,7 +160,7 @@ export async function createWithdrawalRequest(
   });
 }
 
-export async function approveWithdrawalRequest(withdrawalId: number): Promise<{ professionalId: number; amount: number }> {
+export async function approveWithdrawalRequest(withdrawalId: number, paymentProof?: string): Promise<{ professionalId: number; amount: number }> {
   const db = await getDb();
   if (!db) throw new Error("DB not available");
   const client = (db as any).$client;
@@ -185,8 +185,8 @@ export async function approveWithdrawalRequest(withdrawalId: number): Promise<{ 
 
   // Guard against concurrent approval: only update if still pending
   const updateResult = await exec(
-    "UPDATE withdrawalRequests SET status='paid', processedAt=NOW(), updatedAt=NOW() WHERE id=? AND status='pending'",
-    [withdrawalId]
+    `UPDATE withdrawalRequests SET status='paid', processedAt=NOW(), updatedAt=NOW()${paymentProof ? ", paymentProof=?" : ""} WHERE id=? AND status='pending'`,
+    paymentProof ? [paymentProof, withdrawalId] : [withdrawalId]
   );
   if ((updateResult as any)?.affectedRows === 0) {
     throw new Error("Withdrawal already processed by another request");

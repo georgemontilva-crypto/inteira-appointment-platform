@@ -277,11 +277,12 @@ async function runStartupMigrations() {
     ].join(" ")).catch(() => {});
     console.log("[Migration] withdrawalRequests table ready");
 
-    // Ensure withdrawalRequests has paymentMethod, paymentDetails, notes columns
+    // Ensure withdrawalRequests has paymentMethod, paymentDetails, notes, paymentProof columns
     const wrExtraCols = [
-      { name: "paymentMethod", definition: "VARCHAR(50) NULL" },
+      { name: "paymentMethod",  definition: "VARCHAR(50) NULL" },
       { name: "paymentDetails", definition: "TEXT NULL" },
       { name: "notes",          definition: "TEXT NULL" },
+      { name: "paymentProof",   definition: "VARCHAR(1000) NULL DEFAULT NULL" },
     ];
     for (const col of wrExtraCols) {
       try {

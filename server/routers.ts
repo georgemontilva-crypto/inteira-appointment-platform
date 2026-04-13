@@ -1082,11 +1082,14 @@ export const appRouter = router({
     }),
 
     approveWithdrawal: protectedProcedure
-      .input(z.object({ withdrawalId: z.number() }))
+      .input(z.object({
+        withdrawalId: z.number(),
+        paymentProof: z.string().max(1000).optional(),
+      }))
       .mutation(async ({ ctx, input }) => {
         if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
         const { approveWithdrawalRequest } = await import("./professionalWallet");
-        const { professionalId, amount } = await approveWithdrawalRequest(input.withdrawalId);
+        const { professionalId, amount } = await approveWithdrawalRequest(input.withdrawalId, input.paymentProof);
 
         // Look up professional user for notification/email
         const dbInst = await db.getDb();
@@ -1116,16 +1119,38 @@ export const appRouter = router({
             link: "/panel-profesional#ganancias",
             audience: "professional",
           }).catch(() => {});
+        }
 
-          if (profRow.email) {
-            const { sendWithdrawalPaidEmail } = await import("./email");
-            sendWithdrawalPaidEmail({
-              professionalEmail: profRow.email,
-              professionalName: profRow.name ?? "Profesional",
-              amount,
-              paymentMethod: wrRow?.paymentMethod ?? "other",
-            }).catch(() => {});
-          }
+        const { sendWithdrawalPaidEmail } = await import("./email");
+        const profEmail = profRow?.email ?? "";
+        const profName = profRow?.name ?? "Profesional";
+        const paymentMethod = wrRow?.paymentMethod ?? "other";
+
+        if (profEmail) {
+          // Email to professional
+          sendWithdrawalPaidEmail({
+            professionalEmail: profEmail,
+            professionalName: profName,
+            amount,
+            paymentMethod,
+            paymentProof: input.paymentProof,
+          })
+            .then((ok) => console.log(`[Withdrawal] Paid email to professional ${ok ? "sent to " + profEmail : "failed (Resend returned false)"}`))
+            .catch((err) => console.error("[Withdrawal] Paid email error:", err?.message));
+
+          // Confirmation email to admin
+          const adminEmail = process.env.ADMIN_EMAIL ?? "Adm@inteira.mx";
+          sendWithdrawalPaidEmail({
+            professionalEmail: adminEmail,
+            professionalName: `Admin — pago procesado a ${profName}`,
+            amount,
+            paymentMethod,
+            paymentProof: input.paymentProof,
+          })
+            .then((ok) => console.log(`[Withdrawal] Admin confirmation email ${ok ? "sent" : "failed (Resend returned false)"}`))
+            .catch((err) => console.error("[Withdrawal] Admin confirmation email error:", err?.message));
+        } else {
+          console.warn("[Withdrawal] No professional email found for professionalId:", professionalId, "— skipping emails");
         }
 
         return { success: true };

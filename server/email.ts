@@ -697,6 +697,7 @@ export async function sendWithdrawalPaidEmail(params: {
   professionalName: string;
   amount: number;
   paymentMethod: string;
+  paymentProof?: string;
 }): Promise<boolean> {
   const methodLabels: Record<string, string> = {
     clabe: "CLABE (transferencia bancaria)",
@@ -704,12 +705,18 @@ export async function sendWithdrawalPaidEmail(params: {
     paypal: "PayPal",
     other: "Otro",
   };
+  const proofBlock = params.paymentProof
+    ? params.paymentProof.startsWith("http")
+      ? `<p><strong>Comprobante:</strong> <a href="${params.paymentProof}" target="_blank" style="color:#4F7942;">Ver comprobante</a></p>`
+      : `<p><strong>Comprobante / referencia:</strong> ${params.paymentProof}</p>`
+    : "";
   const content = `
     <p>Hola <strong>${params.professionalName}</strong>,</p>
     <p>Tu solicitud de retiro ha sido procesada exitosamente. 🎉</p>
     <div class="info-box">
       <p><strong>Monto pagado:</strong> $${params.amount.toLocaleString("es-MX")} MXN</p>
       <p><strong>Método utilizado:</strong> ${methodLabels[params.paymentMethod] ?? params.paymentMethod}</p>
+      ${proofBlock}
     </div>
     <p>El dinero puede tardar hasta <strong>7 días hábiles</strong> en llegar dependiendo de tu método de pago.</p>
     <p>Si tienes alguna pregunta, responde a este correo o contáctanos desde la plataforma.</p>
