@@ -801,120 +801,122 @@ export default function AdminDashboard() {
 
         {/* Tab: Especialidades */}
         {activeTab === "especialidades" && (
-          <div className="space-y-6 max-w-2xl">
+          <div className="space-y-6">
             <h2 className="text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
               Gestionar especialidades
             </h2>
 
-            {/* Current specialties */}
-            <Card className="border-border">
-              <CardHeader>
-                <CardTitle className="text-base">Especialidades actuales</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {(specialties ?? []).map((s: any) => (
-                    <div key={s.id} className="rounded-xl border border-border overflow-hidden">
-                      <div className="flex items-center justify-between p-3 bg-primary/5">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
-                            {s.icon && SPECIALTY_ICON_MAP[s.icon]
-                              ? SPECIALTY_ICON_MAP[s.icon]
-                              : <Stethoscope className="w-5 h-5" />}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Columna izquierda — lista actual */}
+              <Card className="border-border">
+                <CardHeader>
+                  <CardTitle className="text-base">Especialidades actuales</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {(specialties ?? []).map((s: any) => (
+                      <div key={s.id} className="rounded-xl border border-border overflow-hidden">
+                        <div className="flex items-center justify-between p-3 bg-primary/5">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
+                              {s.icon && SPECIALTY_ICON_MAP[s.icon]
+                                ? SPECIALTY_ICON_MAP[s.icon]
+                                : <Stethoscope className="w-5 h-5" />}
+                            </div>
+                            <span className="font-medium text-sm">{s.name}</span>
                           </div>
-                          <span className="font-medium text-sm">{s.name}</span>
+                          <div className="flex items-center gap-1">
+                            <Badge className="bg-emerald-100 text-emerald-700 border-0 text-xs">Activa</Badge>
+                            <button
+                              title="Editar ícono"
+                              onClick={() => setEditingIconId(editingIconId === s.id ? null : s.id)}
+                              className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              title="Eliminar especialidad"
+                              disabled={deleteSpecialtyMutation.isPending}
+                              onClick={() => {
+                                if (window.confirm(`¿Eliminar la especialidad "${s.name}"? Esta acción no se puede deshacer.`)) {
+                                  deleteSpecialtyMutation.mutate({ id: s.id });
+                                }
+                              }}
+                              className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1">
-                          <Badge className="bg-emerald-100 text-emerald-700 border-0 text-xs">Activa</Badge>
-                          <button
-                            title="Editar ícono"
-                            onClick={() => setEditingIconId(editingIconId === s.id ? null : s.id)}
-                            className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
-                          >
-                            <Pencil className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            title="Eliminar especialidad"
-                            disabled={deleteSpecialtyMutation.isPending}
-                            onClick={() => {
-                              if (window.confirm(`¿Eliminar la especialidad "${s.name}"? Esta acción no se puede deshacer.`)) {
-                                deleteSpecialtyMutation.mutate({ id: s.id });
-                              }
-                            }}
-                            className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+                        {editingIconId === s.id && (
+                          <div className="p-3 border-t border-border bg-background space-y-2">
+                            <p className="text-xs font-medium text-muted-foreground">Selecciona un ícono:</p>
+                            <SpecialtyIconPicker
+                              value={s.icon ?? ""}
+                              onChange={(key) => updateSpecialtyIconMutation.mutate({ id: s.id, icon: key })}
+                            />
+                          </div>
+                        )}
                       </div>
-                      {editingIconId === s.id && (
-                        <div className="p-3 border-t border-border bg-background space-y-2">
-                          <p className="text-xs font-medium text-muted-foreground">Selecciona un ícono:</p>
-                          <SpecialtyIconPicker
-                            value={s.icon ?? ""}
-                            onChange={(key) => updateSpecialtyIconMutation.mutate({ id: s.id, icon: key })}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
 
-            {/* Add specialty */}
-            <Card className="border-border">
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Plus className="w-4 h-4 text-primary" />
-                  Nueva especialidad
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div>
-                  <label className="text-xs font-medium mb-1 block">Nombre</label>
-                  <input
-                    type="text"
-                    value={newSpecialty.name}
-                    onChange={(e) => setNewSpecialty({ ...newSpecialty, name: e.target.value })}
-                    placeholder="Ej: Dermatología"
-                    className="w-full rounded-lg border border-border p-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium mb-1 block">Descripción</label>
-                  <textarea
-                    value={newSpecialty.description}
-                    onChange={(e) => setNewSpecialty({ ...newSpecialty, description: e.target.value })}
-                    placeholder="Descripción de la especialidad..."
-                    className="w-full rounded-lg border border-border p-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-[80px] resize-none"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium mb-1 block">Ícono</label>
-                  <SpecialtyIconPicker
-                    value={newSpecialty.icon}
-                    onChange={(key) => setNewSpecialty({ ...newSpecialty, icon: key })}
-                  />
-                  {newSpecialty.icon && (
-                    <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
-                      <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-                        {SPECIALTY_ICON_MAP[newSpecialty.icon]}
+              {/* Columna derecha — nueva especialidad */}
+              <Card className="border-border">
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Plus className="w-4 h-4 text-primary" />
+                    Nueva especialidad
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div>
+                    <label className="text-xs font-medium mb-1 block">Nombre</label>
+                    <input
+                      type="text"
+                      value={newSpecialty.name}
+                      onChange={(e) => setNewSpecialty({ ...newSpecialty, name: e.target.value })}
+                      placeholder="Ej: Dermatología"
+                      className="w-full rounded-lg border border-border p-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium mb-1 block">Descripción</label>
+                    <textarea
+                      value={newSpecialty.description}
+                      onChange={(e) => setNewSpecialty({ ...newSpecialty, description: e.target.value })}
+                      placeholder="Descripción de la especialidad..."
+                      className="w-full rounded-lg border border-border p-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-[80px] resize-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium mb-1 block">Ícono</label>
+                    <SpecialtyIconPicker
+                      value={newSpecialty.icon}
+                      onChange={(key) => setNewSpecialty({ ...newSpecialty, icon: key })}
+                    />
+                    {newSpecialty.icon && (
+                      <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+                        <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                          {SPECIALTY_ICON_MAP[newSpecialty.icon]}
+                        </div>
+                        <span>Preview: {newSpecialty.icon}</span>
                       </div>
-                      <span>Preview: {newSpecialty.icon}</span>
-                    </div>
-                  )}
-                </div>
-                <Button
-                  onClick={() => createSpecialtyMutation.mutate(newSpecialty)}
-                  disabled={!newSpecialty.name || createSpecialtyMutation.isPending}
-                  className="gradient-brand text-white border-0"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Crear especialidad
-                </Button>
-              </CardContent>
-            </Card>
+                    )}
+                  </div>
+                  <Button
+                    onClick={() => createSpecialtyMutation.mutate(newSpecialty)}
+                    disabled={!newSpecialty.name || createSpecialtyMutation.isPending}
+                    className="gradient-brand text-white border-0"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Crear especialidad
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         )}
 
