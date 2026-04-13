@@ -183,32 +183,23 @@ export async function approveWithdrawalRequest(withdrawalId: number): Promise<{ 
 
   const amount = parseFloat(row.amount);
 
-  await exec("BEGIN");
-  try {
-    // Guard against concurrent approval: only update if still pending
-    const updateResult = await exec(
-      "UPDATE withdrawalRequests SET status='paid', processedAt=NOW(), updatedAt=NOW() WHERE id=? AND status='pending'",
-      [withdrawalId]
-    );
-    if ((updateResult as any)?.affectedRows === 0) {
-      await exec("ROLLBACK");
-      throw new Error("Withdrawal already processed by another request");
-    }
-
-    await exec(
-      `UPDATE professionalWallet
-       SET balance = GREATEST(0, balance - ?),
-           totalWithdrawn = totalWithdrawn + ?,
-           pendingWithdrawal = GREATEST(0, pendingWithdrawal - ?)
-       WHERE professionalId = ?`,
-      [amount, amount, amount, row.professionalId]
-    );
-
-    await exec("COMMIT");
-  } catch (err) {
-    await exec("ROLLBACK").catch(() => {});
-    throw err;
+  // Guard against concurrent approval: only update if still pending
+  const updateResult = await exec(
+    "UPDATE withdrawalRequests SET status='paid', processedAt=NOW(), updatedAt=NOW() WHERE id=? AND status='pending'",
+    [withdrawalId]
+  );
+  if ((updateResult as any)?.affectedRows === 0) {
+    throw new Error("Withdrawal already processed by another request");
   }
+
+  await exec(
+    `UPDATE professionalWallet
+     SET balance = GREATEST(0, balance - ?),
+         totalWithdrawn = totalWithdrawn + ?,
+         pendingWithdrawal = 0
+     WHERE professionalId = ?`,
+    [amount, amount, row.professionalId]
+  );
 
   return { professionalId: row.professionalId, amount };
 }
@@ -239,29 +230,21 @@ export async function rejectWithdrawalRequest(
 
   const amount = parseFloat(row.amount);
 
-  await exec("BEGIN");
-  try {
-    // Guard against concurrent rejection/approval: only update if still pending
-    const updateResult = await exec(
-      "UPDATE withdrawalRequests SET status='rejected', processedAt=NOW(), updatedAt=NOW(), notes=COALESCE(CONCAT(COALESCE(notes,''), ?), notes) WHERE id=? AND status='pending'",
-      [adminNote ? `\n[Admin] ${adminNote}` : "", withdrawalId]
-    );
-    if ((updateResult as any)?.affectedRows === 0) {
-      await exec("ROLLBACK");
-      throw new Error("Withdrawal already processed by another request");
-    }
-    // Wallet balance is NOT touched — the money never left.
-    // Clear the pending amount since the request is no longer active.
-    await exec(
-      `UPDATE professionalWallet SET pendingWithdrawal = GREATEST(0, pendingWithdrawal - ?) WHERE professionalId = ?`,
-      [amount, row.professionalId]
-    );
-
-    await exec("COMMIT");
-  } catch (err) {
-    await exec("ROLLBACK").catch(() => {});
-    throw err;
+  // Guard against concurrent rejection/approval: only update if still pending
+  const updateResult = await exec(
+    "UPDATE withdrawalRequests SET status='rejected', processedAt=NOW(), updatedAt=NOW(), notes=COALESCE(CONCAT(COALESCE(notes,''), ?), notes) WHERE id=? AND status='pending'",
+    [adminNote ? `\n[Admin] ${adminNote}` : "", withdrawalId]
+  );
+  if ((updateResult as any)?.affectedRows === 0) {
+    throw new Error("Withdrawal already processed by another request");
   }
+
+  // Wallet balance is NOT touched — the money never left.
+  // Clear the pending amount since the request is no longer active.
+  await exec(
+    `UPDATE professionalWallet SET pendingWithdrawal = GREATEST(0, pendingWithdrawal - ?) WHERE professionalId = ?`,
+    [amount, row.professionalId]
+  );
 
   return { professionalId: row.professionalId, amount };
 }
