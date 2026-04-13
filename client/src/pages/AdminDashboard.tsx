@@ -187,6 +187,7 @@ export default function AdminDashboard() {
   const [expandedBio, setExpandedBio] = useState<Record<number, boolean>>({});
   const [newSpecialty, setNewSpecialty] = useState({ name: "", description: "", icon: "" });
   const [editingIconId, setEditingIconId] = useState<number | null>(null);
+  const [editingDesc, setEditingDesc] = useState<Record<number, string>>({});
   const [newPlan, setNewPlan] = useState({
     name: "", price: "", billingPeriod: "monthly" as "monthly" | "yearly",
     maxAppointmentsPerMonth: "", maxMinutesPerAppointment: "",
@@ -239,8 +240,13 @@ export default function AdminDashboard() {
   });
 
   const updateSpecialtyIconMutation = trpc.specialty.updateIcon.useMutation({
-    onSuccess: () => { refetchSpecialties(); setEditingIconId(null); toast.success("Ícono actualizado"); },
+    onSuccess: () => { refetchSpecialties(); toast.success("Ícono actualizado"); },
     onError: () => toast.error("Error al actualizar el ícono"),
+  });
+
+  const updateSpecialtyDescMutation = trpc.specialty.updateDescription.useMutation({
+    onSuccess: () => { refetchSpecialties(); setEditingIconId(null); toast.success("Descripción actualizada"); },
+    onError: () => toast.error("Error al actualizar la descripción"),
   });
 
   const cronMutation = trpc.admin.runCronJobs.useMutation({
@@ -828,8 +834,14 @@ export default function AdminDashboard() {
                           <div className="flex items-center gap-1">
                             <Badge className="bg-emerald-100 text-emerald-700 border-0 text-xs">Activa</Badge>
                             <button
-                              title="Editar ícono"
-                              onClick={() => setEditingIconId(editingIconId === s.id ? null : s.id)}
+                              title="Editar especialidad"
+                              onClick={() => {
+                                const isOpening = editingIconId !== s.id;
+                                setEditingIconId(isOpening ? s.id : null);
+                                if (isOpening) {
+                                  setEditingDesc((prev) => ({ ...prev, [s.id]: s.description ?? "" }));
+                                }
+                              }}
                               className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
                             >
                               <Pencil className="w-3.5 h-3.5" />
@@ -849,12 +861,31 @@ export default function AdminDashboard() {
                           </div>
                         </div>
                         {editingIconId === s.id && (
-                          <div className="p-3 border-t border-border bg-background space-y-2">
-                            <p className="text-xs font-medium text-muted-foreground">Selecciona un ícono:</p>
-                            <SpecialtyIconPicker
-                              value={s.icon ?? ""}
-                              onChange={(key) => updateSpecialtyIconMutation.mutate({ id: s.id, icon: key })}
-                            />
+                          <div className="p-3 border-t border-border bg-background space-y-3">
+                            <div>
+                              <p className="text-xs font-medium text-muted-foreground mb-1.5">Ícono:</p>
+                              <SpecialtyIconPicker
+                                value={s.icon ?? ""}
+                                onChange={(key) => updateSpecialtyIconMutation.mutate({ id: s.id, icon: key })}
+                              />
+                            </div>
+                            <div>
+                              <p className="text-xs font-medium text-muted-foreground mb-1.5">Descripción:</p>
+                              <textarea
+                                value={editingDesc[s.id] ?? ""}
+                                onChange={(e) => setEditingDesc((prev) => ({ ...prev, [s.id]: e.target.value }))}
+                                placeholder="Descripción de la especialidad..."
+                                className="w-full rounded-lg border border-border p-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-[72px] resize-none"
+                              />
+                              <Button
+                                size="sm"
+                                className="mt-2 gradient-brand text-white border-0"
+                                disabled={updateSpecialtyDescMutation.isPending}
+                                onClick={() => updateSpecialtyDescMutation.mutate({ id: s.id, description: editingDesc[s.id] ?? "" })}
+                              >
+                                Guardar descripción
+                              </Button>
+                            </div>
                           </div>
                         )}
                       </div>

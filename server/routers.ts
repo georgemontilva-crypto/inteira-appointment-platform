@@ -1309,6 +1309,16 @@ export const appRouter = router({
         await db.updateSpecialtyIcon(input.id, input.icon);
         return { success: true };
       }),
+
+    updateDescription: protectedProcedure
+      .input(z.object({ id: z.number(), description: z.string().max(500) }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") {
+          throw new TRPCError({ code: "FORBIDDEN" });
+        }
+        await db.updateSpecialtyDescription(input.id, input.description);
+        return { success: true };
+      }),
   }),
 
   // Appointment routes

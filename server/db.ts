@@ -436,6 +436,12 @@ export async function updateSpecialtyIcon(id: number, icon: string) {
   await db.update(specialties).set({ icon } as any).where(eq(specialties.id, id));
 }
 
+export async function updateSpecialtyDescription(id: number, description: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(specialties).set({ description } as any).where(eq(specialties.id, id));
+}
+
 // Subscription Plan functions
 export async function getAllSubscriptionPlans() {
   const db = await getDb();
