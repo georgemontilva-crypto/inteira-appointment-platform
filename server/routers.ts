@@ -244,6 +244,7 @@ export const appRouter = router({
     register: protectedProcedure
       .input(professionalRegistrationSchema)
       .mutation(async ({ ctx, input }) => {
+        console.log("[Register] input recibido — specialtyId:", input.specialtyId, "| userId:", ctx.user.id);
         // Check if user already registered as professional
         const existing = await db.getProfessionalByUserId(ctx.user.id);
         if (existing) {
@@ -269,6 +270,7 @@ export const appRouter = router({
           `NOLIC_${ctx.user.id}_${Date.now()}`;
 
         // Create professional profile
+        console.log("[Register] calling createProfessional — userId:", ctx.user.id, "specialtyId:", input.specialtyId);
         await db.createProfessional(
           ctx.user.id,
           input.specialtyId,

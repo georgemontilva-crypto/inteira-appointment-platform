@@ -311,6 +311,7 @@ export default function RegisterProfessional() {
       let certificationsUrl: string | undefined;
       if (certifications) certificationsUrl = await uploadFile(certifications);
 
+      console.log("[Register] specialtyId enviado:", form.specialtyId, "→ parseInt:", parseInt(form.specialtyId));
       registerMutation.mutate({
         specialtyId: parseInt(form.specialtyId),
         licenseNumber: form.licenseNumber.trim() || undefined,
