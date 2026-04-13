@@ -298,6 +298,24 @@ async function runStartupMigrations() {
       }
     }
 
+    // Make clabe nullable — originally created NOT NULL but only used for CLABE transfers
+    try {
+      await new Promise<void>((resolve) => {
+        client.execute(
+          `ALTER TABLE \`withdrawalRequests\` MODIFY COLUMN \`clabe\` VARCHAR(18) NULL`,
+          [],
+          (err: any) => {
+            if (err && !String(err).includes("doesn't exist")) {
+              console.warn("[Migration] withdrawalRequests.clabe nullable:", err?.message);
+            }
+            resolve();
+          }
+        );
+      });
+    } catch (e: any) {
+      console.warn("[Migration] withdrawalRequests.clabe modify failed:", e?.message);
+    }
+
     // Ensure pending_review in appointments status enum
     await db.execute(
       "ALTER TABLE `appointments` MODIFY COLUMN `status` ENUM('scheduled','completed','canceled','no-show','pending_review') DEFAULT 'scheduled'"
