@@ -417,6 +417,20 @@ async function runStartupMigrations() {
       console.warn("[Migration] Could not set admin role for Adm@inteira.mx:", adminErr?.message);
     }
 
+    // Ensure specialties.icon column exists
+    try {
+      const [sIconCols] = await db.execute(
+        "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'specialties' AND COLUMN_NAME = 'icon'"
+      ) as any;
+      const sIconExists = Array.isArray(sIconCols) ? sIconCols.length > 0 : false;
+      if (!sIconExists) {
+        await db.execute("ALTER TABLE `specialties` ADD COLUMN `icon` VARCHAR(50) NULL DEFAULT NULL");
+        console.log("[Migration] specialties.icon column added");
+      }
+    } catch (e: any) {
+      console.warn("[Migration] Could not add specialties.icon column:", e?.message);
+    }
+
     // ── Seed: créditos de prueba a marketingdedsm — solo si NUNCA ha tenido un batch admin_grant ──
     try {
       const client = (db as any).$client;

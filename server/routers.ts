@@ -1270,13 +1270,33 @@ export const appRouter = router({
       .input(specialtySchema)
       .mutation(async ({ ctx, input }) => {
         if (ctx.user.role !== "admin") {
-          throw new TRPCError({
-            code: "FORBIDDEN",
-            message: "Only admins can create specialties",
-          });
+          throw new TRPCError({ code: "FORBIDDEN", message: "Only admins can create specialties" });
         }
-
         await db.createSpecialty(input);
+        return { success: true };
+      }),
+
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") {
+          throw new TRPCError({ code: "FORBIDDEN" });
+        }
+        try {
+          await db.deleteSpecialty(input.id);
+        } catch (err: any) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: err.message });
+        }
+        return { success: true };
+      }),
+
+    updateIcon: protectedProcedure
+      .input(z.object({ id: z.number(), icon: z.string().max(50) }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") {
+          throw new TRPCError({ code: "FORBIDDEN" });
+        }
+        await db.updateSpecialtyIcon(input.id, input.icon);
         return { success: true };
       }),
   }),

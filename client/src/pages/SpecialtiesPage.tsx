@@ -2,68 +2,77 @@ import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import DashboardLayout from "../components/DashboardLayout";
 import {
-  Brain, Scale, TrendingUp, DollarSign, Mic2, Sparkles, Compass,
-  Sun, Leaf, Apple, GraduationCap, HeartHandshake, HandHeart,
-  Smile, BookOpen, Briefcase, Globe, Activity, Heart, Users,
+  Brain, Apple, Target, Leaf, Heart, Users, Compass, Stethoscope,
+  Scale, TrendingUp, DollarSign, Mic2, Sparkles, Sun, GraduationCap,
+  Briefcase, Globe, Activity, HandHeart, Smile, BookOpen, HeartHandshake,
 } from "lucide-react";
 import type React from "react";
 
-const specialtyIcon: Record<string, React.ReactNode> = {
-  "Psicología": <Brain className="w-6 h-6 text-white" />,
-  "Legal": <Scale className="w-6 h-6 text-white" />,
-  "Emprendimiento": <TrendingUp className="w-6 h-6 text-white" />,
-  "Finanzas": <DollarSign className="w-6 h-6 text-white" />,
-  "Idiomas": <Mic2 className="w-6 h-6 text-white" />,
-  "Imagen Personal": <Sparkles className="w-6 h-6 text-white" />,
-  "Vocación": <Compass className="w-6 h-6 text-white" />,
-  "Coaching de vida": <Sun className="w-6 h-6 text-white" />,
-  "Mindfulness y meditación": <Leaf className="w-6 h-6 text-white" />,
-  "Nutrición": <Apple className="w-6 h-6 text-white" />,
-  "Orientación vocacional": <GraduationCap className="w-6 h-6 text-white" />,
-  "Terapia de pareja": <HeartHandshake className="w-6 h-6 text-white" />,
-  "Trabajo social": <HandHeart className="w-6 h-6 text-white" />,
-  "Salud mental": <Brain className="w-6 h-6 text-white" />,
-  "Desarrollo personal": <Smile className="w-6 h-6 text-white" />,
-  "Educación": <BookOpen className="w-6 h-6 text-white" />,
-  "Negocios": <Briefcase className="w-6 h-6 text-white" />,
-  "Idiomas y cultura": <Globe className="w-6 h-6 text-white" />,
-  "Bienestar": <Activity className="w-6 h-6 text-white" />,
-  "Familia": <Heart className="w-6 h-6 text-white" />,
-  "Recursos Humanos": <Users className="w-6 h-6 text-white" />,
+// Matches SPECIALTY_ICON_MAP in AdminDashboard — key = DB icon string
+const ICON_MAP: Record<string, React.ReactNode> = {
+  Brain:         <Brain className="w-6 h-6 text-white" />,
+  Apple:         <Apple className="w-6 h-6 text-white" />,
+  Target:        <Target className="w-6 h-6 text-white" />,
+  Leaf:          <Leaf className="w-6 h-6 text-white" />,
+  Heart:         <Heart className="w-6 h-6 text-white" />,
+  Users:         <Users className="w-6 h-6 text-white" />,
+  Compass:       <Compass className="w-6 h-6 text-white" />,
+  Stethoscope:   <Stethoscope className="w-6 h-6 text-white" />,
+  Scale:         <Scale className="w-6 h-6 text-white" />,
+  TrendingUp:    <TrendingUp className="w-6 h-6 text-white" />,
+  DollarSign:    <DollarSign className="w-6 h-6 text-white" />,
+  Mic2:          <Mic2 className="w-6 h-6 text-white" />,
+  Sparkles:      <Sparkles className="w-6 h-6 text-white" />,
+  Sun:           <Sun className="w-6 h-6 text-white" />,
+  GraduationCap: <GraduationCap className="w-6 h-6 text-white" />,
+  Briefcase:     <Briefcase className="w-6 h-6 text-white" />,
+  Globe:         <Globe className="w-6 h-6 text-white" />,
+  Activity:      <Activity className="w-6 h-6 text-white" />,
+  HandHeart:     <HandHeart className="w-6 h-6 text-white" />,
+  Smile:         <Smile className="w-6 h-6 text-white" />,
+  BookOpen:      <BookOpen className="w-6 h-6 text-white" />,
+  HeartHandshake:<HeartHandshake className="w-6 h-6 text-white" />,
 };
 
-const specialtyBg: Record<string, string> = {
-  "Psicología": "bg-[#607562]",
-  "Legal": "bg-[#4a5c4c]",
-  "Emprendimiento": "bg-[#607562]",
-  "Finanzas": "bg-[#4f6651]",
-  "Idiomas": "bg-[#556e57]",
-  "Imagen Personal": "bg-[#607562]",
-  "Vocación": "bg-[#4a5c4c]",
-  "Coaching de vida": "bg-[#607562]",
-  "Mindfulness y meditación": "bg-[#4f6651]",
-  "Nutrición": "bg-[#556e57]",
-  "Orientación vocacional": "bg-[#4a5c4c]",
-  "Terapia de pareja": "bg-[#607562]",
-  "Trabajo social": "bg-[#4f6651]",
-  "Salud mental": "bg-[#607562]",
-  "Desarrollo personal": "bg-[#556e57]",
-  "Educación": "bg-[#4a5c4c]",
-  "Negocios": "bg-[#607562]",
-  "Idiomas y cultura": "bg-[#4f6651]",
-  "Bienestar": "bg-[#556e57]",
-  "Familia": "bg-[#607562]",
-  "Recursos Humanos": "bg-[#4a5c4c]",
+// Legacy name-based fallback for specialties that predate icon assignment
+const NAME_ICON_MAP: Record<string, React.ReactNode> = {
+  "Psicología":             <Brain className="w-6 h-6 text-white" />,
+  "Salud mental":           <Brain className="w-6 h-6 text-white" />,
+  "Legal":                  <Scale className="w-6 h-6 text-white" />,
+  "Emprendimiento":         <TrendingUp className="w-6 h-6 text-white" />,
+  "Negocios":               <Briefcase className="w-6 h-6 text-white" />,
+  "Finanzas":               <DollarSign className="w-6 h-6 text-white" />,
+  "Idiomas":                <Mic2 className="w-6 h-6 text-white" />,
+  "Idiomas y cultura":      <Globe className="w-6 h-6 text-white" />,
+  "Imagen Personal":        <Sparkles className="w-6 h-6 text-white" />,
+  "Vocación":               <Compass className="w-6 h-6 text-white" />,
+  "Orientación vocacional": <GraduationCap className="w-6 h-6 text-white" />,
+  "Coaching de vida":       <Sun className="w-6 h-6 text-white" />,
+  "Mindfulness y meditación":<Leaf className="w-6 h-6 text-white" />,
+  "Nutrición":              <Apple className="w-6 h-6 text-white" />,
+  "Terapia de pareja":      <HeartHandshake className="w-6 h-6 text-white" />,
+  "Familia":                <Heart className="w-6 h-6 text-white" />,
+  "Trabajo social":         <HandHeart className="w-6 h-6 text-white" />,
+  "Recursos Humanos":       <Users className="w-6 h-6 text-white" />,
+  "Desarrollo personal":    <Smile className="w-6 h-6 text-white" />,
+  "Educación":              <BookOpen className="w-6 h-6 text-white" />,
+  "Bienestar":              <Activity className="w-6 h-6 text-white" />,
 };
+
+function resolveIcon(iconKey: string | null | undefined, name: string): React.ReactNode {
+  if (iconKey && ICON_MAP[iconKey]) return ICON_MAP[iconKey];
+  if (NAME_ICON_MAP[name]) return NAME_ICON_MAP[name];
+  return <Stethoscope className="w-6 h-6 text-white" />;
+}
 
 const STATIC_SPECIALTIES = [
-  { id: 1, name: "Psicología", description: "Bienestar mental y emocional con psicólogos certificados." },
-  { id: 2, name: "Emprendimiento", description: "Asesoría para emprendedores y startups en crecimiento." },
-  { id: 3, name: "Finanzas", description: "Consultoría financiera personal y empresarial." },
-  { id: 4, name: "Idiomas", description: "Clases con profesores nativos y certificados." },
-  { id: 5, name: "Imagen Personal", description: "Consultoría de imagen, estilo y presencia personal." },
-  { id: 6, name: "Legal", description: "Asesoría legal en diversas áreas del derecho." },
-  { id: 7, name: "Vocación", description: "Orientación vocacional y desarrollo profesional." },
+  { id: 1, name: "Psicología",       description: "Bienestar mental y emocional con psicólogos certificados.", icon: null },
+  { id: 2, name: "Emprendimiento",   description: "Asesoría para emprendedores y startups en crecimiento.",    icon: null },
+  { id: 3, name: "Finanzas",         description: "Consultoría financiera personal y empresarial.",             icon: null },
+  { id: 4, name: "Idiomas",          description: "Clases con profesores nativos y certificados.",              icon: null },
+  { id: 5, name: "Imagen Personal",  description: "Consultoría de imagen, estilo y presencia personal.",        icon: null },
+  { id: 6, name: "Legal",            description: "Asesoría legal en diversas áreas del derecho.",              icon: null },
+  { id: 7, name: "Vocación",         description: "Orientación vocacional y desarrollo profesional.",           icon: null },
 ];
 
 export default function SpecialtiesPage() {
@@ -87,19 +96,19 @@ export default function SpecialtiesPage() {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {(specialties ?? STATIC_SPECIALTIES).map((s) => (
+          {(specialties ?? STATIC_SPECIALTIES).map((s: any) => (
             <button
               key={s.id}
               onClick={() => navigate(`/especialidades/${s.id}`)}
               className="flex flex-col items-start gap-3 bg-white rounded-2xl p-4 border border-border/60 shadow-sm hover:shadow-md hover:border-primary/30 active:scale-[0.98] transition-all text-left"
             >
-              <div className={`w-12 h-12 rounded-xl ${specialtyBg[s.name] ?? "bg-[#607562]"} flex items-center justify-center flex-shrink-0 shadow-sm`}>
-                {specialtyIcon[s.name] ?? <Compass className="w-6 h-6 text-white" />}
+              <div className="w-12 h-12 rounded-xl bg-[#607562] flex items-center justify-center flex-shrink-0 shadow-sm">
+                {resolveIcon(s.icon, s.name)}
               </div>
               <div>
                 <p className="text-sm font-semibold text-foreground">{s.name}</p>
                 <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed line-clamp-2">
-                  {(s as any).description ?? "Consultas con profesionales certificados."}
+                  {s.description ?? "Consultas con profesionales certificados."}
                 </p>
               </div>
               <span className="text-xs text-primary font-medium mt-auto">Ver profesionales →</span>

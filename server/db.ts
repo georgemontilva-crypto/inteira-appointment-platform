@@ -411,6 +411,23 @@ export async function createSpecialty(data: Partial<Specialty>) {
   return await db.insert(specialties).values(data as any);
 }
 
+export async function deleteSpecialty(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [rows] = await db.execute(
+    `SELECT COUNT(*) as cnt FROM \`professionals\` WHERE \`specialtyId\` = ${Number(id)}`
+  ) as any;
+  const cnt = Number(Array.isArray(rows) ? (rows[0]?.cnt ?? 0) : (rows?.cnt ?? 0));
+  if (cnt > 0) throw new Error("Esta especialidad tiene profesionales asignados y no puede eliminarse");
+  await db.delete(specialties).where(eq(specialties.id, id));
+}
+
+export async function updateSpecialtyIcon(id: number, icon: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(specialties).set({ icon } as any).where(eq(specialties.id, id));
+}
+
 // Subscription Plan functions
 export async function getAllSubscriptionPlans() {
   const db = await getDb();

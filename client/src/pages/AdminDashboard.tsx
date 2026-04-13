@@ -14,7 +14,60 @@ import {
   Settings, BarChart3, Award, TrendingUp, Calendar,
   Star, Activity, CreditCard, UserCheck, RefreshCw, Wrench,
   ChevronDown, ChevronUp, FileText, ExternalLink, User,
+  Trash2, Pencil, Stethoscope,
+  Brain, Apple, Target, Leaf, Heart, Compass, Scale, DollarSign,
+  Mic2, Sparkles, Sun, GraduationCap, Briefcase, Globe,
+  HandHeart, Smile, BookOpen, HeartHandshake,
 } from "lucide-react";
+import type React from "react";
+
+// Icon registry — key is stored in DB, value is the React element
+const SPECIALTY_ICON_MAP: Record<string, React.ReactNode> = {
+  Brain:        <Brain className="w-5 h-5" />,
+  Apple:        <Apple className="w-5 h-5" />,
+  Target:       <Target className="w-5 h-5" />,
+  Leaf:         <Leaf className="w-5 h-5" />,
+  Heart:        <Heart className="w-5 h-5" />,
+  Users:        <Users className="w-5 h-5" />,
+  Compass:      <Compass className="w-5 h-5" />,
+  Stethoscope:  <Stethoscope className="w-5 h-5" />,
+  Scale:        <Scale className="w-5 h-5" />,
+  TrendingUp:   <TrendingUp className="w-5 h-5" />,
+  DollarSign:   <DollarSign className="w-5 h-5" />,
+  Mic2:         <Mic2 className="w-5 h-5" />,
+  Sparkles:     <Sparkles className="w-5 h-5" />,
+  Sun:          <Sun className="w-5 h-5" />,
+  GraduationCap:<GraduationCap className="w-5 h-5" />,
+  Briefcase:    <Briefcase className="w-5 h-5" />,
+  Globe:        <Globe className="w-5 h-5" />,
+  Activity:     <Activity className="w-5 h-5" />,
+  HandHeart:    <HandHeart className="w-5 h-5" />,
+  Smile:        <Smile className="w-5 h-5" />,
+  BookOpen:     <BookOpen className="w-5 h-5" />,
+  HeartHandshake:<HeartHandshake className="w-5 h-5" />,
+};
+
+function SpecialtyIconPicker({ value, onChange }: { value: string; onChange: (key: string) => void }) {
+  return (
+    <div className="flex flex-wrap gap-1.5 p-2 bg-muted/40 rounded-lg">
+      {Object.entries(SPECIALTY_ICON_MAP).map(([key, icon]) => (
+        <button
+          key={key}
+          type="button"
+          title={key}
+          onClick={() => onChange(value === key ? "" : key)}
+          className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
+            value === key
+              ? "bg-primary text-white shadow"
+              : "bg-background text-muted-foreground hover:bg-primary/10 hover:text-primary"
+          }`}
+        >
+          {icon}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 // ─── Simple bar chart ────────────────────────────────────────────────────────
 function MiniBarChart({ data }: { data: { day: string; total: number; completed: number; canceled: number }[] }) {
@@ -65,7 +118,8 @@ export default function AdminDashboard() {
   const [proofFile, setProofFile] = useState<Record<number, { base64: string; name: string; mimeType: string } | null>>({});
   const [tierSelect, setTierSelect] = useState<Record<number, "basic" | "pro">>({});
   const [expandedBio, setExpandedBio] = useState<Record<number, boolean>>({});
-  const [newSpecialty, setNewSpecialty] = useState({ name: "", description: "" });
+  const [newSpecialty, setNewSpecialty] = useState({ name: "", description: "", icon: "" });
+  const [editingIconId, setEditingIconId] = useState<number | null>(null);
   const [newPlan, setNewPlan] = useState({
     name: "", price: "", billingPeriod: "monthly" as "monthly" | "yearly",
     maxAppointmentsPerMonth: "", maxMinutesPerAppointment: "",
@@ -106,10 +160,20 @@ export default function AdminDashboard() {
   const createSpecialtyMutation = trpc.specialty.create.useMutation({
     onSuccess: () => {
       refetchSpecialties();
-      setNewSpecialty({ name: "", description: "" });
+      setNewSpecialty({ name: "", description: "", icon: "" });
       toast.success("Especialidad creada");
     },
     onError: () => toast.error("Error al crear la especialidad"),
+  });
+
+  const deleteSpecialtyMutation = trpc.specialty.delete.useMutation({
+    onSuccess: () => { refetchSpecialties(); toast.success("Especialidad eliminada"); },
+    onError: (err) => toast.error(err.message ?? "Error al eliminar la especialidad"),
+  });
+
+  const updateSpecialtyIconMutation = trpc.specialty.updateIcon.useMutation({
+    onSuccess: () => { refetchSpecialties(); setEditingIconId(null); toast.success("Ícono actualizado"); },
+    onError: () => toast.error("Error al actualizar el ícono"),
   });
 
   const cronMutation = trpc.admin.runCronJobs.useMutation({
@@ -682,10 +746,49 @@ export default function AdminDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {(specialties ?? []).map((s) => (
-                    <div key={s.id} className="flex items-center justify-between p-3 bg-primary/5 rounded-xl">
-                      <span className="font-medium text-sm">{s.name}</span>
-                      <Badge className="bg-emerald-100 text-emerald-700 border-0 text-xs">Activa</Badge>
+                  {(specialties ?? []).map((s: any) => (
+                    <div key={s.id} className="rounded-xl border border-border overflow-hidden">
+                      <div className="flex items-center justify-between p-3 bg-primary/5">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
+                            {s.icon && SPECIALTY_ICON_MAP[s.icon]
+                              ? SPECIALTY_ICON_MAP[s.icon]
+                              : <Stethoscope className="w-5 h-5" />}
+                          </div>
+                          <span className="font-medium text-sm">{s.name}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Badge className="bg-emerald-100 text-emerald-700 border-0 text-xs">Activa</Badge>
+                          <button
+                            title="Editar ícono"
+                            onClick={() => setEditingIconId(editingIconId === s.id ? null : s.id)}
+                            className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            title="Eliminar especialidad"
+                            disabled={deleteSpecialtyMutation.isPending}
+                            onClick={() => {
+                              if (window.confirm(`¿Eliminar la especialidad "${s.name}"? Esta acción no se puede deshacer.`)) {
+                                deleteSpecialtyMutation.mutate({ id: s.id });
+                              }
+                            }}
+                            className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                      {editingIconId === s.id && (
+                        <div className="p-3 border-t border-border bg-background space-y-2">
+                          <p className="text-xs font-medium text-muted-foreground">Selecciona un ícono:</p>
+                          <SpecialtyIconPicker
+                            value={s.icon ?? ""}
+                            onChange={(key) => updateSpecialtyIconMutation.mutate({ id: s.id, icon: key })}
+                          />
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -719,6 +822,21 @@ export default function AdminDashboard() {
                     placeholder="Descripción de la especialidad..."
                     className="w-full rounded-lg border border-border p-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-[80px] resize-none"
                   />
+                </div>
+                <div>
+                  <label className="text-xs font-medium mb-1 block">Ícono</label>
+                  <SpecialtyIconPicker
+                    value={newSpecialty.icon}
+                    onChange={(key) => setNewSpecialty({ ...newSpecialty, icon: key })}
+                  />
+                  {newSpecialty.icon && (
+                    <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+                      <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                        {SPECIALTY_ICON_MAP[newSpecialty.icon]}
+                      </div>
+                      <span>Preview: {newSpecialty.icon}</span>
+                    </div>
+                  )}
                 </div>
                 <Button
                   onClick={() => createSpecialtyMutation.mutate(newSpecialty)}
