@@ -412,8 +412,8 @@ export async function createSpecialty(data: { name: string; description?: string
   // production DB when schema and migrations are out of sync.
   return new Promise<void>((resolve, reject) => {
     client.execute(
-      "INSERT INTO `specialties` (`name`, `description`, `icon`, `color`) VALUES (?, ?, ?, ?)",
-      [data.name, data.description ?? null, data.icon || null, data.color ?? null],
+      "INSERT INTO `specialties` (`name`, `description`, `icon`) VALUES (?, ?, ?)",
+      [data.name, data.description ?? null, data.icon || null],
       (err: any) => { if (err) reject(err); else resolve(); }
     );
   });

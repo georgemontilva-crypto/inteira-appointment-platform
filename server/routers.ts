@@ -33,7 +33,6 @@ const specialtySchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string().max(1000).optional(),
   icon: z.string().max(100).optional(),
-  color: z.string().max(50).optional(),
 });
 
 const subscriptionPlanSchema = z.object({
