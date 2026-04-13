@@ -125,7 +125,6 @@ export default function RegisterProfessional() {
     gender: "",
     email: "",
     specialtyId: "",
-    especialidad: "",
     bio: "",
     yearsOfExperience: "",
     education: "",
@@ -376,12 +375,6 @@ export default function RegisterProfessional() {
                       La categoría bajo la que aparecerás en la plataforma para los usuarios.
                     </p>
                   )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="especialidad">Especialidad específica</Label>
-                  <Input id="especialidad" placeholder="Ej: Terapia cognitivo-conductual, Derecho laboral..."
-                    value={form.especialidad} onChange={(e) => handleChange("especialidad", e.target.value)} />
                 </div>
 
                 <div className="space-y-2">
