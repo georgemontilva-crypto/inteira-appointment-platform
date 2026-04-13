@@ -710,19 +710,38 @@ export const appRouter = router({
           }).catch(() => {});
         }
 
-        // Email to admin (fire-and-forget)
-        const { sendWithdrawalRequestEmail } = await import("./email");
-        sendWithdrawalRequestEmail({
-          adminEmail: process.env.ADMIN_EMAIL ?? "Adm@inteira.mx",
-          professionalName: profUser?.name ?? "Profesional",
-          professionalEmail: profUser?.email ?? "",
-          amount: input.amount,
-          paymentMethod: input.paymentMethod,
-          paymentDetails: input.paymentDetails,
-          notes: input.notes,
-        })
-          .then(() => console.log("[Withdrawal] Email sent to admin"))
-          .catch((err) => console.error("[Withdrawal] Email error:", err?.message));
+        // Emails (fire-and-forget)
+        const { sendWithdrawalRequestEmail, sendWithdrawalReceivedEmail } = await import("./email");
+        const profEmail = profUser?.email ?? "";
+        const profName = profUser?.name ?? "Profesional";
+
+        // Email to admin
+        if (profEmail) {
+          sendWithdrawalRequestEmail({
+            adminEmail: process.env.ADMIN_EMAIL ?? "Adm@inteira.mx",
+            professionalName: profName,
+            professionalEmail: profEmail,
+            amount: input.amount,
+            paymentMethod: input.paymentMethod,
+            paymentDetails: input.paymentDetails,
+            notes: input.notes,
+          })
+            .then((ok) => console.log(`[Withdrawal] Admin email ${ok ? "sent" : "failed (Resend returned false)"}`))
+            .catch((err) => console.error("[Withdrawal] Admin email error:", err?.message));
+
+          // Confirmation email to professional
+          sendWithdrawalReceivedEmail({
+            professionalEmail: profEmail,
+            professionalName: profName,
+            amount: input.amount,
+            paymentMethod: input.paymentMethod,
+            paymentDetails: input.paymentDetails,
+          })
+            .then((ok) => console.log(`[Withdrawal] Professional confirmation email ${ok ? "sent to " + profEmail : "failed (Resend returned false)"}`))
+            .catch((err) => console.error("[Withdrawal] Professional email error:", err?.message));
+        } else {
+          console.warn("[Withdrawal] No professional email found — skipping emails for professionalId:", professional.id);
+        }
 
         return {
           success: true,

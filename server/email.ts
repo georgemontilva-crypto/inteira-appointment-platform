@@ -658,7 +658,40 @@ export async function sendWithdrawalRejectedEmail(params: {
   });
 }
 
-// 15. Withdrawal paid confirmation to professional
+// 15. Withdrawal received confirmation to professional
+export async function sendWithdrawalReceivedEmail(params: {
+  professionalEmail: string;
+  professionalName: string;
+  amount: number;
+  paymentMethod: string;
+  paymentDetails: string;
+}): Promise<boolean> {
+  const methodLabels: Record<string, string> = {
+    clabe: "CLABE (transferencia bancaria)",
+    binance: "Binance Pay",
+    paypal: "PayPal",
+    other: "Otro",
+  };
+  const content = `
+    <p>Hola <strong>${params.professionalName}</strong>,</p>
+    <p>Hemos recibido tu solicitud de retiro. La revisaremos y procesaremos el <strong>próximo lunes</strong>.</p>
+    <div class="info-box">
+      <p><strong>Monto solicitado:</strong> $${params.amount.toLocaleString("es-MX")} MXN</p>
+      <p><strong>Método de pago:</strong> ${methodLabels[params.paymentMethod] ?? params.paymentMethod}</p>
+      <p><strong>Detalles:</strong> ${params.paymentDetails}</p>
+      <p><strong>Fecha de solicitud:</strong> ${new Date().toLocaleDateString("es-MX", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
+    </div>
+    <p>Recibirás otro correo cuando tu retiro haya sido procesado. Si tienes alguna pregunta, responde a este mensaje.</p>
+    <a href="https://inteira.mx/panel-profesional#ganancias" class="btn">Ver mis ganancias</a>
+  `;
+  return sendEmail({
+    to: params.professionalEmail,
+    subject: `📩 Solicitud de retiro recibida — $${params.amount.toLocaleString("es-MX")} MXN`,
+    html: baseTemplate(content),
+  });
+}
+
+// 16. Withdrawal paid confirmation to professional
 export async function sendWithdrawalPaidEmail(params: {
   professionalEmail: string;
   professionalName: string;
