@@ -89,6 +89,10 @@ export default function ProfessionalDashboard() {
   } | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const carouselRef = useRef<HTMLDivElement>(null);
+  const scrollCarousel = (dir: "left" | "right") => {
+    carouselRef.current?.scrollBy({ left: dir === "left" ? -220 : 220, behavior: "smooth" });
+  };
 
   const { data: profile, isLoading: loadingProfile, refetch: refetchProfile, error: profileError } = trpc.professional.getProfile.useQuery(
     undefined,
@@ -405,11 +409,6 @@ export default function ProfessionalDashboard() {
 
   const upcomingAppointments = appointments?.filter((a) => a.status === "scheduled") ?? [];
   const pastAppointments = appointments?.filter((a) => a.status !== "scheduled") ?? [];
-
-  const carouselRef = useRef<HTMLDivElement>(null);
-  const scrollCarousel = (dir: "left" | "right") => {
-    carouselRef.current?.scrollBy({ left: dir === "left" ? -220 : 220, behavior: "smooth" });
-  };
 
   // Withdrawal modal derived values — must be at component level (used outside ganancias IIFE)
   const wAmount = parseFloat(withdrawalForm.amount || "0");
