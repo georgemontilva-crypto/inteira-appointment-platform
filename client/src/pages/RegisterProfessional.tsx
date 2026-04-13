@@ -251,6 +251,7 @@ export default function RegisterProfessional() {
     gender: "",
     email: "",
     campo: "",
+    specialtyId: "",
     especialidad: "",
     bio: "",
     yearsOfExperience: "",
@@ -294,6 +295,7 @@ export default function RegisterProfessional() {
     e.preventDefault();
     if (!form.firstName || !form.lastName) return toast.error("Nombre y apellido son obligatorios");
     if (!form.campo) return toast.error("Selecciona tu campo de especialidad");
+    if (!form.specialtyId) return toast.error("Selecciona la especialidad en la plataforma");
     if (!form.bio.trim()) return toast.error("La descripción profesional es obligatoria");
     if (!profilePhoto) return toast.error("La foto de perfil es obligatoria");
     if (!identityDoc) return toast.error("El documento de identidad es obligatorio");
@@ -309,14 +311,8 @@ export default function RegisterProfessional() {
       let certificationsUrl: string | undefined;
       if (certifications) certificationsUrl = await uploadFile(certifications);
 
-      const specialtyName = CAMPO_TO_SPECIALTY[form.campo];
-      const matchedSpecialty = specialties?.find(
-        (s) => s.name === specialtyName ||
-          s.name.toLowerCase().includes((specialtyName ?? "").toLowerCase())
-      );
-
       registerMutation.mutate({
-        specialtyId: matchedSpecialty?.id ?? 1,
+        specialtyId: parseInt(form.specialtyId),
         licenseNumber: form.licenseNumber.trim() || undefined,
         licenseDocument: identityDocUrl,
         bio: form.bio || undefined,
@@ -511,6 +507,28 @@ export default function RegisterProfessional() {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Especialidad en Inteira <span className="text-red-500">*</span></Label>
+                  <Select
+                    value={form.specialtyId}
+                    onValueChange={(v) => handleChange("specialtyId", v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona la especialidad de la plataforma" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(specialties ?? []).map((s: any) => (
+                        <SelectItem key={s.id} value={String(s.id)}>
+                          {s.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    La categoría bajo la que aparecerás en la plataforma para los usuarios.
+                  </p>
                 </div>
 
                 <div className="space-y-2">
