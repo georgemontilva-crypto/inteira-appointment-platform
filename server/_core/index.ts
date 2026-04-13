@@ -344,6 +344,16 @@ async function runStartupMigrations() {
     )`).catch(() => {});
     console.log("[Migration] notifications table ready");
 
+    // Ensure notifications.link column exists
+    try {
+      await db.execute(
+        `ALTER TABLE \`notifications\` ADD COLUMN \`link\` VARCHAR(500) NULL DEFAULT NULL`
+      );
+      console.log("[Migration] notifications.link column ready");
+    } catch (e: any) {
+      console.log("[Migration] notifications.link already exists:", e.message);
+    }
+
     // Ensure notifications.audience column exists
     try {
       const [audCols] = await db.execute(
