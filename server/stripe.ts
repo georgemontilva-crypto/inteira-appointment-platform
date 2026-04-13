@@ -214,7 +214,7 @@ export function registerStripeRoutes(app: Express) {
       const batchId = await addCreditBatch(userId, productType);
       const credits = CREDIT_COSTS[productType];
 
-      console.log(`[Recovery] ✅ ${credits} créditos acreditados a ${email} (userId=${userId}, batchId=${batchId})`);
+      console.log(`[Recovery] ✅ ${credits} créditos acreditados (userId=${userId}, batchId=${batchId})`);
       return res.json({
         success: true,
         userId,

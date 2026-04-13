@@ -82,7 +82,7 @@ export function registerOAuthRoutes(app: Express) {
       };
 
       if (!tokenData.access_token) {
-        console.error("[Google OAuth] Token exchange failed:", tokenData);
+        console.error("[Google OAuth] Token exchange failed:", tokenData?.error ?? "unknown error");
         return res.redirect("/?error=token_exchange_failed");
       }
 
