@@ -274,97 +274,115 @@ export async function reserveCredits(
 /**
  * Confirm reserved credits — converts 'reserved' transactions to 'consumed'
  * and decrements remaining + reservedAmount from batches.
+ * Wrapped in a transaction; idempotent via WHERE reason='reserved' guard on UPDATE.
  */
 export async function confirmCredits(appointmentId: number): Promise<void> {
   const db = await getDb();
   if (!db) return;
   const client = (db as any).$client;
 
-  const reservedTxs = await new Promise<any[]>((resolve, reject) => {
-    client.execute(
-      `SELECT * FROM creditTransactions WHERE reason = 'reserved' AND appointmentId = ?`,
-      [appointmentId],
-      (err: any, results: any) => {
-        if (err) reject(err);
-        else resolve(Array.isArray(results) ? results : []);
-      }
-    );
-  });
+  const exec = (sql: string, params: any[] = []) =>
+    new Promise<any>((resolve, reject) => {
+      client.execute(sql, params, (err: any, results: any) => {
+        if (err) reject(err); else resolve(results);
+      });
+    });
+
+  // Idempotency guard: if no reserved transactions exist, already confirmed (or never reserved)
+  const reservedTxs: any[] = await exec(
+    `SELECT * FROM creditTransactions WHERE reason = 'reserved' AND appointmentId = ?`,
+    [appointmentId]
+  ).then((r: any) => (Array.isArray(r) ? r : []));
 
   if (reservedTxs.length === 0) return;
 
-  for (const tx of reservedTxs) {
-    const toConsume = Math.abs(tx.delta);
+  await exec("BEGIN");
+  try {
+    for (const tx of reservedTxs) {
+      const toConsume = Math.abs(tx.delta);
 
-    await new Promise<void>((resolve) => {
-      client.execute(
+      await exec(
         `UPDATE creditBatches
          SET remaining = remaining - ?, reservedAmount = GREATEST(0, reservedAmount - ?)
          WHERE id = ?`,
-        [toConsume, toConsume, tx.batchId],
-        (err: any) => { if (err) console.error("[confirmCredits] update batch:", err?.message); resolve(); }
+        [toConsume, toConsume, tx.batchId]
       );
-    });
 
-    await new Promise<void>((resolve) => {
-      client.execute(
-        `UPDATE creditTransactions SET reason = 'consumed' WHERE id = ?`,
-        [tx.id],
-        (err: any) => { if (err) console.error("[confirmCredits] update tx:", err?.message); resolve(); }
+      // WHERE reason='reserved' is the DB-level idempotency guard:
+      // a concurrent call that already flipped this row to 'consumed' will get affectedRows=0
+      const result = await exec(
+        `UPDATE creditTransactions SET reason = 'consumed' WHERE id = ? AND reason = 'reserved'`,
+        [tx.id]
       );
-    });
+      if ((result as any)?.affectedRows === 0) {
+        await exec("ROLLBACK");
+        console.warn(`[confirmCredits] tx ${tx.id} already consumed — concurrent call detected, aborting`);
+        return;
+      }
+    }
+    await exec("COMMIT");
+  } catch (err) {
+    await exec("ROLLBACK").catch(() => {});
+    throw err;
   }
 }
 
 /**
  * Refund reserved credits — releases the reservation without consuming.
  * Decrements reservedAmount and inserts a positive 'refund' transaction.
+ * Wrapped in a transaction; idempotent via WHERE reason='reserved' guard on UPDATE.
  */
 export async function refundCredits(userId: number, appointmentId: number): Promise<void> {
   const db = await getDb();
   if (!db) return;
   const client = (db as any).$client;
 
-  const reservedTxs = await new Promise<any[]>((resolve, reject) => {
-    client.execute(
-      `SELECT * FROM creditTransactions WHERE reason = 'reserved' AND appointmentId = ?`,
-      [appointmentId],
-      (err: any, results: any) => {
-        if (err) reject(err);
-        else resolve(Array.isArray(results) ? results : []);
-      }
-    );
-  });
+  const exec = (sql: string, params: any[] = []) =>
+    new Promise<any>((resolve, reject) => {
+      client.execute(sql, params, (err: any, results: any) => {
+        if (err) reject(err); else resolve(results);
+      });
+    });
+
+  // Idempotency guard: if no reserved transactions exist, already refunded (or never reserved)
+  const reservedTxs: any[] = await exec(
+    `SELECT * FROM creditTransactions WHERE reason = 'reserved' AND appointmentId = ?`,
+    [appointmentId]
+  ).then((r: any) => (Array.isArray(r) ? r : []));
 
   if (reservedTxs.length === 0) return;
 
-  for (const tx of reservedTxs) {
-    const toRefund = Math.abs(tx.delta);
+  await exec("BEGIN");
+  try {
+    for (const tx of reservedTxs) {
+      const toRefund = Math.abs(tx.delta);
 
-    await new Promise<void>((resolve) => {
-      client.execute(
+      await exec(
         `UPDATE creditBatches SET reservedAmount = GREATEST(0, reservedAmount - ?) WHERE id = ?`,
-        [toRefund, tx.batchId],
-        (err: any) => { if (err) console.error("[refundCredits] update batch:", err?.message); resolve(); }
+        [toRefund, tx.batchId]
       );
-    });
 
-    await new Promise<void>((resolve) => {
-      client.execute(
-        `UPDATE creditTransactions SET reason = 'refunded' WHERE id = ?`,
-        [tx.id],
-        (err: any) => { if (err) console.error("[refundCredits] update tx:", err?.message); resolve(); }
+      // WHERE reason='reserved' is the DB-level idempotency guard
+      const result = await exec(
+        `UPDATE creditTransactions SET reason = 'refunded' WHERE id = ? AND reason = 'reserved'`,
+        [tx.id]
       );
-    });
+      if ((result as any)?.affectedRows === 0) {
+        await exec("ROLLBACK");
+        console.warn(`[refundCredits] tx ${tx.id} already refunded — concurrent call detected, aborting`);
+        return;
+      }
 
-    await new Promise<void>((resolve) => {
-      client.execute(
+      await exec(
         `INSERT INTO creditTransactions (userId, batchId, delta, reason, appointmentId, description)
          VALUES (?, ?, ?, 'refund', ?, ?)`,
-        [userId, tx.batchId, toRefund, appointmentId, `Reembolso de ${toRefund} créditos (cita #${appointmentId})`],
-        (err: any) => { if (err) console.error("[refundCredits] insert refund tx:", err?.message); resolve(); }
+        [userId, tx.batchId, toRefund, appointmentId, `Reembolso de ${toRefund} créditos (cita #${appointmentId})`]
       );
-    });
+    }
+    await exec("COMMIT");
+  } catch (err) {
+    await exec("ROLLBACK").catch(() => {});
+    throw err;
   }
 }
 
