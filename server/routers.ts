@@ -1122,6 +1122,47 @@ export const appRouter = router({
         return { success: true };
       }),
 
+    rejectWithdrawal: protectedProcedure
+      .input(z.object({ withdrawalId: z.number(), adminNote: z.string().max(500).optional() }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+        const { rejectWithdrawalRequest } = await import("./professionalWallet");
+        const { professionalId, amount } = await rejectWithdrawalRequest(input.withdrawalId, input.adminNote);
+
+        // Look up professional user for notification/email
+        const dbInst = await db.getDb();
+        const profRow = await new Promise<any>((resolve) => {
+          (dbInst as any).$client.execute(
+            "SELECT p.userId, u.name, u.email FROM professionals p JOIN users u ON u.id = p.userId WHERE p.id = ? LIMIT 1",
+            [professionalId],
+            (err: any, results: any) => resolve(Array.isArray(results) ? results[0] ?? null : null)
+          );
+        });
+
+        if (profRow?.userId) {
+          createNotification({
+            userId: profRow.userId,
+            type: "system",
+            title: "Solicitud de retiro rechazada",
+            message: `Tu solicitud de retiro de $${amount.toLocaleString("es-MX")} MXN no fue procesada.${input.adminNote ? ` Motivo: ${input.adminNote}` : ""}`,
+            link: "/panel-profesional#ganancias",
+            audience: "professional",
+          }).catch(() => {});
+
+          if (profRow.email) {
+            const { sendWithdrawalRejectedEmail } = await import("./email");
+            sendWithdrawalRejectedEmail({
+              professionalEmail: profRow.email,
+              professionalName: profRow.name ?? "Profesional",
+              amount,
+              adminNote: input.adminNote,
+            }).catch(() => {});
+          }
+        }
+
+        return { success: true };
+      }),
+
     getActiveProfessionals: protectedProcedure.query(async ({ ctx }) => {
       if (ctx.user.role !== "admin") {
         throw new TRPCError({ code: "FORBIDDEN", message: "User is not an admin" });

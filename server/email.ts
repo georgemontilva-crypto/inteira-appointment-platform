@@ -633,7 +633,32 @@ export async function sendWithdrawalRequestEmail(params: {
   });
 }
 
-// 14. Withdrawal paid confirmation to professional
+// 14. Withdrawal rejected notification to professional
+export async function sendWithdrawalRejectedEmail(params: {
+  professionalEmail: string;
+  professionalName: string;
+  amount: number;
+  adminNote?: string;
+}): Promise<boolean> {
+  const content = `
+    <p>Hola <strong>${params.professionalName}</strong>,</p>
+    <p>Tu solicitud de retiro de <strong>$${params.amount.toLocaleString("es-MX")} MXN</strong> no pudo ser procesada en esta ocasión.</p>
+    ${params.adminNote ? `
+    <div class="info-box">
+      <p><strong>Motivo:</strong> ${params.adminNote}</p>
+    </div>` : ""}
+    <p>Tu balance no ha sido modificado. Puedes enviar una nueva solicitud desde tu panel de ganancias cuando lo desees.</p>
+    <p>Si tienes dudas, responde a este correo o contáctanos desde la plataforma.</p>
+    <a href="https://inteira.mx/panel-profesional#ganancias" class="btn">Ver mis ganancias</a>
+  `;
+  return sendEmail({
+    to: params.professionalEmail,
+    subject: `❌ Tu solicitud de retiro de $${params.amount.toLocaleString("es-MX")} MXN fue rechazada — Inteira`,
+    html: baseTemplate(content),
+  });
+}
+
+// 15. Withdrawal paid confirmation to professional
 export async function sendWithdrawalPaidEmail(params: {
   professionalEmail: string;
   professionalName: string;

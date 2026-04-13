@@ -187,3 +187,50 @@ export async function approveWithdrawalRequest(withdrawalId: number): Promise<{ 
 
   return { professionalId: row.professionalId, amount };
 }
+
+export async function rejectWithdrawalRequest(
+  withdrawalId: number,
+  adminNote?: string
+): Promise<{ professionalId: number; amount: number }> {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const client = (db as any).$client;
+
+  const exec = (sql: string, params: any[] = []) =>
+    new Promise<any>((resolve, reject) => {
+      client.execute(sql, params, (err: any, results: any) => {
+        if (err) reject(err); else resolve(results);
+      });
+    });
+
+  // Read row before opening transaction
+  const row = await exec(
+    "SELECT id, professionalId, amount, status FROM withdrawalRequests WHERE id = ? LIMIT 1",
+    [withdrawalId]
+  ).then((r: any) => (Array.isArray(r) ? r[0] ?? null : null));
+
+  if (!row) throw new Error("Withdrawal request not found");
+  if (row.status !== "pending") throw new Error(`Withdrawal already ${row.status}`);
+
+  const amount = parseFloat(row.amount);
+
+  await exec("BEGIN");
+  try {
+    // Guard against concurrent rejection/approval: only update if still pending
+    const updateResult = await exec(
+      "UPDATE withdrawalRequests SET status='rejected', processedAt=NOW(), updatedAt=NOW(), notes=COALESCE(CONCAT(COALESCE(notes,''), ?), notes) WHERE id=? AND status='pending'",
+      [adminNote ? `\n[Admin] ${adminNote}` : "", withdrawalId]
+    );
+    if ((updateResult as any)?.affectedRows === 0) {
+      await exec("ROLLBACK");
+      throw new Error("Withdrawal already processed by another request");
+    }
+    // Wallet balance is NOT touched — the money never left
+    await exec("COMMIT");
+  } catch (err) {
+    await exec("ROLLBACK").catch(() => {});
+    throw err;
+  }
+
+  return { professionalId: row.professionalId, amount };
+}
