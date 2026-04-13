@@ -89,19 +89,52 @@ export default function WalletPage() {
     enabled: isAuthenticated,
   });
 
-  // Detectar retorno de Stripe con pago exitoso
+  // Detectar retorno de Stripe y hacer polling hasta que los créditos aparezcan
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("payment") === "success") {
-      toast.success("¡Pago exitoso! Tus créditos serán acreditados en breve.");
-      // Limpiar el parámetro de la URL
-      window.history.replaceState({}, "", window.location.pathname);
-      // Refrescar wallet después de un momento
-      setTimeout(() => refetch(), 2000);
-    } else if (params.get("payment") === "cancelled") {
+
+    if (params.get("payment") === "cancelled") {
       toast.info("Pago cancelado.");
       window.history.replaceState({}, "", window.location.pathname);
+      return;
     }
+
+    if (params.get("payment") !== "success") return;
+
+    // Limpiar URL inmediatamente para que no persista en recargas
+    window.history.replaceState({}, "", window.location.pathname);
+    setCheckingPayment(true);
+    toast.success("¡Pago recibido! Verificando tus créditos...");
+
+    let attempts = 0;
+    const MAX_ATTEMPTS = 10; // 10 × 3s = 30 segundos máximo
+    let baseBalance: number | null = null;
+
+    const poll = setInterval(async () => {
+      attempts++;
+      const result = await refetch();
+      const newBalance = result.data?.balance ?? 0;
+
+      // Capturar el balance inicial en el primer resultado
+      if (baseBalance === null) {
+        baseBalance = newBalance;
+      }
+
+      const credited = newBalance > baseBalance;
+
+      if (credited || attempts >= MAX_ATTEMPTS) {
+        clearInterval(poll);
+        setCheckingPayment(false);
+        if (credited) {
+          toast.success(`¡Créditos acreditados! Tu nuevo saldo: ${newBalance.toLocaleString("es-MX")} créditos.`);
+        } else {
+          toast.info("Los créditos llegarán en breve. Si no aparecen en unos minutos, recarga la página.");
+        }
+      }
+    }, 3000);
+
+    return () => clearInterval(poll);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const [buyingSession, setBuyingSession] = useState<string | null>(null);
@@ -168,7 +201,9 @@ export default function WalletPage() {
             <CardContent className="p-5 md:p-7">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">Saldo disponible</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">
+                    {checkingPayment ? "Verificando pago..." : "Saldo disponible"}
+                  </p>
                   <div className="flex items-baseline gap-2">
                     <span className="text-4xl md:text-5xl font-bold text-primary" style={{ fontFamily: "Poppins, sans-serif" }}>
                       {balance.toLocaleString("es-MX")}
