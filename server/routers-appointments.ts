@@ -573,6 +573,38 @@ export const appointmentRouter = router({
             (err: any) => { if (err) console.error("[submitReview] avg rating update error:", err?.message); resolve(); }
           );
         });
+
+        // Credit professional earnings (inside idempotency block — only runs once per review)
+        const professional = await db.getProfessionalById(appointment.professionalId);
+        if (!professional) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Profesional no encontrado" });
+
+        const { creditProfessionalEarning } = await import("./professionalWallet");
+        const { netAmount } = await creditProfessionalEarning(
+          professional.id,
+          input.appointmentId,
+          (professional.tier ?? "basic") as "basic" | "pro"
+        );
+
+        // Notify professional
+        const profUser = await db.getUserById(professional.userId);
+        if (profUser?.email) {
+          const { sendProfessionalEarningNotification } = await import("./email");
+          sendProfessionalEarningNotification({
+            professionalEmail: profUser.email,
+            professionalName: profUser.name ?? "Profesional",
+            netAmount,
+            appointmentId: input.appointmentId,
+          }).catch(() => {});
+        }
+
+        createNotification({
+          userId: professional.userId,
+          type: "new_earning",
+          title: "Reseña recibida",
+          message: `Recibiste una reseña de ${input.rating} estrella${input.rating !== 1 ? "s" : ""}. Se acreditaron $${netAmount} MXN a tu wallet.`,
+          link: "/profesional/wallet",
+          audience: "professional",
+        }).catch(() => {});
       }
 
       // Mark appointment as completed
@@ -583,38 +615,6 @@ export const appointmentRouter = router({
           (err: any) => { if (err) reject(err); else resolve(); }
         );
       });
-
-      // Credit professional earnings
-      const professional = await db.getProfessionalById(appointment.professionalId);
-      if (!professional) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Profesional no encontrado" });
-
-      const { creditProfessionalEarning } = await import("./professionalWallet");
-      const { netAmount } = await creditProfessionalEarning(
-        professional.id,
-        input.appointmentId,
-        (professional.tier ?? "basic") as "basic" | "pro"
-      );
-
-      // Notify professional
-      const profUser = await db.getUserById(professional.userId);
-      if (profUser?.email) {
-        const { sendProfessionalEarningNotification } = await import("./email");
-        sendProfessionalEarningNotification({
-          professionalEmail: profUser.email,
-          professionalName: profUser.name ?? "Profesional",
-          netAmount,
-          appointmentId: input.appointmentId,
-        }).catch(() => {});
-      }
-
-      createNotification({
-        userId: professional.userId,
-        type: "new_earning",
-        title: "Reseña recibida",
-        message: `Recibiste una reseña de ${input.rating} estrella${input.rating !== 1 ? "s" : ""}. Se acreditaron $${netAmount} MXN a tu wallet.`,
-        link: "/profesional/wallet",
-        audience: "professional",
-      }).catch(() => {});
 
       return { success: true };
     }),
