@@ -128,12 +128,26 @@ export async function createWithdrawalRequest(
 ): Promise<void> {
   const db = await getDb();
   if (!db) throw new Error("DB not available");
-  // Do NOT touch the wallet balance here — deduction happens only on approval
-  await (db as any).$client.execute(
-    `INSERT INTO withdrawalRequests (professionalId, amount, clabe, paymentMethod, paymentDetails, notes, status, requestedAt)
-     VALUES (?, ?, ?, ?, ?, ?, 'pending', NOW())`,
-    [professionalId, amount, clabe ?? null, paymentMethod ?? null, paymentDetails ?? null, notes ?? null]
-  );
+  const client = (db as any).$client;
+
+  // Insert the withdrawal request
+  await new Promise<void>((resolve, reject) => {
+    client.execute(
+      `INSERT INTO withdrawalRequests (professionalId, amount, clabe, paymentMethod, paymentDetails, notes, status, requestedAt)
+       VALUES (?, ?, ?, ?, ?, ?, 'pending', NOW())`,
+      [professionalId, amount, clabe ?? null, paymentMethod ?? null, paymentDetails ?? null, notes ?? null],
+      (err: any) => { if (err) reject(err); else resolve(); }
+    );
+  });
+
+  // Reflect the pending amount in the wallet so the UI can show it
+  await new Promise<void>((resolve, reject) => {
+    client.execute(
+      `UPDATE professionalWallet SET pendingWithdrawal = pendingWithdrawal + ? WHERE professionalId = ?`,
+      [amount, professionalId],
+      (err: any) => { if (err) reject(err); else resolve(); }
+    );
+  });
 }
 
 export async function approveWithdrawalRequest(withdrawalId: number): Promise<{ professionalId: number; amount: number }> {
@@ -174,9 +188,10 @@ export async function approveWithdrawalRequest(withdrawalId: number): Promise<{ 
     await exec(
       `UPDATE professionalWallet
        SET balance = GREATEST(0, balance - ?),
-           totalWithdrawn = totalWithdrawn + ?
+           totalWithdrawn = totalWithdrawn + ?,
+           pendingWithdrawal = GREATEST(0, pendingWithdrawal - ?)
        WHERE professionalId = ?`,
-      [amount, amount, row.professionalId]
+      [amount, amount, amount, row.professionalId]
     );
 
     await exec("COMMIT");
@@ -225,7 +240,13 @@ export async function rejectWithdrawalRequest(
       await exec("ROLLBACK");
       throw new Error("Withdrawal already processed by another request");
     }
-    // Wallet balance is NOT touched — the money never left
+    // Wallet balance is NOT touched — the money never left.
+    // Clear the pending amount since the request is no longer active.
+    await exec(
+      `UPDATE professionalWallet SET pendingWithdrawal = GREATEST(0, pendingWithdrawal - ?) WHERE professionalId = ?`,
+      [amount, row.professionalId]
+    );
+
     await exec("COMMIT");
   } catch (err) {
     await exec("ROLLBACK").catch(() => {});
