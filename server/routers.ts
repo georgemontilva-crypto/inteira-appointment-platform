@@ -1272,7 +1272,15 @@ export const appRouter = router({
         if (ctx.user.role !== "admin") {
           throw new TRPCError({ code: "FORBIDDEN", message: "Only admins can create specialties" });
         }
-        await db.createSpecialty(input);
+        try {
+          await db.createSpecialty(input);
+        } catch (err: any) {
+          console.error("[Specialty:create] FAILED — message:", err?.message, "| sqlMessage:", err?.sqlMessage, "| code:", err?.code);
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: err?.sqlMessage ?? err?.message ?? "Error al crear la especialidad",
+          });
+        }
         return { success: true };
       }),
 

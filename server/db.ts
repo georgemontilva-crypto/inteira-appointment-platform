@@ -404,11 +404,19 @@ export async function getSpecialtyById(id: number) {
   }
 }
 
-export async function createSpecialty(data: Partial<Specialty>) {
+export async function createSpecialty(data: { name: string; description?: string; icon?: string; color?: string }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-
-  return await db.insert(specialties).values(data as any);
+  const client = (db as any).$client;
+  // Use raw SQL — avoids Drizzle inserting columns that don't exist in the
+  // production DB when schema and migrations are out of sync.
+  return new Promise<void>((resolve, reject) => {
+    client.execute(
+      "INSERT INTO `specialties` (`name`, `description`, `icon`, `color`) VALUES (?, ?, ?, ?)",
+      [data.name, data.description ?? null, data.icon || null, data.color ?? null],
+      (err: any) => { if (err) reject(err); else resolve(); }
+    );
+  });
 }
 
 export async function deleteSpecialty(id: number) {
