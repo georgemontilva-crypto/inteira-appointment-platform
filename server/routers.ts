@@ -147,17 +147,13 @@ export const appRouter = router({
     }),
     // ── Wallet ──────────────────────────────────────────────────────────
     getWallet: protectedProcedure.query(async ({ ctx }) => {
-      const t0 = Date.now();
       const dbConn = await db.getDb();
       if (!dbConn) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
       const client = (dbConn as any).$client;
-      console.log(`[getWallet] db ready: ${Date.now() - t0}ms`);
 
-      const tq = Date.now();
       const [balanceRow, batches, transactions] = await Promise.all([
         // balance + nextExpiry en una sola query
         new Promise<any>((resolve, reject) => {
-          const t = Date.now();
           client.execute(
             `SELECT
               COALESCE(SUM(GREATEST(0, remaining - reservedAmount)), 0) AS balance,
@@ -167,38 +163,32 @@ export const appRouter = router({
              WHERE userId = ? AND remaining > 0 AND expiredEarly = 0 AND (expiresAt IS NULL OR expiresAt > NOW())`,
             [ctx.user.id],
             (err: any, results: any) => {
-              console.log(`[getWallet] q1 balance+expiry: ${Date.now() - t}ms`);
               if (err) reject(err);
               else resolve(Array.isArray(results) ? results[0] : (results ?? { balance: 0, nextExpiry: null }));
             }
           );
         }),
         new Promise<any[]>((resolve, reject) => {
-          const t = Date.now();
           client.execute(
             `SELECT * FROM creditBatches WHERE userId = ? ORDER BY createdAt ASC`,
             [ctx.user.id],
             (err: any, results: any) => {
-              console.log(`[getWallet] q2 batches: ${Date.now() - t}ms`);
               if (err) reject(err);
               else resolve(Array.isArray(results) ? results : []);
             }
           );
         }),
         new Promise<any[]>((resolve, reject) => {
-          const t = Date.now();
           client.execute(
             `SELECT * FROM creditTransactions WHERE userId = ? ORDER BY createdAt DESC LIMIT 50`,
             [ctx.user.id],
             (err: any, results: any) => {
-              console.log(`[getWallet] q3 transactions: ${Date.now() - t}ms`);
               if (err) reject(err);
               else resolve(Array.isArray(results) ? results : []);
             }
           );
         }),
       ]);
-      console.log(`[getWallet] all queries: ${Date.now() - tq}ms | total: ${Date.now() - t0}ms`);
 
       return {
         balance: Number(balanceRow?.balance ?? 0),

@@ -38,7 +38,6 @@ export const appointmentRouter = router({
     )
     .query(async ({ input }) => {
       const durationMinutes = SESSION_TYPES[input.sessionType].durationMinutes;
-      console.log("[SLOTS] Request received - professionalId:", input.professionalId, "date:", input.date, "sessionType:", input.sessionType);
 
       const professional = await db.getProfessionalById(input.professionalId);
       if (!professional) {
