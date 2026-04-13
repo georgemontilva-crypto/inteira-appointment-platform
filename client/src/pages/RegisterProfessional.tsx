@@ -11,7 +11,6 @@ import {
   Select,
   SelectContent,
   SelectItem,
-  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -20,138 +19,13 @@ import {
   CheckCircle2,
   Upload,
   User,
-  FileText,
   ArrowLeft,
   Camera,
   Clock,
   Briefcase,
   Shield,
-  AlertTriangle,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
-
-// ── Category requirements ─────────────────────────────────────────────────────
-const CATEGORY_REQUIREMENTS = {
-  MANDATORY_CEDULA: [
-    "psicologia", "contador", "legal", "pedagogo",
-    "gastroenterologo", "dermatologo", "nutriologo", "consulta_general",
-  ],
-  OPTIONAL_CEDULA: [
-    "emprendimiento", "marketing", "coach_ejecutivo",
-    "asesor_financiero", "tutor_uni", "tutor_prep",
-  ],
-  CERTIFICATES_ONLY: [
-    "desarrollo", "coach_vida", "estilo_vida", "vocacion",
-    "guia_espiritual", "teologia", "meditacion",
-    "profesor_ingles", "profesor_idiomas", "lenguaje_senas", "oratoria",
-    "ia", "entrenador_canino",
-  ],
-};
-
-type DocCategory = "mandatory_cedula" | "optional_cedula" | "certificates_only" | null;
-
-function getDocCategory(campo: string): DocCategory {
-  if (CATEGORY_REQUIREMENTS.MANDATORY_CEDULA.includes(campo)) return "mandatory_cedula";
-  if (CATEGORY_REQUIREMENTS.OPTIONAL_CEDULA.includes(campo)) return "optional_cedula";
-  if (CATEGORY_REQUIREMENTS.CERTIFICATES_ONLY.includes(campo)) return "certificates_only";
-  return null;
-}
-
-// ── Campo options with groups ─────────────────────────────────────────────────
-const CAMPO_GROUPS = [
-  {
-    group: "Desarrollo Personal y Bienestar",
-    items: [
-      { value: "psicologia", label: "Psicología" },
-      { value: "desarrollo", label: "Desarrollo Personal" },
-      { value: "coach_vida", label: "Coach de Vida" },
-      { value: "estilo_vida", label: "Estilo de Vida" },
-      { value: "vocacion", label: "Vocación" },
-    ],
-  },
-  {
-    group: "Espiritualidad",
-    items: [
-      { value: "guia_espiritual", label: "Guía Espiritual" },
-      { value: "teologia", label: "Teología" },
-      { value: "meditacion", label: "Meditación y Mindfulness" },
-    ],
-  },
-  {
-    group: "Negocios y Finanzas",
-    items: [
-      { value: "emprendimiento", label: "Emprendimiento" },
-      { value: "asesor_financiero", label: "Asesor Financiero" },
-      { value: "contador", label: "Contador" },
-      { value: "marketing", label: "Marketing" },
-      { value: "coach_ejecutivo", label: "Coach Ejecutivo" },
-    ],
-  },
-  {
-    group: "Salud Integral",
-    items: [
-      { value: "gastroenterologo", label: "Gastroenterólogo" },
-      { value: "dermatologo", label: "Dermatólogo" },
-      { value: "nutriologo", label: "Nutriólogo" },
-      { value: "consulta_general", label: "Consulta General" },
-    ],
-  },
-  {
-    group: "Educación y Formación",
-    items: [
-      { value: "tutor_uni", label: "Tutor Universitario" },
-      { value: "tutor_prep", label: "Tutor Preparatoria" },
-      { value: "pedagogo", label: "Pedagogo" },
-      { value: "profesor_ingles", label: "Profesor de Inglés" },
-      { value: "profesor_idiomas", label: "Profesor de Idiomas" },
-      { value: "lenguaje_senas", label: "Lenguaje de Señas" },
-      { value: "oratoria", label: "Oratoria y Comunicación" },
-    ],
-  },
-  {
-    group: "Tecnología",
-    items: [{ value: "ia", label: "Inteligencia Artificial" }],
-  },
-  {
-    group: "Legal",
-    items: [{ value: "legal", label: "Legal" }],
-  },
-  {
-    group: "Mascotas",
-    items: [{ value: "entrenador_canino", label: "Entrenador Canino" }],
-  },
-];
-
-// Maps campo value → specialty name for DB ID lookup
-const CAMPO_TO_SPECIALTY: Record<string, string> = {
-  psicologia: "Psicología",
-  desarrollo: "Desarrollo Personal",
-  coach_vida: "Coach de Vida",
-  estilo_vida: "Estilo de Vida",
-  vocacion: "Vocación",
-  guia_espiritual: "Guía Espiritual",
-  teologia: "Teología",
-  meditacion: "Meditación",
-  emprendimiento: "Emprendimiento",
-  asesor_financiero: "Finanzas",
-  contador: "Finanzas",
-  marketing: "Marketing",
-  coach_ejecutivo: "Emprendimiento",
-  gastroenterologo: "Salud",
-  dermatologo: "Salud",
-  nutriologo: "Salud",
-  consulta_general: "Salud",
-  tutor_uni: "Educación",
-  tutor_prep: "Educación",
-  pedagogo: "Educación",
-  profesor_ingles: "Idiomas",
-  profesor_idiomas: "Idiomas",
-  lenguaje_senas: "Idiomas",
-  oratoria: "Idiomas",
-  ia: "Tecnología",
-  legal: "Legal",
-  entrenador_canino: "Mascotas",
-};
 
 // ── File upload helper ────────────────────────────────────────────────────────
 async function uploadFile(file: File): Promise<string> {
@@ -250,7 +124,6 @@ export default function RegisterProfessional() {
     username: "",
     gender: "",
     email: "",
-    campo: "",
     specialtyId: "",
     especialidad: "",
     bio: "",
@@ -276,7 +149,6 @@ export default function RegisterProfessional() {
     },
   });
 
-  const docCategory = getDocCategory(form.campo);
   const handleChange = (field: string, value: string) =>
     setForm((prev) => ({ ...prev, [field]: value }));
 
@@ -294,15 +166,10 @@ export default function RegisterProfessional() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.firstName || !form.lastName) return toast.error("Nombre y apellido son obligatorios");
-    if (!form.campo) return toast.error("Selecciona tu campo de especialidad");
     if (!form.specialtyId) return toast.error("Selecciona la especialidad en la plataforma");
     if (!form.bio.trim()) return toast.error("La descripción profesional es obligatoria");
     if (!profilePhoto) return toast.error("La foto de perfil es obligatoria");
     if (!identityDoc) return toast.error("El documento de identidad es obligatorio");
-    if (docCategory === "mandatory_cedula" && !form.licenseNumber.trim())
-      return toast.error("La cédula profesional es obligatoria para tu especialidad");
-    if ((docCategory === "optional_cedula" || docCategory === "certificates_only") && !certifications)
-      return toast.error("El archivo de certificaciones es obligatorio");
 
     setUploading(true);
     try {
@@ -479,45 +346,18 @@ export default function RegisterProfessional() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Campo principal <span className="text-red-500">*</span></Label>
-                  <Select
-                    value={form.campo}
-                    onValueChange={(v) => {
-                      handleChange("campo", v);
-                      setIdentityDoc(null);
-                      setCertifications(null);
-                      handleChange("licenseNumber", "");
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecciona tu campo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CAMPO_GROUPS.map((group, gi) => (
-                        <div key={group.group}>
-                          {gi > 0 && <SelectSeparator />}
-                          <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide pointer-events-none select-none">
-                            {group.group}
-                          </div>
-                          {group.items.map((item) => (
-                            <SelectItem key={item.value} value={item.value}>
-                              {item.label}
-                            </SelectItem>
-                          ))}
-                        </div>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
                   <Label>Especialidad en Inteira <span className="text-red-500">*</span></Label>
                   <Select
                     value={form.specialtyId}
                     onValueChange={(v) => handleChange("specialtyId", v)}
+                    disabled={!specialties}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecciona la especialidad de la plataforma" />
+                      <SelectValue placeholder={
+                        !specialties ? "Cargando especialidades..." :
+                        specialties.length === 0 ? "No hay especialidades disponibles" :
+                        "Selecciona la especialidad de la plataforma"
+                      } />
                     </SelectTrigger>
                     <SelectContent>
                       {(specialties ?? []).map((s: any) => (
@@ -527,9 +367,15 @@ export default function RegisterProfessional() {
                       ))}
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-muted-foreground">
-                    La categoría bajo la que aparecerás en la plataforma para los usuarios.
-                  </p>
+                  {specialties && specialties.length === 0 ? (
+                    <p className="text-xs text-destructive">
+                      No hay especialidades disponibles. Contacta al administrador.
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      La categoría bajo la que aparecerás en la plataforma para los usuarios.
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -618,71 +464,28 @@ export default function RegisterProfessional() {
                   required
                 />
 
-                {/* No campo selected yet */}
-                {!form.campo && (
-                  <div className="rounded-xl border border-dashed border-border p-5 text-center">
-                    <FileText className="w-8 h-8 text-muted-foreground/50 mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground">
-                      Selecciona tu campo de especialidad para ver qué documentos adicionales se requieren.
-                    </p>
+                {/* Cédula profesional (opcional) */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="licenseNumber" className="text-sm font-semibold">
+                      Número de cédula profesional
+                    </Label>
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                      Opcional — da más confianza
+                    </span>
                   </div>
-                )}
+                  <Input id="licenseNumber" placeholder="Ej: 12345678 (opcional)"
+                    value={form.licenseNumber} onChange={(e) => handleChange("licenseNumber", e.target.value)} />
+                </div>
 
-                {/* Cédula obligatoria */}
-                {docCategory === "mandatory_cedula" && (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Label htmlFor="licenseNumber" className="text-sm font-semibold">
-                        Número de cédula profesional <span className="text-red-500">*</span>
-                      </Label>
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700 border border-red-200">
-                        <AlertTriangle className="w-3 h-3" />
-                        Requerido por ley
-                      </span>
-                    </div>
-                    <Input id="licenseNumber" placeholder="Ej: 12345678"
-                      value={form.licenseNumber} onChange={(e) => handleChange("licenseNumber", e.target.value)} />
-                  </div>
-                )}
-
-                {/* Cédula opcional */}
-                {docCategory === "optional_cedula" && (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Label htmlFor="licenseNumber" className="text-sm font-semibold">
-                        Número de cédula profesional
-                      </Label>
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
-                        Opcional — da más confianza
-                      </span>
-                    </div>
-                    <Input id="licenseNumber" placeholder="Ej: 12345678 (opcional)"
-                      value={form.licenseNumber} onChange={(e) => handleChange("licenseNumber", e.target.value)} />
-                  </div>
-                )}
-
-                {/* Certificaciones — obligatorias para optional_cedula y certificates_only */}
-                {(docCategory === "optional_cedula" || docCategory === "certificates_only") && (
-                  <FileUploadField
-                    label="Certificaciones y títulos"
-                    description="PDF, JPG o PNG — máximo 10 MB"
-                    accept="application/pdf,image/jpeg,image/png,image/webp"
-                    file={certifications}
-                    onChange={setCertifications}
-                    required
-                  />
-                )}
-
-                {/* Certificaciones — opcionales para mandatory_cedula */}
-                {docCategory === "mandatory_cedula" && (
-                  <FileUploadField
-                    label="Certificaciones y títulos"
-                    description="PDF, JPG o PNG — máximo 10 MB (opcional)"
-                    accept="application/pdf,image/jpeg,image/png,image/webp"
-                    file={certifications}
-                    onChange={setCertifications}
-                  />
-                )}
+                {/* Certificaciones (opcional) */}
+                <FileUploadField
+                  label="Certificaciones y títulos"
+                  description="PDF, JPG o PNG — máximo 10 MB (opcional)"
+                  accept="application/pdf,image/jpeg,image/png,image/webp"
+                  file={certifications}
+                  onChange={setCertifications}
+                />
               </CardContent>
             </Card>
 
