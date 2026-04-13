@@ -1111,7 +1111,7 @@ export const appRouter = router({
         const dbInst = await db.getDb();
         const profRow = await new Promise<any>((resolve) => {
           (dbInst as any).$client.execute(
-            "SELECT p.userId, u.name, u.email, p.paymentMethod FROM professionals p JOIN users u ON u.id = p.userId WHERE p.id = ? LIMIT 1",
+            "SELECT p.userId, u.name, u.email FROM professionals p JOIN users u ON u.id = p.userId WHERE p.id = ? LIMIT 1",
             [professionalId],
             (err: any, results: any) => {
               if (err) console.error("[Withdrawal:approve] profRow query error:", err?.message);
@@ -1121,10 +1121,10 @@ export const appRouter = router({
         });
         console.log("[Withdrawal:approve] profRow:", profRow ? `name=${profRow.name} email=${profRow.email}` : "null");
 
-        // Get withdrawal method from the request itself
+        // Get withdrawal details from the request itself
         const wrRow = await new Promise<any>((resolve) => {
           (dbInst as any).$client.execute(
-            "SELECT paymentMethod FROM withdrawalRequests WHERE id = ? LIMIT 1",
+            "SELECT paymentMethod, paymentDetails, amount FROM withdrawalRequests WHERE id = ? LIMIT 1",
             [input.withdrawalId],
             (err: any, results: any) => {
               if (err) console.error("[Withdrawal:approve] wrRow query error:", err?.message);
