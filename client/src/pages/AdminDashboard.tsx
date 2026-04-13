@@ -62,7 +62,7 @@ export default function AdminDashboard() {
   const { user, isAuthenticated, loading } = useAuth();
   const [activeTab, setActiveTab] = useState<"overview" | "profesionales" | "activos" | "especialidades" | "planes" | "herramientas" | "retiros">("overview");
   const [rejectReason, setRejectReason] = useState<Record<number, string>>({});
-  const [paymentProof, setPaymentProof] = useState<Record<number, string>>({});
+  const [proofFile, setProofFile] = useState<Record<number, { base64: string; name: string; mimeType: string } | null>>({});
   const [tierSelect, setTierSelect] = useState<Record<number, "basic" | "pro">>({});
   const [expandedBio, setExpandedBio] = useState<Record<number, boolean>>({});
   const [newSpecialty, setNewSpecialty] = useState({ name: "", description: "" });
@@ -871,23 +871,42 @@ export default function AdminDashboard() {
                             <p><span className="font-medium">Solicitado:</span> {format(new Date(w.createdAt), "d MMM yyyy 'a las' HH:mm", { locale: es })}</p>
                           </div>
                         </div>
-                        <div className="flex flex-col gap-2 flex-shrink-0">
+                        <div className="flex flex-col gap-2 flex-shrink-0 w-52">
+                          <label className="text-[10px] text-muted-foreground font-medium">Comprobante (opcional)</label>
                           <input
-                            type="text"
-                            placeholder="Comprobante (URL o referencia, opcional)"
-                            value={paymentProof[w.id] ?? ""}
-                            onChange={(e) => setPaymentProof((prev) => ({ ...prev, [w.id]: e.target.value }))}
-                            className="text-xs border border-border rounded px-2 py-1 w-52 bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+                            type="file"
+                            accept="image/*,application/pdf"
+                            className="text-xs text-muted-foreground file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-muted file:text-muted-foreground hover:file:bg-muted/80 cursor-pointer"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0] ?? null;
+                              if (!file) {
+                                setProofFile((prev) => ({ ...prev, [w.id]: null }));
+                                return;
+                              }
+                              const base64 = await new Promise<string>((resolve, reject) => {
+                                const reader = new FileReader();
+                                reader.onload = () => resolve((reader.result as string).split(",")[1]);
+                                reader.onerror = reject;
+                                reader.readAsDataURL(file);
+                              });
+                              setProofFile((prev) => ({ ...prev, [w.id]: { base64, name: file.name, mimeType: file.type } }));
+                            }}
                           />
+                          {proofFile[w.id] && (
+                            <p className="text-[10px] text-emerald-600 truncate">{proofFile[w.id]!.name}</p>
+                          )}
                           <Button
                             size="sm"
                             className="gradient-brand text-white border-0"
                             disabled={approveWithdrawalMutation.isPending}
                             onClick={() => {
                               if (window.confirm(`¿Confirmar pago de $${parseFloat(w.amount).toLocaleString("es-MX")} MXN a ${w.professionalName}?`)) {
+                                const proof = proofFile[w.id];
                                 approveWithdrawalMutation.mutate({
                                   withdrawalId: w.id,
-                                  paymentProof: paymentProof[w.id] || undefined,
+                                  attachmentBase64: proof?.base64,
+                                  attachmentName: proof?.name,
+                                  attachmentMimeType: proof?.mimeType,
                                 });
                               }
                             }}

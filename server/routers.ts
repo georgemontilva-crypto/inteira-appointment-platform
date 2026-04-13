@@ -1084,12 +1084,14 @@ export const appRouter = router({
     approveWithdrawal: protectedProcedure
       .input(z.object({
         withdrawalId: z.number(),
-        paymentProof: z.string().max(1000).optional(),
+        attachmentBase64: z.string().optional(),
+        attachmentName: z.string().max(255).optional(),
+        attachmentMimeType: z.string().max(100).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
         const { approveWithdrawalRequest } = await import("./professionalWallet");
-        const { professionalId, amount } = await approveWithdrawalRequest(input.withdrawalId, input.paymentProof);
+        const { professionalId, amount } = await approveWithdrawalRequest(input.withdrawalId);
 
         // Look up professional user for notification/email
         const dbInst = await db.getDb();
@@ -1125,27 +1127,30 @@ export const appRouter = router({
         const profEmail = profRow?.email ?? "";
         const profName = profRow?.name ?? "Profesional";
         const paymentMethod = wrRow?.paymentMethod ?? "other";
+        const attachment = (input.attachmentBase64 && input.attachmentName)
+          ? { base64: input.attachmentBase64, name: input.attachmentName, mimeType: input.attachmentMimeType ?? "application/octet-stream" }
+          : undefined;
 
         if (profEmail) {
-          // Email to professional
+          // Email to professional (with attachment if provided)
           sendWithdrawalPaidEmail({
             professionalEmail: profEmail,
             professionalName: profName,
             amount,
             paymentMethod,
-            paymentProof: input.paymentProof,
+            attachment,
           })
             .then((ok) => console.log(`[Withdrawal] Paid email to professional ${ok ? "sent to " + profEmail : "failed (Resend returned false)"}`))
             .catch((err) => console.error("[Withdrawal] Paid email error:", err?.message));
 
-          // Confirmation email to admin
+          // Confirmation email to admin (with attachment as well)
           const adminEmail = process.env.ADMIN_EMAIL ?? "Adm@inteira.mx";
           sendWithdrawalPaidEmail({
             professionalEmail: adminEmail,
             professionalName: `Admin — pago procesado a ${profName}`,
             amount,
             paymentMethod,
-            paymentProof: input.paymentProof,
+            attachment,
           })
             .then((ok) => console.log(`[Withdrawal] Admin confirmation email ${ok ? "sent" : "failed (Resend returned false)"}`))
             .catch((err) => console.error("[Withdrawal] Admin confirmation email error:", err?.message));
