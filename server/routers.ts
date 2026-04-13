@@ -97,19 +97,21 @@ export const appRouter = router({
         const dbInstance = await db.getDb();
         if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
-        // Build dynamic SQL using safe string escaping (no callbacks)
-        const esc = (v: any) => v === null ? "NULL" : `'${String(v).replace(/'/g, "''")}'`;
+        // Build dynamic SET clause with ? placeholders — no string escaping
         const setParts: string[] = [];
+        const params: any[] = [];
 
-        if (input.name !== undefined) { setParts.push(`\`name\` = ${esc(input.name)}`); }
-        if (input.phone !== undefined) { setParts.push(`\`phone\` = ${esc(input.phone)}`); }
-        if (input.bio !== undefined) { setParts.push(`\`bio\` = ${esc(input.bio)}`); }
-        if (input.profileImage !== undefined) { setParts.push(`\`profileImage\` = ${esc(input.profileImage)}`); }
+        if (input.name !== undefined) { setParts.push("`name` = ?"); params.push(input.name); }
+        if (input.phone !== undefined) { setParts.push("`phone` = ?"); params.push(input.phone); }
+        if (input.bio !== undefined) { setParts.push("`bio` = ?"); params.push(input.bio); }
+        if (input.profileImage !== undefined) { setParts.push("`profileImage` = ?"); params.push(input.profileImage); }
         setParts.push("`updatedAt` = NOW()");
 
         if (setParts.length > 1) {
+          params.push(ctx.user.id);
           await dbInstance.execute(
-            `UPDATE \`users\` SET ${setParts.join(", ")} WHERE \`id\` = ${Number(ctx.user.id)}`
+            `UPDATE \`users\` SET ${setParts.join(", ")} WHERE \`id\` = ?`,
+            params
           );
         }
 
@@ -495,19 +497,20 @@ export const appRouter = router({
         const dbInstance = await db.getDb();
         if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
-        // Use raw SQL with safe string escaping (no callbacks, no placeholders)
-        const esc = (v: any) => v === null ? "NULL" : `'${String(v).replace(/'/g, "''")}'`;
+        // Build dynamic SET clause with ? placeholders — no string escaping
         const setParts: string[] = [];
+        const params: any[] = [];
 
-        if (input.bio !== undefined) { setParts.push(`\`bio\` = ${esc(input.bio)}`); }
-        if (input.education !== undefined) { setParts.push(`\`education\` = ${esc(input.education)}`); }
-        if (input.certifications !== undefined) { setParts.push(`\`certifications\` = ${esc(input.certifications)}`); }
-        if (input.yearsOfExperience !== undefined) { setParts.push(`\`yearsOfExperience\` = ${Number(input.yearsOfExperience)}`); }
+        if (input.bio !== undefined) { setParts.push("`bio` = ?"); params.push(input.bio); }
+        if (input.education !== undefined) { setParts.push("`education` = ?"); params.push(input.education); }
+        if (input.certifications !== undefined) { setParts.push("`certifications` = ?"); params.push(input.certifications); }
+        if (input.yearsOfExperience !== undefined) { setParts.push("`yearsOfExperience` = ?"); params.push(Number(input.yearsOfExperience)); }
         setParts.push("`updatedAt` = NOW()");
 
         if (setParts.length > 1) {
           await dbInstance.execute(
-            `UPDATE \`professionals\` SET ${setParts.join(", ")} WHERE \`id\` = ${Number(professional.id)}`
+            `UPDATE \`professionals\` SET ${setParts.join(", ")} WHERE \`id\` = ?`,
+            [...params, professional.id]
           );
         }
 
@@ -515,7 +518,8 @@ export const appRouter = router({
         if (input.name !== undefined && input.name.trim()) {
           try {
             await dbInstance.execute(
-              `UPDATE \`users\` SET \`name\` = ${esc(input.name.trim())} WHERE \`id\` = ${Number(ctx.user.id)}`
+              "UPDATE `users` SET `name` = ?, `updatedAt` = NOW() WHERE `id` = ?",
+              [input.name.trim(), ctx.user.id]
             );
           } catch {
             // silently ignore
@@ -526,7 +530,8 @@ export const appRouter = router({
         if (input.languages !== undefined) {
           try {
             await dbInstance.execute(
-              `UPDATE \`professionals\` SET \`languages\` = ${esc(input.languages)} WHERE \`id\` = ${Number(professional.id)}`
+              "UPDATE `professionals` SET `languages` = ? WHERE `id` = ?",
+              [input.languages, professional.id]
             );
           } catch {
             // Column doesn't exist yet in DB — silently ignore

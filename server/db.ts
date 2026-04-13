@@ -78,58 +78,56 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       : now;
     const role = user.role ?? (user.openId === ENV.ownerOpenId ? "admin" : "user");
 
-    // Escape single quotes in string values
-    const esc = (v: string | null) => v === null ? "NULL" : `'${String(v).replace(/'/g, "''")}'`;
-
-    // Build INSERT with only columns that exist
+    // Build INSERT with only columns that exist — use ? placeholders throughout
     const insertCols: string[] = ["openId", "email"];
-    const insertVals: string[] = [esc(user.openId), esc(user.email)];
+    const insertParams: any[] = [user.openId, user.email];
     const updateParts: string[] = [];
+    const updateParams: any[] = [];
 
     if (cols.has("name")) {
-      insertCols.push("name"); insertVals.push(esc(name));
+      insertCols.push("name"); insertParams.push(name);
       // Do NOT overwrite name on update — the user may have changed it via profile settings.
       // Only set name on INSERT (new user). On duplicate key, keep the existing name in DB.
     }
     if (cols.has("lastSignedIn")) {
-      insertCols.push("lastSignedIn"); insertVals.push(`'${lastSignedIn}'`);
-      updateParts.push(`\`lastSignedIn\` = '${lastSignedIn}'`);
+      insertCols.push("lastSignedIn"); insertParams.push(lastSignedIn);
+      updateParts.push("`lastSignedIn` = ?"); updateParams.push(lastSignedIn);
     }
     if (cols.has("createdAt")) {
-      insertCols.push("createdAt"); insertVals.push(`'${now}'`);
+      insertCols.push("createdAt"); insertParams.push(now);
     }
     if (cols.has("updatedAt")) {
-      insertCols.push("updatedAt"); insertVals.push(`'${now}'`);
-      updateParts.push(`\`updatedAt\` = '${now}'`);
+      insertCols.push("updatedAt"); insertParams.push(now);
+      updateParts.push("`updatedAt` = ?"); updateParams.push(now);
     }
     if (cols.has("loginMethod") && user.loginMethod) {
-      insertCols.push("loginMethod"); insertVals.push(esc(user.loginMethod ?? null));
-      updateParts.push(`\`loginMethod\` = ${esc(user.loginMethod ?? null)}`);
+      insertCols.push("loginMethod"); insertParams.push(user.loginMethod ?? null);
+      updateParts.push("`loginMethod` = ?"); updateParams.push(user.loginMethod ?? null);
     }
     // Support both profileImage and avatarUrl column names (schema drift)
     const profileImageVal = (user as any).profileImage ?? null;
     if (profileImageVal !== null) {
       if (cols.has("profileImage")) {
-        insertCols.push("profileImage"); insertVals.push(esc(profileImageVal));
-        updateParts.push(`\`profileImage\` = ${esc(profileImageVal)}`);
+        insertCols.push("profileImage"); insertParams.push(profileImageVal);
+        updateParts.push("`profileImage` = ?"); updateParams.push(profileImageVal);
       }
       if (cols.has("avatarUrl")) {
-        insertCols.push("avatarUrl"); insertVals.push(esc(profileImageVal));
-        updateParts.push(`\`avatarUrl\` = ${esc(profileImageVal)}`);
+        insertCols.push("avatarUrl"); insertParams.push(profileImageVal);
+        updateParts.push("`avatarUrl` = ?"); updateParams.push(profileImageVal);
       }
     }
 
     if (updateParts.length === 0) {
-      updateParts.push(`\`email\` = ${esc(user.email)}`);
+      updateParts.push("`email` = ?"); updateParams.push(user.email);
     }
 
     const insertSQL = [
       `INSERT INTO \`users\` (${insertCols.map(c => `\`${c}\``).join(", ")})`,
-      `VALUES (${insertVals.join(", ")})`,
+      `VALUES (${insertCols.map(() => "?").join(", ")})`,
       `ON DUPLICATE KEY UPDATE ${updateParts.join(", ")}`,
     ].join(" ");
 
-    await db.execute(insertSQL);
+    await db.execute(insertSQL, [...insertParams, ...updateParams]);
 
     // Try to update role separately (column may or may not exist)
     if (cols.has("role")) {
@@ -160,8 +158,7 @@ export async function getUserByOpenId(openId: string) {
   }
 
   try {
-    const esc = (v: string) => `'${v.replace(/'/g, "''")}'`;
-    const [rows] = await db.execute(`SELECT * FROM \`users\` WHERE \`openId\` = ${esc(openId)} LIMIT 1`) as any;
+    const [rows] = await db.execute("SELECT * FROM `users` WHERE `openId` = ? LIMIT 1", [openId]) as any;
     const arr = Array.isArray(rows) ? rows : [];
     return arr.length > 0 ? arr[0] : undefined;
   } catch (error) {
@@ -190,8 +187,7 @@ export async function getUserByEmail(email: string) {
   const db = await getDb();
   if (!db) return undefined;
   try {
-    const esc = (v: string) => `'${v.replace(/'/g, "''")}'`;
-    const [rows] = await db.execute(`SELECT * FROM \`users\` WHERE \`email\` = ${esc(email)} LIMIT 1`) as any;
+    const [rows] = await db.execute("SELECT * FROM `users` WHERE `email` = ? LIMIT 1", [email]) as any;
     const arr = Array.isArray(rows) ? rows : [];
     return arr.length > 0 ? arr[0] : undefined;
   } catch (error) {
