@@ -579,10 +579,12 @@ export const appointmentRouter = router({
         if (!professional) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Profesional no encontrado" });
 
         const { creditProfessionalEarning } = await import("./professionalWallet");
+        const sessionType = (appointment as any).durationMinutes > 60 ? "premium" : "basic";
         const { netAmount } = await creditProfessionalEarning(
           professional.id,
           input.appointmentId,
-          (professional.tier ?? "basic") as "basic" | "pro"
+          (professional.tier ?? "basic") as "basic" | "pro",
+          sessionType
         );
 
         // Notify professional

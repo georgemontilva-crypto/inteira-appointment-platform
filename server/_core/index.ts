@@ -425,7 +425,7 @@ async function runStartupMigrations() {
     try {
       const noShowUnpaid = await new Promise<any[]>((resolve) => {
         client.execute(
-          `SELECT a.id, a.professionalId, p.tier
+          `SELECT a.id, a.professionalId, a.durationMinutes, p.tier
            FROM appointments a
            JOIN professionals p ON p.id = a.professionalId
            WHERE a.status = 'no-show'
@@ -444,7 +444,7 @@ async function runStartupMigrations() {
         console.log(`[Migration] Backfilling ${noShowUnpaid.length} unpaid no-show appointment(s)`);
         const { creditProfessionalEarning } = await import("../professionalWallet");
         for (const row of noShowUnpaid) {
-          await creditProfessionalEarning(row.professionalId, row.id, (row.tier ?? "basic") as "basic" | "pro")
+          await creditProfessionalEarning(row.professionalId, row.id, (row.tier ?? "basic") as "basic" | "pro", row.durationMinutes > 60 ? "premium" : "basic")
             .catch((e: any) => console.error(`[Migration] backfill credit apt ${row.id}:`, e?.message));
           console.log(`[Migration] Backfilled earning for professional ${row.professionalId}, appointment ${row.id}`);
         }
@@ -846,7 +846,7 @@ setInterval(async () => {
       const { createNotification } = await import("../notifications");
       for (const row of noShowCandidates) {
         await confirmCredits(row.id).catch(() => {});
-        await creditProfessionalEarning(row.professionalId, row.id, (row.tier ?? "basic") as "basic" | "pro").catch(() => {});
+        await creditProfessionalEarning(row.professionalId, row.id, (row.tier ?? "basic") as "basic" | "pro", row.durationMinutes > 60 ? "premium" : "basic").catch(() => {});
         console.log(`[Cron] No-show: professional ${row.professionalId} credited for appointment ${row.id}`);
         // Notify user their credits were consumed for the no-show
         if (row.userEmail) {
@@ -872,7 +872,7 @@ setInterval(async () => {
     // Check 2: auto-completar pending_review con más de 8 horas sin calificar
     const pendingRows = await new Promise<any[]>((resolve) => {
       client.execute(
-        `SELECT a.id, a.professionalId, a.userId AS clientUserId, p.tier, p.userId AS profUserId
+        `SELECT a.id, a.professionalId, a.userId AS clientUserId, a.durationMinutes, p.tier, p.userId AS profUserId
          FROM appointments a
          JOIN professionals p ON p.id = a.professionalId
          WHERE a.status = 'pending_review'
@@ -910,7 +910,7 @@ setInterval(async () => {
             );
           });
           const { netAmount } = await creditProfessionalEarning(
-            row.professionalId, row.id, (row.tier ?? "basic") as "basic" | "pro"
+            row.professionalId, row.id, (row.tier ?? "basic") as "basic" | "pro", row.durationMinutes > 60 ? "premium" : "basic"
           );
           createNotification({
             userId: row.profUserId,

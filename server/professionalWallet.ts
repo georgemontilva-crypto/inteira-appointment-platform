@@ -6,18 +6,21 @@ export const PROFESSIONAL_COMMISSIONS: Record<"basic" | "pro", number> = {
   pro:   0.15, // 15% platform fee — professional earns 85%
 };
 
-const GROSS_AMOUNT_MXN = 350; // Fixed session cost in MXN
+// Gross session amounts in MXN — must match credit costs in SESSION_TYPES
+export const GROSS_AMOUNT_BASIC   = 350;
+export const GROSS_AMOUNT_PREMIUM = 1500;
 
 export async function creditProfessionalEarning(
   professionalId: number,
   appointmentId: number,
-  tier: "basic" | "pro"
+  tier: "basic" | "pro",
+  sessionType: "basic" | "premium" = "basic"
 ): Promise<{ netAmount: number; commissionAmount: number }> {
   const db = await getDb();
   if (!db) throw new Error("DB not available");
 
   const commissionRate = PROFESSIONAL_COMMISSIONS[tier];
-  const grossAmount = GROSS_AMOUNT_MXN;
+  const grossAmount = sessionType === "premium" ? GROSS_AMOUNT_PREMIUM : GROSS_AMOUNT_BASIC;
   const commissionAmount = Math.round(grossAmount * commissionRate * 100) / 100;
   const netAmount = Math.round((grossAmount - commissionAmount) * 100) / 100;
 
