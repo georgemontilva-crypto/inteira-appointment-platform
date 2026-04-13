@@ -93,6 +93,14 @@ export default function ProfessionalDashboard() {
   const scrollCarousel = (dir: "left" | "right") => {
     carouselRef.current?.scrollBy({ left: dir === "left" ? -220 : 220, behavior: "smooth" });
   };
+  const [viewportW, setViewportW] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth : 1024
+  );
+  useEffect(() => {
+    const fn = () => setViewportW(window.innerWidth);
+    window.addEventListener("resize", fn);
+    return () => window.removeEventListener("resize", fn);
+  }, []);
 
   const { data: profile, isLoading: loadingProfile, refetch: refetchProfile, error: profileError } = trpc.professional.getProfile.useQuery(
     undefined,
@@ -410,6 +418,14 @@ export default function ProfessionalDashboard() {
   const upcomingAppointments = appointments?.filter((a) => a.status === "scheduled") ?? [];
   const pastAppointments = appointments?.filter((a) => a.status !== "scheduled") ?? [];
 
+  // Card width: 3 on desktop (≥1024), 2 on tablet (≥640), 1.2 on mobile
+  const cardMinWidth: React.CSSProperties =
+    viewportW >= 1024
+      ? { minWidth: "calc((100% - 48px) / 3)" }   // 3 cards, 2 gaps × 24px
+      : viewportW >= 640
+      ? { minWidth: "calc((100% - 24px) / 2)" }    // 2 cards, 1 gap × 24px
+      : { minWidth: "85%" };                        // 1.2 cards on mobile
+
   // Withdrawal modal derived values — must be at component level (used outside ganancias IIFE)
   const wAmount = parseFloat(withdrawalForm.amount || "0");
   const wBalance = parseFloat((wallet as any)?.wallet?.balance ?? "0");
@@ -574,9 +590,10 @@ export default function ProfessionalDashboard() {
                   {upcomingAppointments.map((apt) => (
                     <div
                       key={apt.id}
-                      className="min-w-[75vw] sm:min-w-[260px] lg:min-w-[280px] flex-shrink-0 rounded-xl border border-border bg-card hover:shadow-md transition-shadow"
+                      className="flex-shrink-0 rounded-xl border border-border bg-card hover:shadow-md transition-shadow"
+                      style={cardMinWidth}
                     >
-                      <div className="py-2 px-3">
+                      <div className="p-4">
                         {/* Top row: avatar + name + countdown badge */}
                         <div className="flex items-center gap-2">
                           {(apt as any).userProfileImage ? (
