@@ -69,16 +69,26 @@ export async function getProfessionalWallet(professionalId: number) {
   const db = await getDb();
   if (!db) return null;
   const client = (db as any).$client;
-  return new Promise<any>((resolve, reject) => {
-    client.execute(
-      "SELECT * FROM professionalWallet WHERE professionalId = ? LIMIT 1",
-      [professionalId],
-      (err: any, results: any) => {
-        if (err) reject(err);
-        else resolve(Array.isArray(results) ? results[0] ?? null : null);
-      }
-    );
-  });
+
+  const exec = (sql: string, params: any[] = []) =>
+    new Promise<any>((resolve, reject) => {
+      client.execute(sql, params, (err: any, results: any) => {
+        if (err) reject(err); else resolve(results);
+      });
+    });
+
+  // Ensure a wallet row always exists — create with zeros if missing
+  await exec(
+    `INSERT IGNORE INTO professionalWallet (professionalId, balance, pendingWithdrawal, totalEarned, totalWithdrawn)
+     VALUES (?, 0, 0, 0, 0)`,
+    [professionalId]
+  );
+
+  const rows = await exec(
+    "SELECT * FROM professionalWallet WHERE professionalId = ? LIMIT 1",
+    [professionalId]
+  );
+  return Array.isArray(rows) ? rows[0] ?? null : null;
 }
 
 export async function getProfessionalEarningsHistory(professionalId: number) {

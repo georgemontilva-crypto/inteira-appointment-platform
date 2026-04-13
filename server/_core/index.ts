@@ -453,6 +453,24 @@ async function runStartupMigrations() {
       console.error("[Migration] noshow-backfill failed:", e?.message);
     }
 
+    // Idempotent: ensure every professional has a professionalWallet row
+    try {
+      await new Promise<void>((resolve) => {
+        client.execute(
+          `INSERT IGNORE INTO professionalWallet (professionalId, balance, pendingWithdrawal, totalEarned, totalWithdrawn)
+           SELECT id, 0, 0, 0, 0 FROM professionals
+           WHERE id NOT IN (SELECT professionalId FROM professionalWallet)`,
+          [],
+          (err: any) => {
+            if (err) console.error("[Migration] professionalWallet seed failed:", err?.message);
+            resolve();
+          }
+        );
+      });
+    } catch (e: any) {
+      console.error("[Migration] professionalWallet seed error:", e?.message);
+    }
+
     // Drop FK reviews_professionalId_fk if it points to a non-existent table
     try {
       await new Promise<void>((resolve) => {
