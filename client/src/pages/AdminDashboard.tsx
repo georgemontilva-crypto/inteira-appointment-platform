@@ -192,7 +192,7 @@ const STATUS_MAP: Record<string, { label: string; cls: string }> = {
 
 export default function AdminDashboard() {
   const { user, isAuthenticated, loading } = useAuth();
-  const [activeTab, setActiveTab] = useState<"overview" | "profesionales" | "activos" | "especialidades" | "planes" | "herramientas" | "retiros">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "profesionales" | "activos" | "especialidades" | "planes" | "herramientas" | "codigos" | "retiros">("overview");
   const [rejectReason, setRejectReason] = useState<Record<number, string>>({});
   const [proofFile, setProofFile] = useState<Record<number, { base64: string; name: string; mimeType: string } | null>>({});
   const [tierSelect, setTierSelect] = useState<Record<number, "basic" | "pro">>({});
@@ -407,6 +407,7 @@ export default function AdminDashboard() {
               { key: "especialidades",  label: "Especialidades", icon: <Award className="w-4 h-4" /> },
               { key: "planes",          label: "Planes",         icon: <Settings className="w-4 h-4" /> },
       { key: "herramientas",    label: "Herramientas",   icon: <Wrench className="w-4 h-4" /> },
+              { key: "codigos",         label: "Códigos",        icon: <Tag className="w-4 h-4" /> },
               { key: "retiros",         label: "Retiros",        icon: <CreditCard className="w-4 h-4" /> },
             ] as const).map((tab) => (
               <button
@@ -1147,7 +1148,7 @@ export default function AdminDashboard() {
               Herramientas del sistema
             </h2>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Columna izquierda — herramientas del sistema */}
+            {/* Herramientas del sistema */}
             <div className="space-y-6">
 
             {/* Cron Jobs */}
@@ -1243,171 +1244,172 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
 
-            </div>{/* /columna izquierda */}
+            </div>{/* /herramientas */}
+            </div>{/* /grid */}
+          </div>
+        )}
 
-            {/* Columna derecha — Códigos de descuento */}
-            <div>
-              <h3 className="text-base font-bold flex items-center gap-2 mb-4" style={{ fontFamily: "Poppins, sans-serif" }}>
-                <Tag className="w-4 h-4 text-primary" />
-                Códigos de descuento
-              </h3>
-              <div className="grid grid-cols-1 gap-6">
-                {/* Columna izquierda — lista de códigos existentes */}
-                <Card className="border-border">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm">Códigos existentes</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2 max-h-[520px] overflow-y-auto pr-1">
-                      {(!discountCodes || discountCodes.length === 0) ? (
-                        <p className="text-sm text-muted-foreground text-center py-8">No hay códigos creados</p>
-                      ) : (
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-xs">
-                            <thead>
-                              <tr className="text-muted-foreground border-b">
-                                <th className="text-left pb-2 font-medium">Código</th>
-                                <th className="text-left pb-2 font-medium">Descuento</th>
-                                <th className="text-left pb-2 font-medium">Usos</th>
-                                <th className="text-left pb-2 font-medium">Vence</th>
-                                <th className="text-left pb-2 font-medium">Estado</th>
-                                <th className="pb-2" />
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-border">
-                              {(discountCodes as any[]).map((dc) => {
-                                const isExpired = dc.expiresAt && new Date(dc.expiresAt) < new Date();
-                                const isExhausted = dc.maxUses !== null && dc.usedCount >= dc.maxUses;
-                                return (
-                                  <tr key={dc.id} className="hover:bg-muted/30 transition-colors">
-                                    <td className="py-2 font-mono font-semibold">{dc.code}</td>
-                                    <td className="py-2">
-                                      <span className="flex items-center gap-0.5">
-                                        {dc.type === "percentage"
-                                          ? <><Percent className="w-3 h-3" />{Number(dc.value)}%</>
-                                          : <>${Number(dc.value)} MXN</>
+        {/* ══ TAB: CÓDIGOS DE DESCUENTO ════════════════════════════════════ */}
+        {activeTab === "codigos" && (
+          <div className="space-y-6">
+            <h2 className="text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
+              Códigos de descuento
+            </h2>
+            <div className="grid grid-cols-1 gap-6">
+              {/* Lista de códigos existentes */}
+              <Card className="border-border">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm">Códigos existentes</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2 max-h-[520px] overflow-y-auto pr-1">
+                    {(!discountCodes || discountCodes.length === 0) ? (
+                      <p className="text-sm text-muted-foreground text-center py-8">No hay códigos creados</p>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr className="text-muted-foreground border-b">
+                              <th className="text-left pb-2 font-medium">Código</th>
+                              <th className="text-left pb-2 font-medium">Descuento</th>
+                              <th className="text-left pb-2 font-medium">Usos</th>
+                              <th className="text-left pb-2 font-medium">Vence</th>
+                              <th className="text-left pb-2 font-medium">Estado</th>
+                              <th className="pb-2" />
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-border">
+                            {(discountCodes as any[]).map((dc) => {
+                              const isExpired = dc.expiresAt && new Date(dc.expiresAt) < new Date();
+                              const isExhausted = dc.maxUses !== null && dc.usedCount >= dc.maxUses;
+                              return (
+                                <tr key={dc.id} className="hover:bg-muted/30 transition-colors">
+                                  <td className="py-2 font-mono font-semibold">{dc.code}</td>
+                                  <td className="py-2">
+                                    <span className="flex items-center gap-0.5">
+                                      {dc.type === "percentage"
+                                        ? <><Percent className="w-3 h-3" />{Number(dc.value)}%</>
+                                        : <>${Number(dc.value)} MXN</>
+                                      }
+                                    </span>
+                                  </td>
+                                  <td className="py-2 text-muted-foreground">
+                                    {dc.usedCount}{dc.maxUses !== null ? `/${dc.maxUses}` : ""}
+                                  </td>
+                                  <td className="py-2 text-muted-foreground">
+                                    {dc.expiresAt ? format(new Date(dc.expiresAt), "dd/MM/yy") : "—"}
+                                  </td>
+                                  <td className="py-2">
+                                    {isExpired || isExhausted ? (
+                                      <Badge className="bg-gray-100 text-gray-600 border-0 text-[10px]">
+                                        {isExpired ? "Expirado" : "Agotado"}
+                                      </Badge>
+                                    ) : dc.isActive ? (
+                                      <Badge className="bg-emerald-100 text-emerald-700 border-0 text-[10px]">Activo</Badge>
+                                    ) : (
+                                      <Badge className="bg-amber-100 text-amber-700 border-0 text-[10px]">Inactivo</Badge>
+                                    )}
+                                  </td>
+                                  <td className="py-2">
+                                    <div className="flex items-center gap-1 justify-end">
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                                        title={dc.isActive ? "Desactivar" : "Activar"}
+                                        onClick={() => toggleDiscountMutation.mutate({ id: dc.id, isActive: !dc.isActive })}
+                                      >
+                                        {dc.isActive
+                                          ? <ToggleRight className="w-4 h-4 text-emerald-600" />
+                                          : <ToggleLeft className="w-4 h-4 text-muted-foreground" />
                                         }
-                                      </span>
-                                    </td>
-                                    <td className="py-2 text-muted-foreground">
-                                      {dc.usedCount}{dc.maxUses !== null ? `/${dc.maxUses}` : ""}
-                                    </td>
-                                    <td className="py-2 text-muted-foreground">
-                                      {dc.expiresAt ? format(new Date(dc.expiresAt), "dd/MM/yy") : "—"}
-                                    </td>
-                                    <td className="py-2">
-                                      {isExpired || isExhausted ? (
-                                        <Badge className="bg-gray-100 text-gray-600 border-0 text-[10px]">
-                                          {isExpired ? "Expirado" : "Agotado"}
-                                        </Badge>
-                                      ) : dc.isActive ? (
-                                        <Badge className="bg-emerald-100 text-emerald-700 border-0 text-[10px]">Activo</Badge>
-                                      ) : (
-                                        <Badge className="bg-amber-100 text-amber-700 border-0 text-[10px]">Inactivo</Badge>
-                                      )}
-                                    </td>
-                                    <td className="py-2">
-                                      <div className="flex items-center gap-1 justify-end">
-                                        <Button
-                                          size="sm"
-                                          variant="ghost"
-                                          className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
-                                          title={dc.isActive ? "Desactivar" : "Activar"}
-                                          onClick={() => toggleDiscountMutation.mutate({ id: dc.id, isActive: !dc.isActive })}
-                                        >
-                                          {dc.isActive
-                                            ? <ToggleRight className="w-4 h-4 text-emerald-600" />
-                                            : <ToggleLeft className="w-4 h-4 text-muted-foreground" />
-                                          }
-                                        </Button>
-                                        <Button
-                                          size="sm"
-                                          variant="ghost"
-                                          className="h-6 w-6 p-0 text-muted-foreground hover:text-red-600"
-                                          title="Eliminar"
-                                          onClick={() => deleteDiscountMutation.mutate({ id: dc.id })}
-                                        >
-                                          <Trash2 className="w-3.5 h-3.5" />
-                                        </Button>
-                                      </div>
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-6 w-6 p-0 text-muted-foreground hover:text-red-600"
+                                        title="Eliminar"
+                                        onClick={() => deleteDiscountMutation.mutate({ id: dc.id })}
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </Button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
 
-                {/* Columna derecha — formulario nuevo código */}
-                <Card className="border-border">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm">Nuevo código</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <Input
-                      placeholder="CÓDIGO (ej. BIENVENIDA20)"
-                      value={discountForm.code}
-                      onChange={(e) => setDiscountForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))}
-                      className="text-xs h-8 font-mono"
-                      maxLength={50}
-                    />
-                    <div className="grid grid-cols-2 gap-2">
-                      <select
-                        value={discountForm.type}
-                        onChange={(e) => setDiscountForm((f) => ({ ...f, type: e.target.value as "percentage" | "fixed" }))}
-                        className="h-8 rounded-md border border-input bg-background px-2 text-xs"
-                      >
-                        <option value="percentage">Porcentaje (%)</option>
-                        <option value="fixed">Monto fijo ($)</option>
-                      </select>
-                      <Input
-                        type="number"
-                        placeholder={discountForm.type === "percentage" ? "Valor (ej. 20)" : "Valor MXN (ej. 100)"}
-                        value={discountForm.value}
-                        onChange={(e) => setDiscountForm((f) => ({ ...f, value: e.target.value }))}
-                        className="text-xs h-8"
-                        min={0}
-                      />
-                    </div>
+              {/* Formulario nuevo código */}
+              <Card className="border-border">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm">Nuevo código</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Input
+                    placeholder="CÓDIGO (ej. BIENVENIDA20)"
+                    value={discountForm.code}
+                    onChange={(e) => setDiscountForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))}
+                    className="text-xs h-8 font-mono"
+                    maxLength={50}
+                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <select
+                      value={discountForm.type}
+                      onChange={(e) => setDiscountForm((f) => ({ ...f, type: e.target.value as "percentage" | "fixed" }))}
+                      className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+                    >
+                      <option value="percentage">Porcentaje (%)</option>
+                      <option value="fixed">Monto fijo ($)</option>
+                    </select>
                     <Input
                       type="number"
-                      placeholder="Usos máximos (opcional)"
-                      value={discountForm.maxUses}
-                      onChange={(e) => setDiscountForm((f) => ({ ...f, maxUses: e.target.value }))}
+                      placeholder={discountForm.type === "percentage" ? "Valor (ej. 20)" : "Valor MXN (ej. 100)"}
+                      value={discountForm.value}
+                      onChange={(e) => setDiscountForm((f) => ({ ...f, value: e.target.value }))}
                       className="text-xs h-8"
-                      min={1}
+                      min={0}
                     />
-                    <Input
-                      type="date"
-                      placeholder="Fecha de vencimiento (opcional)"
-                      value={discountForm.expiresAt}
-                      onChange={(e) => setDiscountForm((f) => ({ ...f, expiresAt: e.target.value }))}
-                      className="text-xs h-8"
-                    />
-                    <Button
-                      size="sm"
-                      className="gradient-brand text-white border-0 w-full"
-                      disabled={!discountForm.code.trim() || !discountForm.value || createDiscountMutation.isPending}
-                      onClick={() => createDiscountMutation.mutate({
-                        code: discountForm.code.trim(),
-                        type: discountForm.type,
-                        value: parseFloat(discountForm.value),
-                        maxUses: discountForm.maxUses ? parseInt(discountForm.maxUses) : null,
-                        expiresAt: discountForm.expiresAt ? new Date(discountForm.expiresAt).toISOString() : null,
-                      })}
-                    >
-                      <Plus className="w-3.5 h-3.5 mr-1" />
-                      {createDiscountMutation.isPending ? "Creando..." : "Crear código"}
-                    </Button>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>{/* /columna derecha */}
-            </div>{/* /grid */}
+                  </div>
+                  <Input
+                    type="number"
+                    placeholder="Usos máximos (opcional)"
+                    value={discountForm.maxUses}
+                    onChange={(e) => setDiscountForm((f) => ({ ...f, maxUses: e.target.value }))}
+                    className="text-xs h-8"
+                    min={1}
+                  />
+                  <Input
+                    type="date"
+                    placeholder="Fecha de vencimiento (opcional)"
+                    value={discountForm.expiresAt}
+                    onChange={(e) => setDiscountForm((f) => ({ ...f, expiresAt: e.target.value }))}
+                    className="text-xs h-8"
+                  />
+                  <Button
+                    size="sm"
+                    className="gradient-brand text-white border-0 w-full"
+                    disabled={!discountForm.code.trim() || !discountForm.value || createDiscountMutation.isPending}
+                    onClick={() => createDiscountMutation.mutate({
+                      code: discountForm.code.trim(),
+                      type: discountForm.type,
+                      value: parseFloat(discountForm.value),
+                      maxUses: discountForm.maxUses ? parseInt(discountForm.maxUses) : null,
+                      expiresAt: discountForm.expiresAt ? new Date(discountForm.expiresAt).toISOString() : null,
+                    })}
+                  >
+                    <Plus className="w-3.5 h-3.5 mr-1" />
+                    {createDiscountMutation.isPending ? "Creando..." : "Crear código"}
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         )}
 
