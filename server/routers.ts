@@ -1312,6 +1312,42 @@ export const appRouter = router({
       });
     }),
 
+    updateProfessionalTier: protectedProcedure
+      .input(z.object({ professionalId: z.number(), tier: z.enum(["basic", "pro"]) }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+        const dbConn = await db.getDb();
+        if (!dbConn) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const client = (dbConn as any).$client;
+        await new Promise<void>((resolve, reject) => {
+          client.execute(
+            `UPDATE professionals SET tier = ? WHERE id = ?`,
+            [input.tier, input.professionalId],
+            (err: any) => { if (err) reject(err); else resolve(); }
+          );
+        });
+        return { success: true };
+      }),
+
+    getProfessionalDocuments: protectedProcedure
+      .input(z.object({ professionalId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+        const dbConn = await db.getDb();
+        if (!dbConn) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const client = (dbConn as any).$client;
+        return new Promise<any>((resolve, reject) => {
+          client.execute(
+            `SELECT licenseDocument, certifications, licenseNumber FROM professionals WHERE id = ? LIMIT 1`,
+            [input.professionalId],
+            (err: any, results: any) => {
+              if (err) reject(err);
+              else resolve(Array.isArray(results) ? results[0] ?? null : null);
+            }
+          );
+        });
+      }),
+
     // ── Discount codes ────────────────────────────────────────────────────
     createDiscountCode: protectedProcedure
       .input(z.object({

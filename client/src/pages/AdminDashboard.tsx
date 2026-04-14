@@ -16,6 +16,7 @@ import {
   Star, Activity, CreditCard, UserCheck, RefreshCw, Wrench,
   ChevronDown, ChevronUp, FileText, ExternalLink, User,
   Trash2, Pencil, Stethoscope, Tag, Percent, ToggleLeft, ToggleRight,
+  FolderOpen, X,
   // specialty icons
   Brain, Apple, Target, Leaf, Heart, Compass, Scale, DollarSign,
   Mic2, Sparkles, Sun, GraduationCap, Briefcase, Globe,
@@ -198,6 +199,8 @@ export default function AdminDashboard() {
     code: "", type: "percentage" as "percentage" | "fixed",
     value: "", maxUses: "", expiresAt: "",
   });
+  const [docsModal, setDocsModal] = useState<{ professionalId: number; name: string } | null>(null);
+  const [tierConfirm, setTierConfirm] = useState<{ professionalId: number; name: string; newTier: "basic" | "pro" } | null>(null);
 
   const { data: pendingProfessionals, refetch: refetchPending, isLoading: loadingPending } =
     trpc.admin.getPendingProfessionals.useQuery(undefined, {
@@ -211,7 +214,7 @@ export default function AdminDashboard() {
   const { data: recentAppointments } = trpc.admin.getRecentAppointments.useQuery({ limit: 8 }, { enabled: isAuthenticated });
   const { data: topProfessionals } = trpc.admin.getTopProfessionals.useQuery({ limit: 5 }, { enabled: isAuthenticated });
   const { data: profsBySpecialty } = trpc.admin.getProfessionalsBySpecialty.useQuery(undefined, { enabled: isAuthenticated });
-  const { data: activeProfessionals } = trpc.admin.getActiveProfessionals.useQuery(undefined, { enabled: isAuthenticated });
+  const { data: activeProfessionals, refetch: refetchActiveProfessionals } = trpc.admin.getActiveProfessionals.useQuery(undefined, { enabled: isAuthenticated });
   const { data: allWithdrawals, refetch: refetchWithdrawals } = trpc.admin.getPendingWithdrawals.useQuery(undefined, { enabled: isAuthenticated });
 
   const approveMutation = trpc.admin.approveProfessional.useMutation({
@@ -301,6 +304,21 @@ export default function AdminDashboard() {
   const deleteDiscountMutation = trpc.admin.deleteDiscountCode.useMutation({
     onSuccess: () => { refetchDiscountCodes(); toast.success("Código eliminado"); },
     onError: () => toast.error("Error al eliminar"),
+  });
+
+  // ── Professional tier + documents ─────────────────────────────────────────
+  const { data: proDocuments, isLoading: loadingDocs } = trpc.admin.getProfessionalDocuments.useQuery(
+    { professionalId: docsModal?.professionalId ?? 0 },
+    { enabled: docsModal !== null }
+  );
+
+  const updateTierMutation = trpc.admin.updateProfessionalTier.useMutation({
+    onSuccess: () => {
+      refetchActiveProfessionals();
+      toast.success("Tier actualizado");
+      setTierConfirm(null);
+    },
+    onError: () => toast.error("Error al actualizar el tier"),
   });
 
   if (loading) {
@@ -801,32 +819,163 @@ export default function AdminDashboard() {
                   const avatar = pro.profilePhoto;
                   return (
                     <Card key={pro.id} className="border-border">
-                      <CardContent className="p-4 flex items-start gap-3">
-                        {avatar ? (
-                          <img src={avatar} alt={name} className="w-11 h-11 rounded-xl object-cover flex-shrink-0" />
-                        ) : (
-                          <div className="w-11 h-11 rounded-xl gradient-brand flex items-center justify-center text-white font-bold flex-shrink-0">
-                            {name.charAt(0).toUpperCase()}
-                          </div>
-                        )}
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 flex-wrap">
+                      <CardContent className="p-4 space-y-3">
+                        {/* Header row */}
+                        <div className="flex items-start gap-3">
+                          {avatar ? (
+                            <img src={avatar} alt={name} className="w-11 h-11 rounded-xl object-cover flex-shrink-0" />
+                          ) : (
+                            <div className="w-11 h-11 rounded-xl gradient-brand flex items-center justify-center text-white font-bold flex-shrink-0">
+                              {name.charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          <div className="min-w-0 flex-1">
                             <p className="font-semibold text-sm truncate">{name}</p>
-                            <Badge className={`border-0 text-[10px] ${pro.tier === "pro" ? "bg-purple-100 text-purple-700" : "bg-emerald-100 text-emerald-700"}`}>
-                              {pro.tier === "pro" ? "Pro" : "Básico"}
-                            </Badge>
+                            {pro.specialtyName && (
+                              <p className="text-[11px] text-muted-foreground mt-0.5">{pro.specialtyName}</p>
+                            )}
+                            {pro.userEmail && (
+                              <p className="text-[11px] text-muted-foreground truncate">{pro.userEmail}</p>
+                            )}
                           </div>
-                          {pro.specialtyName && (
-                            <p className="text-[11px] text-muted-foreground mt-0.5">{pro.specialtyName}</p>
-                          )}
-                          {pro.userEmail && (
-                            <p className="text-[11px] text-muted-foreground truncate">{pro.userEmail}</p>
-                          )}
+                        </div>
+
+                        {/* Tier selector + docs button */}
+                        <div className="flex items-center gap-2 pt-1 border-t border-border">
+                          <div className="flex items-center gap-1.5 flex-1">
+                            <span className="text-[11px] text-muted-foreground">Tier:</span>
+                            <button
+                              onClick={() => setTierConfirm({ professionalId: pro.id, name, newTier: "basic" })}
+                              className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
+                                pro.tier !== "pro"
+                                  ? "bg-emerald-100 text-emerald-700"
+                                  : "bg-muted text-muted-foreground hover:bg-emerald-50 hover:text-emerald-700"
+                              }`}
+                            >Básico</button>
+                            <button
+                              onClick={() => setTierConfirm({ professionalId: pro.id, name, newTier: "pro" })}
+                              className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
+                                pro.tier === "pro"
+                                  ? "bg-purple-100 text-purple-700"
+                                  : "bg-muted text-muted-foreground hover:bg-purple-50 hover:text-purple-700"
+                              }`}
+                            >Pro</button>
+                          </div>
+                          <button
+                            onClick={() => setDocsModal({ professionalId: pro.id, name })}
+                            className="flex items-center gap-1 text-[11px] text-primary hover:text-primary/80 transition-colors"
+                            title="Ver documentos"
+                          >
+                            <FolderOpen className="w-3.5 h-3.5" />
+                            Documentos
+                          </button>
                         </div>
                       </CardContent>
                     </Card>
                   );
                 })}
+              </div>
+            )}
+
+            {/* ── Documents modal ── */}
+            {docsModal && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setDocsModal(null)}>
+                <div className="bg-background rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center justify-between p-5 border-b border-border">
+                    <div>
+                      <h3 className="font-bold text-base" style={{ fontFamily: "Poppins, sans-serif" }}>Documentos del profesional</h3>
+                      <p className="text-xs text-muted-foreground mt-0.5">{docsModal.name}</p>
+                    </div>
+                    <button onClick={() => setDocsModal(null)} className="p-1.5 rounded-lg hover:bg-muted transition-colors">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <div className="p-5 space-y-5">
+                    {loadingDocs ? (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                      </div>
+                    ) : !proDocuments ? (
+                      <p className="text-sm text-muted-foreground text-center py-6">No se encontraron documentos</p>
+                    ) : (
+                      <>
+                        {/* Cédula */}
+                        <div>
+                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Número de cédula</p>
+                          {proDocuments.licenseNumber ? (
+                            <p className="text-sm font-mono bg-muted px-3 py-2 rounded-lg">{proDocuments.licenseNumber}</p>
+                          ) : (
+                            <p className="text-xs text-muted-foreground italic">No proporcionado</p>
+                          )}
+                        </div>
+
+                        {/* Documento de identidad */}
+                        <div>
+                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Documento de identidad</p>
+                          {proDocuments.licenseDocument ? (
+                            /\.(jpg|jpeg|png|gif|webp)$/i.test(proDocuments.licenseDocument) ? (
+                              <img src={proDocuments.licenseDocument} alt="Documento de identidad" className="w-full rounded-xl border border-border object-contain max-h-64" />
+                            ) : (
+                              <a href={proDocuments.licenseDocument} target="_blank" rel="noopener noreferrer"
+                                className="flex items-center gap-2 text-sm text-primary hover:underline bg-primary/5 px-3 py-2.5 rounded-lg">
+                                <FileText className="w-4 h-4 flex-shrink-0" />
+                                Abrir documento (PDF)
+                                <ExternalLink className="w-3.5 h-3.5 ml-auto flex-shrink-0" />
+                              </a>
+                            )
+                          ) : (
+                            <p className="text-xs text-muted-foreground italic">No proporcionado</p>
+                          )}
+                        </div>
+
+                        {/* Certificaciones */}
+                        <div>
+                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Certificaciones</p>
+                          {proDocuments.certifications ? (
+                            /\.(jpg|jpeg|png|gif|webp)$/i.test(proDocuments.certifications) ? (
+                              <img src={proDocuments.certifications} alt="Certificaciones" className="w-full rounded-xl border border-border object-contain max-h-64" />
+                            ) : (
+                              <a href={proDocuments.certifications} target="_blank" rel="noopener noreferrer"
+                                className="flex items-center gap-2 text-sm text-primary hover:underline bg-primary/5 px-3 py-2.5 rounded-lg">
+                                <FileText className="w-4 h-4 flex-shrink-0" />
+                                Abrir certificaciones (PDF)
+                                <ExternalLink className="w-3.5 h-3.5 ml-auto flex-shrink-0" />
+                              </a>
+                            )
+                          ) : (
+                            <p className="text-xs text-muted-foreground italic">No proporcionado</p>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ── Tier confirm dialog ── */}
+            {tierConfirm && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setTierConfirm(null)}>
+                <div className="bg-background rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+                  <h3 className="font-bold text-base" style={{ fontFamily: "Poppins, sans-serif" }}>Cambiar tier</h3>
+                  <p className="text-sm text-muted-foreground">
+                    ¿Cambiar el tier de <strong>{tierConfirm.name}</strong> a{" "}
+                    <strong className={tierConfirm.newTier === "pro" ? "text-purple-700" : "text-emerald-700"}>
+                      {tierConfirm.newTier === "pro" ? "Pro" : "Básico"}
+                    </strong>?
+                  </p>
+                  <div className="flex gap-2 justify-end">
+                    <Button variant="outline" size="sm" onClick={() => setTierConfirm(null)}>Cancelar</Button>
+                    <Button
+                      size="sm"
+                      className="gradient-brand text-white border-0"
+                      disabled={updateTierMutation.isPending}
+                      onClick={() => updateTierMutation.mutate({ professionalId: tierConfirm.professionalId, tier: tierConfirm.newTier })}
+                    >
+                      {updateTierMutation.isPending ? "Guardando..." : "Confirmar"}
+                    </Button>
+                  </div>
+                </div>
               </div>
             )}
           </div>
