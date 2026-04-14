@@ -1142,10 +1142,13 @@ export default function AdminDashboard() {
 
         {/* Tab: Herramientas */}
         {activeTab === "herramientas" && (
-          <div className="space-y-6 max-w-2xl">
+          <div className="space-y-6">
             <h2 className="text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
               Herramientas del sistema
             </h2>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Columna izquierda — herramientas del sistema */}
+            <div className="space-y-6">
 
             {/* Cron Jobs */}
             <Card className="border-border">
@@ -1240,13 +1243,15 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
 
-            {/* ── Discount codes ── */}
+            </div>{/* /columna izquierda */}
+
+            {/* Columna derecha — Códigos de descuento */}
             <div>
               <h3 className="text-base font-bold flex items-center gap-2 mb-4" style={{ fontFamily: "Poppins, sans-serif" }}>
                 <Tag className="w-4 h-4 text-primary" />
                 Códigos de descuento
               </h3>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 gap-6">
                 {/* Columna izquierda — lista de códigos existentes */}
                 <Card className="border-border">
                   <CardHeader className="pb-3">
@@ -1401,7 +1406,8 @@ export default function AdminDashboard() {
                   </CardContent>
                 </Card>
               </div>
-            </div>
+            </div>{/* /columna derecha */}
+            </div>{/* /grid */}
           </div>
         )}
 
