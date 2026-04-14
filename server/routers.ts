@@ -317,6 +317,52 @@ export const appRouter = router({
           discountCodeId: row.id as number,
         };
       }),
+
+    redeemPrepaidCard: protectedProcedure
+      .input(z.object({ code: z.string().min(1).max(20) }))
+      .mutation(async ({ ctx, input }) => {
+        const dbConn = await db.getDb();
+        if (!dbConn) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const client = (dbConn as any).$client;
+
+        const normalizedCode = input.code.trim().toUpperCase();
+
+        // Fetch card (we need credits + productType regardless)
+        const card = await new Promise<any>((resolve) => {
+          client.execute(
+            `SELECT id, productType, credits, amount, isUsed FROM prepaidCards WHERE code = ? LIMIT 1`,
+            [normalizedCode],
+            (err: any, results: any) => {
+              resolve(Array.isArray(results) ? results[0] ?? null : null);
+            }
+          );
+        });
+
+        if (!card) throw new TRPCError({ code: "NOT_FOUND", message: "Código no encontrado. Verifica que lo ingresaste correctamente." });
+        if (card.isUsed) throw new TRPCError({ code: "BAD_REQUEST", message: "Esta tarjeta ya fue canjeada." });
+
+        // Atomic update — WHERE isUsed = 0 prevents double-redemption races
+        const result = await new Promise<any>((resolve, reject) => {
+          client.execute(
+            `UPDATE prepaidCards SET isUsed = 1, usedByUserId = ?, usedAt = NOW() WHERE id = ? AND isUsed = 0`,
+            [ctx.user.id, card.id],
+            (err: any, res: any) => { if (err) reject(err); else resolve(res); }
+          );
+        });
+
+        if ((result?.affectedRows ?? 0) === 0) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Esta tarjeta ya fue canjeada." });
+        }
+
+        await addCreditBatch(ctx.user.id, card.productType as CreditSource, card.credits);
+
+        return {
+          success: true,
+          credits: card.credits as number,
+          productType: card.productType as string,
+          amount: Number(card.amount),
+        };
+      }),
   }),
 
   // Professional routes
@@ -1445,6 +1491,87 @@ export const appRouter = router({
         await new Promise<void>((resolve, reject) => {
           client.execute(
             `DELETE FROM discountCodes WHERE id = ?`,
+            [input.id],
+            (err: any) => { if (err) reject(err); else resolve(); }
+          );
+        });
+        return { success: true };
+      }),
+
+    // ── Prepaid cards ──────────────────────────────────────────────────────────
+    createPrepaidCard: protectedProcedure
+      .input(z.object({
+        productType: z.enum(["individual_basic", "individual_premium", "plan_basic", "plan_pro"]),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+        const dbConn = await db.getDb();
+        if (!dbConn) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const client = (dbConn as any).$client;
+
+        const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        const group = () => Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+        const code = `${group()}-${group()}-${group()}-${group()}`;
+
+        const credits = CREDIT_COSTS[input.productType];
+        const amount = credits; // 1 crédito = 1 MXN
+
+        await new Promise<void>((resolve, reject) => {
+          client.execute(
+            `INSERT INTO prepaidCards (code, productType, credits, amount) VALUES (?, ?, ?, ?)`,
+            [code, input.productType, credits, amount],
+            (err: any) => { if (err) reject(err); else resolve(); }
+          );
+        });
+
+        return { success: true, code };
+      }),
+
+    listPrepaidCards: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+      const dbConn = await db.getDb();
+      if (!dbConn) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      const client = (dbConn as any).$client;
+
+      return new Promise<any[]>((resolve, reject) => {
+        client.execute(
+          `SELECT pc.id, pc.code, pc.productType, pc.credits, pc.amount,
+                  pc.isUsed, pc.usedAt, pc.createdAt, u.email AS usedByEmail
+           FROM prepaidCards pc
+           LEFT JOIN users u ON u.id = pc.usedByUserId
+           ORDER BY pc.createdAt DESC`,
+          [],
+          (err: any, results: any) => {
+            if (err) reject(err);
+            else resolve(Array.isArray(results) ? results : []);
+          }
+        );
+      });
+    }),
+
+    deletePrepaidCard: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+        const dbConn = await db.getDb();
+        if (!dbConn) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const client = (dbConn as any).$client;
+
+        // Only allow deleting unused cards
+        const card = await new Promise<any>((resolve) => {
+          client.execute(
+            `SELECT isUsed FROM prepaidCards WHERE id = ? LIMIT 1`,
+            [input.id],
+            (err: any, results: any) => resolve(Array.isArray(results) ? results[0] ?? null : null)
+          );
+        });
+
+        if (!card) throw new TRPCError({ code: "NOT_FOUND" });
+        if (card.isUsed) throw new TRPCError({ code: "BAD_REQUEST", message: "No se puede eliminar una tarjeta ya canjeada." });
+
+        await new Promise<void>((resolve, reject) => {
+          client.execute(
+            `DELETE FROM prepaidCards WHERE id = ?`,
             [input.id],
             (err: any) => { if (err) reject(err); else resolve(); }
           );

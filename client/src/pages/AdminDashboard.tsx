@@ -39,7 +39,7 @@ import {
   Trophy, Lightbulb, Puzzle, BrainCircuit, Syringe, Zap,
   Sunset, HeartCrack, Bandage, Droplets, ShieldPlus,
   Footprints, Bike, Wheat, Carrot, Grape, Citrus,
-  Feather, Flower, Flower2, TestTube,
+  Feather, Flower, Flower2, TestTube, Copy, CreditCard as CardIcon,
 } from "lucide-react";
 import type React from "react";
 
@@ -314,6 +314,21 @@ export default function AdminDashboard() {
   const deleteDiscountMutation = trpc.admin.deleteDiscountCode.useMutation({
     onSuccess: () => { refetchDiscountCodes(); toast.success("Código eliminado"); },
     onError: () => toast.error("Error al eliminar"),
+  });
+
+  // ── Prepaid cards ─────────────────────────────────────────────────────────
+  const [prepaidProductType, setPrepaidProductType] = useState<"individual_basic" | "individual_premium" | "plan_basic" | "plan_pro">("individual_basic");
+  const { data: prepaidCards, refetch: refetchPrepaidCards } = trpc.admin.listPrepaidCards.useQuery(undefined, { enabled: isAuthenticated });
+  const createPrepaidMutation = trpc.admin.createPrepaidCard.useMutation({
+    onSuccess: (data: any) => {
+      refetchPrepaidCards();
+      toast.success(`Tarjeta creada: ${data.code}`);
+    },
+    onError: (err: any) => toast.error(err.message ?? "Error al crear tarjeta"),
+  });
+  const deletePrepaidMutation = trpc.admin.deletePrepaidCard.useMutation({
+    onSuccess: () => { refetchPrepaidCards(); toast.success("Tarjeta eliminada"); },
+    onError: (err: any) => toast.error(err.message ?? "Error al eliminar"),
   });
 
   // ── Professional tier + documents ─────────────────────────────────────────
@@ -1409,6 +1424,120 @@ export default function AdminDashboard() {
                   </Button>
                 </CardContent>
               </Card>
+            </div>
+
+            {/* ── Tarjetas prepago ─────────────────────────────────────────── */}
+            <div>
+              <h3 className="text-base font-bold flex items-center gap-2 mb-4" style={{ fontFamily: "Poppins, sans-serif" }}>
+                <CardIcon className="w-4 h-4 text-primary" />
+                Tarjetas prepago
+              </h3>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Lista */}
+                <Card className="border-border">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm">Tarjetas generadas</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2 max-h-[480px] overflow-y-auto pr-1">
+                      {(!prepaidCards || prepaidCards.length === 0) ? (
+                        <p className="text-sm text-muted-foreground text-center py-8">No hay tarjetas generadas</p>
+                      ) : (
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-xs">
+                            <thead>
+                              <tr className="text-muted-foreground border-b">
+                                <th className="text-left pb-2 font-medium">Código</th>
+                                <th className="text-left pb-2 font-medium">Tipo</th>
+                                <th className="text-left pb-2 font-medium">Cr.</th>
+                                <th className="text-left pb-2 font-medium">Estado</th>
+                                <th className="pb-2" />
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-border">
+                              {(prepaidCards as any[]).map((card) => (
+                                <tr key={card.id} className="hover:bg-muted/30 transition-colors">
+                                  <td className="py-2 font-mono text-[11px] font-semibold tracking-wider">{card.code}</td>
+                                  <td className="py-2 text-muted-foreground capitalize">
+                                    {card.productType === "individual_basic" ? "Básica" :
+                                     card.productType === "individual_premium" ? "Premium" :
+                                     card.productType === "plan_basic" ? "Plan Básico" : "Plan Pro"}
+                                  </td>
+                                  <td className="py-2 text-muted-foreground">{card.credits}</td>
+                                  <td className="py-2">
+                                    {card.isUsed ? (
+                                      <div>
+                                        <Badge className="bg-gray-100 text-gray-600 border-0 text-[10px]">Usada</Badge>
+                                        {card.usedByEmail && (
+                                          <p className="text-[10px] text-muted-foreground mt-0.5 truncate max-w-[100px]">{card.usedByEmail}</p>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <Badge className="bg-emerald-100 text-emerald-700 border-0 text-[10px]">Disponible</Badge>
+                                    )}
+                                  </td>
+                                  <td className="py-2">
+                                    <div className="flex items-center gap-1 justify-end">
+                                      <Button
+                                        size="sm" variant="ghost"
+                                        className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                                        title="Copiar código"
+                                        onClick={() => { navigator.clipboard.writeText(card.code); toast.success("Código copiado"); }}
+                                      >
+                                        <Copy className="w-3.5 h-3.5" />
+                                      </Button>
+                                      {!card.isUsed && (
+                                        <Button
+                                          size="sm" variant="ghost"
+                                          className="h-6 w-6 p-0 text-muted-foreground hover:text-red-600"
+                                          title="Eliminar"
+                                          onClick={() => deletePrepaidMutation.mutate({ id: card.id })}
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                        </Button>
+                                      )}
+                                    </div>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Formulario */}
+                <Card className="border-border">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm">Generar tarjeta</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <select
+                      value={prepaidProductType}
+                      onChange={(e) => setPrepaidProductType(e.target.value as typeof prepaidProductType)}
+                      className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
+                    >
+                      <option value="individual_basic">Sesión Básica — 350 créditos</option>
+                      <option value="individual_premium">Sesión Premium — 1,500 créditos</option>
+                      <option value="plan_basic">Plan Básico — 980 créditos</option>
+                      <option value="plan_pro">Plan Pro — 2,500 créditos</option>
+                    </select>
+                    <Button
+                      className="gradient-brand text-white border-0 w-full"
+                      disabled={createPrepaidMutation.isPending}
+                      onClick={() => createPrepaidMutation.mutate({ productType: prepaidProductType })}
+                    >
+                      <Plus className="w-4 h-4 mr-1.5" />
+                      {createPrepaidMutation.isPending ? "Generando..." : "Generar tarjeta"}
+                    </Button>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                      Se genera un código único formato XXXX-XXXX-XXXX-XXXX que el usuario puede canjear en su wallet para acreditar créditos.
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           </div>
         )}

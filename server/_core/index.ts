@@ -669,6 +669,22 @@ async function runStartupMigrations() {
       );
     });
 
+    // Ensure prepaidCards table exists
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS \`prepaidCards\` (
+        \`id\` INT AUTO_INCREMENT PRIMARY KEY,
+        \`code\` VARCHAR(20) NOT NULL UNIQUE,
+        \`productType\` VARCHAR(64) NOT NULL,
+        \`credits\` INT NOT NULL,
+        \`amount\` DECIMAL(10,2) NOT NULL,
+        \`isUsed\` TINYINT(1) DEFAULT 0,
+        \`usedByUserId\` INT NULL,
+        \`usedAt\` TIMESTAMP NULL,
+        \`createdAt\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `).catch(() => {});
+    console.log("[Migration] prepaidCards table ready");
+
     // Create emailOtps table for email-based OTP authentication
     await db.execute(`
       CREATE TABLE IF NOT EXISTS \`emailOtps\` (

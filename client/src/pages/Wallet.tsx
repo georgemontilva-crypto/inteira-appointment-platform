@@ -19,6 +19,7 @@ import {
   Tag,
   CheckCircle2,
   XCircle,
+  Gift,
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { es } from "date-fns/locale";
@@ -162,6 +163,23 @@ export default function WalletPage() {
       code: discountCode.trim(),
       productType: productType as "individual_basic" | "individual_premium" | "plan_basic" | "plan_pro",
     });
+  };
+
+  const [prepaidCode, setPrepaidCode] = useState("");
+  const redeemMutation = trpc.user.redeemPrepaidCard.useMutation({
+    onSuccess: (data) => {
+      toast.success(`¡${data.credits.toLocaleString("es-MX")} créditos acreditados a tu wallet!`);
+      setPrepaidCode("");
+      refetch();
+    },
+    onError: (err: any) => toast.error(err.message ?? "Código inválido o ya fue canjeado"),
+  });
+
+  const handlePrepaidInput = (raw: string) => {
+    // Strip non-alphanumeric, uppercase, limit to 16 chars, then insert dashes
+    const clean = raw.replace(/[^A-Z0-9]/gi, "").toUpperCase().slice(0, 16);
+    const parts = clean.match(/.{1,4}/g) ?? [];
+    setPrepaidCode(parts.join("-"));
   };
 
   const handleBuySession = async (sessionType: string) => {
@@ -400,6 +418,38 @@ export default function WalletPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* ── Redeem prepaid card ── */}
+        <Card className="border-border">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Gift className="w-4 h-4 text-primary" />
+              Canjear tarjeta prepago
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-2">
+              <Input
+                value={prepaidCode}
+                onChange={(e) => handlePrepaidInput(e.target.value)}
+                placeholder="XXXX-XXXX-XXXX-XXXX"
+                className="font-mono tracking-widest text-sm h-10 flex-1"
+                maxLength={19}
+                onKeyDown={(e) => { if (e.key === "Enter" && prepaidCode.replace(/-/g, "").length === 16) redeemMutation.mutate({ code: prepaidCode }); }}
+              />
+              <Button
+                className="gradient-brand text-white border-0 h-10 px-5"
+                disabled={prepaidCode.replace(/-/g, "").length < 16 || redeemMutation.isPending}
+                onClick={() => redeemMutation.mutate({ code: prepaidCode })}
+              >
+                {redeemMutation.isPending ? "Canjeando..." : "Canjear"}
+              </Button>
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-2">
+              Ingresa el código de tu tarjeta prepago para acreditar créditos a tu wallet.
+            </p>
+          </CardContent>
+        </Card>
 
         {/* ── Policy info ── */}
         <div className="flex items-start gap-3 bg-blue-50 border border-blue-100 rounded-xl p-4 text-xs text-blue-700">
