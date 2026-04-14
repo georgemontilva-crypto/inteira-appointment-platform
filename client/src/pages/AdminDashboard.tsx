@@ -399,7 +399,7 @@ export default function AdminDashboard() {
       {/* Tabs */}
       <div className="border-b border-border bg-background sticky top-0 z-10">
         <div className="container">
-          <div className="flex gap-1 overflow-x-auto scrollbar-none">
+          <div className="flex gap-1 overflow-x-auto scrollbar-none" style={{ WebkitOverflowScrolling: "touch" }}>
             {([
               { key: "overview",        label: "Resumen",        icon: <BarChart3 className="w-4 h-4" /> },
               { key: "profesionales",   label: "Solicitudes",          icon: <Users className="w-4 h-4" /> },
@@ -412,7 +412,7 @@ export default function AdminDashboard() {
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`flex items-center gap-1.5 px-3 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${
+                className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${
                   activeTab === tab.key
                     ? "border-primary text-primary"
                     : "border-transparent text-muted-foreground hover:text-foreground"
