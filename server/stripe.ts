@@ -71,7 +71,7 @@ export function registerStripeRoutes(app: Express) {
       const userId = sessionUser.id;
 
       const stripe = getStripe();
-      const { productType } = req.body as { productType: CreditSource };
+      const { productType, discountCode } = req.body as { productType: CreditSource; discountCode?: string };
 
       if (!productType) {
         return res.status(400).json({ error: "productType es requerido" });
@@ -80,6 +80,38 @@ export function registerStripeRoutes(app: Express) {
       const product = PRODUCT_PRICES[productType];
       if (!product) {
         return res.status(400).json({ error: "Tipo de producto inválido" });
+      }
+
+      // ── Apply discount code if provided ────────────────────────────────────
+      let finalAmount = product.amount; // centavos
+      let discountCodeId: number | null = null;
+
+      if (discountCode) {
+        const dbConn = await db.getDb();
+        if (dbConn) {
+          const client = (dbConn as any).$client;
+          const row = await new Promise<any>((resolve) => {
+            client.execute(
+              `SELECT id, type, value, maxUses, usedCount, expiresAt, isActive
+               FROM discountCodes WHERE code = ? LIMIT 1`,
+              [discountCode.toUpperCase().trim()],
+              (err: any, results: any) => resolve(Array.isArray(results) ? results[0] ?? null : null)
+            );
+          });
+
+          const isValid = row &&
+            row.isActive &&
+            !(row.expiresAt && new Date(row.expiresAt) < new Date()) &&
+            !(row.maxUses !== null && Number(row.usedCount) >= Number(row.maxUses));
+
+          if (isValid) {
+            const discountCents = row.type === "percentage"
+              ? Math.round(product.amount * Number(row.value) / 100)
+              : Math.round(Number(row.value) * 100);
+            finalAmount = Math.max(product.amount - discountCents, 50); // Stripe mínimo 50 centavos
+            discountCodeId = row.id;
+          }
+        }
       }
 
       const proto = req.headers["x-forwarded-proto"] ?? req.protocol;
@@ -96,7 +128,7 @@ export function registerStripeRoutes(app: Express) {
                 name: product.name,
                 description: product.description,
               },
-              unit_amount: product.amount,
+              unit_amount: finalAmount,
             },
             quantity: 1,
           },
@@ -108,6 +140,7 @@ export function registerStripeRoutes(app: Express) {
           userId: String(userId),
           productType,
           credits: String(CREDIT_COSTS[productType]),
+          ...(discountCodeId !== null ? { discountCodeId: String(discountCodeId) } : {}),
         },
         locale: "es",
       });
@@ -264,6 +297,19 @@ async function handleSuccessfulPayment(session: Stripe.Checkout.Session) {
       currency: (session.currency ?? "mxn").toUpperCase(),
     });
     console.log(`[Stripe] ✅ ${creditsNum} créditos procesados para userId=${userIdNum}`);
+
+    // Increment discount code usage if applicable
+    if (session.metadata?.discountCodeId) {
+      const dcId = parseInt(session.metadata.discountCodeId);
+      client.execute(
+        `UPDATE discountCodes SET usedCount = usedCount + 1 WHERE id = ?`,
+        [dcId],
+        (err: any) => {
+          if (err) console.error("[Stripe] discountCode usedCount increment failed:", err?.message);
+          else console.log(`[Stripe] discountCode id=${dcId} usedCount incremented`);
+        }
+      );
+    }
 
   } catch (err: any) {
     console.error("[Stripe] ❌ Error:", err?.message);

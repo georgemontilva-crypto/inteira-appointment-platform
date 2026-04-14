@@ -611,6 +611,22 @@ async function runStartupMigrations() {
       );
     });
 
+    // Ensure discountCodes table exists
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS \`discountCodes\` (
+        \`id\` INT AUTO_INCREMENT PRIMARY KEY,
+        \`code\` VARCHAR(50) NOT NULL UNIQUE,
+        \`type\` ENUM('percentage', 'fixed') NOT NULL,
+        \`value\` DECIMAL(10,2) NOT NULL,
+        \`maxUses\` INT NULL DEFAULT NULL,
+        \`usedCount\` INT NOT NULL DEFAULT 0,
+        \`expiresAt\` TIMESTAMP NULL DEFAULT NULL,
+        \`isActive\` TINYINT(1) NOT NULL DEFAULT 1,
+        \`createdAt\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+      )
+    `).catch(() => {});
+    console.log("[Migration] discountCodes table ready");
+
     // Create emailOtps table for email-based OTP authentication
     await db.execute(`
       CREATE TABLE IF NOT EXISTS \`emailOtps\` (

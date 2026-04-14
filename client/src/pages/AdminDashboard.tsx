@@ -9,12 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { Input } from "@/components/ui/input";
 import {
   Users, CheckCircle2, XCircle, Clock, Shield, Plus,
   Settings, BarChart3, Award, TrendingUp, Calendar,
   Star, Activity, CreditCard, UserCheck, RefreshCw, Wrench,
   ChevronDown, ChevronUp, FileText, ExternalLink, User,
-  Trash2, Pencil, Stethoscope,
+  Trash2, Pencil, Stethoscope, Tag, Percent, ToggleLeft, ToggleRight,
   // specialty icons
   Brain, Apple, Target, Leaf, Heart, Compass, Scale, DollarSign,
   Mic2, Sparkles, Sun, GraduationCap, Briefcase, Globe,
@@ -193,6 +194,10 @@ export default function AdminDashboard() {
     maxAppointmentsPerMonth: "", maxMinutesPerAppointment: "",
     description: "",
   });
+  const [discountForm, setDiscountForm] = useState({
+    code: "", type: "percentage" as "percentage" | "fixed",
+    value: "", maxUses: "", expiresAt: "",
+  });
 
   const { data: pendingProfessionals, refetch: refetchPending, isLoading: loadingPending } =
     trpc.admin.getPendingProfessionals.useQuery(undefined, {
@@ -274,6 +279,28 @@ export default function AdminDashboard() {
       toast.success("Plan creado");
     },
     onError: () => toast.error("Error al crear el plan"),
+  });
+
+  // ── Discount codes ─────────────────────────────────────────────────────────
+  const { data: discountCodes, refetch: refetchDiscountCodes } = trpc.admin.listDiscountCodes.useQuery(undefined, { enabled: isAuthenticated });
+
+  const createDiscountMutation = trpc.admin.createDiscountCode.useMutation({
+    onSuccess: () => {
+      refetchDiscountCodes();
+      setDiscountForm({ code: "", type: "percentage", value: "", maxUses: "", expiresAt: "" });
+      toast.success("Código creado");
+    },
+    onError: (err: any) => toast.error(err?.message ?? "Error al crear el código"),
+  });
+
+  const toggleDiscountMutation = trpc.admin.toggleDiscountCode.useMutation({
+    onSuccess: () => { refetchDiscountCodes(); },
+    onError: () => toast.error("Error al actualizar"),
+  });
+
+  const deleteDiscountMutation = trpc.admin.deleteDiscountCode.useMutation({
+    onSuccess: () => { refetchDiscountCodes(); toast.success("Código eliminado"); },
+    onError: () => toast.error("Error al eliminar"),
   });
 
   if (loading) {
@@ -1048,6 +1075,162 @@ export default function AdminDashboard() {
                     <span>Roles sincronizados correctamente. Los profesionales afectados deben cerrar sesión y volver a entrar.</span>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+
+            {/* ── Discount codes ── */}
+            <Card className="border-border">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Tag className="w-4 h-4 text-primary" />
+                  Códigos de descuento
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Create form */}
+                <div className="space-y-3 p-4 bg-muted/40 rounded-xl">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Nuevo código</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="col-span-2">
+                      <Input
+                        placeholder="CÓDIGO (ej. BIENVENIDA20)"
+                        value={discountForm.code}
+                        onChange={(e) => setDiscountForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))}
+                        className="text-xs h-8 font-mono"
+                        maxLength={50}
+                      />
+                    </div>
+                    <select
+                      value={discountForm.type}
+                      onChange={(e) => setDiscountForm((f) => ({ ...f, type: e.target.value as "percentage" | "fixed" }))}
+                      className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+                    >
+                      <option value="percentage">Porcentaje (%)</option>
+                      <option value="fixed">Monto fijo ($)</option>
+                    </select>
+                    <Input
+                      type="number"
+                      placeholder={discountForm.type === "percentage" ? "Valor (ej. 20)" : "Valor en MXN (ej. 100)"}
+                      value={discountForm.value}
+                      onChange={(e) => setDiscountForm((f) => ({ ...f, value: e.target.value }))}
+                      className="text-xs h-8"
+                      min={0}
+                    />
+                    <Input
+                      type="number"
+                      placeholder="Usos máx. (opcional)"
+                      value={discountForm.maxUses}
+                      onChange={(e) => setDiscountForm((f) => ({ ...f, maxUses: e.target.value }))}
+                      className="text-xs h-8"
+                      min={1}
+                    />
+                    <Input
+                      type="date"
+                      placeholder="Vencimiento (opcional)"
+                      value={discountForm.expiresAt}
+                      onChange={(e) => setDiscountForm((f) => ({ ...f, expiresAt: e.target.value }))}
+                      className="text-xs h-8"
+                    />
+                  </div>
+                  <Button
+                    size="sm"
+                    className="gradient-brand text-white border-0 w-full"
+                    disabled={!discountForm.code.trim() || !discountForm.value || createDiscountMutation.isPending}
+                    onClick={() => createDiscountMutation.mutate({
+                      code: discountForm.code.trim(),
+                      type: discountForm.type,
+                      value: parseFloat(discountForm.value),
+                      maxUses: discountForm.maxUses ? parseInt(discountForm.maxUses) : null,
+                      expiresAt: discountForm.expiresAt ? new Date(discountForm.expiresAt).toISOString() : null,
+                    })}
+                  >
+                    <Plus className="w-3.5 h-3.5 mr-1" />
+                    {createDiscountMutation.isPending ? "Creando..." : "Crear código"}
+                  </Button>
+                </div>
+
+                {/* Codes list */}
+                <div className="space-y-2">
+                  {(!discountCodes || discountCodes.length === 0) ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">No hay códigos creados</p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="text-muted-foreground border-b">
+                            <th className="text-left pb-2 font-medium">Código</th>
+                            <th className="text-left pb-2 font-medium">Descuento</th>
+                            <th className="text-left pb-2 font-medium">Usos</th>
+                            <th className="text-left pb-2 font-medium">Vence</th>
+                            <th className="text-left pb-2 font-medium">Estado</th>
+                            <th className="pb-2" />
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border">
+                          {(discountCodes as any[]).map((dc) => {
+                            const isExpired = dc.expiresAt && new Date(dc.expiresAt) < new Date();
+                            const isExhausted = dc.maxUses !== null && dc.usedCount >= dc.maxUses;
+                            return (
+                              <tr key={dc.id} className="hover:bg-muted/30 transition-colors">
+                                <td className="py-2 font-mono font-semibold">{dc.code}</td>
+                                <td className="py-2">
+                                  <span className="flex items-center gap-0.5">
+                                    {dc.type === "percentage"
+                                      ? <><Percent className="w-3 h-3" />{Number(dc.value)}%</>
+                                      : <>${Number(dc.value)} MXN</>
+                                    }
+                                  </span>
+                                </td>
+                                <td className="py-2 text-muted-foreground">
+                                  {dc.usedCount}{dc.maxUses !== null ? `/${dc.maxUses}` : ""}
+                                </td>
+                                <td className="py-2 text-muted-foreground">
+                                  {dc.expiresAt ? format(new Date(dc.expiresAt), "dd/MM/yy") : "—"}
+                                </td>
+                                <td className="py-2">
+                                  {isExpired || isExhausted ? (
+                                    <Badge className="bg-gray-100 text-gray-600 border-0 text-[10px]">
+                                      {isExpired ? "Expirado" : "Agotado"}
+                                    </Badge>
+                                  ) : dc.isActive ? (
+                                    <Badge className="bg-emerald-100 text-emerald-700 border-0 text-[10px]">Activo</Badge>
+                                  ) : (
+                                    <Badge className="bg-amber-100 text-amber-700 border-0 text-[10px]">Inactivo</Badge>
+                                  )}
+                                </td>
+                                <td className="py-2">
+                                  <div className="flex items-center gap-1 justify-end">
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                                      title={dc.isActive ? "Desactivar" : "Activar"}
+                                      onClick={() => toggleDiscountMutation.mutate({ id: dc.id, isActive: !dc.isActive })}
+                                    >
+                                      {dc.isActive
+                                        ? <ToggleRight className="w-4 h-4 text-emerald-600" />
+                                        : <ToggleLeft className="w-4 h-4 text-muted-foreground" />
+                                      }
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-6 w-6 p-0 text-muted-foreground hover:text-red-600"
+                                      title="Eliminar"
+                                      onClick={() => deleteDiscountMutation.mutate({ id: dc.id })}
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </Button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </div>

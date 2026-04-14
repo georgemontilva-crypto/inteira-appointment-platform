@@ -3,6 +3,7 @@ import { PRICING, PRICING_DISPLAY } from "@/lib/pricing";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
@@ -15,6 +16,9 @@ import {
   AlertCircle,
   ShoppingCart,
   Info,
+  Tag,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { es } from "date-fns/locale";
@@ -63,12 +67,12 @@ function BatchStatusBadge({ batch }: { batch: { remaining: number; expiresAt: st
   return <Badge className="bg-emerald-100 text-emerald-700 border-0 text-[10px]">Activo</Badge>;
 }
 
-async function redirectToStripeCheckout(productType: string) {
+async function redirectToStripeCheckout(productType: string, discountCode?: string) {
   try {
     const res = await fetch("/api/stripe/create-checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ productType }),
+      body: JSON.stringify({ productType, ...(discountCode ? { discountCode } : {}) }),
     });
     const data = await res.json();
     if (data.url) {
@@ -138,11 +142,33 @@ export default function WalletPage() {
   }, []);
 
   const [buyingSession, setBuyingSession] = useState<string | null>(null);
+  const [discountCode, setDiscountCode] = useState("");
+  const [discountResult, setDiscountResult] = useState<null | {
+    valid: true; type: "percentage" | "fixed"; value: number;
+    discountAmount: number; finalAmount: number; discountCodeId: number;
+  } | { valid: false; reason: string }>(null);
+
+  const validateDiscountMutation = trpc.user.validateDiscountCode.useMutation({
+    onSuccess: (data) => {
+      setDiscountResult(data);
+      if (!data.valid) toast.error(data.reason);
+    },
+    onError: () => toast.error("Error al validar el código"),
+  });
+
+  const handleApplyDiscount = (productType: string) => {
+    if (!discountCode.trim()) return;
+    validateDiscountMutation.mutate({
+      code: discountCode.trim(),
+      productType: productType as "individual_basic" | "individual_premium" | "plan_basic" | "plan_pro",
+    });
+  };
 
   const handleBuySession = async (sessionType: string) => {
     if (!user?.id) return;
     setBuyingSession(sessionType);
-    await redirectToStripeCheckout(sessionType);
+    const code = discountResult?.valid ? discountCode.trim() : undefined;
+    await redirectToStripeCheckout(sessionType, code);
     setBuyingSession(null);
   };
 
@@ -271,6 +297,61 @@ export default function WalletPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
+              {/* ── Discount code input ── */}
+              <div className="flex gap-1.5">
+                <div className="relative flex-1">
+                  <Tag className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={discountCode}
+                    onChange={(e) => {
+                      setDiscountCode(e.target.value.toUpperCase());
+                      setDiscountResult(null);
+                    }}
+                    placeholder="Código descuento"
+                    className="pl-8 h-8 text-xs"
+                    maxLength={50}
+                  />
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 px-3 text-xs"
+                  disabled={!discountCode.trim() || validateDiscountMutation.isPending}
+                  onClick={() => handleApplyDiscount("individual_basic")}
+                >
+                  {validateDiscountMutation.isPending ? "..." : "Aplicar"}
+                </Button>
+              </div>
+
+              {/* ── Discount result feedback ── */}
+              {discountResult !== null && (
+                <div className={`flex items-center gap-1.5 text-xs rounded-lg px-2.5 py-1.5 ${
+                  discountResult.valid
+                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                    : "bg-red-50 text-red-600 border border-red-200"
+                }`}>
+                  {discountResult.valid
+                    ? <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" />
+                    : <XCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                  }
+                  <span>
+                    {discountResult.valid
+                      ? `Descuento: -$${discountResult.discountAmount} MXN`
+                      : discountResult.reason
+                    }
+                  </span>
+                  {discountResult.valid && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-4 w-4 p-0 ml-auto text-muted-foreground hover:text-foreground"
+                      onClick={() => { setDiscountCode(""); setDiscountResult(null); }}
+                    >×</Button>
+                  )}
+                </div>
+              )}
+
+              {/* ── Buy buttons ── */}
               <Button
                 onClick={() => handleBuySession("individual_basic")}
                 disabled={buyingSession !== null}
@@ -279,7 +360,15 @@ export default function WalletPage() {
                 size="sm"
               >
                 <span>{buyingSession === "individual_basic" ? "Redirigiendo..." : "Sesión Básica"}</span>
-                <span className="font-bold">${PRICING.SESSION_BASIC_MXN} MXN</span>
+                <span className="font-bold flex items-center gap-1">
+                  {discountResult?.valid && (
+                    <span className="line-through text-muted-foreground font-normal">${PRICING.SESSION_BASIC_MXN}</span>
+                  )}
+                  ${discountResult?.valid
+                    ? Math.max(PRICING.SESSION_BASIC_MXN - discountResult.discountAmount, 0)
+                    : PRICING.SESSION_BASIC_MXN
+                  } MXN
+                </span>
               </Button>
               <Button
                 onClick={() => handleBuySession("individual_premium")}
@@ -289,7 +378,15 @@ export default function WalletPage() {
                 size="sm"
               >
                 <span>{buyingSession === "individual_premium" ? "Redirigiendo..." : "Sesión Premium"}</span>
-                <span className="font-bold">{PRICING_DISPLAY.SESSION_PREMIUM} MXN</span>
+                <span className="font-bold flex items-center gap-1">
+                  {discountResult?.valid && (
+                    <span className="line-through text-muted-foreground font-normal">$1,500</span>
+                  )}
+                  ${discountResult?.valid
+                    ? Math.max(1500 - discountResult.discountAmount, 0).toLocaleString("es-MX")
+                    : "1,500"
+                  } MXN
+                </span>
               </Button>
               <Link href="/planes">
                 <Button className="w-full gradient-brand text-white border-0 text-xs active:scale-95 transition-transform" size="sm">

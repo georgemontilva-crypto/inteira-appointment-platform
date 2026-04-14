@@ -237,6 +237,59 @@ export const appRouter = router({
           message: `Se agregaron ${CREDIT_COSTS[source]} créditos a tu wallet. Válidos por 60 días.`,
         };
       }),
+
+    validateDiscountCode: protectedProcedure
+      .input(z.object({
+        code: z.string().min(1).max(50),
+        productType: z.enum(["individual_basic", "individual_premium", "plan_basic", "plan_pro"]),
+      }))
+      .mutation(async ({ input }) => {
+        const PRODUCT_PRICES_MXN: Record<string, number> = {
+          individual_basic: 350,
+          individual_premium: 1500,
+          plan_basic: 980,
+          plan_pro: 2500,
+        };
+        const baseAmount = PRODUCT_PRICES_MXN[input.productType] ?? 0;
+
+        const dbConn = await db.getDb();
+        if (!dbConn) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const client = (dbConn as any).$client;
+
+        const row = await new Promise<any>((resolve) => {
+          client.execute(
+            `SELECT id, type, value, maxUses, usedCount, expiresAt, isActive
+             FROM discountCodes WHERE code = ? LIMIT 1`,
+            [input.code.toUpperCase().trim()],
+            (err: any, results: any) => {
+              resolve(Array.isArray(results) ? results[0] ?? null : null);
+            }
+          );
+        });
+
+        if (!row) return { valid: false as const, reason: "Código no encontrado" };
+        if (!row.isActive) return { valid: false as const, reason: "Código inactivo" };
+        if (row.expiresAt && new Date(row.expiresAt) < new Date()) {
+          return { valid: false as const, reason: "Código expirado" };
+        }
+        if (row.maxUses !== null && Number(row.usedCount) >= Number(row.maxUses)) {
+          return { valid: false as const, reason: "Código agotado" };
+        }
+
+        const discountAmount = row.type === "percentage"
+          ? Math.round(baseAmount * Number(row.value) / 100)
+          : Math.min(Number(row.value), baseAmount);
+        const finalAmount = Math.max(baseAmount - discountAmount, 0);
+
+        return {
+          valid: true as const,
+          type: row.type as "percentage" | "fixed",
+          value: Number(row.value),
+          discountAmount,
+          finalAmount,
+          discountCodeId: row.id as number,
+        };
+      }),
   }),
 
   // Professional routes
@@ -1254,6 +1307,87 @@ export const appRouter = router({
         );
       });
     }),
+
+    // ── Discount codes ────────────────────────────────────────────────────
+    createDiscountCode: protectedProcedure
+      .input(z.object({
+        code: z.string().min(1).max(50),
+        type: z.enum(["percentage", "fixed"]),
+        value: z.number().positive(),
+        maxUses: z.number().int().positive().optional().nullable(),
+        expiresAt: z.string().optional().nullable(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+        const dbConn = await db.getDb();
+        if (!dbConn) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const client = (dbConn as any).$client;
+
+        await new Promise<void>((resolve, reject) => {
+          client.execute(
+            `INSERT INTO discountCodes (code, type, value, maxUses, expiresAt, isActive)
+             VALUES (?, ?, ?, ?, ?, 1)`,
+            [input.code.toUpperCase().trim(), input.type, input.value, input.maxUses ?? null, input.expiresAt ?? null],
+            (err: any) => { if (err) reject(err); else resolve(); }
+          );
+        });
+        return { success: true };
+      }),
+
+    listDiscountCodes: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+      const dbConn = await db.getDb();
+      if (!dbConn) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      const client = (dbConn as any).$client;
+
+      return await new Promise<any[]>((resolve, reject) => {
+        client.execute(
+          `SELECT id, code, type, value, maxUses, usedCount, expiresAt, isActive, createdAt
+           FROM discountCodes ORDER BY createdAt DESC`,
+          [],
+          (err: any, results: any) => {
+            if (err) reject(err);
+            else resolve(Array.isArray(results) ? results : []);
+          }
+        );
+      });
+    }),
+
+    toggleDiscountCode: protectedProcedure
+      .input(z.object({ id: z.number(), isActive: z.boolean() }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+        const dbConn = await db.getDb();
+        if (!dbConn) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const client = (dbConn as any).$client;
+
+        await new Promise<void>((resolve, reject) => {
+          client.execute(
+            `UPDATE discountCodes SET isActive = ? WHERE id = ?`,
+            [input.isActive ? 1 : 0, input.id],
+            (err: any) => { if (err) reject(err); else resolve(); }
+          );
+        });
+        return { success: true };
+      }),
+
+    deleteDiscountCode: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+        const dbConn = await db.getDb();
+        if (!dbConn) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const client = (dbConn as any).$client;
+
+        await new Promise<void>((resolve, reject) => {
+          client.execute(
+            `DELETE FROM discountCodes WHERE id = ?`,
+            [input.id],
+            (err: any) => { if (err) reject(err); else resolve(); }
+          );
+        });
+        return { success: true };
+      }),
   }),
   // Specialty routes
   specialty: router({
