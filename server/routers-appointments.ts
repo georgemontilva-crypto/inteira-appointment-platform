@@ -308,7 +308,7 @@ export const appointmentRouter = router({
       if (canceledByRole === "professional") {
         // Profesional cancela: siempre devolver los créditos reservados al cliente
         if (appointment.status === "scheduled") {
-          await refundCredits(appointment.userId, input.appointmentId).catch(() => {});
+          await refundCredits(appointment.userId, input.appointmentId).catch((err: any) => console.error("[Credits] refundCredits error (professional cancel):", err?.message));
         }
         // Multa en pesos según tier y anticipación (se descuenta del professionalWallet)
         const isPro = (userProfessional as any)?.tier === "pro";
@@ -329,14 +329,14 @@ export const appointmentRouter = router({
         if (hoursUntil >= 4) {
           // Con suficiente anticipación: devolver créditos reservados
           if (appointment.status === "scheduled") {
-            await refundCredits(appointment.userId, input.appointmentId).catch(() => {});
+            await refundCredits(appointment.userId, input.appointmentId).catch((err: any) => console.error("[Credits] refundCredits error (user cancel early):", err?.message));
           }
           penaltyAmount = 0;
           penaltyType = "none";
         } else {
           // Cancelación tardía: confirmar consumo de créditos reservados (cliente los pierde)
           if (appointment.status === "scheduled") {
-            await confirmCredits(input.appointmentId).catch(() => {});
+            await confirmCredits(input.appointmentId).catch((err: any) => console.error("[Credits] confirmCredits error (user cancel late):", err?.message));
           }
           penaltyAmount = 0;
           penaltyType = "credits_lost";
@@ -652,7 +652,7 @@ export const appointmentRouter = router({
       // Idempotent: only act on scheduled appointments
       if (appointment.status !== "scheduled") return { success: true };
 
-      await confirmCredits(input.appointmentId).catch(() => {});
+      await confirmCredits(input.appointmentId).catch((err: any) => console.error("[Credits] confirmCredits error (session join):", err?.message));
 
       // Email debit notification (fire-and-forget)
       const userRecord = await db.getUserById(ctx.user.id).catch(() => null);
@@ -733,7 +733,7 @@ export const appointmentRouter = router({
       });
 
       // Confirm reserved credits (user no-showed → professional gets paid, credits consumed)
-      await confirmCredits(input.appointmentId).catch(() => {});
+      await confirmCredits(input.appointmentId).catch((err: any) => console.error("[Credits] confirmCredits error (no-show):", err?.message));
 
       createNotification({
         userId: appointment.userId,

@@ -274,7 +274,8 @@ export async function reserveCredits(
 /**
  * Confirm reserved credits — converts 'reserved' transactions to 'consumed'
  * and decrements remaining + reservedAmount from batches.
- * Wrapped in a transaction; idempotent via WHERE reason='reserved' guard on UPDATE.
+ * No BEGIN/COMMIT — TiDB serverless does not support explicit transactions via this client.
+ * Idempotent: guard via WHERE reason='reserved' on the UPDATE.
  */
 export async function confirmCredits(appointmentId: number): Promise<void> {
   const db = await getDb();
@@ -296,41 +297,34 @@ export async function confirmCredits(appointmentId: number): Promise<void> {
 
   if (reservedTxs.length === 0) return;
 
-  await exec("BEGIN");
-  try {
-    for (const tx of reservedTxs) {
-      const toConsume = Math.abs(tx.delta);
+  for (const tx of reservedTxs) {
+    const toConsume = Math.abs(tx.delta);
 
-      await exec(
-        `UPDATE creditBatches
-         SET remaining = remaining - ?, reservedAmount = GREATEST(0, reservedAmount - ?)
-         WHERE id = ?`,
-        [toConsume, toConsume, tx.batchId]
-      );
-
-      // WHERE reason='reserved' is the DB-level idempotency guard:
-      // a concurrent call that already flipped this row to 'consumed' will get affectedRows=0
-      const result = await exec(
-        `UPDATE creditTransactions SET reason = 'consumed' WHERE id = ? AND reason = 'reserved'`,
-        [tx.id]
-      );
-      if ((result as any)?.affectedRows === 0) {
-        await exec("ROLLBACK");
-        console.warn(`[confirmCredits] tx ${tx.id} already consumed — concurrent call detected, aborting`);
-        return;
-      }
+    // WHERE reason='reserved' is the DB-level idempotency guard:
+    // a concurrent call that already flipped this row to 'consumed' will get affectedRows=0
+    const result = await exec(
+      `UPDATE creditTransactions SET reason = 'consumed' WHERE id = ? AND reason = 'reserved'`,
+      [tx.id]
+    );
+    if ((result as any)?.affectedRows === 0) {
+      console.warn(`[confirmCredits] tx ${tx.id} already consumed — skipping batch update`);
+      continue;
     }
-    await exec("COMMIT");
-  } catch (err) {
-    await exec("ROLLBACK").catch(() => {});
-    throw err;
+
+    await exec(
+      `UPDATE creditBatches
+       SET remaining = remaining - ?, reservedAmount = GREATEST(0, reservedAmount - ?)
+       WHERE id = ?`,
+      [toConsume, toConsume, tx.batchId]
+    );
   }
 }
 
 /**
  * Refund reserved credits — releases the reservation without consuming.
  * Decrements reservedAmount and inserts a positive 'refund' transaction.
- * Wrapped in a transaction; idempotent via WHERE reason='reserved' guard on UPDATE.
+ * No BEGIN/COMMIT — TiDB serverless does not support explicit transactions via this client.
+ * Idempotent: guard via WHERE reason='reserved' on the UPDATE.
  */
 export async function refundCredits(userId: number, appointmentId: number): Promise<void> {
   const db = await getDb();
@@ -352,37 +346,29 @@ export async function refundCredits(userId: number, appointmentId: number): Prom
 
   if (reservedTxs.length === 0) return;
 
-  await exec("BEGIN");
-  try {
-    for (const tx of reservedTxs) {
-      const toRefund = Math.abs(tx.delta);
+  for (const tx of reservedTxs) {
+    const toRefund = Math.abs(tx.delta);
 
-      await exec(
-        `UPDATE creditBatches SET reservedAmount = GREATEST(0, reservedAmount - ?) WHERE id = ?`,
-        [toRefund, tx.batchId]
-      );
-
-      // WHERE reason='reserved' is the DB-level idempotency guard
-      const result = await exec(
-        `UPDATE creditTransactions SET reason = 'refunded' WHERE id = ? AND reason = 'reserved'`,
-        [tx.id]
-      );
-      if ((result as any)?.affectedRows === 0) {
-        await exec("ROLLBACK");
-        console.warn(`[refundCredits] tx ${tx.id} already refunded — concurrent call detected, aborting`);
-        return;
-      }
-
-      await exec(
-        `INSERT INTO creditTransactions (userId, batchId, delta, reason, appointmentId, description)
-         VALUES (?, ?, ?, 'refund', ?, ?)`,
-        [userId, tx.batchId, toRefund, appointmentId, `Reembolso de ${toRefund} créditos (cita #${appointmentId})`]
-      );
+    // WHERE reason='reserved' is the DB-level idempotency guard
+    const result = await exec(
+      `UPDATE creditTransactions SET reason = 'refunded' WHERE id = ? AND reason = 'reserved'`,
+      [tx.id]
+    );
+    if ((result as any)?.affectedRows === 0) {
+      console.warn(`[refundCredits] tx ${tx.id} already refunded — skipping`);
+      continue;
     }
-    await exec("COMMIT");
-  } catch (err) {
-    await exec("ROLLBACK").catch(() => {});
-    throw err;
+
+    await exec(
+      `UPDATE creditBatches SET reservedAmount = GREATEST(0, reservedAmount - ?) WHERE id = ?`,
+      [toRefund, tx.batchId]
+    );
+
+    await exec(
+      `INSERT INTO creditTransactions (userId, batchId, delta, reason, appointmentId, description)
+       VALUES (?, ?, ?, 'refund', ?, ?)`,
+      [userId, tx.batchId, toRefund, appointmentId, `Reembolso de ${toRefund} créditos (cita #${appointmentId})`]
+    );
   }
 }
 

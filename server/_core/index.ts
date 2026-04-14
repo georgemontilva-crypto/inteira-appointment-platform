@@ -627,6 +627,27 @@ async function runStartupMigrations() {
     `).catch(() => {});
     console.log("[Migration] discountCodes table ready");
 
+    // ── One-time fix: release orphaned reserved credits for cancelled/no-show appointments ──
+    // Fixes the BEGIN/COMMIT bug where refundCredits silently failed on TiDB
+    await new Promise<void>((resolve) => {
+      client.execute(
+        `UPDATE creditBatches cb
+         JOIN creditTransactions ct ON ct.batchId = cb.id
+         JOIN appointments a ON a.id = ct.appointmentId
+         SET cb.reservedAmount = 0
+         WHERE ct.reason = 'reserved'
+           AND a.status IN ('cancelled', 'canceled', 'no_show', 'no-show')
+           AND cb.reservedAmount > 0`,
+        [],
+        (err: any, result: any) => {
+          if (err) console.error("[Migration] orphaned reservedAmount fix:", err?.message);
+          else if (result?.affectedRows > 0) console.log(`[Migration] Released orphaned reservedAmount on ${result.affectedRows} batch(es)`);
+          else console.log("[Migration] No orphaned reservedAmount found");
+          resolve();
+        }
+      );
+    });
+
     // Create emailOtps table for email-based OTP authentication
     await db.execute(`
       CREATE TABLE IF NOT EXISTS \`emailOtps\` (
