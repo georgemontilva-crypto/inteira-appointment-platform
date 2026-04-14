@@ -6,6 +6,16 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -954,30 +964,33 @@ export default function AdminDashboard() {
             )}
 
             {/* ── Tier confirm dialog ── */}
-            {tierConfirm && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setTierConfirm(null)}>
-                <div className="bg-background rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
-                  <h3 className="font-bold text-base" style={{ fontFamily: "Poppins, sans-serif" }}>Cambiar tier</h3>
-                  <p className="text-sm text-muted-foreground">
-                    ¿Cambiar el tier de <strong>{tierConfirm.name}</strong> a{" "}
-                    <strong className={tierConfirm.newTier === "pro" ? "text-purple-700" : "text-emerald-700"}>
-                      {tierConfirm.newTier === "pro" ? "Pro" : "Básico"}
-                    </strong>?
-                  </p>
-                  <div className="flex gap-2 justify-end">
-                    <Button variant="outline" size="sm" onClick={() => setTierConfirm(null)}>Cancelar</Button>
-                    <Button
-                      size="sm"
-                      className="gradient-brand text-white border-0"
-                      disabled={updateTierMutation.isPending}
-                      onClick={() => updateTierMutation.mutate({ professionalId: tierConfirm.professionalId, tier: tierConfirm.newTier })}
-                    >
-                      {updateTierMutation.isPending ? "Guardando..." : "Confirmar"}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
+            <AlertDialog open={tierConfirm !== null} onOpenChange={(open) => { if (!open) setTierConfirm(null); }}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>¿Cambiar tier?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Estás a punto de cambiar el tier de <strong>{tierConfirm?.name}</strong> de{" "}
+                    <strong>{tierConfirm?.newTier === "pro" ? "Básico" : "Pro"}</strong> a{" "}
+                    <strong className={tierConfirm?.newTier === "pro" ? "text-purple-700" : "text-emerald-700"}>
+                      {tierConfirm?.newTier === "pro" ? "Pro" : "Básico"}
+                    </strong>. Esta acción afecta sus comisiones inmediatamente.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction
+                    disabled={updateTierMutation.isPending}
+                    onClick={() => {
+                      if (tierConfirm) {
+                        updateTierMutation.mutate({ professionalId: tierConfirm.professionalId, tier: tierConfirm.newTier });
+                      }
+                    }}
+                  >
+                    {updateTierMutation.isPending ? "Guardando..." : "Confirmar cambio"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         )}
 
