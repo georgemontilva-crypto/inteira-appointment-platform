@@ -46,15 +46,19 @@ export function getAvailableSlots(
 
   const slots: TimeSlot[] = [];
 
+  // Extract date components in UTC so that setHours-style construction is
+  // timezone-agnostic. Railway runs in UTC; professional availability is stored
+  // in local Mexican time (UTC-6). Using Date.UTC keeps both sides consistent.
+  const utcYear  = date.getUTCFullYear();
+  const utcMonth = date.getUTCMonth();
+  const utcDay   = date.getUTCDate();
+
   for (const daySchedule of daySchedules) {
     const [startHour, startMinute] = daySchedule.startTime.split(":").map(Number);
     const [endHour, endMinute] = daySchedule.endTime.split(":").map(Number);
 
-    let currentTime = new Date(date);
-    currentTime.setHours(startHour, startMinute, 0, 0);
-
-    const endTime = new Date(date);
-    endTime.setHours(endHour, endMinute, 0, 0);
+    let currentTime = new Date(Date.UTC(utcYear, utcMonth, utcDay, startHour, startMinute, 0));
+    const endTime   = new Date(Date.UTC(utcYear, utcMonth, utcDay, endHour,   endMinute,   0));
 
     while (currentTime.getTime() + durationMinutes * 60 * 1000 <= endTime.getTime()) {
       const slotEnd = new Date(currentTime.getTime() + durationMinutes * 60 * 1000);
@@ -163,11 +167,13 @@ export function isTimeWithinAvailability(
   const [startHour, startMinute] = daySchedule.startTime.split(":").map(Number);
   const [endHour, endMinute] = daySchedule.endTime.split(":").map(Number);
 
-  const dayStart = new Date(appointmentTime);
-  dayStart.setHours(startHour, startMinute, 0, 0);
+  // Use Date.UTC to stay consistent with getAvailableSlots — avoids server-TZ drift
+  const utcYear  = appointmentTime.getUTCFullYear();
+  const utcMonth = appointmentTime.getUTCMonth();
+  const utcDay   = appointmentTime.getUTCDate();
 
-  const dayEnd = new Date(appointmentTime);
-  dayEnd.setHours(endHour, endMinute, 0, 0);
+  const dayStart = new Date(Date.UTC(utcYear, utcMonth, utcDay, startHour, startMinute, 0));
+  const dayEnd   = new Date(Date.UTC(utcYear, utcMonth, utcDay, endHour,   endMinute,   0));
 
   const appointmentEnd = calculateEndTime(appointmentTime, durationMinutes);
 
