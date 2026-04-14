@@ -280,10 +280,6 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
           <div className="flex items-center gap-2 flex-shrink-0">
             <img src={logo} alt="Inteira" style={{ height: "28px", width: "auto", objectFit: "contain" }} />
           </div>
-          <div className="flex items-center gap-2 bg-[#F7FAFC] border border-[rgba(96,117,98,0.2)] rounded-full px-3 h-[34px] w-[200px] flex-shrink-0 ml-2">
-            <Icon name="search" className="w-3.5 h-3.5 text-[#93A295]" />
-            <input className="bg-transparent border-none outline-none text-[13px] text-[#333333] w-full placeholder:text-[#93A295]" placeholder="Buscar especialistas..." />
-          </div>
           <nav className="flex items-center">
             {[
               { label: "Especialidades", href: "/especialidades" },
