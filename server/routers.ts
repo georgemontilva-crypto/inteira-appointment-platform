@@ -93,8 +93,9 @@ export const appRouter = router({
     updateProfile: protectedProcedure
       .input(userProfileUpdateSchema)
       .mutation(async ({ ctx, input }) => {
-        const dbInstance = await db.getDb();
-        if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const dbConn = await db.getDb();
+        if (!dbConn) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const client = (dbConn as any).$client;
 
         // Build dynamic SET clause with ? placeholders — no string escaping
         const setParts: string[] = [];
@@ -108,10 +109,13 @@ export const appRouter = router({
 
         if (setParts.length > 1) {
           params.push(ctx.user.id);
-          await dbInstance.execute(
-            `UPDATE \`users\` SET ${setParts.join(", ")} WHERE \`id\` = ?`,
-            params
-          );
+          await new Promise<void>((resolve, reject) => {
+            client.execute(
+              `UPDATE \`users\` SET ${setParts.join(", ")} WHERE \`id\` = ?`,
+              params,
+              (err: any) => { if (err) reject(err); else resolve(); }
+            );
+          });
         }
 
         return await db.getUserById(ctx.user.id);
