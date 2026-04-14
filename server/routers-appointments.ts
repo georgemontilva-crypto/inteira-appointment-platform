@@ -112,7 +112,7 @@ export const appointmentRouter = router({
       if (!canScheduleAppointment(appointmentDateObj)) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Las citas deben agendarse con al menos 30 minutos de anticipación",
+          message: "Las citas deben agendarse con al menos 10 minutos de anticipación",
         });
       }
 

@@ -15,11 +15,11 @@ export interface AvailabilitySlot {
 }
 
 /**
- * Check if an appointment can be scheduled (30 minutes minimum anticipation)
+ * Check if an appointment can be scheduled (10 minutes minimum anticipation)
  */
 export function canScheduleAppointment(appointmentDate: Date, clientOffsetMinutes: number = 0): boolean {
   const nowUTC = Date.now();
-  const minTimeUTC = nowUTC + 30 * 60 * 1000;
+  const minTimeUTC = nowUTC + 10 * 60 * 1000;
   // Convertir el slot (que está en hora local del cliente) a UTC
   const appointmentUTC = appointmentDate.getTime() - (clientOffsetMinutes * 60 * 1000);
   return appointmentUTC > minTimeUTC;

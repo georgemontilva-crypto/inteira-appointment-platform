@@ -102,9 +102,9 @@ export default function BookAppointment() {
     });
   };
 
-  // Disable past dates and dates less than 30 minutes from now
+  // Disable past dates and dates less than 10 minutes from now
   const disabledDays = (date: Date) => {
-    const minDate = addMinutes(new Date(), 30);
+    const minDate = addMinutes(new Date(), 10);
     return isBefore(startOfDay(date), startOfDay(minDate));
   };
 
@@ -273,7 +273,7 @@ export default function BookAppointment() {
                       className="rounded-xl border border-border"
                     />
                     <p className="text-xs text-muted-foreground text-center mt-3">
-                      Las citas deben agendarse con al menos 30 minutos de anticipación
+                      Las citas deben agendarse con al menos 10 minutos de anticipación
                     </p>
                   </div>
 
@@ -470,7 +470,7 @@ export default function BookAppointment() {
                   <div className="text-xs text-muted-foreground">
                     <p className="flex items-start gap-1">
                       <AlertCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />
-                      Las citas deben agendarse con al menos 30 minutos de anticipación.
+                      Las citas deben agendarse con al menos 10 minutos de anticipación.
                     </p>
                   </div>
                 </CardContent>
