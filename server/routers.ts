@@ -1,3 +1,4 @@
+import { randomBytes } from "crypto";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
@@ -65,6 +66,9 @@ const userProfileUpdateSchema = z.object({
   bio: z.string().max(1000).optional(),
   profileImage: z.string().max(500).optional(),
 });
+
+// In-memory rate limit store for discount code validation (5 req/min per IP)
+const discountRateLimit = new Map<string, { count: number; resetAt: number }>();
 
 export const appRouter = router({
   system: systemRouter,
@@ -270,7 +274,18 @@ export const appRouter = router({
         code: z.string().min(1).max(50),
         productType: z.enum(["individual_basic", "individual_premium", "plan_basic", "plan_pro"]),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
+        // Rate limit: 5 attempts per minute per IP
+        const ip = String((ctx as any).req?.headers?.["x-forwarded-for"] ?? (ctx as any).req?.socket?.remoteAddress ?? "unknown");
+        const now = Date.now();
+        const entry = discountRateLimit.get(ip);
+        if (entry && now < entry.resetAt) {
+          if (entry.count >= 5) throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "Demasiados intentos. Espera 1 minuto." });
+          entry.count++;
+        } else {
+          discountRateLimit.set(ip, { count: 1, resetAt: now + 60_000 });
+        }
+
         const PRODUCT_PRICES_MXN: Record<string, number> = {
           individual_basic: 350,
           individual_premium: 1500,
@@ -1509,9 +1524,14 @@ export const appRouter = router({
         if (!dbConn) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
         const client = (dbConn as any).$client;
 
-        const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-        const group = () => Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
-        const code = `${group()}-${group()}-${group()}-${group()}`;
+        const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        const bytes = randomBytes(16);
+        let rawCode = "";
+        for (let i = 0; i < 16; i++) {
+          rawCode += chars[bytes[i] % chars.length];
+          if (i === 3 || i === 7 || i === 11) rawCode += "-";
+        }
+        const code = rawCode;
 
         const credits = CREDIT_COSTS[input.productType];
         const amount = credits; // 1 crédito = 1 MXN
