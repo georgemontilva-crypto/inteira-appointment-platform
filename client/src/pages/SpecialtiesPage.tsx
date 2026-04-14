@@ -90,14 +90,14 @@ function resolveIcon(iconKey: string | null | undefined, name: string): React.Re
 // ─── Category map ─────────────────────────────────────────────────────────────
 type CategoryKey = "salud_mental" | "salud_fisica" | "negocios" | "educacion" | "legal" | "creatividad" | "otros";
 
-const CATEGORIES: { key: CategoryKey; label: string; emoji: string }[] = [
-  { key: "salud_mental",  label: "Salud Mental y Bienestar",  emoji: "🧠" },
-  { key: "salud_fisica",  label: "Salud Física",              emoji: "🏥" },
-  { key: "negocios",      label: "Negocios y Finanzas",       emoji: "💼" },
-  { key: "educacion",     label: "Educación e Idiomas",       emoji: "🎓" },
-  { key: "legal",         label: "Legal y Profesional",       emoji: "⚖️" },
-  { key: "creatividad",   label: "Creatividad y Estilo",      emoji: "🎨" },
-  { key: "otros",         label: "Otros",                     emoji: "🌿" },
+const CATEGORIES: { key: CategoryKey; label: string; Icon: React.ElementType }[] = [
+  { key: "salud_mental",  label: "Salud Mental y Bienestar",  Icon: Brain },
+  { key: "salud_fisica",  label: "Salud Física",              Icon: HeartPulse },
+  { key: "negocios",      label: "Negocios y Finanzas",       Icon: TrendingUp },
+  { key: "educacion",     label: "Educación e Idiomas",       Icon: GraduationCap },
+  { key: "legal",         label: "Legal y Profesional",       Icon: Scale },
+  { key: "creatividad",   label: "Creatividad y Estilo",      Icon: Palette },
+  { key: "otros",         label: "Otros",                     Icon: Sparkles },
 ];
 
 const CATEGORY_KEYWORDS: Record<CategoryKey, string[]> = {
@@ -246,13 +246,14 @@ export default function SpecialtiesPage() {
             <button
               key={cat.key}
               onClick={() => setActiveCategory(activeCategory === cat.key ? "all" : cat.key)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                 activeCategory === cat.key
                   ? "bg-primary text-white"
                   : "bg-muted text-muted-foreground hover:bg-muted/70"
               }`}
             >
-              {cat.emoji} {cat.label}
+              <cat.Icon className="w-4 h-4" />
+              {cat.label}
             </button>
           ))}
         </div>
@@ -273,7 +274,7 @@ export default function SpecialtiesPage() {
                 {/* Category header — only shown when "Todas" is active or when no search query */}
                 {(activeCategory === "all" && !search) && (
                   <div className="flex items-center gap-2 mb-4">
-                    <span className="text-lg">{group.emoji}</span>
+                    <group.Icon className="w-5 h-5 text-primary" />
                     <h2 className="text-base font-bold text-foreground" style={{ fontFamily: "Poppins, sans-serif" }}>
                       {group.label}
                     </h2>
