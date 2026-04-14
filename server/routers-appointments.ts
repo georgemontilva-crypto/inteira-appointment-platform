@@ -20,10 +20,32 @@ import { createNotification } from "./notifications";
 import { chargeProfessionalPenalty } from "./professionalWallet";
 
 const SESSION_TYPES = {
-  basic:   { credits: 350,  durationMinutes: 60, label: "Sesión Básica" },
-  premium: { credits: 1500, durationMinutes: 60, label: "Sesión Premium" },
+  basic:   { credits: 350,  memberCredits: 245,  durationMinutes: 60, label: "Sesión Básica" },
+  premium: { credits: 1500, memberCredits: 1250, durationMinutes: 60, label: "Sesión Premium" },
 } as const;
 type SessionType = keyof typeof SESSION_TYPES;
+
+/** Returns true if the user has an active plan credit batch (plan_basic or plan_pro). */
+async function userHasActiveMembership(userId: number): Promise<boolean> {
+  const { getDb } = await import("./db");
+  const dbConn = await getDb();
+  if (!dbConn) return false;
+  const client = (dbConn as any).$client;
+  const rows = await new Promise<any[]>((resolve) => {
+    client.execute(
+      `SELECT id FROM creditBatches
+       WHERE userId = ? AND source IN ('plan_basic', 'plan_pro')
+         AND expiredEarly = 0 AND expiresAt > NOW() AND remaining > 0
+       LIMIT 1`,
+      [userId],
+      (err: any, results: any) => {
+        if (err) { console.error("[userHasActiveMembership]", err?.message); resolve([]); }
+        else resolve(Array.isArray(results) ? results : []);
+      }
+    );
+  });
+  return rows.length > 0;
+}
 
 // Since both session types are now 60 min, durationMinutes alone can't distinguish them.
 // This helper queries creditTransactions to find the original credit cost of an appointment.
@@ -105,7 +127,9 @@ export const appointmentRouter = router({
     .mutation(async ({ ctx, input }) => {
       const sessionConfig = SESSION_TYPES[input.sessionType];
       const durationMinutes = sessionConfig.durationMinutes;
-      const creditCost = sessionConfig.credits;
+      const hasMembership = await userHasActiveMembership(ctx.user.id);
+      const pricingType: "individual" | "member" = hasMembership ? "member" : "individual";
+      const creditCost = hasMembership ? sessionConfig.memberCredits : sessionConfig.credits;
       const appointmentDateObj = new Date(input.appointmentDate);
 
       // Validate appointment can be scheduled
@@ -182,14 +206,14 @@ export const appointmentRouter = router({
         appointmentEndDate
       );
 
-      // Update appointment row with the video call link
+      // Update appointment row with the video call link and pricingType
       const { getDb } = await import("./db");
       const dbConn = await getDb();
       if (dbConn) {
         await new Promise<void>((resolve) => {
           (dbConn as any).$client.execute(
-            "UPDATE appointments SET videoCallLink = ?, videoCallId = ? WHERE id = ?",
-            [videoCall.url, videoCall.roomName, newAppointmentId],
+            "UPDATE appointments SET videoCallLink = ?, videoCallId = ?, pricingType = ? WHERE id = ?",
+            [videoCall.url, videoCall.roomName, pricingType, newAppointmentId],
             (err: any) => { if (err) console.error("[createAppointment] update video call:", err); resolve(); }
           );
         });
@@ -599,12 +623,15 @@ export const appointmentRouter = router({
 
         const { creditProfessionalEarning } = await import("./professionalWallet");
         const sessionCreditCost = await getAppointmentCreditCost(input.appointmentId);
-        const sessionType = sessionCreditCost >= 1500 ? "premium" : "basic";
+        // member_basic=245, member_premium=1250, individual_basic=350, individual_premium=1500
+        const sessionType = (sessionCreditCost >= 1250) ? "premium" : "basic";
+        const apptPricingType = ((appointment as any).pricingType ?? "individual") as "individual" | "member";
         const { netAmount } = await creditProfessionalEarning(
           professional.id,
           input.appointmentId,
           (professional.tier ?? "basic") as "basic" | "pro",
-          sessionType
+          sessionType,
+          apptPricingType
         );
 
         // Notify professional

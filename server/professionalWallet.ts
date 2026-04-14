@@ -1,28 +1,50 @@
 import { getDb } from "./db";
 
-// Platform commission rates by tier
+// Platform commission rates by tier (applied to individual/non-member sessions)
 export const PROFESSIONAL_COMMISSIONS: Record<"basic" | "pro", number> = {
   basic: 0.20, // 20% platform fee — professional earns 80%
   pro:   0.15, // 15% platform fee — professional earns 85%
 };
 
-// Gross session amounts in MXN — must match credit costs in SESSION_TYPES
+// Gross session amounts in MXN — individual (non-member) pricing
 export const GROSS_AMOUNT_BASIC   = 350;
 export const GROSS_AMOUNT_PREMIUM = 1500;
+
+// Gross session amounts for member-priced sessions
+export const GROSS_AMOUNT_BASIC_MEMBER   = 245;
+export const GROSS_AMOUNT_PREMIUM_MEMBER = 1250;
+
+// Fixed professional earning for member-priced sessions (no tier % applied)
+export const PROFESSIONAL_EARNING_BASIC_MEMBER   = 147;
+export const PROFESSIONAL_EARNING_PREMIUM_MEMBER = 750;
 
 export async function creditProfessionalEarning(
   professionalId: number,
   appointmentId: number,
   tier: "basic" | "pro",
-  sessionType: "basic" | "premium" = "basic"
+  sessionType: "basic" | "premium" = "basic",
+  pricingType: "individual" | "member" = "individual"
 ): Promise<{ netAmount: number; commissionAmount: number }> {
   const db = await getDb();
   if (!db) throw new Error("DB not available");
 
-  const commissionRate = PROFESSIONAL_COMMISSIONS[tier];
-  const grossAmount = sessionType === "premium" ? GROSS_AMOUNT_PREMIUM : GROSS_AMOUNT_BASIC;
-  const commissionAmount = Math.round(grossAmount * commissionRate * 100) / 100;
-  const netAmount = Math.round((grossAmount - commissionAmount) * 100) / 100;
+  let grossAmount: number;
+  let commissionAmount: number;
+  let netAmount: number;
+  let commissionRate: number;
+
+  if (pricingType === "member") {
+    // Fixed earning for member sessions — no tier % applied
+    grossAmount = sessionType === "premium" ? GROSS_AMOUNT_PREMIUM_MEMBER : GROSS_AMOUNT_BASIC_MEMBER;
+    netAmount = sessionType === "premium" ? PROFESSIONAL_EARNING_PREMIUM_MEMBER : PROFESSIONAL_EARNING_BASIC_MEMBER;
+    commissionAmount = Math.round((grossAmount - netAmount) * 100) / 100;
+    commissionRate = Math.round((commissionAmount / grossAmount) * 10000) / 10000;
+  } else {
+    commissionRate = PROFESSIONAL_COMMISSIONS[tier];
+    grossAmount = sessionType === "premium" ? GROSS_AMOUNT_PREMIUM : GROSS_AMOUNT_BASIC;
+    commissionAmount = Math.round(grossAmount * commissionRate * 100) / 100;
+    netAmount = Math.round((grossAmount - commissionAmount) * 100) / 100;
+  }
 
   const client = (db as any).$client;
 

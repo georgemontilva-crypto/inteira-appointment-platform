@@ -4,18 +4,22 @@
  */
 
 export const PRICING = {
-  SESSION_BASIC_MXN: 350,
-  SESSION_PREMIUM_MXN: 1500,
-  PLAN_BASIC_MXN: 980,
-  PLAN_PRO_MXN: 2500,
+  SESSION_BASIC_MXN:          350,
+  SESSION_PREMIUM_MXN:        1500,
+  SESSION_BASIC_MEMBER_MXN:   245,
+  SESSION_PREMIUM_MEMBER_MXN: 1250,
+  PLAN_BASIC_MXN:             980,
+  PLAN_PRO_MXN:               2500,
 } as const;
 
 /** Pre-formatted display strings (include $ sign and thousands separators) */
 export const PRICING_DISPLAY = {
-  SESSION_BASIC: "$350",
-  SESSION_PREMIUM: "$1,500",
-  PLAN_BASIC: "$980",
-  PLAN_PRO: "$2,500",
+  SESSION_BASIC:          "$350",
+  SESSION_PREMIUM:        "$1,500",
+  SESSION_BASIC_MEMBER:   "$245",
+  SESSION_PREMIUM_MEMBER: "$1,250",
+  PLAN_BASIC:             "$980",
+  PLAN_PRO:               "$2,500",
 } as const;
 
 /** Returns the credit cost for a session based on its duration in minutes */

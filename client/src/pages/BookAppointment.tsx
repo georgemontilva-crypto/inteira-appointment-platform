@@ -12,7 +12,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { toast } from "sonner";
 import {
   Clock, Video, CheckCircle2, Calendar as CalendarIcon,
-  AlertCircle, Star, Wallet,
+  AlertCircle, Star, Wallet, Sparkles,
 } from "lucide-react";
 import { format, addMinutes, isBefore, startOfDay } from "date-fns";
 import { es } from "date-fns/locale";
@@ -34,14 +34,16 @@ export default function BookAppointment() {
   const [confirmedVideoLink, setConfirmedVideoLink] = useState<string | null>(null);
 
   const SESSION_INFO = {
-    basic:   { label: "Sesión Básica",   duration: "60 min", credits: PRICING.SESSION_BASIC_MXN  },
-    premium: { label: "Sesión Premium",  duration: "60 min", credits: PRICING.SESSION_PREMIUM_MXN },
+    basic:   { label: "Sesión Básica",   duration: "60 min", credits: PRICING.SESSION_BASIC_MXN,   memberCredits: PRICING.SESSION_BASIC_MEMBER_MXN  },
+    premium: { label: "Sesión Premium",  duration: "60 min", credits: PRICING.SESSION_PREMIUM_MXN, memberCredits: PRICING.SESSION_PREMIUM_MEMBER_MXN },
   } as const;
   const SESSION_DURATION_MINUTES = { basic: 60, premium: 60 } as const;
 
-  // Wallet query for credit balance indicator
+  // Membership + wallet queries
   const { data: wallet } = trpc.user.getWallet.useQuery(undefined, { enabled: isAuthenticated });
-  const SESSION_COST = SESSION_INFO[sessionType].credits;
+  const { data: membershipData } = trpc.user.hasActiveMembership.useQuery(undefined, { enabled: isAuthenticated });
+  const hasMembership = membershipData?.active ?? false;
+  const SESSION_COST = hasMembership ? SESSION_INFO[sessionType].memberCredits : SESSION_INFO[sessionType].credits;
   const hasEnoughCredits = (wallet?.balance ?? 0) >= SESSION_COST;
 
   const { data: professional } = trpc.professional.getById.useQuery(
@@ -232,6 +234,7 @@ export default function BookAppointment() {
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                   {(["basic", "premium"] as const).map((type) => {
                     const info = SESSION_INFO[type];
+                    const effectiveCost = hasMembership ? info.memberCredits : info.credits;
                     return (
                       <div
                         key={type}
@@ -244,7 +247,14 @@ export default function BookAppointment() {
                       >
                         <p style={{ fontWeight: 600, color: "#333", margin: 0 }}>{info.label}</p>
                         <p style={{ fontSize: "13px", color: "#666", margin: "4px 0" }}>{info.duration}</p>
-                        <p style={{ fontSize: "15px", fontWeight: 600, color: "#607562", margin: 0 }}>{info.credits} créditos</p>
+                        {hasMembership ? (
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                            <p style={{ fontSize: "13px", color: "#999", margin: 0, textDecoration: "line-through" }}>{info.credits} cr</p>
+                            <p style={{ fontSize: "15px", fontWeight: 700, color: "#16a34a", margin: 0 }}>{effectiveCost} créditos</p>
+                          </div>
+                        ) : (
+                          <p style={{ fontSize: "15px", fontWeight: 600, color: "#607562", margin: 0 }}>{info.credits} créditos</p>
+                        )}
                       </div>
                     );
                   })}
@@ -416,10 +426,24 @@ export default function BookAppointment() {
                         <CheckCircle2 className="w-4 h-4 text-primary" />
                         <span>{SESSION_INFO[sessionType].label}</span>
                       </div>
-                      <div className="flex items-center gap-2 text-sm">
-                        <Clock className="w-4 h-4 text-primary" />
-                        <span>{SESSION_INFO[sessionType].duration} · {SESSION_INFO[sessionType].credits} créditos</span>
+                      <div className="flex items-center gap-2 text-sm flex-wrap">
+                        <Clock className="w-4 h-4 text-primary flex-shrink-0" />
+                        {hasMembership ? (
+                          <span className="flex items-center gap-1.5 flex-wrap">
+                            {SESSION_INFO[sessionType].duration}
+                            <span className="line-through text-muted-foreground">{SESSION_INFO[sessionType].credits} cr</span>
+                            <span className="font-semibold text-emerald-600">{SESSION_COST} créditos</span>
+                          </span>
+                        ) : (
+                          <span>{SESSION_INFO[sessionType].duration} · {SESSION_INFO[sessionType].credits} créditos</span>
+                        )}
                       </div>
+                      {hasMembership && (
+                        <div className="flex items-center gap-1 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-1 w-fit">
+                          <Sparkles className="w-3.5 h-3.5" />
+                          Precio membresía
+                        </div>
+                      )}
                       {selectedDate && (
                         <div className="flex items-center gap-2 text-sm">
                           <CalendarIcon className="w-4 h-4 text-primary" />

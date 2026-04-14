@@ -627,6 +627,27 @@ async function runStartupMigrations() {
     `).catch(() => {});
     console.log("[Migration] discountCodes table ready");
 
+    // Ensure appointments.pricingType column exists
+    await new Promise<void>((resolve) => {
+      client.execute(
+        `SELECT COUNT(*) as cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'appointments' AND COLUMN_NAME = 'pricingType'`,
+        [],
+        (err: any, results: any) => {
+          const cnt = Number(Array.isArray(results) ? results[0]?.cnt : results?.cnt);
+          if (cnt > 0) { resolve(); return; }
+          client.execute(
+            `ALTER TABLE appointments ADD COLUMN \`pricingType\` ENUM('individual', 'member') NOT NULL DEFAULT 'individual'`,
+            [],
+            (err2: any) => {
+              if (err2) console.warn("[Migration] appointments.pricingType:", err2?.message);
+              else console.log("[Migration] appointments.pricingType column added");
+              resolve();
+            }
+          );
+        }
+      );
+    });
+
     // ── One-time fix: release orphaned reserved credits for cancelled/no-show appointments ──
     // Fixes the BEGIN/COMMIT bug where refundCredits silently failed on TiDB
     await new Promise<void>((resolve) => {

@@ -17,10 +17,13 @@ import { getDb } from "./db";
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 export const CREDIT_COSTS = {
-  individual_basic: 350,
+  individual_basic:   350,
   individual_premium: 1500,
-  plan_basic: 980,
-  plan_pro: 2500,
+  plan_basic:         980,
+  plan_pro:           2500,
+  // Discounted session cost for users with an active plan membership
+  member_basic:       245,
+  member_premium:     1250,
 } as const;
 
 export type CreditSource = keyof typeof CREDIT_COSTS;

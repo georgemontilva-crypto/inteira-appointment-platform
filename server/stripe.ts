@@ -30,8 +30,11 @@ function getStripe(): Stripe {
   return new Stripe(key, { apiVersion: "2026-02-25.clover" });
 }
 
+type PurchasableCreditSource = "individual_basic" | "individual_premium" | "plan_basic" | "plan_pro";
+
 // Precios en centavos de MXN (1 crédito = 1 MXN)
-const PRODUCT_PRICES: Record<CreditSource, { amount: number; name: string; description: string }> = {
+// member_basic / member_premium are booking-only discounts — not Stripe products
+const PRODUCT_PRICES: Record<PurchasableCreditSource, { amount: number; name: string; description: string }> = {
   individual_basic: {
     amount: 35000,       // $350 MXN en centavos
     name: "Sesión Básica",
@@ -77,7 +80,7 @@ export function registerStripeRoutes(app: Express) {
         return res.status(400).json({ error: "productType es requerido" });
       }
 
-      const product = PRODUCT_PRICES[productType];
+      const product = PRODUCT_PRICES[productType as PurchasableCreditSource];
       if (!product) {
         return res.status(400).json({ error: "Tipo de producto inválido" });
       }

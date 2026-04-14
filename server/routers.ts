@@ -148,6 +148,29 @@ export const appRouter = router({
     getAppointments: protectedProcedure.query(async ({ ctx }) => {
       return await db.getUserAppointments(ctx.user.id);
     }),
+
+    // Returns true if the user has purchased a plan (plan_basic or plan_pro) in the last 32 days
+    // and the resulting credit batch is still active (not expired, not used up).
+    hasActiveMembership: protectedProcedure.query(async ({ ctx }) => {
+      const dbConn = await db.getDb();
+      if (!dbConn) return { active: false };
+      const client = (dbConn as any).$client;
+      const rows = await new Promise<any[]>((resolve) => {
+        client.execute(
+          `SELECT id FROM creditBatches
+           WHERE userId = ? AND source IN ('plan_basic', 'plan_pro')
+             AND expiredEarly = 0 AND expiresAt > NOW() AND remaining > 0
+           LIMIT 1`,
+          [ctx.user.id],
+          (err: any, results: any) => {
+            if (err) { console.error("[hasActiveMembership]", err?.message); resolve([]); }
+            else resolve(Array.isArray(results) ? results : []);
+          }
+        );
+      });
+      return { active: rows.length > 0 };
+    }),
+
     // ── Wallet ──────────────────────────────────────────────────────────
     getWallet: protectedProcedure.query(async ({ ctx }) => {
       const dbConn = await db.getDb();
