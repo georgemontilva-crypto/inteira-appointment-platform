@@ -211,6 +211,8 @@ export default function AdminDashboard() {
   });
   const [docsModal, setDocsModal] = useState<{ professionalId: number; name: string } | null>(null);
   const [tierConfirm, setTierConfirm] = useState<{ professionalId: number; name: string; newTier: "basic" | "pro" } | null>(null);
+  const [revokeConfirm, setRevokeConfirm] = useState<{ professionalId: number; name: string } | null>(null);
+  const [revokeReason, setRevokeReason] = useState("");
 
   const { data: pendingProfessionals, refetch: refetchPending, isLoading: loadingPending } =
     trpc.admin.getPendingProfessionals.useQuery(undefined, {
@@ -241,6 +243,16 @@ export default function AdminDashboard() {
       toast.success("Profesional rechazado");
     },
     onError: () => toast.error("Error al rechazar el profesional"),
+  });
+
+  const revokeMutation = trpc.admin.revokeProfessional.useMutation({
+    onSuccess: () => {
+      refetchActiveProfessionals();
+      setRevokeConfirm(null);
+      setRevokeReason("");
+      toast.success("Acceso revocado correctamente");
+    },
+    onError: () => toast.error("Error al revocar el acceso"),
   });
 
   const createSpecialtyMutation = trpc.specialty.create.useMutation({
@@ -895,6 +907,14 @@ export default function AdminDashboard() {
                             <FolderOpen className="w-3.5 h-3.5" />
                             Documentos
                           </button>
+                          <button
+                            onClick={() => { setRevokeConfirm({ professionalId: pro.id, name }); setRevokeReason(""); }}
+                            className="flex items-center gap-1 text-[11px] text-red-500 hover:text-red-700 transition-colors"
+                            title="Revocar acceso"
+                          >
+                            <XCircle className="w-3.5 h-3.5" />
+                            Revocar
+                          </button>
                         </div>
                       </CardContent>
                     </Card>
@@ -902,6 +922,41 @@ export default function AdminDashboard() {
                 })}
               </div>
             )}
+
+            {/* ── Revocar AlertDialog ── */}
+            <AlertDialog open={revokeConfirm !== null} onOpenChange={(open) => { if (!open) { setRevokeConfirm(null); setRevokeReason(""); } }}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>¿Revocar acceso a {revokeConfirm?.name}?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Esta acción suspenderá su cuenta. El profesional recibirá un email con el motivo.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <div className="py-2">
+                  <textarea
+                    placeholder="Motivo de revocación (obligatorio)..."
+                    value={revokeReason}
+                    onChange={(e) => setRevokeReason(e.target.value)}
+                    rows={3}
+                    className="w-full rounded-xl border border-border p-3 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-red-400/30 focus:border-red-400 resize-none"
+                  />
+                </div>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction
+                    disabled={!revokeReason.trim() || revokeMutation.isPending}
+                    className="bg-red-600 hover:bg-red-700 text-white focus:ring-red-500 disabled:opacity-50"
+                    onClick={() => {
+                      if (revokeConfirm && revokeReason.trim()) {
+                        revokeMutation.mutate({ professionalId: revokeConfirm.professionalId, reason: revokeReason.trim() });
+                      }
+                    }}
+                  >
+                    {revokeMutation.isPending ? "Revocando..." : "Revocar acceso"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
 
             {/* ── Documents modal ── */}
             {docsModal && (

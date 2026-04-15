@@ -724,3 +724,25 @@ export async function sendWithdrawalPaidEmail(params: {
       : [],
   });
 }
+
+export async function sendProfessionalRevocationEmail(params: {
+  professionalEmail: string;
+  professionalName: string;
+  reason: string;
+}): Promise<boolean> {
+  const content = `
+    <p>Hola <strong>${params.professionalName}</strong>,</p>
+    <p>Te informamos que tu acceso como profesional en Inteira ha sido <strong>revocado</strong>.</p>
+    <div class="info-box">
+      <p><strong>Motivo:</strong> ${params.reason}</p>
+    </div>
+    <p>Si consideras que esta decisión fue un error o deseas más información, puedes contactarnos en
+    <a href="mailto:info@inteira.app" style="color:#607562;">info@inteira.app</a>.</p>
+    <p>Gracias por haber formado parte de Inteira.</p>
+  `;
+  return sendEmail({
+    to: params.professionalEmail,
+    subject: 'Tu acceso como profesional en Inteira ha sido revocado',
+    html: baseTemplate(content),
+  });
+}

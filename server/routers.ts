@@ -1163,6 +1163,51 @@ export const appRouter = router({
       }),
 
     // Sincroniza el rol de todos los profesionales aprobados que aún tienen role='user'
+    revokeProfessional: protectedProcedure
+      .input(z.object({
+        professionalId: z.number(),
+        reason: z.string().min(1),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "User is not an admin" });
+        }
+        const professional = await db.getProfessionalById(input.professionalId);
+        if (!professional) throw new TRPCError({ code: "NOT_FOUND", message: "Professional not found" });
+        const user = await db.getUserById(professional.userId);
+
+        const dbInst = await db.getDb();
+        if (!dbInst) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const client = (dbInst as any).$client;
+
+        await new Promise<void>((resolve, reject) => {
+          client.execute(
+            "UPDATE `professionals` SET `status` = 'rejected', `updatedAt` = NOW() WHERE `id` = ?",
+            [input.professionalId],
+            (err: any) => { if (err) reject(err); else resolve(); }
+          );
+        });
+
+        await new Promise<void>((resolve, reject) => {
+          client.execute(
+            "UPDATE `users` SET `role` = 'user', `updatedAt` = NOW() WHERE `id` = ?",
+            [professional.userId],
+            (err: any) => { if (err) reject(err); else resolve(); }
+          );
+        });
+
+        if (user?.email) {
+          const { sendProfessionalRevocationEmail } = await import("./email");
+          sendProfessionalRevocationEmail({
+            professionalEmail: user.email,
+            professionalName: user.name ?? "Profesional",
+            reason: input.reason,
+          }).catch((e: any) => console.error("[revoke] email error:", e?.message));
+        }
+
+        return { success: true };
+      }),
+
     syncProfessionalRoles: protectedProcedure.mutation(async ({ ctx }) => {
       if (ctx.user.role !== "admin") {
         throw new TRPCError({ code: "FORBIDDEN", message: "Only admins can sync roles" });
