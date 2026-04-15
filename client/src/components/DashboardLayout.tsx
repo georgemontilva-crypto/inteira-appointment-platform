@@ -7,7 +7,8 @@ import { toast } from "sonner";
 import logo from "../assets/logo.webp";
 
 const NAV_ITEMS = [
-  { label: "Inicio",          icon: "home",     href: "/dashboard" },
+  { label: "Inicio",          icon: "home",     href: "/" },
+  { label: "Dashboard",       icon: "grid",     href: "/dashboard" },
   { label: "Mis citas",       icon: "calendar", href: "/citas" },
   { label: "Explorar",        icon: "search",   href: "/especialidades" },
   { label: "Wallet",          icon: "wallet",   href: "/wallet" },
@@ -166,14 +167,7 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
   };
 
   // Build nav items including role-specific items
-  // El href de "Inicio" depende del rol del usuario
-  const homeHref =
-    user?.role === "professional" ? "/panel-profesional" :
-    user?.role === "admin" ? "/admin" :
-    "/dashboard";
-  const navItems = NAV_ITEMS.map((item) =>
-    item.href === "/dashboard" ? { ...item, href: homeHref } : item
-  );
+  const navItems = [...NAV_ITEMS];
   if (user?.role === "admin") {
     navItems.push({ label: "Admin", icon: "shield", href: "/admin" });
   }
@@ -201,12 +195,13 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
     {
       section: "Como cliente",
       items: [
-        { label: "Inicio",    icon: "home",     href: "/dashboard" },
-        { label: "Mis citas", icon: "calendar", href: "/citas" },
-        { label: "Explorar",  icon: "search",   href: "/especialidades" },
-        { label: "Wallet",    icon: "wallet",   href: "/wallet" },
-        { label: "Planes",    icon: "star",     href: "/planes" },
-        { label: "Perfil",    icon: "user",     href: "/perfil" },
+        { label: "Inicio",     icon: "home",     href: "/" },
+        { label: "Dashboard",  icon: "grid",     href: "/dashboard" },
+        { label: "Mis citas",  icon: "calendar", href: "/citas" },
+        { label: "Explorar",   icon: "search",   href: "/especialidades" },
+        { label: "Wallet",     icon: "wallet",   href: "/wallet" },
+        { label: "Planes",     icon: "star",     href: "/planes" },
+        { label: "Perfil",     icon: "user",     href: "/perfil" },
       ],
     },
   ];
@@ -214,12 +209,13 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
     {
       section: "",
       items: [
-        { label: "Inicio",    icon: "home",     href: "/dashboard" },
-        { label: "Mis citas", icon: "calendar", href: "/citas" },
-        { label: "Explorar",  icon: "search",   href: "/especialidades" },
-        { label: "Wallet",    icon: "wallet",   href: "/wallet" },
-        { label: "Planes",    icon: "star",     href: "/planes" },
-        { label: "Perfil",    icon: "user",     href: "/perfil" },
+        { label: "Inicio",     icon: "home",     href: "/" },
+        { label: "Dashboard",  icon: "grid",     href: "/dashboard" },
+        { label: "Mis citas",  icon: "calendar", href: "/citas" },
+        { label: "Explorar",   icon: "search",   href: "/especialidades" },
+        { label: "Wallet",     icon: "wallet",   href: "/wallet" },
+        { label: "Planes",     icon: "star",     href: "/planes" },
+        { label: "Perfil",     icon: "user",     href: "/perfil" },
         ...(user?.role === "admin" ? [{ label: "Admin", icon: "shield", href: "/admin" }] : []),
       ],
     },
