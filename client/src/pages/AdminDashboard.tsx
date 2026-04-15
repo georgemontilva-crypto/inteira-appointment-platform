@@ -6,6 +6,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -951,16 +952,17 @@ export default function AdminDashboard() {
                     className="w-full pl-9 pr-4 py-2.5 border border-border rounded-xl bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors placeholder:text-muted-foreground"
                   />
                 </div>
-                <select
-                  value={activosSpecialty}
-                  onChange={(e) => setActivosSpecialty(e.target.value)}
-                  className="sm:w-52 px-3 py-2.5 border border-border rounded-xl bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
-                >
-                  <option value="">Todas las especialidades</option>
-                  {uniqueSpecialties.map((s) => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
+                <Select value={activosSpecialty || "all"} onValueChange={(v) => setActivosSpecialty(v === "all" ? "" : v)}>
+                  <SelectTrigger className="sm:w-52">
+                    <SelectValue placeholder="Todas las especialidades" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas las especialidades</SelectItem>
+                    {uniqueSpecialties.map((s) => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {filtered.length === 0 ? (
