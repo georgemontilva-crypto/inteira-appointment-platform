@@ -26,7 +26,7 @@ import {
   Star, Activity, CreditCard, UserCheck, RefreshCw, Wrench,
   ChevronDown, ChevronUp, FileText, ExternalLink, User,
   Trash2, Pencil, Stethoscope, Tag, Percent, ToggleLeft, ToggleRight,
-  FolderOpen, X,
+  FolderOpen, X, Search,
   // specialty icons
   Brain, Apple, Target, Leaf, Heart, Compass, Scale, DollarSign,
   Mic2, Sparkles, Sun, GraduationCap, Briefcase, Globe,
@@ -213,6 +213,8 @@ export default function AdminDashboard() {
   const [tierConfirm, setTierConfirm] = useState<{ professionalId: number; name: string; newTier: "basic" | "pro" } | null>(null);
   const [revokeConfirm, setRevokeConfirm] = useState<{ professionalId: number; name: string } | null>(null);
   const [revokeReason, setRevokeReason] = useState("");
+  const [activosSearch, setActivosSearch] = useState("");
+  const [activosSpecialty, setActivosSpecialty] = useState("");
 
   const { data: pendingProfessionals, refetch: refetchPending, isLoading: loadingPending } =
     trpc.admin.getPendingProfessionals.useQuery(undefined, {
@@ -838,93 +840,157 @@ export default function AdminDashboard() {
         )}
 
         {/* ══ TAB: ACTIVOS ═══════════════════════════════════════════════════ */}
-        {activeTab === "activos" && (
-          <div className="space-y-4">
-            <h2 className="text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
-              Profesionales activos
-            </h2>
-            {(activeProfessionals ?? []).length === 0 ? (
-              <Card className="border-border border-dashed">
-                <CardContent className="p-10 text-center">
-                  <UserCheck className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-                  <p className="text-muted-foreground text-sm">No hay profesionales aprobados aún</p>
+        {activeTab === "activos" && (() => {
+          const allActivos = activeProfessionals ?? [];
+          const uniqueSpecialties = Array.from(
+            new Set(allActivos.map((p: any) => p.specialtyName).filter(Boolean))
+          ).sort() as string[];
+
+          const filtered = allActivos.filter((p: any) => {
+            const name = p.userName || p.userEmail?.split("@")[0] || "";
+            const q = activosSearch.toLowerCase();
+            const matchesSearch = !q ||
+              name.toLowerCase().includes(q) ||
+              (p.userEmail ?? "").toLowerCase().includes(q) ||
+              (p.specialtyName ?? "").toLowerCase().includes(q);
+            const matchesSpecialty = !activosSpecialty || p.specialtyName === activosSpecialty;
+            return matchesSearch && matchesSpecialty;
+          });
+
+          const groupedBySpecialty = filtered.reduce((acc: Record<string, any[]>, p: any) => {
+            const key = p.specialtyName || "Sin especialidad";
+            if (!acc[key]) acc[key] = [];
+            acc[key].push(p);
+            return acc;
+          }, {});
+
+          const renderCard = (pro: any) => {
+            const name = pro.userName || pro.userEmail?.split("@")[0] || `Profesional #${pro.id}`;
+            const avatar = pro.profilePhoto;
+            return (
+              <Card key={pro.id} className="border-border">
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-start gap-3">
+                    {avatar ? (
+                      <img src={avatar} alt={name} className="w-11 h-11 rounded-xl object-cover flex-shrink-0" />
+                    ) : (
+                      <div className="w-11 h-11 rounded-xl gradient-brand flex items-center justify-center text-white font-bold flex-shrink-0">
+                        {name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-sm truncate">{name}</p>
+                      {pro.specialtyName && (
+                        <p className="text-[11px] text-muted-foreground mt-0.5">{pro.specialtyName}</p>
+                      )}
+                      {pro.userEmail && (
+                        <p className="text-[11px] text-muted-foreground truncate">{pro.userEmail}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 pt-1 border-t border-border">
+                    <div className="flex items-center gap-1.5 flex-1">
+                      <span className="text-[11px] text-muted-foreground">Tier:</span>
+                      <button
+                        onClick={() => setTierConfirm({ professionalId: pro.id, name, newTier: "basic" })}
+                        className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
+                          pro.tier !== "pro"
+                            ? "bg-emerald-100 text-emerald-700"
+                            : "bg-muted text-muted-foreground hover:bg-emerald-50 hover:text-emerald-700"
+                        }`}
+                      >Básico</button>
+                      <button
+                        onClick={() => setTierConfirm({ professionalId: pro.id, name, newTier: "pro" })}
+                        className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
+                          pro.tier === "pro"
+                            ? "bg-purple-100 text-purple-700"
+                            : "bg-muted text-muted-foreground hover:bg-purple-50 hover:text-purple-700"
+                        }`}
+                      >Pro</button>
+                    </div>
+                    <button
+                      onClick={() => setDocsModal({ professionalId: pro.id, name })}
+                      className="flex items-center gap-1 text-[11px] text-primary hover:text-primary/80 transition-colors"
+                      title="Ver documentos"
+                    >
+                      <FolderOpen className="w-3.5 h-3.5" />
+                      Documentos
+                    </button>
+                    <button
+                      onClick={() => { setRevokeConfirm({ professionalId: pro.id, name }); setRevokeReason(""); }}
+                      className="flex items-center gap-1 text-[11px] text-red-500 hover:text-red-700 transition-colors"
+                      title="Revocar acceso"
+                    >
+                      <XCircle className="w-3.5 h-3.5" />
+                      Revocar
+                    </button>
+                  </div>
                 </CardContent>
               </Card>
-            ) : (
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {(activeProfessionals ?? []).map((pro: any) => {
-                  const name = pro.userName || pro.userEmail?.split("@")[0] || `Profesional #${pro.id}`;
-                  const avatar = pro.profilePhoto;
-                  return (
-                    <Card key={pro.id} className="border-border">
-                      <CardContent className="p-4 space-y-3">
-                        {/* Header row */}
-                        <div className="flex items-start gap-3">
-                          {avatar ? (
-                            <img src={avatar} alt={name} className="w-11 h-11 rounded-xl object-cover flex-shrink-0" />
-                          ) : (
-                            <div className="w-11 h-11 rounded-xl gradient-brand flex items-center justify-center text-white font-bold flex-shrink-0">
-                              {name.charAt(0).toUpperCase()}
-                            </div>
-                          )}
-                          <div className="min-w-0 flex-1">
-                            <p className="font-semibold text-sm truncate">{name}</p>
-                            {pro.specialtyName && (
-                              <p className="text-[11px] text-muted-foreground mt-0.5">{pro.specialtyName}</p>
-                            )}
-                            {pro.userEmail && (
-                              <p className="text-[11px] text-muted-foreground truncate">{pro.userEmail}</p>
-                            )}
-                          </div>
-                        </div>
+            );
+          };
 
-                        {/* Tier selector + docs button */}
-                        <div className="flex items-center gap-2 pt-1 border-t border-border">
-                          <div className="flex items-center gap-1.5 flex-1">
-                            <span className="text-[11px] text-muted-foreground">Tier:</span>
-                            <button
-                              onClick={() => setTierConfirm({ professionalId: pro.id, name, newTier: "basic" })}
-                              className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
-                                pro.tier !== "pro"
-                                  ? "bg-emerald-100 text-emerald-700"
-                                  : "bg-muted text-muted-foreground hover:bg-emerald-50 hover:text-emerald-700"
-                              }`}
-                            >Básico</button>
-                            <button
-                              onClick={() => setTierConfirm({ professionalId: pro.id, name, newTier: "pro" })}
-                              className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
-                                pro.tier === "pro"
-                                  ? "bg-purple-100 text-purple-700"
-                                  : "bg-muted text-muted-foreground hover:bg-purple-50 hover:text-purple-700"
-                              }`}
-                            >Pro</button>
-                          </div>
-                          <button
-                            onClick={() => setDocsModal({ professionalId: pro.id, name })}
-                            className="flex items-center gap-1 text-[11px] text-primary hover:text-primary/80 transition-colors"
-                            title="Ver documentos"
-                          >
-                            <FolderOpen className="w-3.5 h-3.5" />
-                            Documentos
-                          </button>
-                          <button
-                            onClick={() => { setRevokeConfirm({ professionalId: pro.id, name }); setRevokeReason(""); }}
-                            className="flex items-center gap-1 text-[11px] text-red-500 hover:text-red-700 transition-colors"
-                            title="Revocar acceso"
-                          >
-                            <XCircle className="w-3.5 h-3.5" />
-                            Revocar
-                          </button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
+          return (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
+                  Profesionales activos
+                </h2>
+                <span className="text-sm text-muted-foreground">{filtered.length} de {allActivos.length}</span>
               </div>
-            )}
 
-            {/* ── Revocar AlertDialog ── */}
-            <AlertDialog open={revokeConfirm !== null} onOpenChange={(open) => { if (!open) { setRevokeConfirm(null); setRevokeReason(""); } }}>
+              {/* Filtros */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="Buscar por nombre, email o especialidad..."
+                    value={activosSearch}
+                    onChange={(e) => setActivosSearch(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2.5 border border-border rounded-xl bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors placeholder:text-muted-foreground"
+                  />
+                </div>
+                <select
+                  value={activosSpecialty}
+                  onChange={(e) => setActivosSpecialty(e.target.value)}
+                  className="sm:w-52 px-3 py-2.5 border border-border rounded-xl bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+                >
+                  <option value="">Todas las especialidades</option>
+                  {uniqueSpecialties.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+
+              {filtered.length === 0 ? (
+                <Card className="border-border border-dashed">
+                  <CardContent className="p-10 text-center">
+                    <UserCheck className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                    <p className="text-muted-foreground text-sm">
+                      {allActivos.length === 0 ? "No hay profesionales aprobados aún" : "Ningún profesional coincide con la búsqueda"}
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-8">
+                  {Object.entries(groupedBySpecialty).sort(([a], [b]) => a.localeCompare(b)).map(([specialty, pros]) => (
+                    <div key={specialty} className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        <h3 className="text-base font-semibold" style={{ fontFamily: "Poppins, sans-serif" }}>{specialty}</h3>
+                        <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium">{pros.length}</span>
+                        <div className="flex-1 h-px bg-border" />
+                      </div>
+                      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {pros.map((pro: any) => renderCard(pro))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* ── Revocar AlertDialog ── */}
+              <AlertDialog open={revokeConfirm !== null} onOpenChange={(open) => { if (!open) { setRevokeConfirm(null); setRevokeReason(""); } }}>
               <AlertDialogContent>
                 <AlertDialogHeader>
                   <AlertDialogTitle>¿Revocar acceso a {revokeConfirm?.name}?</AlertDialogTitle>
@@ -956,9 +1022,9 @@ export default function AdminDashboard() {
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
-            </AlertDialog>
+              </AlertDialog>
 
-            {/* ── Documents modal ── */}
+              {/* ── Documents modal ── */}
             {docsModal && (
               <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setDocsModal(null)}>
                 <div className="bg-background rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
@@ -1034,36 +1100,37 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {/* ── Tier confirm dialog ── */}
-            <AlertDialog open={tierConfirm !== null} onOpenChange={(open) => { if (!open) setTierConfirm(null); }}>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>¿Cambiar tier?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Estás a punto de cambiar el tier de <strong>{tierConfirm?.name}</strong> de{" "}
-                    <strong>{tierConfirm?.newTier === "pro" ? "Básico" : "Pro"}</strong> a{" "}
-                    <strong className={tierConfirm?.newTier === "pro" ? "text-purple-700" : "text-emerald-700"}>
-                      {tierConfirm?.newTier === "pro" ? "Pro" : "Básico"}
-                    </strong>. Esta acción afecta sus comisiones inmediatamente.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                  <AlertDialogAction
-                    disabled={updateTierMutation.isPending}
-                    onClick={() => {
-                      if (tierConfirm) {
-                        updateTierMutation.mutate({ professionalId: tierConfirm.professionalId, tier: tierConfirm.newTier });
-                      }
-                    }}
-                  >
-                    {updateTierMutation.isPending ? "Guardando..." : "Confirmar cambio"}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
-        )}
+              {/* ── Tier confirm dialog ── */}
+              <AlertDialog open={tierConfirm !== null} onOpenChange={(open) => { if (!open) setTierConfirm(null); }}>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>¿Cambiar tier?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Estás a punto de cambiar el tier de <strong>{tierConfirm?.name}</strong> de{" "}
+                      <strong>{tierConfirm?.newTier === "pro" ? "Básico" : "Pro"}</strong> a{" "}
+                      <strong className={tierConfirm?.newTier === "pro" ? "text-purple-700" : "text-emerald-700"}>
+                        {tierConfirm?.newTier === "pro" ? "Pro" : "Básico"}
+                      </strong>. Esta acción afecta sus comisiones inmediatamente.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction
+                      disabled={updateTierMutation.isPending}
+                      onClick={() => {
+                        if (tierConfirm) {
+                          updateTierMutation.mutate({ professionalId: tierConfirm.professionalId, tier: tierConfirm.newTier });
+                        }
+                      }}
+                    >
+                      {updateTierMutation.isPending ? "Guardando..." : "Confirmar cambio"}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          );
+        })()}
 
         {/* Tab: Especialidades */}
         {activeTab === "especialidades" && (
