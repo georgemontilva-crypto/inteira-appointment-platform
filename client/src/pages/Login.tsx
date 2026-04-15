@@ -8,8 +8,8 @@ export default function Login() {
 
   // ── Email OTP state ──────────────────────────────────────────────────────────
   const [emailStep, setEmailStep] = useState<"idle" | "form" | "verify">("idle");
-  const [formData, setFormData] = useState({ firstName: "", lastName: "", email: "" });
-  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [email, setEmail] = useState("");
+  const [notRegistered, setNotRegistered] = useState(false);
   const [otpCode, setOtpCode] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [authError, setAuthError] = useState("");
@@ -41,14 +41,19 @@ export default function Login() {
   const handleRequestOtp = async () => {
     setSubmitting(true);
     setAuthError("");
+    setNotRegistered(false);
     try {
       const res = await fetch("/api/auth/email/request-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ email }),
       });
       const data = await res.json();
-      if (!res.ok) { setAuthError(data.error ?? "Error enviando código"); return; }
+      if (!res.ok) {
+        if (data.notRegistered) setNotRegistered(true);
+        setAuthError(data.error ?? "Error enviando código");
+        return;
+      }
       setEmailStep("verify");
       setResendTimer(30);
     } catch {
@@ -65,7 +70,7 @@ export default function Login() {
       const res = await fetch("/api/auth/email/verify-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: formData.email, code: otpCode }),
+        body: JSON.stringify({ email, code: otpCode }),
       });
       const data = await res.json();
       if (!res.ok) { setAuthError(data.error ?? "Código inválido"); return; }
@@ -181,61 +186,36 @@ export default function Login() {
                   </button>
                 )}
 
-                {/* ── STEP: form — nombre + apellido + email + términos ── */}
+                {/* ── STEP: form — solo email ── */}
                 {emailStep === "form" && (
                   <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-2">
-                      <input
-                        type="text"
-                        placeholder="Nombre"
-                        value={formData.firstName}
-                        onChange={(e) => setFormData((d) => ({ ...d, firstName: e.target.value }))}
-                        className={inputClass}
-                        autoFocus
-                      />
-                      <input
-                        type="text"
-                        placeholder="Apellido"
-                        value={formData.lastName}
-                        onChange={(e) => setFormData((d) => ({ ...d, lastName: e.target.value }))}
-                        className={inputClass}
-                      />
-                    </div>
                     <input
                       type="email"
                       placeholder="tucorreo@ejemplo.com"
-                      value={formData.email}
-                      onChange={(e) => setFormData((d) => ({ ...d, email: e.target.value }))}
+                      value={email}
+                      onChange={(e) => { setEmail(e.target.value); setNotRegistered(false); setAuthError(""); }}
                       className={inputClass}
+                      autoFocus
+                      onKeyDown={(e) => e.key === "Enter" && !submitting && email.trim() && handleRequestOtp()}
                     />
-                    <label className="flex items-start gap-2 cursor-pointer select-none">
-                      <input
-                        type="checkbox"
-                        checked={termsAccepted}
-                        onChange={(e) => setTermsAccepted(e.target.checked)}
-                        className="mt-0.5 w-4 h-4 rounded accent-primary flex-shrink-0"
-                      />
-                      <span className="text-xs text-muted-foreground leading-relaxed">
-                        Acepto los{" "}
-                        <a href="/terminos" className="text-primary hover:underline">Términos de servicio</a>
-                        {" "}y la{" "}
-                        <a href="/privacidad" className="text-primary hover:underline">Política de privacidad</a>
-                      </span>
-                    </label>
 
                     {authError && (
-                      <p className="text-xs text-red-500 text-center">{authError}</p>
+                      <div className="space-y-2">
+                        <p className="text-xs text-red-500 text-center">{authError}</p>
+                        {notRegistered && (
+                          <a
+                            href={`/registro?email=${encodeURIComponent(email)}`}
+                            className="block w-full text-center py-2.5 rounded-2xl border border-primary text-primary text-sm font-semibold hover:bg-primary/5 transition-colors"
+                          >
+                            Crear cuenta
+                          </a>
+                        )}
+                      </div>
                     )}
 
                     <button
                       onClick={handleRequestOtp}
-                      disabled={
-                        submitting ||
-                        !formData.firstName.trim() ||
-                        !formData.lastName.trim() ||
-                        !formData.email.trim() ||
-                        !termsAccepted
-                      }
+                      disabled={submitting || !email.trim()}
                       className={btnPrimary}
                       style={{ background: "#607562" }}
                     >
@@ -243,7 +223,7 @@ export default function Login() {
                     </button>
 
                     <button
-                      onClick={() => { setEmailStep("idle"); setAuthError(""); }}
+                      onClick={() => { setEmailStep("idle"); setAuthError(""); setNotRegistered(false); }}
                       className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors py-1"
                     >
                       ← Volver
@@ -301,7 +281,7 @@ export default function Login() {
                 </div>
 
                 <button
-                  onClick={() => { setEmailStep("form"); setOtpCode(""); setAuthError(""); }}
+                  onClick={() => { setEmailStep("form"); setOtpCode(""); setAuthError(""); setNotRegistered(false); }}
                   className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors py-1"
                 >
                   ← Cambiar email

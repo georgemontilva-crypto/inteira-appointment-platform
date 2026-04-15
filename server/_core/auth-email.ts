@@ -8,8 +8,81 @@ import { getDb } from "../db";
 
 export const emailAuthRouter = Router();
 
-// ── POST /api/auth/email/request-otp ─────────────────────────────────────────
+// ── POST /api/auth/email/request-otp — LOGIN (el usuario debe existir) ────────
 emailAuthRouter.post("/request-otp", async (req: Request, res: Response) => {
+  const { email } = req.body as { email?: string };
+
+  if (!email?.trim()) {
+    return res.status(400).json({ error: "El email es requerido" });
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ error: "Email inválido" });
+  }
+
+  const dbConn = await getDb();
+  if (!dbConn) return res.status(500).json({ error: "DB no disponible" });
+  const client = (dbConn as any).$client;
+
+  // Verificar que el usuario exista
+  const existingUser = await new Promise<any>((resolve) => {
+    client.execute(
+      "SELECT id, name FROM users WHERE email = ? LIMIT 1",
+      [email],
+      (err: any, results: any) => resolve(Array.isArray(results) ? results[0] : null)
+    );
+  });
+
+  if (!existingUser) {
+    return res.status(400).json({ error: "Este correo no está registrado", notRegistered: true });
+  }
+
+  // Rate limit: max 3 OTPs por email en la última hora
+  const recentRows = await new Promise<any[]>((resolve) => {
+    client.execute(
+      "SELECT COUNT(*) as cnt FROM emailOtps WHERE email = ? AND createdAt > DATE_SUB(NOW(), INTERVAL 1 HOUR)",
+      [email],
+      (err: any, results: any) => resolve(Array.isArray(results) ? results : [])
+    );
+  });
+  if (Number(recentRows[0]?.cnt) >= 3) {
+    return res.status(429).json({ error: "Demasiados intentos. Espera una hora." });
+  }
+
+  // Invalidar OTPs anteriores no usados para este email
+  await new Promise<void>((resolve) => {
+    client.execute(
+      "UPDATE emailOtps SET used = TRUE WHERE email = ? AND used = FALSE",
+      [email],
+      () => resolve()
+    );
+  });
+
+  // Derivar nombre del usuario almacenado en BD
+  const parts = (existingUser.name ?? "").split(" ");
+  const firstName = parts[0] ?? "Usuario";
+  const lastName = parts.slice(1).join(" ") ?? "";
+
+  // Generar código de 6 dígitos
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+  const expiresStr = expiresAt.toISOString().slice(0, 19).replace("T", " ");
+
+  await new Promise<void>((resolve, reject) => {
+    client.execute(
+      "INSERT INTO emailOtps (email, code, firstName, lastName, expiresAt) VALUES (?, ?, ?, ?, ?)",
+      [email, code, firstName, lastName, expiresStr],
+      (err: any) => { if (err) reject(err); else resolve(); }
+    );
+  });
+
+  const { sendOtpEmail } = await import("../email");
+  await sendOtpEmail({ email, firstName, code });
+
+  return res.json({ success: true });
+});
+
+// ── POST /api/auth/email/register-otp — REGISTRO (crea nuevos usuarios) ───────
+emailAuthRouter.post("/register-otp", async (req: Request, res: Response) => {
   const { firstName, lastName, email } = req.body as {
     firstName?: string;
     lastName?: string;
@@ -61,7 +134,6 @@ emailAuthRouter.post("/request-otp", async (req: Request, res: Response) => {
     );
   });
 
-  // Enviar OTP por email
   const { sendOtpEmail } = await import("../email");
   await sendOtpEmail({ email, firstName: firstName.trim(), code });
 
