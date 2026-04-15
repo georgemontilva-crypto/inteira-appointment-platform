@@ -1096,11 +1096,9 @@ export default function ProfessionalDashboard() {
               const DOW_HEADERS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 
               return (
-                <div className="space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    Toca un día para bloquearlo o desbloquearlo. Los pacientes no podrán agendar en los días marcados en rojo.
-                  </p>
-
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Columna izquierda — calendario compacto */}
+                  <div className="max-w-sm w-full">
                   <Card className="border-border overflow-hidden">
                     {/* Calendar header */}
                     <div className="flex items-center justify-between px-5 py-4 border-b border-border">
@@ -1172,42 +1170,55 @@ export default function ProfessionalDashboard() {
                     </CardContent>
                   </Card>
 
-                  {/* Blocked days list */}
-                  {(blockedDays ?? []).length > 0 && (
-                    <div className="space-y-2">
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-1">
-                        Días bloqueados ({(blockedDays ?? []).filter((d) => d.blockedDate >= todayStr).length} próximos)
-                      </p>
-                      <div className="space-y-1.5">
-                        {(blockedDays ?? [])
-                          .filter((d) => d.blockedDate >= todayStr)
-                          .sort((a, b) => a.blockedDate.localeCompare(b.blockedDate))
-                          .map((day) => (
-                            <div key={day.id} className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-red-50 border border-red-100">
-                              <div className="flex items-center gap-2.5">
-                                <div className="w-7 h-7 rounded-lg bg-red-100 flex items-center justify-center flex-shrink-0">
-                                  <CalendarX className="w-3.5 h-3.5 text-red-500" />
-                                </div>
-                                <div>
-                                  <p className="text-sm font-medium text-red-700 capitalize">
-                                    {format(new Date(day.blockedDate + "T12:00:00"), "EEEE d 'de' MMMM", { locale: es })}
-                                  </p>
-                                  {day.reason && <p className="text-xs text-red-400">{day.reason}</p>}
-                                </div>
-                              </div>
-                              <button
-                                onClick={() => removeBlockedDayMutation.mutate({ id: day.id })}
-                                disabled={removeBlockedDayMutation.isPending}
-                                className="text-red-300 hover:text-red-500 transition-colors disabled:opacity-30"
-                                title="Desbloquear"
-                              >
-                                <XCircle className="w-4 h-4" />
-                              </button>
-                            </div>
-                          ))}
+                  </div>
+
+                  {/* Columna derecha — instrucciones + días bloqueados */}
+                  <div className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                      Toca un día para bloquearlo o desbloquearlo. Los pacientes no podrán agendar en los días marcados en rojo.
+                    </p>
+
+                    {(blockedDays ?? []).filter((d) => d.blockedDate >= todayStr).length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-10 text-center">
+                        <CalendarX className="w-10 h-10 text-muted-foreground/25 mb-2" />
+                        <p className="text-sm text-muted-foreground">No tienes días bloqueados próximos</p>
                       </div>
-                    </div>
-                  )}
+                    ) : (
+                      <div className="space-y-2">
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                          Días bloqueados ({(blockedDays ?? []).filter((d) => d.blockedDate >= todayStr).length} próximos)
+                        </p>
+                        <div className="space-y-1.5">
+                          {(blockedDays ?? [])
+                            .filter((d) => d.blockedDate >= todayStr)
+                            .sort((a, b) => a.blockedDate.localeCompare(b.blockedDate))
+                            .map((day) => (
+                              <div key={day.id} className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-red-50 border border-red-100">
+                                <div className="flex items-center gap-2.5">
+                                  <div className="w-7 h-7 rounded-lg bg-red-100 flex items-center justify-center flex-shrink-0">
+                                    <CalendarX className="w-3.5 h-3.5 text-red-500" />
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium text-red-700 capitalize">
+                                      {format(new Date(day.blockedDate + "T12:00:00"), "EEEE d 'de' MMMM", { locale: es })}
+                                    </p>
+                                    {day.reason && <p className="text-xs text-red-400">{day.reason}</p>}
+                                  </div>
+                                </div>
+                                <button
+                                  onClick={() => removeBlockedDayMutation.mutate({ id: day.id })}
+                                  disabled={removeBlockedDayMutation.isPending}
+                                  className="text-red-300 hover:text-red-500 transition-colors disabled:opacity-30"
+                                  title="Desbloquear"
+                                >
+                                  <XCircle className="w-4 h-4" />
+                                </button>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               );
             })()}
