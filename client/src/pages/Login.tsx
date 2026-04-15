@@ -130,7 +130,7 @@ export default function Login() {
               </h1>
               <p className="text-sm text-muted-foreground">
                 {emailStep === "verify"
-                  ? `Código enviado a ${formData.email}`
+                  ? `Código enviado a ${email}`
                   : "Conecta con especialistas de calidad"}
               </p>
             </div>
@@ -238,7 +238,7 @@ export default function Login() {
               <div className="space-y-4">
                 <p className="text-sm text-center text-muted-foreground">
                   Ingresa el código de 6 dígitos que enviamos a{" "}
-                  <strong className="text-foreground">{formData.email}</strong>
+                  <strong className="text-foreground">{email}</strong>
                 </p>
 
                 <input
@@ -287,6 +287,16 @@ export default function Login() {
                   ← Cambiar email
                 </button>
               </div>
+            )}
+
+            {/* ¿No tienes cuenta? — visible en idle y form */}
+            {emailStep !== "verify" && (
+              <p className="text-center text-xs text-muted-foreground">
+                ¿No tienes cuenta?{" "}
+                <a href="/registro" className="text-primary hover:underline font-medium">
+                  Crear cuenta →
+                </a>
+              </p>
             )}
 
             {/* Nota de privacidad — solo en idle */}
