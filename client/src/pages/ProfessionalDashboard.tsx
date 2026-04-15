@@ -888,7 +888,7 @@ export default function ProfessionalDashboard() {
                     <p className="text-sm text-muted-foreground">Sin historial aún</p>
                   </div>
                 ) : (
-                  <div className="max-h-[600px] overflow-y-auto scroll-smooth rounded-2xl border border-border divide-y divide-border">
+                  <div className="max-h-[520px] overflow-y-auto scroll-smooth rounded-2xl border border-border divide-y divide-border" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
                     {pastAppointments.map((apt, idx) => {
                       const startDate = new Date(apt.appointmentDate);
                       const endTime = new Date(startDate);
