@@ -265,7 +265,7 @@ export default function ProfessionalDashboard() {
     if (!isForbidden) return;
     const timer = setTimeout(async () => {
       await logout();
-      window.location.href = "/login?returnTo=/panel-profesional";
+      window.location.href = "/login";
     }, 2000);
     return () => clearTimeout(timer);
   }, [isForbidden]);
@@ -466,8 +466,11 @@ export default function ProfessionalDashboard() {
               )}
             </p>
             <p className="text-muted-foreground text-xs">
-              Si tienes preguntas, contáctanos a soporte@inteira.mx
+              Si tienes preguntas, contáctanos a soporte@inteira.app
             </p>
+            <a href="/registro-profesional">
+              <Button className="w-full gradient-brand text-white border-0">¿Quieres volver a aplicar?</Button>
+            </a>
             <a href="/dashboard">
               <Button variant="outline" className="w-full">Ir al dashboard</Button>
             </a>

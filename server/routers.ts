@@ -475,13 +475,9 @@ export const appRouter = router({
       }),
 
     getProfile: protectedProcedure.query(async ({ ctx }) => {
-      if (ctx.user.role !== "professional") {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "User is not a professional",
-        });
-      }
-
+      // Any authenticated user can query their own professional record.
+      // This is needed so pending/rejected users can see their status screen
+      // without being stuck in a FORBIDDEN → logout → redirect loop.
       return await db.getProfessionalByUserId(ctx.user.id);
     }),
 
@@ -1182,8 +1178,8 @@ export const appRouter = router({
 
         await new Promise<void>((resolve, reject) => {
           client.execute(
-            "UPDATE `professionals` SET `status` = 'rejected', `updatedAt` = NOW() WHERE `id` = ?",
-            [input.professionalId],
+            "UPDATE `professionals` SET `status` = 'rejected', `rejectionReason` = ?, `updatedAt` = NOW() WHERE `id` = ?",
+            [input.reason, input.professionalId],
             (err: any) => { if (err) reject(err); else resolve(); }
           );
         });
