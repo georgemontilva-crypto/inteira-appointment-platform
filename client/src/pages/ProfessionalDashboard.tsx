@@ -13,7 +13,7 @@ import {
   Calendar, Clock, CheckCircle2, User, Video,
   Plus, Star, BarChart3, ArrowLeft, AlertCircle, XCircle,
   Camera, Trash2, MessageSquare, CalendarX,
-  ChevronLeft, ChevronRight,
+  ChevronLeft, ChevronRight, LayoutDashboard, DollarSign, Wallet,
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -41,12 +41,15 @@ const statusLabels: Record<string, string> = {
 export default function ProfessionalDashboard() {
   const { user, isAuthenticated, loading, refresh, logout } = useAuth();
   const utils = trpc.useUtils();
-  const [activeTab, setActiveTab] = useState<"citas" | "disponibilidad" | "dias-libres" | "resenas" | "perfil" | "ganancias">(() => {
-    if (typeof window === "undefined") return "citas";
+  const [activeTab, setActiveTab] = useState<"resumen" | "agenda" | "disponibilidad" | "resenas" | "ganancias" | "perfil">(() => {
+    if (typeof window === "undefined") return "resumen";
     const hash = window.location.hash.slice(1);
-    const valid = ["citas", "disponibilidad", "dias-libres", "resenas", "perfil", "ganancias"];
-    return (valid.includes(hash) ? hash : "citas") as "citas" | "disponibilidad" | "dias-libres" | "resenas" | "perfil" | "ganancias";
+    const hashMap: Record<string, string> = { citas: "agenda", "dias-libres": "disponibilidad" };
+    const mapped = hashMap[hash] ?? hash;
+    const valid = ["resumen", "agenda", "disponibilidad", "resenas", "ganancias", "perfil"];
+    return (valid.includes(mapped) ? mapped : "resumen") as "resumen" | "agenda" | "disponibilidad" | "resenas" | "ganancias" | "perfil";
   });
+  const [availSubTab, setAvailSubTab] = useState<"horarios" | "dias-libres">("horarios");
   const [newSlot, setNewSlot] = useState({ dayOfWeek: 1, startTime: "09:00", endTime: "17:00" });
   const [editingProfile, setEditingProfile] = useState(false);
   const [profileForm, setProfileForm] = useState({
@@ -261,8 +264,10 @@ export default function ProfessionalDashboard() {
   useEffect(() => {
     const handleHash = () => {
       const hash = window.location.hash.replace('#', '');
-      const valid = ['citas','disponibilidad','dias-libres','resenas','ganancias','perfil'];
-      if (valid.includes(hash)) setActiveTab(hash as any);
+      const hashMap: Record<string, string> = { citas: "agenda", "dias-libres": "disponibilidad" };
+      const mapped = hashMap[hash] ?? hash;
+      const valid = ['resumen', 'agenda', 'disponibilidad', 'resenas', 'ganancias', 'perfil'];
+      if (valid.includes(mapped)) setActiveTab(mapped as any);
     };
     handleHash();
     window.addEventListener('hashchange', handleHash);
@@ -435,12 +440,12 @@ export default function ProfessionalDashboard() {
     <DashboardLayout>
       <div className={activeCall ? "flex gap-4 p-4 md:p-6 items-start" : ""}>
       <div style={activeCall ? { flex: 1, minWidth: 0 } : {}} className={activeCall ? "p-0" : "p-4 md:p-6"}>
-      {/* Header */}
-      <div style={{ background: "linear-gradient(135deg, #2d3e2f, #3d4e3f)", borderRadius: 16, padding: 24, marginBottom: 16 }}>
-        {/* Header con foto y saludo */}
-        <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 20 }}>
+      {/* Header compacto */}
+      <div className="bg-white rounded-2xl border border-[rgba(96,117,98,0.12)] shadow-sm p-4 mb-4">
+        {/* Fila superior: avatar + nombre + tier + rating */}
+        <div className="flex items-center gap-3 mb-3">
           <div className="relative group flex-shrink-0">
-            <div className="w-14 h-14 overflow-hidden" style={{ borderRadius: 12, border: "2px solid rgba(255,255,255,0.2)" }}>
+            <div className="w-12 h-12 overflow-hidden rounded-xl">
               {profile.profilePhoto || (user as any)?.profileImage ? (
                 <img
                   src={profile.profilePhoto ?? (user as any)?.profileImage}
@@ -449,7 +454,7 @@ export default function ProfessionalDashboard() {
                   onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-xl font-medium text-white" style={{ background: "rgba(255,255,255,0.15)" }}>
+                <div className="w-full h-full flex items-center justify-center text-base font-bold text-white gradient-brand">
                   {user?.name?.charAt(0) ?? "P"}
                 </div>
               )}
@@ -457,7 +462,7 @@ export default function ProfessionalDashboard() {
             <button
               onClick={() => photoInputRef.current?.click()}
               disabled={uploadingPhoto}
-              className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer" style={{ borderRadius: 12 }}
+              className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer rounded-xl"
             >
               {uploadingPhoto ? (
                 <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
@@ -467,32 +472,36 @@ export default function ProfessionalDashboard() {
             </button>
             <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
           </div>
-          <div>
-            <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 13, margin: 0 }}>Panel del profesional</p>
-            <h2 style={{ color: "#fff", fontSize: 22, fontWeight: 700, margin: "2px 0" }}>{user?.name ?? "Profesional"}</h2>
-            <span style={{ background: "rgba(255,255,255,0.15)", color: "#fff", fontSize: 11, padding: "2px 8px", borderRadius: 20 }}>
-              Aprobado · Tier {profile.tier === "pro" ? "Pro" : "Básico"}
-            </span>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="font-bold text-foreground truncate">{user?.name ?? "Profesional"}</h2>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium flex-shrink-0">
+                Tier {profile.tier === "pro" ? "Pro" : "Básico"}
+              </span>
+              {reviews && reviews.length > 0 && (
+                <span className="flex items-center gap-0.5 text-xs text-amber-500 flex-shrink-0">
+                  <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                  {(reviews.reduce((s: number, r: any) => s + r.rating, 0) / reviews.length).toFixed(1)}
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">Panel del profesional</p>
           </div>
         </div>
-        {/* 4 cards de stats */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          <div style={{ background: "rgba(255,255,255,0.1)", borderRadius: 12, padding: "12px 16px" }}>
-            <p style={{ color: "#4ade80", fontSize: 22, fontWeight: 700, margin: 0 }}>${wallet?.wallet?.balance ? parseFloat(String(wallet.wallet.balance)).toFixed(0) : "0"}</p>
-            <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 12, margin: 0 }}>Balance</p>
-          </div>
-          <div style={{ background: "rgba(255,255,255,0.1)", borderRadius: 12, padding: "12px 16px" }}>
-            <p style={{ color: "#fff", fontSize: 22, fontWeight: 700, margin: 0 }}>{appointments?.filter((a: any) => a.status === "completed" || a.status === "no-show" || a.status === "pending_review").length ?? 0}</p>
-            <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 12, margin: 0 }}>Completadas</p>
-          </div>
-          <div style={{ background: "rgba(255,255,255,0.1)", borderRadius: 12, padding: "12px 16px" }}>
-            <p style={{ color: "#fff", fontSize: 22, fontWeight: 700, margin: 0 }}>{reviews && reviews.length > 0 ? (reviews.reduce((s: number, r: any) => s + r.rating, 0) / reviews.length).toFixed(1) : "—"}</p>
-            <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 12, margin: 0 }}>Calificación</p>
-          </div>
-          <div style={{ background: "rgba(255,255,255,0.1)", borderRadius: 12, padding: "12px 16px" }}>
-            <p style={{ color: "#fff", fontSize: 22, fontWeight: 700, margin: 0 }}>{appointments?.filter((a: any) => a.status === "scheduled").length ?? 0}</p>
-            <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 12, margin: 0 }}>Próximas</p>
-          </div>
+        {/* 4 métricas en scroll horizontal */}
+        <div className="flex gap-2 overflow-x-auto pb-0.5" style={{ scrollbarWidth: "none" }}>
+          {[
+            { Icon: Wallet, label: "Balance", value: `$${wallet?.wallet?.balance ? parseFloat(String(wallet.wallet.balance)).toFixed(0) : "0"}`, color: "text-emerald-600", bg: "bg-emerald-50" },
+            { Icon: CheckCircle2, label: "Completadas", value: String(appointments?.filter((a: any) => a.status === "completed" || a.status === "no-show" || a.status === "pending_review").length ?? 0), color: "text-blue-600", bg: "bg-blue-50" },
+            { Icon: Star, label: "Calificación", value: reviews && reviews.length > 0 ? (reviews.reduce((s: number, r: any) => s + r.rating, 0) / reviews.length).toFixed(1) : "—", color: "text-amber-500", bg: "bg-amber-50" },
+            { Icon: Calendar, label: "Próximas", value: String(appointments?.filter((a: any) => a.status === "scheduled").length ?? 0), color: "text-primary", bg: "bg-primary/10" },
+          ].map(({ Icon, label, value, color, bg }) => (
+            <div key={label} className={`flex-shrink-0 ${bg} rounded-xl px-3 py-2 min-w-[90px]`}>
+              <Icon className={`w-3.5 h-3.5 ${color} mb-1`} />
+              <p className={`text-base font-bold leading-none ${color}`}>{value}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">{label}</p>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -540,10 +549,148 @@ export default function ProfessionalDashboard() {
         );
       })()}
 
+      {/* Tab bar con scroll horizontal */}
+      <div className="flex overflow-x-auto bg-white rounded-xl border border-[rgba(96,117,98,0.12)] mb-4 -mx-4 md:-mx-6 px-2" style={{ scrollbarWidth: "none" }}>
+        {([
+          { id: "resumen",        label: "Resumen",        Icon: LayoutDashboard },
+          { id: "agenda",         label: "Agenda",         Icon: Calendar },
+          { id: "disponibilidad", label: "Disponibilidad", Icon: Clock },
+          { id: "resenas",        label: "Reseñas",        Icon: Star },
+          { id: "ganancias",      label: "Ganancias",      Icon: DollarSign },
+          { id: "perfil",         label: "Perfil",         Icon: User },
+        ] as const).map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => { setActiveTab(tab.id); window.location.hash = tab.id; }}
+            className={`flex items-center gap-1.5 px-3 py-3 text-xs font-medium whitespace-nowrap flex-shrink-0 border-b-2 transition-colors ${
+              activeTab === tab.id
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <tab.Icon className="w-3.5 h-3.5" />
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       <div>
 
-        {/* Tab: Citas */}
-        {activeTab === "citas" && (
+        {/* Tab: Resumen */}
+        {activeTab === "resumen" && (
+          <div className="space-y-6">
+            {/* Próximas citas — carrusel */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>Próximas citas</h2>
+                {upcomingAppointments.length > 0 && (
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => scrollCarousel("left")} className="w-7 h-7 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors">
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => scrollCarousel("right")} className="w-7 h-7 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors">
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
+              {upcomingAppointments.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-primary/30 bg-primary/5 p-6 text-center space-y-3">
+                  <Calendar className="w-10 h-10 text-primary/40 mx-auto" />
+                  <p className="font-medium text-foreground">¡Comparte tu perfil y consigue más pacientes!</p>
+                  <p className="text-sm text-muted-foreground">Aún no tienes citas próximas. Comparte tu enlace de perfil para que los pacientes puedan agendarte.</p>
+                  <button
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors"
+                    onClick={() => {
+                      const url = `${window.location.origin}/profesional/${profile.id}`;
+                      navigator.clipboard.writeText(url).then(() => toast.success("Enlace copiado al portapapeles"));
+                    }}
+                  >
+                    Copiar enlace de perfil
+                  </button>
+                </div>
+              ) : (
+                <div ref={carouselRef} className="flex gap-3 overflow-x-auto scroll-smooth pb-1" style={{ scrollbarWidth: "none" }}>
+                  {upcomingAppointments.map((apt) => (
+                    <div key={apt.id} className="flex-shrink-0 rounded-xl border border-border bg-card hover:shadow-md transition-shadow" style={cardMinWidth}>
+                      <div className="p-4">
+                        <div className="flex items-center gap-2">
+                          {(apt as any).userProfileImage ? (
+                            <img src={(apt as any).userProfileImage} alt={(apt as any).userName ?? ""} className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm flex-shrink-0">
+                              {(apt as any).userName?.charAt(0)?.toUpperCase() ?? "U"}
+                            </div>
+                          )}
+                          <p className="font-semibold text-sm truncate flex-1">{(apt as any).userName ?? `Usuario #${apt.userId}`}</p>
+                          <span className="text-[10px] font-medium text-primary bg-primary/10 rounded-full px-2 py-0.5 flex-shrink-0 whitespace-nowrap">
+                            {canJoin(apt) ? "¡Ahora!" : `En ${joinCountdown(apt)}`}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-1.5 ml-10">
+                          <Clock className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                          <span className="text-xs text-muted-foreground truncate">{format(new Date(apt.appointmentDate), "d MMM · HH:mm", { locale: es })}</span>
+                          <span className="text-xs text-muted-foreground flex-shrink-0">· {apt.durationMinutes}m</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Últimas 3 reseñas */}
+            {myReviews && myReviews.length > 0 && (
+              <div>
+                <h3 className="text-base font-bold mb-3" style={{ fontFamily: "Poppins, sans-serif" }}>Últimas reseñas</h3>
+                <div className="space-y-2">
+                  {myReviews.slice(0, 3).map((review) => (
+                    <div key={review.id} className="bg-white rounded-xl border border-[rgba(96,117,98,0.12)] p-3 flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-full bg-[#eef2ee] flex items-center justify-center text-xs font-semibold text-primary flex-shrink-0 overflow-hidden">
+                        {(review as any).userImage
+                          ? <img src={(review as any).userImage} className="w-full h-full object-cover" />
+                          : ((review as any).userName?.[0] ?? "U").toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-xs font-semibold truncate">{(review as any).userName ?? "Usuario"}</p>
+                          <span className="text-amber-400 text-xs flex-shrink-0">{"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}</span>
+                        </div>
+                        {review.comment && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{review.comment}</p>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Acceso rápido */}
+            <div>
+              <h3 className="text-base font-bold mb-3" style={{ fontFamily: "Poppins, sans-serif" }}>Acceso rápido</h3>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => { setActiveTab("disponibilidad"); window.location.hash = "disponibilidad"; }}
+                  className="flex flex-col items-start gap-2 p-4 bg-white rounded-2xl border border-[rgba(96,117,98,0.12)] hover:bg-[#f0f4f0] transition-colors text-left"
+                >
+                  <Clock className="w-5 h-5 text-primary" />
+                  <span className="text-sm font-semibold text-foreground">Configurar disponibilidad</span>
+                  <span className="text-xs text-muted-foreground">Gestiona tus horarios</span>
+                </button>
+                <button
+                  onClick={() => { setActiveTab("ganancias"); window.location.hash = "ganancias"; }}
+                  className="flex flex-col items-start gap-2 p-4 bg-white rounded-2xl border border-[rgba(96,117,98,0.12)] hover:bg-[#f0f4f0] transition-colors text-left"
+                >
+                  <DollarSign className="w-5 h-5 text-emerald-600" />
+                  <span className="text-sm font-semibold text-foreground">Ver ganancias</span>
+                  <span className="text-xs text-muted-foreground">Balance y retiros</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tab: Agenda (antes Citas) */}
+        {activeTab === "agenda" && (
           <div className="space-y-6">
             <div>
               <div className="flex items-center justify-between mb-3">
@@ -698,212 +845,227 @@ export default function ProfessionalDashboard() {
           </div>
         )}
 
-        {/* Tab: Disponibilidad */}
+        {/* Tab: Disponibilidad (incluye Horarios y Días libres como sub-tabs) */}
         {activeTab === "disponibilidad" && (
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-xl font-bold mb-2" style={{ fontFamily: "Poppins, sans-serif" }}>
-                Configurar disponibilidad
-              </h2>
-              <p className="text-muted-foreground text-sm">
-                Define los días y horarios semanales en que estás disponible para atender consultas.
-              </p>
+          <div className="space-y-5">
+            <h2 className="text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>Disponibilidad</h2>
+
+            {/* Sub-tabs internos */}
+            <div className="flex gap-1 bg-muted/50 rounded-xl p-1">
+              <button
+                onClick={() => setAvailSubTab("horarios")}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium rounded-lg transition-colors ${
+                  availSubTab === "horarios" ? "bg-white shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Clock className="w-3.5 h-3.5" />
+                Horarios semanales
+              </button>
+              <button
+                onClick={() => setAvailSubTab("dias-libres")}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium rounded-lg transition-colors ${
+                  availSubTab === "dias-libres" ? "bg-white shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <CalendarX className="w-3.5 h-3.5" />
+                Días libres
+              </button>
             </div>
 
-            <Card className="border-border">
-              <CardHeader>
-                <CardTitle className="text-base">Horarios actuales</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {!availability || availability.length === 0 ? (
-                  <p className="text-muted-foreground text-sm text-center py-4">
-                    No has configurado horarios aún
-                  </p>
-                ) : (
-                  <div className="space-y-2">
-                    {availability.map((slot) => (
-                      <div key={slot.id} className="flex items-center justify-between p-3 bg-primary/5 rounded-xl">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg gradient-brand flex items-center justify-center text-white text-xs font-bold">
-                            {DAYS[slot.dayOfWeek]?.charAt(0)}
+            {/* Sub-tab: Horarios */}
+            {availSubTab === "horarios" && (
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Define los días y horarios semanales en que estás disponible para atender consultas.
+                </p>
+                <Card className="border-border">
+                  <CardHeader>
+                    <CardTitle className="text-base">Horarios actuales</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {!availability || availability.length === 0 ? (
+                      <p className="text-muted-foreground text-sm text-center py-4">
+                        No has configurado horarios aún
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {availability.map((slot) => (
+                          <div key={slot.id} className="flex items-center justify-between p-3 bg-primary/5 rounded-xl">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-lg gradient-brand flex items-center justify-center text-white text-xs font-bold">
+                                {DAYS[slot.dayOfWeek]?.charAt(0)}
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium">{DAYS[slot.dayOfWeek]}</p>
+                                <p className="text-xs text-muted-foreground">{slot.startTime} - {slot.endTime}</p>
+                              </div>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 h-auto"
+                              onClick={() => removeAvailabilityMutation.mutate({ id: slot.id })}
+                              disabled={removeAvailabilityMutation.isPending}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
                           </div>
-                          <div>
-                            <p className="text-sm font-medium">{DAYS[slot.dayOfWeek]}</p>
-                            <p className="text-xs text-muted-foreground">{slot.startTime} - {slot.endTime}</p>
-                          </div>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 h-auto"
-                          onClick={() => removeAvailabilityMutation.mutate({ id: slot.id })}
-                          disabled={removeAvailabilityMutation.isPending}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                    )}
+                  </CardContent>
+                </Card>
 
-            <Card className="border-border">
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Plus className="w-4 h-4 text-primary" />
-                  Agregar horario
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div>
-                    <label className="text-xs font-medium mb-1 block">Día</label>
-                    <select
-                      value={newSlot.dayOfWeek}
-                      onChange={(e) => setNewSlot({ ...newSlot, dayOfWeek: parseInt(e.target.value) })}
-                      className="w-full rounded-lg border border-border p-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+                <Card className="border-border">
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Plus className="w-4 h-4 text-primary" />
+                      Agregar horario
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div>
+                        <label className="text-xs font-medium mb-1 block">Día</label>
+                        <select
+                          value={newSlot.dayOfWeek}
+                          onChange={(e) => setNewSlot({ ...newSlot, dayOfWeek: parseInt(e.target.value) })}
+                          className="w-full rounded-lg border border-border p-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        >
+                          {DAYS.map((day, i) => (
+                            <option key={i} value={i}>{day}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium mb-1 block">Hora inicio</label>
+                        <input
+                          type="time"
+                          value={newSlot.startTime}
+                          onChange={(e) => setNewSlot({ ...newSlot, startTime: e.target.value })}
+                          className="w-full rounded-lg border border-border p-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium mb-1 block">Hora fin</label>
+                        <input
+                          type="time"
+                          value={newSlot.endTime}
+                          onChange={(e) => setNewSlot({ ...newSlot, endTime: e.target.value })}
+                          className="w-full rounded-lg border border-border p-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        />
+                      </div>
+                    </div>
+                    <Button
+                      onClick={() => addAvailabilityMutation.mutate(newSlot)}
+                      disabled={addAvailabilityMutation.isPending}
+                      className="gradient-brand text-white border-0"
                     >
-                      {DAYS.map((day, i) => (
-                        <option key={i} value={i}>{day}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium mb-1 block">Hora inicio</label>
-                    <input
-                      type="time"
-                      value={newSlot.startTime}
-                      onChange={(e) => setNewSlot({ ...newSlot, startTime: e.target.value })}
-                      className="w-full rounded-lg border border-border p-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium mb-1 block">Hora fin</label>
-                    <input
-                      type="time"
-                      value={newSlot.endTime}
-                      onChange={(e) => setNewSlot({ ...newSlot, endTime: e.target.value })}
-                      className="w-full rounded-lg border border-border p-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
-                    />
-                  </div>
-                </div>
-                <Button
-                  onClick={() => addAvailabilityMutation.mutate(newSlot)}
-                  disabled={addAvailabilityMutation.isPending}
-                  className="gradient-brand text-white border-0"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Agregar horario
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+                      <Plus className="w-4 h-4 mr-2" />
+                      Agregar horario
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
 
-        {/* Tab: Días libres */}
-        {activeTab === "dias-libres" && (
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-xl font-bold mb-2" style={{ fontFamily: "Poppins, sans-serif" }}>
-                Días libres y vacaciones
-              </h2>
-              <p className="text-muted-foreground text-sm">
-                Bloquea fechas específicas en las que no estarás disponible. Los pacientes no podrán agendar citas en estos días.
-              </p>
-            </div>
+            {/* Sub-tab: Días libres */}
+            {availSubTab === "dias-libres" && (
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Bloquea fechas específicas en las que no estarás disponible. Los pacientes no podrán agendar citas en estos días.
+                </p>
+                <Card className="border-border">
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <CalendarX className="w-4 h-4 text-primary" />
+                      Bloquear fecha
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-xs font-medium mb-1 block">Fecha</Label>
+                        <input
+                          type="date"
+                          value={newBlockedDate}
+                          min={new Date().toISOString().split("T")[0]}
+                          onChange={(e) => setNewBlockedDate(e.target.value)}
+                          className="w-full rounded-lg border border-border p-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs font-medium mb-1 block">Motivo (opcional)</Label>
+                        <Input
+                          placeholder="Ej: Vacaciones, cita médica..."
+                          value={newBlockedReason}
+                          onChange={(e) => setNewBlockedReason(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <Button
+                      onClick={() => {
+                        if (!newBlockedDate) {
+                          toast.error("Selecciona una fecha");
+                          return;
+                        }
+                        addBlockedDayMutation.mutate({ blockedDate: newBlockedDate, reason: newBlockedReason || undefined });
+                      }}
+                      disabled={addBlockedDayMutation.isPending}
+                      className="gradient-brand text-white border-0"
+                    >
+                      <CalendarX className="w-4 h-4 mr-2" />
+                      Bloquear día
+                    </Button>
+                  </CardContent>
+                </Card>
 
-            {/* Agregar día bloqueado */}
-            <Card className="border-border">
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <CalendarX className="w-4 h-4 text-primary" />
-                  Bloquear fecha
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-xs font-medium mb-1 block">Fecha</Label>
-                    <input
-                      type="date"
-                      value={newBlockedDate}
-                      min={new Date().toISOString().split("T")[0]}
-                      onChange={(e) => setNewBlockedDate(e.target.value)}
-                      className="w-full rounded-lg border border-border p-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs font-medium mb-1 block">Motivo (opcional)</Label>
-                    <Input
-                      placeholder="Ej: Vacaciones, cita médica..."
-                      value={newBlockedReason}
-                      onChange={(e) => setNewBlockedReason(e.target.value)}
-                    />
-                  </div>
-                </div>
-                <Button
-                  onClick={() => {
-                    if (!newBlockedDate) {
-                      toast.error("Selecciona una fecha");
-                      return;
-                    }
-                    addBlockedDayMutation.mutate({ blockedDate: newBlockedDate, reason: newBlockedReason || undefined });
-                  }}
-                  disabled={addBlockedDayMutation.isPending}
-                  className="gradient-brand text-white border-0"
-                >
-                  <CalendarX className="w-4 h-4 mr-2" />
-                  Bloquear día
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Lista de días bloqueados */}
-            <Card className="border-border">
-              <CardHeader>
-                <CardTitle className="text-base">Fechas bloqueadas</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {!blockedDays || blockedDays.length === 0 ? (
-                  <div className="text-center py-6">
-                    <CalendarX className="w-10 h-10 text-muted-foreground/30 mx-auto mb-2" />
-                    <p className="text-muted-foreground text-sm">No tienes fechas bloqueadas</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {blockedDays
-                      .sort((a, b) => a.blockedDate.localeCompare(b.blockedDate))
-                      .map((day) => (
-                        <div key={day.id} className="flex items-center justify-between p-3 bg-red-50 border border-red-100 rounded-xl">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center">
-                              <CalendarX className="w-4 h-4 text-red-500" />
+                <Card className="border-border">
+                  <CardHeader>
+                    <CardTitle className="text-base">Fechas bloqueadas</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {!blockedDays || blockedDays.length === 0 ? (
+                      <div className="text-center py-6">
+                        <CalendarX className="w-10 h-10 text-muted-foreground/30 mx-auto mb-2" />
+                        <p className="text-muted-foreground text-sm">No tienes fechas bloqueadas</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {blockedDays
+                          .sort((a, b) => a.blockedDate.localeCompare(b.blockedDate))
+                          .map((day) => (
+                            <div key={day.id} className="flex items-center justify-between p-3 bg-red-50 border border-red-100 rounded-xl">
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center">
+                                  <CalendarX className="w-4 h-4 text-red-500" />
+                                </div>
+                                <div>
+                                  <p className="text-sm font-medium text-red-700">
+                                    {format(new Date(day.blockedDate + "T12:00:00"), "EEEE d 'de' MMMM yyyy", { locale: es })}
+                                  </p>
+                                  {day.reason && (
+                                    <p className="text-xs text-red-500">{day.reason}</p>
+                                  )}
+                                </div>
+                              </div>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 w-8 p-0 text-red-400 hover:text-red-600 hover:bg-red-100"
+                                onClick={() => removeBlockedDayMutation.mutate({ id: day.id })}
+                                disabled={removeBlockedDayMutation.isPending}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
                             </div>
-                            <div>
-                              <p className="text-sm font-medium text-red-700">
-                                {format(new Date(day.blockedDate + "T12:00:00"), "EEEE d 'de' MMMM yyyy", { locale: es })}
-                              </p>
-                              {day.reason && (
-                                <p className="text-xs text-red-500">{day.reason}</p>
-                              )}
-                            </div>
-                          </div>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-8 w-8 p-0 text-red-400 hover:text-red-600 hover:bg-red-100"
-                            onClick={() => removeBlockedDayMutation.mutate({ id: day.id })}
-                            disabled={removeBlockedDayMutation.isPending}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                          ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            )}
           </div>
         )}
 

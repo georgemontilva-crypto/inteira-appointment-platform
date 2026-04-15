@@ -20,18 +20,19 @@ const PRO_NAV_SECTIONS = [
   {
     section: "Panel",
     items: [
-      { label: "Mis citas",      icon: "calendar", href: "/panel-profesional#citas",          hash: "#citas" },
+      { label: "Resumen",        icon: "grid",     href: "/panel-profesional#resumen",         hash: "#resumen" },
+      { label: "Agenda",         icon: "calendar", href: "/panel-profesional#agenda",          hash: "#agenda" },
       { label: "Disponibilidad", icon: "clock",    href: "/panel-profesional#disponibilidad",  hash: "#disponibilidad" },
-      { label: "Días libres",    icon: "calendar", href: "/panel-profesional#dias-libres",     hash: "#dias-libres" },
       { label: "Reseñas",        icon: "star",     href: "/panel-profesional#resenas",         hash: "#resenas" },
       { label: "Ganancias",      icon: "wallet",   href: "/panel-profesional#ganancias",       hash: "#ganancias" },
-      { label: "Mi perfil",      icon: "user",     href: "/panel-profesional#perfil",          hash: "#perfil" },
+      { label: "Perfil",         icon: "user",     href: "/panel-profesional#perfil",          hash: "#perfil" },
     ],
   },
   {
-    section: "Cuenta",
+    section: "Navegación",
     items: [
-      { label: "Ir al inicio",   icon: "home",     href: "/dashboard",                         hash: "" },
+      { label: "Inicio",         icon: "home",     href: "/",                                  hash: "" },
+      { label: "Dashboard",      icon: "layers",   href: "/panel-profesional",                 hash: "" },
     ],
   },
 ];
@@ -186,12 +187,13 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
     {
       section: "Panel profesional",
       items: [
-        { label: "Inicio",         icon: "home",     href: "/panel-profesional" },
-        { label: "Mis citas",      icon: "calendar", href: "/panel-profesional#citas" },
+        { label: "Inicio",         icon: "home",     href: "/" },
+        { label: "Dashboard",      icon: "layers",   href: "/panel-profesional" },
+        { label: "Agenda",         icon: "calendar", href: "/panel-profesional#agenda" },
         { label: "Ganancias",      icon: "wallet",   href: "/panel-profesional#ganancias" },
         { label: "Disponibilidad", icon: "clock",    href: "/panel-profesional#disponibilidad" },
         { label: "Reseñas",        icon: "star",     href: "/panel-profesional#resenas" },
-        { label: "Mi perfil",      icon: "user",     href: "/panel-profesional#perfil" },
+        { label: "Perfil",         icon: "user",     href: "/panel-profesional#perfil" },
       ],
     },
   ];
@@ -248,7 +250,7 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
               >Profesional</button>
             </div>
           ) : (
-            <img src={logo} alt="Inteira" style={{ height: "24px", width: "auto", objectFit: "contain" }} />
+            <a href="/"><img src={logo} alt="Inteira" style={{ height: "24px", width: "auto", objectFit: "contain" }} /></a>
           )}
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
             <button onClick={() => openPanel("notifications")} style={{ position: "relative", background: "none", border: "none", cursor: "pointer", color: "#607562", padding: 0, display: "flex" }}>
@@ -278,7 +280,7 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
         {/* DESKTOP TOPBAR */}
         <div className="hidden md:flex items-center gap-2 px-4 h-[58px]">
           <div className="flex items-center gap-2 flex-shrink-0">
-            <img src={logo} alt="Inteira" style={{ height: "28px", width: "auto", objectFit: "contain" }} />
+            <a href="/"><img src={logo} alt="Inteira" style={{ height: "28px", width: "auto", objectFit: "contain" }} /></a>
           </div>
           <nav className="flex items-center">
             {[
