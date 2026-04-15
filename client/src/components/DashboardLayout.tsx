@@ -405,12 +405,12 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
                       </button>
                     );
                   }
-                  // href="/" must bypass wouter — use window.location to reach the public landing page
+                  // href="/" — native <a> so the browser navigates without wouter intercepting
                   if (item.href === "/") {
                     return (
-                      <button key={item.href} className={cellClass} onClick={() => { window.location.href = "/"; }}>
+                      <a key="inicio-home" href="/" className={cellClass}>
                         {inner}
-                      </button>
+                      </a>
                     );
                   }
                   return (
