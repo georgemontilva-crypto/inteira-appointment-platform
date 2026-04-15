@@ -1396,13 +1396,80 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
               {/* ── Columna izquierda: Códigos de descuento ── */}
               <div className="flex flex-col gap-4 min-h-[500px]">
-                {/* Tabla */}
-                <Card className="border-border flex-1 flex flex-col">
+                {/* Formulario nuevo código — arriba */}
+                <Card className="border-border">
                   <CardHeader className="pb-2 pt-4 px-4">
                     <CardTitle className="text-sm flex items-center gap-2">
                       <Tag className="w-4 h-4 text-primary" />
-                      Códigos de descuento
+                      Nuevo código
                     </CardTitle>
+                  </CardHeader>
+                  <CardContent className="px-4 pb-4 space-y-2.5">
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input
+                        placeholder="CÓDIGO (ej. BIENVENIDA20)"
+                        value={discountForm.code}
+                        onChange={(e) => setDiscountForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))}
+                        className="text-xs h-8 font-mono col-span-2"
+                        maxLength={50}
+                      />
+                      <Select
+                        value={discountForm.type}
+                        onValueChange={(v) => setDiscountForm((f) => ({ ...f, type: v as "percentage" | "fixed" }))}
+                      >
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="percentage">Porcentaje (%)</SelectItem>
+                          <SelectItem value="fixed">Monto fijo ($)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Input
+                        type="number"
+                        placeholder={discountForm.type === "percentage" ? "Valor (ej. 20)" : "Valor MXN"}
+                        value={discountForm.value}
+                        onChange={(e) => setDiscountForm((f) => ({ ...f, value: e.target.value }))}
+                        className="text-xs h-8"
+                        min={0}
+                      />
+                      <Input
+                        type="number"
+                        placeholder="Usos máx. (opcional)"
+                        value={discountForm.maxUses}
+                        onChange={(e) => setDiscountForm((f) => ({ ...f, maxUses: e.target.value }))}
+                        className="text-xs h-8"
+                        min={1}
+                      />
+                      <Input
+                        type="date"
+                        value={discountForm.expiresAt}
+                        onChange={(e) => setDiscountForm((f) => ({ ...f, expiresAt: e.target.value }))}
+                        className="text-xs h-8"
+                      />
+                    </div>
+                    <Button
+                      size="sm"
+                      className="gradient-brand text-white border-0 w-full h-8"
+                      disabled={!discountForm.code.trim() || !discountForm.value || createDiscountMutation.isPending}
+                      onClick={() => createDiscountMutation.mutate({
+                        code: discountForm.code.trim(),
+                        type: discountForm.type,
+                        value: parseFloat(discountForm.value),
+                        maxUses: discountForm.maxUses ? parseInt(discountForm.maxUses) : null,
+                        expiresAt: discountForm.expiresAt ? new Date(discountForm.expiresAt).toISOString() : null,
+                      })}
+                    >
+                      <Plus className="w-3.5 h-3.5 mr-1" />
+                      {createDiscountMutation.isPending ? "Creando..." : "Crear código"}
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                {/* Tabla — abajo, crece para igualar altura */}
+                <Card className="border-border flex-1 flex flex-col">
+                  <CardHeader className="pb-2 pt-4 px-4">
+                    <CardTitle className="text-sm text-muted-foreground">Códigos de descuento</CardTitle>
                   </CardHeader>
                   <CardContent className="px-4 pb-4">
                     {(!discountCodes || discountCodes.length === 0) ? (
@@ -1474,73 +1541,6 @@ export default function AdminDashboard() {
                         </table>
                       </div>
                     )}
-                  </CardContent>
-                </Card>
-
-                {/* Formulario nuevo código */}
-                <Card className="border-border">
-                  <CardHeader className="pb-2 pt-4 px-4">
-                    <CardTitle className="text-sm text-muted-foreground">Nuevo código</CardTitle>
-                  </CardHeader>
-                  <CardContent className="px-4 pb-4 space-y-2.5">
-                    <div className="grid grid-cols-2 gap-2">
-                      <Input
-                        placeholder="CÓDIGO (ej. BIENVENIDA20)"
-                        value={discountForm.code}
-                        onChange={(e) => setDiscountForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))}
-                        className="text-xs h-8 font-mono col-span-2"
-                        maxLength={50}
-                      />
-                      <Select
-                        value={discountForm.type}
-                        onValueChange={(v) => setDiscountForm((f) => ({ ...f, type: v as "percentage" | "fixed" }))}
-                      >
-                        <SelectTrigger className="h-8 text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="percentage">Porcentaje (%)</SelectItem>
-                          <SelectItem value="fixed">Monto fijo ($)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Input
-                        type="number"
-                        placeholder={discountForm.type === "percentage" ? "Valor (ej. 20)" : "Valor MXN"}
-                        value={discountForm.value}
-                        onChange={(e) => setDiscountForm((f) => ({ ...f, value: e.target.value }))}
-                        className="text-xs h-8"
-                        min={0}
-                      />
-                      <Input
-                        type="number"
-                        placeholder="Usos máx. (opcional)"
-                        value={discountForm.maxUses}
-                        onChange={(e) => setDiscountForm((f) => ({ ...f, maxUses: e.target.value }))}
-                        className="text-xs h-8"
-                        min={1}
-                      />
-                      <Input
-                        type="date"
-                        value={discountForm.expiresAt}
-                        onChange={(e) => setDiscountForm((f) => ({ ...f, expiresAt: e.target.value }))}
-                        className="text-xs h-8"
-                      />
-                    </div>
-                    <Button
-                      size="sm"
-                      className="gradient-brand text-white border-0 w-full h-8"
-                      disabled={!discountForm.code.trim() || !discountForm.value || createDiscountMutation.isPending}
-                      onClick={() => createDiscountMutation.mutate({
-                        code: discountForm.code.trim(),
-                        type: discountForm.type,
-                        value: parseFloat(discountForm.value),
-                        maxUses: discountForm.maxUses ? parseInt(discountForm.maxUses) : null,
-                        expiresAt: discountForm.expiresAt ? new Date(discountForm.expiresAt).toISOString() : null,
-                      })}
-                    >
-                      <Plus className="w-3.5 h-3.5 mr-1" />
-                      {createDiscountMutation.isPending ? "Creando..." : "Crear código"}
-                    </Button>
                   </CardContent>
                 </Card>
               </div>
