@@ -1393,11 +1393,11 @@ export default function AdminDashboard() {
           <div className="space-y-6">
             <h2 className="text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>Códigos</h2>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
               {/* ── Columna izquierda: Códigos de descuento ── */}
-              <div className="space-y-4">
+              <div className="flex flex-col gap-4 min-h-[500px]">
                 {/* Tabla */}
-                <Card className="border-border">
+                <Card className="border-border flex-1 flex flex-col">
                   <CardHeader className="pb-2 pt-4 px-4">
                     <CardTitle className="text-sm flex items-center gap-2">
                       <Tag className="w-4 h-4 text-primary" />
@@ -1546,20 +1546,54 @@ export default function AdminDashboard() {
               </div>
 
               {/* ── Columna derecha: Tarjetas prepago ── */}
-              <div className="space-y-4">
-                {/* Lista tarjetas */}
+              <div className="flex flex-col gap-4 min-h-[500px]">
+                {/* Formulario generar tarjeta — arriba */}
                 <Card className="border-border">
                   <CardHeader className="pb-2 pt-4 px-4">
                     <CardTitle className="text-sm flex items-center gap-2">
                       <CardIcon className="w-4 h-4 text-primary" />
-                      Tarjetas prepago
+                      Generar tarjeta
                     </CardTitle>
+                  </CardHeader>
+                  <CardContent className="px-4 pb-4 space-y-2.5">
+                    <Select
+                      value={prepaidProductType}
+                      onValueChange={(v) => setPrepaidProductType(v as typeof prepaidProductType)}
+                    >
+                      <SelectTrigger className="text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="individual_basic">Sesión Básica — 350 créditos</SelectItem>
+                        <SelectItem value="individual_premium">Sesión Premium — 1,500 créditos</SelectItem>
+                        <SelectItem value="plan_basic">Plan Básico — 980 créditos</SelectItem>
+                        <SelectItem value="plan_pro">Plan Pro — 2,500 créditos</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      className="gradient-brand text-white border-0 w-full"
+                      disabled={createPrepaidMutation.isPending}
+                      onClick={() => createPrepaidMutation.mutate({ productType: prepaidProductType })}
+                    >
+                      <Plus className="w-4 h-4 mr-1.5" />
+                      {createPrepaidMutation.isPending ? "Generando..." : "Generar tarjeta"}
+                    </Button>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                      Código único XXXX-XXXX-XXXX-XXXX que el usuario canjea en su wallet para acreditar créditos.
+                    </p>
+                  </CardContent>
+                </Card>
+
+                {/* Lista tarjetas — abajo, crece para igualar altura */}
+                <Card className="border-border flex-1 flex flex-col">
+                  <CardHeader className="pb-2 pt-4 px-4">
+                    <CardTitle className="text-sm text-muted-foreground">Tarjetas generadas</CardTitle>
                   </CardHeader>
                   <CardContent className="px-4 pb-4">
                     {(!prepaidCards || prepaidCards.length === 0) ? (
                       <p className="text-xs text-muted-foreground text-center py-6">No hay tarjetas generadas</p>
                     ) : (
-                      <div className="max-h-[300px] overflow-y-auto" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
+                      <div className="max-h-[320px] overflow-y-auto" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
                         <div className="space-y-1.5">
                           {(prepaidCards as any[]).map((card) => (
                             <div
@@ -1600,40 +1634,6 @@ export default function AdminDashboard() {
                         </div>
                       </div>
                     )}
-                  </CardContent>
-                </Card>
-
-                {/* Formulario generar tarjeta */}
-                <Card className="border-border">
-                  <CardHeader className="pb-2 pt-4 px-4">
-                    <CardTitle className="text-sm text-muted-foreground">Generar tarjeta</CardTitle>
-                  </CardHeader>
-                  <CardContent className="px-4 pb-4 space-y-2.5">
-                    <Select
-                      value={prepaidProductType}
-                      onValueChange={(v) => setPrepaidProductType(v as typeof prepaidProductType)}
-                    >
-                      <SelectTrigger className="text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="individual_basic">Sesión Básica — 350 créditos</SelectItem>
-                        <SelectItem value="individual_premium">Sesión Premium — 1,500 créditos</SelectItem>
-                        <SelectItem value="plan_basic">Plan Básico — 980 créditos</SelectItem>
-                        <SelectItem value="plan_pro">Plan Pro — 2,500 créditos</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Button
-                      className="gradient-brand text-white border-0 w-full"
-                      disabled={createPrepaidMutation.isPending}
-                      onClick={() => createPrepaidMutation.mutate({ productType: prepaidProductType })}
-                    >
-                      <Plus className="w-4 h-4 mr-1.5" />
-                      {createPrepaidMutation.isPending ? "Generando..." : "Generar tarjeta"}
-                    </Button>
-                    <p className="text-[11px] text-muted-foreground leading-relaxed">
-                      Código único XXXX-XXXX-XXXX-XXXX que el usuario canjea en su wallet para acreditar créditos.
-                    </p>
                   </CardContent>
                 </Card>
               </div>
