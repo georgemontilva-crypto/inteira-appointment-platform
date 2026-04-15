@@ -258,16 +258,12 @@ export default function ProfessionalDashboard() {
     onError: () => toast.error("Error al registrar no-show"),
   });
 
-  // Si hay error FORBIDDEN significa que el rol en la sesión aún no está actualizado.
-  // Hacer logout automático y redirigir al login para refrescar la sesión.
+  // Si hay error FORBIDDEN el acceso profesional fue revocado — redirigir al
+  // dashboard de cliente sin cerrar sesión (el usuario sigue siendo cliente).
   const isForbidden = (profileError as any)?.data?.code === "FORBIDDEN";
   useEffect(() => {
     if (!isForbidden) return;
-    const timer = setTimeout(async () => {
-      await logout();
-      window.location.href = "/login";
-    }, 2000);
-    return () => clearTimeout(timer);
+    window.location.href = "/dashboard";
   }, [isForbidden]);
 
   useEffect(() => {

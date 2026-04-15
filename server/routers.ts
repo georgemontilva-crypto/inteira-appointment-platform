@@ -475,9 +475,14 @@ export const appRouter = router({
       }),
 
     getProfile: protectedProcedure.query(async ({ ctx }) => {
-      // Any authenticated user can query their own professional record.
-      // This is needed so pending/rejected users can see their status screen
-      // without being stuck in a FORBIDDEN → logout → redirect loop.
+      // Verificar rol actual en BD (no solo el JWT que puede estar desactualizado)
+      const freshUser = await db.getUserById(ctx.user.id);
+      if (!freshUser || freshUser.role !== "professional") {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Tu acceso como profesional ha sido revocado",
+        });
+      }
       return await db.getProfessionalByUserId(ctx.user.id);
     }),
 
