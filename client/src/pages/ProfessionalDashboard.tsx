@@ -748,157 +748,202 @@ export default function ProfessionalDashboard() {
 
         {/* Tab: Agenda (antes Citas) */}
         {activeTab === "agenda" && (
-          <div className="space-y-6">
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
-                  Próximas citas
-                </h2>
-                {upcomingAppointments.length > 0 && (
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => scrollCarousel("left")}
-                      className="w-7 h-7 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors"
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => scrollCarousel("right")}
-                      className="w-7 h-7 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors"
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>Agenda</h2>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+              {/* ── Columna izquierda — Próximas citas ── */}
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <h3 className="font-semibold text-base">Próximas citas</h3>
+                  {upcomingAppointments.length > 0 && (
+                    <span className="text-xs font-semibold bg-primary/10 text-primary rounded-full px-2 py-0.5">
+                      {upcomingAppointments.length}
+                    </span>
+                  )}
+                </div>
+
+                {loadingAppointments ? (
+                  <div className="space-y-3">
+                    {[1, 2].map((i) => (
+                      <div key={i} className="h-20 rounded-2xl border border-border bg-muted/40 animate-pulse" />
+                    ))}
+                  </div>
+                ) : upcomingAppointments.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-14 text-center rounded-2xl border border-dashed border-border">
+                    <Calendar className="w-10 h-10 text-muted-foreground/25 mb-2" />
+                    <p className="text-sm text-muted-foreground">No tienes citas próximas</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {upcomingAppointments.map((apt) => {
+                      const startDate = new Date(apt.appointmentDate);
+                      const endTime = new Date(startDate);
+                      endTime.setMinutes(endTime.getMinutes() + (apt.durationMinutes ?? 55));
+                      const joinable = canJoin(apt);
+
+                      return (
+                        <div
+                          key={apt.id}
+                          className="rounded-2xl border border-border bg-card hover:shadow-md transition-all p-4"
+                        >
+                          <div className="flex items-center gap-3">
+                            {/* Avatar 40px */}
+                            {(apt as any).userProfileImage ? (
+                              <img
+                                src={(apt as any).userProfileImage}
+                                alt={(apt as any).userName ?? ""}
+                                className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                              />
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold flex-shrink-0">
+                                {(apt as any).userName?.charAt(0)?.toUpperCase() ?? "U"}
+                              </div>
+                            )}
+
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-2">
+                                <p className="font-semibold text-sm truncate">
+                                  {(apt as any).userName ?? `Usuario #${apt.userId}`}
+                                </p>
+                                <span className={`text-[10px] font-semibold rounded-full px-2 py-0.5 whitespace-nowrap flex-shrink-0 ${
+                                  joinable ? "bg-green-100 text-green-700" : "bg-primary/10 text-primary"
+                                }`}>
+                                  {joinable ? "¡Ahora!" : `En ${joinCountdown(apt)}`}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1.5 mt-0.5">
+                                <Clock className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                                <span className="text-xs text-muted-foreground">
+                                  {format(startDate, "EEEE d MMM", { locale: es })}
+                                  {" · "}
+                                  {format(startDate, "HH:mm")}–{format(endTime, "HH:mm")}
+                                </span>
+                                <span className="text-xs text-muted-foreground">· {apt.durationMinutes}m</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Action buttons */}
+                          {(apt.videoCallLink || new Date(apt.appointmentDate).getTime() + 55 * 60 * 1000 < Date.now()) && (
+                            <div className="flex gap-2 mt-3 pl-[52px]">
+                              {apt.videoCallLink && (
+                                <Button
+                                  size="sm"
+                                  disabled={!joinable}
+                                  className="gradient-brand text-white border-0 h-7 text-xs px-3 disabled:opacity-50"
+                                  onClick={() => joinable && setActiveCall({
+                                    url: apt.videoCallLink!,
+                                    appointmentId: apt.id,
+                                    professionalName: (apt as any).userName ?? `Usuario #${apt.userId}`,
+                                    startTime: new Date(apt.appointmentDate),
+                                    endTime: new Date(new Date(apt.appointmentDate).getTime() + (apt.durationMinutes ?? 55) * 60 * 1000),
+                                  })}
+                                >
+                                  <Video className="w-3 h-3 mr-1.5" />
+                                  Unirse
+                                </Button>
+                              )}
+                              {new Date(apt.appointmentDate).getTime() + 55 * 60 * 1000 < Date.now() && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 text-xs px-3 border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                                  onClick={() => setAttendanceModal(apt)}
+                                >
+                                  <CheckCircle2 className="w-3 h-3 mr-1.5" />
+                                  Completar
+                                </Button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
 
-              {loadingAppointments ? (
-                <div className="flex gap-3">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="min-w-[200px] h-[72px] rounded-xl border border-border bg-muted/40 animate-pulse flex-shrink-0" />
-                  ))}
+              {/* ── Columna derecha — Historial ── */}
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <h3 className="font-semibold text-base">Historial</h3>
+                  {pastAppointments.length > 0 && (
+                    <span className="text-xs font-semibold bg-muted text-muted-foreground rounded-full px-2 py-0.5">
+                      {pastAppointments.length}
+                    </span>
+                  )}
                 </div>
-              ) : upcomingAppointments.length === 0 ? (
-                <Card className="border-border border-dashed">
-                  <CardContent className="p-8 text-center">
-                    <Calendar className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
-                    <p className="text-muted-foreground">No tienes citas próximas</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div
-                  ref={carouselRef}
-                  className="flex gap-3 overflow-x-auto scroll-smooth pb-1"
-                  style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-                >
-                  {upcomingAppointments.map((apt) => (
-                    <div
-                      key={apt.id}
-                      className="flex-shrink-0 rounded-xl border border-border bg-card hover:shadow-md transition-shadow"
-                      style={cardMinWidth}
-                    >
-                      <div className="p-4">
-                        {/* Top row: avatar + name + countdown badge */}
-                        <div className="flex items-center gap-2">
+
+                {loadingAppointments ? (
+                  <div className="space-y-2">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="h-14 rounded-xl border border-border bg-muted/40 animate-pulse" />
+                    ))}
+                  </div>
+                ) : pastAppointments.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-14 text-center rounded-2xl border border-dashed border-border">
+                    <Clock className="w-10 h-10 text-muted-foreground/25 mb-2" />
+                    <p className="text-sm text-muted-foreground">Sin historial aún</p>
+                  </div>
+                ) : (
+                  <div className="max-h-[600px] overflow-y-auto scroll-smooth rounded-2xl border border-border divide-y divide-border">
+                    {pastAppointments.map((apt, idx) => {
+                      const startDate = new Date(apt.appointmentDate);
+                      const endTime = new Date(startDate);
+                      endTime.setMinutes(endTime.getMinutes() + (apt.durationMinutes ?? 55));
+                      const isPremium = (apt.durationMinutes ?? 55) >= 60;
+
+                      return (
+                        <div
+                          key={apt.id}
+                          className="flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors"
+                        >
+                          {/* Avatar 36px */}
                           {(apt as any).userProfileImage ? (
                             <img
                               src={(apt as any).userProfileImage}
                               alt={(apt as any).userName ?? ""}
-                              className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+                              className="w-9 h-9 rounded-full object-cover flex-shrink-0"
                             />
                           ) : (
-                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm flex-shrink-0">
+                            <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-muted-foreground font-semibold text-sm flex-shrink-0">
                               {(apt as any).userName?.charAt(0)?.toUpperCase() ?? "U"}
                             </div>
                           )}
-                          <p className="font-semibold text-sm truncate flex-1">
-                            {(apt as any).userName ?? `Usuario #${apt.userId}`}
-                          </p>
-                          <span className="text-[10px] font-medium text-primary bg-primary/10 rounded-full px-2 py-0.5 flex-shrink-0 whitespace-nowrap">
-                            {canJoin(apt) ? "¡Ahora!" : `En ${joinCountdown(apt)}`}
-                          </span>
-                        </div>
 
-                        {/* Bottom row: date + duration */}
-                        <div className="flex items-center gap-1.5 mt-1.5 ml-10">
-                          <Clock className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-                          <span className="text-xs text-muted-foreground truncate">
-                            {format(new Date(apt.appointmentDate), "d MMM · HH:mm", { locale: es })}
-                          </span>
-                          <span className="text-xs text-muted-foreground flex-shrink-0">· {apt.durationMinutes}m</span>
-                        </div>
-
-                        {/* Action buttons */}
-                        {(apt.videoCallLink || new Date(apt.appointmentDate).getTime() + 55 * 60 * 1000 < Date.now()) && (
-                          <div className="flex gap-1.5 mt-2 ml-10">
-                            {apt.videoCallLink && (
-                              <Button
-                                size="sm"
-                                disabled={!canJoin(apt)}
-                                className="gradient-brand text-white border-0 h-6 text-[11px] px-2 disabled:opacity-60 disabled:cursor-not-allowed"
-                                onClick={() => canJoin(apt) && setActiveCall({
-                                  url: apt.videoCallLink!,
-                                  appointmentId: apt.id,
-                                  professionalName: (apt as any).userName ?? `Usuario #${apt.userId}`,
-                                  startTime: new Date(apt.appointmentDate),
-                                  endTime: new Date(new Date(apt.appointmentDate).getTime() + (apt.durationMinutes ?? 55) * 60 * 1000),
-                                })}
-                              >
-                                <Video className="w-3 h-3 mr-1" />
-                                {canJoin(apt) ? "Unirse" : "Unirse"}
-                              </Button>
-                            )}
-                            {new Date(apt.appointmentDate).getTime() + 55 * 60 * 1000 < Date.now() && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-6 text-[11px] px-2 border-emerald-300 text-emerald-700 hover:bg-emerald-50"
-                                onClick={() => setAttendanceModal(apt)}
-                              >
-                                <CheckCircle2 className="w-3 h-3 mr-1" />
-                                Completar
-                              </Button>
-                            )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">
+                              {(apt as any).userName ?? `Usuario #${apt.userId}`}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {format(startDate, "d MMM yyyy", { locale: es })}
+                              {" · "}
+                              {format(startDate, "HH:mm")}–{format(endTime, "HH:mm")}
+                            </p>
                           </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
 
-            {pastAppointments.length > 0 && (
-              <div>
-                <h2 className="text-xl font-bold mb-4" style={{ fontFamily: "Poppins, sans-serif" }}>
-                  Historial
-                </h2>
-                <div className="space-y-2">
-                  {pastAppointments.slice(0, 5).map((apt) => (
-                    <Card key={apt.id} className="border-border opacity-80">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center text-muted-foreground text-sm font-bold">
-                              {(apt as any).userName?.charAt(0) ?? "U"}
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium">{(apt as any).userName ?? `Usuario #${apt.userId}`}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {format(new Date(apt.appointmentDate), "d MMM yyyy", { locale: es })}
-                              </p>
-                            </div>
+                          <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                            <Badge className={`text-[10px] px-1.5 py-0 border-0 ${
+                              isPremium
+                                ? "bg-amber-100 text-amber-700"
+                                : "bg-muted text-muted-foreground"
+                            }`}>
+                              {isPremium ? "Premium" : "Básica"}
+                            </Badge>
+                            <Badge className={`text-[10px] px-1.5 py-0 border ${statusColors[apt.status]}`}>
+                              {statusLabels[apt.status]}
+                            </Badge>
                           </div>
-                          <Badge className={statusColors[apt.status] + " border-0 text-xs"}>
-                            {statusLabels[apt.status]}
-                          </Badge>
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-            )}
+
+            </div>
           </div>
         )}
 
