@@ -851,7 +851,7 @@ async function startServer() {
   app.use("/api/auth/email", emailAuthRouter);
 
   // ─── File upload: professional profile photo / documents ────────────────────
-  app.post("/api/upload/professional-file", async (req, res) => {
+  app.post("/api/upload/professional-photo", async (req, res) => {
     try {
       let user = null;
       try { user = await sdk.authenticateRequest(req); } catch { user = null; }

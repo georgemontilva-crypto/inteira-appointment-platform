@@ -628,6 +628,7 @@ export const appRouter = router({
 
         const dbInstance = await db.getDb();
         if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const client = (dbInstance as any).$client;
 
         // Build dynamic SET clause with ? placeholders — no string escaping
         const setParts: string[] = [];
@@ -640,34 +641,35 @@ export const appRouter = router({
         setParts.push("`updatedAt` = NOW()");
 
         if (setParts.length > 1) {
-          await dbInstance.execute(
-            `UPDATE \`professionals\` SET ${setParts.join(", ")} WHERE \`id\` = ?`,
-            [...params, professional.id]
-          );
+          await new Promise<void>((resolve, reject) => {
+            client.execute(
+              `UPDATE \`professionals\` SET ${setParts.join(", ")} WHERE \`id\` = ?`,
+              [...params, professional.id],
+              (err: any) => { if (err) reject(err); else resolve(); }
+            );
+          });
         }
 
         // Actualizar nombre del usuario si fue provisto
         if (input.name !== undefined && input.name.trim()) {
-          try {
-            await dbInstance.execute(
+          await new Promise<void>((resolve) => {
+            client.execute(
               "UPDATE `users` SET `name` = ?, `updatedAt` = NOW() WHERE `id` = ?",
-              [input.name.trim(), ctx.user.id]
+              [input.name!.trim(), ctx.user.id],
+              () => resolve()
             );
-          } catch {
-            // silently ignore
-          }
+          });
         }
 
         // Try to update languages separately (column may not exist yet)
         if (input.languages !== undefined) {
-          try {
-            await dbInstance.execute(
+          await new Promise<void>((resolve) => {
+            client.execute(
               "UPDATE `professionals` SET `languages` = ? WHERE `id` = ?",
-              [input.languages, professional.id]
+              [input.languages, professional.id],
+              () => resolve()
             );
-          } catch {
-            // Column doesn't exist yet in DB — silently ignore
-          }
+          });
         }
 
         return { success: true };

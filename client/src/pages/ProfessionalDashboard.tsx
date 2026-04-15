@@ -92,6 +92,8 @@ export default function ProfessionalDashboard() {
   } | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingCerts, setUploadingCerts] = useState(false);
+  const certFileInputRef = useRef<HTMLInputElement>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
   const scrollCarousel = (dir: "left" | "right") => {
     carouselRef.current?.scrollBy({ left: dir === "left" ? -220 : 220, behavior: "smooth" });
@@ -310,6 +312,54 @@ export default function ProfessionalDashboard() {
       toast.error("Error al subir la foto de perfil");
     } finally {
       setUploadingPhoto(false);
+    }
+  };
+
+  // Parse certifications: JSON array of URLs, or legacy plain string
+  const parseCerts = (raw: string): string[] => {
+    if (!raw) return [];
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [raw];
+    } catch {
+      return [raw];
+    }
+  };
+
+  const handleCertUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const allowed = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+    if (!allowed.includes(file.type)) {
+      toast.error("Solo se permiten PDF, JPG, PNG o WebP");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("El archivo no puede superar 10 MB");
+      return;
+    }
+    setUploadingCerts(true);
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve((reader.result as string).split(",")[1] ?? "");
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const res = await fetch("/api/upload/professional-photo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ base64, mimeType: file.type, fileName: file.name }),
+      });
+      if (!res.ok) throw new Error("Upload failed");
+      const data = await res.json();
+      const existing = parseCerts(profileForm.certifications);
+      setProfileForm((f) => ({ ...f, certifications: JSON.stringify([...existing, data.url]) }));
+    } catch {
+      toast.error("Error al subir el documento");
+    } finally {
+      setUploadingCerts(false);
+      if (certFileInputRef.current) certFileInputRef.current.value = "";
     }
   };
 
@@ -1496,13 +1546,46 @@ export default function ProfessionalDashboard() {
                     />
                   </div>
                   <div>
-                    <Label className="text-xs">Certificaciones</Label>
-                    <Textarea
-                      value={profileForm.certifications}
-                      onChange={(e) => setProfileForm({ ...profileForm, certifications: e.target.value })}
-                      placeholder="Certificaciones y cursos relevantes..."
-                      rows={3}
-                    />
+                    <Label className="text-xs">Certificaciones y documentos</Label>
+                    <div className="mt-1.5 space-y-2">
+                      {parseCerts(profileForm.certifications).map((url, i) => {
+                        const fileName = url.split("/").pop() ?? `Documento ${i + 1}`;
+                        const isPdf = url.toLowerCase().includes(".pdf");
+                        return (
+                          <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-xl border border-border bg-muted/40 text-sm">
+                            <span className="text-base">{isPdf ? "📄" : "🖼️"}</span>
+                            <a href={url} target="_blank" rel="noopener noreferrer" className="flex-1 truncate text-primary hover:underline text-xs">
+                              {fileName}
+                            </a>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updated = parseCerts(profileForm.certifications).filter((_, idx) => idx !== i);
+                                setProfileForm((f) => ({ ...f, certifications: JSON.stringify(updated) }));
+                              }}
+                              className="text-muted-foreground hover:text-red-500 transition-colors text-xs px-1"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        );
+                      })}
+                      <button
+                        type="button"
+                        onClick={() => certFileInputRef.current?.click()}
+                        disabled={uploadingCerts}
+                        className="w-full py-2 rounded-xl border border-dashed border-border text-xs text-muted-foreground hover:border-primary hover:text-primary transition-colors disabled:opacity-50"
+                      >
+                        {uploadingCerts ? "Subiendo..." : "+ Subir documento (PDF, JPG, PNG — máx 10 MB)"}
+                      </button>
+                      <input
+                        ref={certFileInputRef}
+                        type="file"
+                        accept=".pdf,image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        onChange={handleCertUpload}
+                      />
+                    </div>
                   </div>
                   <div className="flex gap-3 pt-2">
                     <Button
@@ -1555,7 +1638,26 @@ export default function ProfessionalDashboard() {
                   {profile.certifications && (
                     <div>
                       <p className="text-muted-foreground text-xs mb-1">Certificaciones</p>
-                      <p className="text-sm">{profile.certifications}</p>
+                      {(() => {
+                        const certs = parseCerts(profile.certifications);
+                        return certs.length === 1 && !profile.certifications.startsWith("[")
+                          ? <p className="text-sm">{profile.certifications}</p>
+                          : (
+                            <div className="flex flex-wrap gap-2 mt-1">
+                              {certs.map((url, i) => {
+                                const fileName = url.split("/").pop() ?? `Documento ${i + 1}`;
+                                const isPdf = url.toLowerCase().includes(".pdf");
+                                return (
+                                  <a key={i} href={url} target="_blank" rel="noopener noreferrer"
+                                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-border bg-muted/40 text-xs text-primary hover:underline">
+                                    <span>{isPdf ? "📄" : "🖼️"}</span>
+                                    <span className="max-w-[140px] truncate">{fileName}</span>
+                                  </a>
+                                );
+                              })}
+                            </div>
+                          );
+                      })()}
                     </div>
                   )}
                 </CardContent>
