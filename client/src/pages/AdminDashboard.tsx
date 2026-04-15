@@ -633,7 +633,7 @@ export default function AdminDashboard() {
                     <Card key={pro.id} className="border-border hover:shadow-md transition-shadow">
                       <CardContent className="p-6 space-y-4">
                         {/* ── Fila superior: avatar + info + acciones ── */}
-                        <div className="flex items-start justify-between gap-4">
+                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                           <div className="flex items-start gap-4">
                             {/* Avatar */}
                             {avatar ? (
@@ -685,7 +685,7 @@ export default function AdminDashboard() {
                           </div>
 
                           {/* ── Acciones ── */}
-                          <div className="flex flex-col gap-2 flex-shrink-0 min-w-[160px]">
+                          <div className="flex flex-col gap-2 sm:flex-shrink-0 sm:min-w-[160px]">
                             {/* Selector de tier */}
                             <div className="flex gap-1">
                               <button
@@ -713,7 +713,7 @@ export default function AdminDashboard() {
                             {/* Botón Aprobar */}
                             <Button
                               size="sm"
-                              className="bg-emerald-600 hover:bg-emerald-700 text-white border-0"
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white border-0 w-full sm:w-auto"
                               onClick={() => approveMutation.mutate({ professionalId: pro.id, tier: selectedTier })}
                               disabled={approveMutation.isPending}
                             >
@@ -722,7 +722,7 @@ export default function AdminDashboard() {
                             </Button>
 
                             {/* Rechazar */}
-                            <div className="flex gap-2">
+                            <div className="flex flex-row gap-2">
                               <input
                                 type="text"
                                 placeholder="Motivo de rechazo..."
