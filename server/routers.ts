@@ -1145,6 +1145,7 @@ export const appRouter = router({
             professionalName: user.name ?? "Profesional",
             specialty: "",
             approved: false,
+            rejectionReason: input.reason,
           }).catch(() => {});
         }
         // Notificación in-app al profesional rechazado
