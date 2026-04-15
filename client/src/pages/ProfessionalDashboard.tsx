@@ -51,6 +51,13 @@ export default function ProfessionalDashboard() {
   });
   const [availSubTab, setAvailSubTab] = useState<"horarios" | "dias-libres">("horarios");
   const [newSlot, setNewSlot] = useState({ dayOfWeek: 1, startTime: "09:00", endTime: "17:00" });
+  // Which day card has the inline add-form open (0-6 = day index, null = closed)
+  const [addingSlotForDay, setAddingSlotForDay] = useState<number | null>(null);
+  const [inlineSlot, setInlineSlot] = useState({ startTime: "09:00", endTime: "17:00" });
+  // Blocked-days calendar state
+  const [blockedCalMonth, setBlockedCalMonth] = useState(() => {
+    const d = new Date(); d.setDate(1); return d;
+  });
   const [editingProfile, setEditingProfile] = useState(false);
   const [profileForm, setProfileForm] = useState({
     name: "", bio: "", education: "", certifications: "",
@@ -900,7 +907,7 @@ export default function ProfessionalDashboard() {
           <div className="space-y-5">
             <h2 className="text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>Disponibilidad</h2>
 
-            {/* Sub-tabs internos */}
+            {/* Sub-tabs */}
             <div className="flex gap-1 bg-muted/50 rounded-xl p-1">
               <button
                 onClick={() => setAvailSubTab("horarios")}
@@ -922,200 +929,288 @@ export default function ProfessionalDashboard() {
               </button>
             </div>
 
-            {/* Sub-tab: Horarios */}
-            {availSubTab === "horarios" && (
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Define los días y horarios semanales en que estás disponible para atender consultas.
-                </p>
-                <Card className="border-border">
-                  <CardHeader>
-                    <CardTitle className="text-base">Horarios actuales</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {!availability || availability.length === 0 ? (
-                      <p className="text-muted-foreground text-sm text-center py-4">
-                        No has configurado horarios aún
-                      </p>
-                    ) : (
-                      <div className="space-y-2">
-                        {availability.map((slot) => (
-                          <div key={slot.id} className="flex items-center justify-between p-3 bg-primary/5 rounded-xl">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-lg gradient-brand flex items-center justify-center text-white text-xs font-bold">
-                                {DAYS[slot.dayOfWeek]?.charAt(0)}
-                              </div>
+            {/* ── Sub-tab: Horarios — vista semanal tipo calendario ── */}
+            {availSubTab === "horarios" && (() => {
+              // Group slots by day
+              const slotsByDay: Record<number, typeof availability> = {};
+              for (let i = 0; i < 7; i++) slotsByDay[i] = [];
+              (availability ?? []).forEach((s) => slotsByDay[s.dayOfWeek]?.push(s));
+
+              // Days ordered Mon–Sun (1-6, 0) for display
+              const dayOrder = [1, 2, 3, 4, 5, 6, 0];
+              const DAY_SHORT = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+
+              return (
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Toca <span className="font-medium text-foreground">+</span> en cualquier día para agregar un horario. Los pacientes solo podrán agendar en los bloques activos.
+                  </p>
+
+                  {/* Scrollable week grid */}
+                  <div className="overflow-x-auto pb-2 -mx-1 px-1">
+                    <div className="flex gap-2.5" style={{ minWidth: "560px" }}>
+                      {dayOrder.map((dayIdx) => {
+                        const slots = slotsByDay[dayIdx] ?? [];
+                        const hasSlots = slots.length > 0;
+                        const isAddingThis = addingSlotForDay === dayIdx;
+
+                        return (
+                          <div
+                            key={dayIdx}
+                            className={`flex-1 rounded-2xl border transition-all duration-200 ${
+                              hasSlots
+                                ? "border-primary/20 bg-primary/[0.03] shadow-sm"
+                                : "border-border bg-muted/20"
+                            }`}
+                          >
+                            {/* Day header */}
+                            <div className={`flex items-center justify-between px-3 pt-3 pb-2 rounded-t-2xl ${
+                              hasSlots ? "border-b border-primary/10" : "border-b border-border/40"
+                            }`}>
                               <div>
-                                <p className="text-sm font-medium">{DAYS[slot.dayOfWeek]}</p>
-                                <p className="text-xs text-muted-foreground">{slot.startTime} - {slot.endTime}</p>
+                                <p className={`text-xs font-bold uppercase tracking-wide ${
+                                  hasSlots ? "text-primary" : "text-muted-foreground"
+                                }`}>
+                                  {DAY_SHORT[dayIdx]}
+                                </p>
+                                <p className={`text-[10px] ${hasSlots ? "text-primary/60" : "text-muted-foreground/60"}`}>
+                                  {DAYS[dayIdx]}
+                                </p>
                               </div>
+                              <button
+                                onClick={() => {
+                                  if (isAddingThis) {
+                                    setAddingSlotForDay(null);
+                                  } else {
+                                    setAddingSlotForDay(dayIdx);
+                                    setInlineSlot({ startTime: "09:00", endTime: "17:00" });
+                                  }
+                                }}
+                                className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors text-xs font-bold ${
+                                  isAddingThis
+                                    ? "bg-primary/10 text-primary rotate-45"
+                                    : hasSlots
+                                    ? "bg-primary/10 text-primary hover:bg-primary/20"
+                                    : "bg-border text-muted-foreground hover:bg-primary/10 hover:text-primary"
+                                }`}
+                                title={isAddingThis ? "Cancelar" : "Agregar horario"}
+                              >
+                                {isAddingThis ? "✕" : "+"}
+                              </button>
                             </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 h-auto"
-                              onClick={() => removeAvailabilityMutation.mutate({ id: slot.id })}
-                              disabled={removeAvailabilityMutation.isPending}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+
+                            {/* Slots */}
+                            <div className="px-2.5 py-2 space-y-1.5 min-h-[56px]">
+                              {slots.length === 0 && !isAddingThis && (
+                                <p className="text-[10px] text-muted-foreground/50 text-center pt-2">Sin horario</p>
+                              )}
+                              {slots.map((slot) => (
+                                <div
+                                  key={slot.id}
+                                  className="group flex items-center justify-between gap-1 px-2 py-1 rounded-lg bg-primary/10 border border-primary/20 transition-all hover:bg-primary/15"
+                                >
+                                  <span className="text-[11px] font-medium text-primary tabular-nums whitespace-nowrap">
+                                    {slot.startTime.slice(0, 5)}–{slot.endTime.slice(0, 5)}
+                                  </span>
+                                  <button
+                                    onClick={() => removeAvailabilityMutation.mutate({ id: slot.id })}
+                                    disabled={removeAvailabilityMutation.isPending}
+                                    className="opacity-0 group-hover:opacity-100 text-primary/40 hover:text-red-500 transition-all disabled:opacity-30 flex-shrink-0"
+                                    title="Eliminar"
+                                  >
+                                    <XCircle className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              ))}
+
+                              {/* Inline add form */}
+                              {isAddingThis && (
+                                <div className="mt-1 space-y-1.5 pt-1 border-t border-primary/10">
+                                  <div className="flex flex-col gap-1">
+                                    <input
+                                      type="time"
+                                      value={inlineSlot.startTime}
+                                      onChange={(e) => setInlineSlot((s) => ({ ...s, startTime: e.target.value }))}
+                                      className="w-full rounded-lg border border-border p-1.5 text-xs bg-background focus:outline-none focus:ring-1 focus:ring-primary/40"
+                                    />
+                                    <input
+                                      type="time"
+                                      value={inlineSlot.endTime}
+                                      onChange={(e) => setInlineSlot((s) => ({ ...s, endTime: e.target.value }))}
+                                      className="w-full rounded-lg border border-border p-1.5 text-xs bg-background focus:outline-none focus:ring-1 focus:ring-primary/40"
+                                    />
+                                  </div>
+                                  <button
+                                    onClick={() => {
+                                      addAvailabilityMutation.mutate(
+                                        { dayOfWeek: dayIdx, startTime: inlineSlot.startTime, endTime: inlineSlot.endTime },
+                                        { onSuccess: () => setAddingSlotForDay(null) }
+                                      );
+                                    }}
+                                    disabled={addAvailabilityMutation.isPending}
+                                    className="w-full py-1.5 rounded-lg text-[11px] font-semibold text-white gradient-brand disabled:opacity-50 transition-opacity"
+                                  >
+                                    {addAvailabilityMutation.isPending ? "..." : "Guardar"}
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Summary badge */}
+                  {(availability ?? []).length > 0 && (
+                    <p className="text-xs text-muted-foreground text-center">
+                      {(availability ?? []).length} horario{(availability ?? []).length !== 1 ? "s" : ""} activo{(availability ?? []).length !== 1 ? "s" : ""} en{" "}
+                      {Object.values(slotsByDay).filter((s) => (s ?? []).length > 0).length} día{Object.values(slotsByDay).filter((s) => (s ?? []).length > 0).length !== 1 ? "s" : ""}
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Sub-tab: Días libres — calendario mensual ── */}
+            {availSubTab === "dias-libres" && (() => {
+              const blockedSet = new Set((blockedDays ?? []).map((d) => d.blockedDate));
+              const today = new Date();
+              today.setHours(0, 0, 0, 0);
+              const todayStr = today.toISOString().split("T")[0];
+
+              const year = blockedCalMonth.getFullYear();
+              const month = blockedCalMonth.getMonth();
+              const firstDay = new Date(year, month, 1);
+              const lastDay = new Date(year, month + 1, 0);
+              // Start grid on Monday (adjust firstDay.getDay: 0=Sun→6, 1=Mon→0, ...)
+              const startOffset = (firstDay.getDay() + 6) % 7;
+              const totalCells = startOffset + lastDay.getDate();
+              const cells = Array.from({ length: Math.ceil(totalCells / 7) * 7 }, (_, i) => {
+                const d = i - startOffset + 1;
+                if (d < 1 || d > lastDay.getDate()) return null;
+                const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+                return { d, dateStr };
+              });
+
+              const DOW_HEADERS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
+
+              return (
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Toca un día para bloquearlo o desbloquearlo. Los pacientes no podrán agendar en los días marcados en rojo.
+                  </p>
+
+                  <Card className="border-border overflow-hidden">
+                    {/* Calendar header */}
+                    <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+                      <button
+                        onClick={() => setBlockedCalMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1))}
+                        className="w-8 h-8 rounded-xl flex items-center justify-center hover:bg-muted transition-colors"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+                      <h3 className="text-sm font-semibold capitalize">
+                        {format(blockedCalMonth, "MMMM yyyy", { locale: es })}
+                      </h3>
+                      <button
+                        onClick={() => setBlockedCalMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1))}
+                        className="w-8 h-8 rounded-xl flex items-center justify-center hover:bg-muted transition-colors"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    <CardContent className="p-4">
+                      {/* Day-of-week headers */}
+                      <div className="grid grid-cols-7 mb-1">
+                        {DOW_HEADERS.map((h) => (
+                          <div key={h} className="text-center text-[10px] font-semibold text-muted-foreground py-1">{h}</div>
                         ))}
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
 
-                <Card className="border-border">
-                  <CardHeader>
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Plus className="w-4 h-4 text-primary" />
-                      Agregar horario
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      <div>
-                        <label className="text-xs font-medium mb-1 block">Día</label>
-                        <select
-                          value={newSlot.dayOfWeek}
-                          onChange={(e) => setNewSlot({ ...newSlot, dayOfWeek: parseInt(e.target.value) })}
-                          className="w-full rounded-lg border border-border p-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
-                        >
-                          {DAYS.map((day, i) => (
-                            <option key={i} value={i}>{day}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium mb-1 block">Hora inicio</label>
-                        <input
-                          type="time"
-                          value={newSlot.startTime}
-                          onChange={(e) => setNewSlot({ ...newSlot, startTime: e.target.value })}
-                          className="w-full rounded-lg border border-border p-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium mb-1 block">Hora fin</label>
-                        <input
-                          type="time"
-                          value={newSlot.endTime}
-                          onChange={(e) => setNewSlot({ ...newSlot, endTime: e.target.value })}
-                          className="w-full rounded-lg border border-border p-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
-                        />
-                      </div>
-                    </div>
-                    <Button
-                      onClick={() => addAvailabilityMutation.mutate(newSlot)}
-                      disabled={addAvailabilityMutation.isPending}
-                      className="gradient-brand text-white border-0"
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Agregar horario
-                    </Button>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
+                      {/* Calendar grid */}
+                      <div className="grid grid-cols-7 gap-1">
+                        {cells.map((cell, i) => {
+                          if (!cell) return <div key={i} />;
+                          const { d, dateStr } = cell;
+                          const isPast = dateStr < todayStr;
+                          const isBlocked = blockedSet.has(dateStr);
+                          const isToday = dateStr === todayStr;
+                          const pendingRemove = removeBlockedDayMutation.isPending;
+                          const pendingAdd = addBlockedDayMutation.isPending;
 
-            {/* Sub-tab: Días libres */}
-            {availSubTab === "dias-libres" && (
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Bloquea fechas específicas en las que no estarás disponible. Los pacientes no podrán agendar citas en estos días.
-                </p>
-                <Card className="border-border">
-                  <CardHeader>
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <CalendarX className="w-4 h-4 text-primary" />
-                      Bloquear fecha
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label className="text-xs font-medium mb-1 block">Fecha</Label>
-                        <input
-                          type="date"
-                          value={newBlockedDate}
-                          min={new Date().toISOString().split("T")[0]}
-                          onChange={(e) => setNewBlockedDate(e.target.value)}
-                          className="w-full rounded-lg border border-border p-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
-                        />
+                          return (
+                            <button
+                              key={dateStr}
+                              disabled={isPast || pendingAdd || pendingRemove}
+                              onClick={() => {
+                                if (isBlocked) {
+                                  const entry = (blockedDays ?? []).find((bd) => bd.blockedDate === dateStr);
+                                  if (entry) removeBlockedDayMutation.mutate({ id: entry.id });
+                                } else {
+                                  addBlockedDayMutation.mutate({ blockedDate: dateStr });
+                                }
+                              }}
+                              className={`
+                                relative aspect-square flex items-center justify-center rounded-xl text-xs font-medium transition-all
+                                ${isPast ? "opacity-30 cursor-not-allowed text-muted-foreground" : "cursor-pointer"}
+                                ${isBlocked && !isPast ? "bg-red-100 text-red-600 border border-red-200 hover:bg-red-200" : ""}
+                                ${!isBlocked && !isPast ? "hover:bg-primary/10 hover:text-primary" : ""}
+                                ${isToday && !isBlocked ? "ring-2 ring-primary/40 text-primary font-bold" : ""}
+                                ${isToday && isBlocked ? "ring-2 ring-red-400" : ""}
+                              `}
+                            >
+                              {d}
+                              {isBlocked && (
+                                <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-red-400" />
+                              )}
+                            </button>
+                          );
+                        })}
                       </div>
-                      <div>
-                        <Label className="text-xs font-medium mb-1 block">Motivo (opcional)</Label>
-                        <Input
-                          placeholder="Ej: Vacaciones, cita médica..."
-                          value={newBlockedReason}
-                          onChange={(e) => setNewBlockedReason(e.target.value)}
-                        />
-                      </div>
-                    </div>
-                    <Button
-                      onClick={() => {
-                        if (!newBlockedDate) {
-                          toast.error("Selecciona una fecha");
-                          return;
-                        }
-                        addBlockedDayMutation.mutate({ blockedDate: newBlockedDate, reason: newBlockedReason || undefined });
-                      }}
-                      disabled={addBlockedDayMutation.isPending}
-                      className="gradient-brand text-white border-0"
-                    >
-                      <CalendarX className="w-4 h-4 mr-2" />
-                      Bloquear día
-                    </Button>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
 
-                <Card className="border-border">
-                  <CardHeader>
-                    <CardTitle className="text-base">Fechas bloqueadas</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {!blockedDays || blockedDays.length === 0 ? (
-                      <div className="text-center py-6">
-                        <CalendarX className="w-10 h-10 text-muted-foreground/30 mx-auto mb-2" />
-                        <p className="text-muted-foreground text-sm">No tienes fechas bloqueadas</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {blockedDays
+                  {/* Blocked days list */}
+                  {(blockedDays ?? []).length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-1">
+                        Días bloqueados ({(blockedDays ?? []).filter((d) => d.blockedDate >= todayStr).length} próximos)
+                      </p>
+                      <div className="space-y-1.5">
+                        {(blockedDays ?? [])
+                          .filter((d) => d.blockedDate >= todayStr)
                           .sort((a, b) => a.blockedDate.localeCompare(b.blockedDate))
                           .map((day) => (
-                            <div key={day.id} className="flex items-center justify-between p-3 bg-red-50 border border-red-100 rounded-xl">
-                              <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center">
-                                  <CalendarX className="w-4 h-4 text-red-500" />
+                            <div key={day.id} className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-red-50 border border-red-100">
+                              <div className="flex items-center gap-2.5">
+                                <div className="w-7 h-7 rounded-lg bg-red-100 flex items-center justify-center flex-shrink-0">
+                                  <CalendarX className="w-3.5 h-3.5 text-red-500" />
                                 </div>
                                 <div>
-                                  <p className="text-sm font-medium text-red-700">
-                                    {format(new Date(day.blockedDate + "T12:00:00"), "EEEE d 'de' MMMM yyyy", { locale: es })}
+                                  <p className="text-sm font-medium text-red-700 capitalize">
+                                    {format(new Date(day.blockedDate + "T12:00:00"), "EEEE d 'de' MMMM", { locale: es })}
                                   </p>
-                                  {day.reason && (
-                                    <p className="text-xs text-red-500">{day.reason}</p>
-                                  )}
+                                  {day.reason && <p className="text-xs text-red-400">{day.reason}</p>}
                                 </div>
                               </div>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-8 w-8 p-0 text-red-400 hover:text-red-600 hover:bg-red-100"
+                              <button
                                 onClick={() => removeBlockedDayMutation.mutate({ id: day.id })}
                                 disabled={removeBlockedDayMutation.isPending}
+                                className="text-red-300 hover:text-red-500 transition-colors disabled:opacity-30"
+                                title="Desbloquear"
                               >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
+                                <XCircle className="w-4 h-4" />
+                              </button>
                             </div>
                           ))}
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            )}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         )}
 
