@@ -1388,33 +1388,36 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* ══ TAB: CÓDIGOS DE DESCUENTO ════════════════════════════════════ */}
+        {/* ══ TAB: CÓDIGOS ═════════════════════════════════════════════════ */}
         {activeTab === "codigos" && (
           <div className="space-y-6">
-            <h2 className="text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
-              Códigos de descuento
-            </h2>
-            <div className="grid grid-cols-1 gap-6">
-              {/* Lista de códigos existentes */}
-              <Card className="border-border">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm">Códigos existentes</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2 max-h-[520px] overflow-y-auto pr-1">
+            <h2 className="text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>Códigos</h2>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* ── Columna izquierda: Códigos de descuento ── */}
+              <div className="space-y-4">
+                {/* Tabla */}
+                <Card className="border-border">
+                  <CardHeader className="pb-2 pt-4 px-4">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Tag className="w-4 h-4 text-primary" />
+                      Códigos de descuento
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="px-4 pb-4">
                     {(!discountCodes || discountCodes.length === 0) ? (
-                      <p className="text-sm text-muted-foreground text-center py-8">No hay códigos creados</p>
+                      <p className="text-xs text-muted-foreground text-center py-6">No hay códigos creados</p>
                     ) : (
                       <div className="overflow-x-auto">
                         <table className="w-full text-xs">
                           <thead>
-                            <tr className="text-muted-foreground border-b">
-                              <th className="text-left pb-2 font-medium">Código</th>
-                              <th className="text-left pb-2 font-medium">Descuento</th>
-                              <th className="text-left pb-2 font-medium">Usos</th>
-                              <th className="text-left pb-2 font-medium">Vence</th>
-                              <th className="text-left pb-2 font-medium">Estado</th>
-                              <th className="pb-2" />
+                            <tr className="text-muted-foreground border-b border-border">
+                              <th className="text-left py-1.5 font-medium pr-3">Código</th>
+                              <th className="text-left py-1.5 font-medium pr-3">Desc.</th>
+                              <th className="text-left py-1.5 font-medium pr-3">Usos</th>
+                              <th className="text-left py-1.5 font-medium pr-3">Vence</th>
+                              <th className="text-left py-1.5 font-medium pr-3">Estado</th>
+                              <th className="py-1.5" />
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-border">
@@ -1423,53 +1426,43 @@ export default function AdminDashboard() {
                               const isExhausted = dc.maxUses !== null && dc.usedCount >= dc.maxUses;
                               return (
                                 <tr key={dc.id} className="hover:bg-muted/30 transition-colors">
-                                  <td className="py-2 font-mono font-semibold">{dc.code}</td>
-                                  <td className="py-2">
+                                  <td className="py-2 font-mono font-semibold pr-3">{dc.code}</td>
+                                  <td className="py-2 pr-3">
                                     <span className="flex items-center gap-0.5">
                                       {dc.type === "percentage"
                                         ? <><Percent className="w-3 h-3" />{Number(dc.value)}%</>
-                                        : <>${Number(dc.value)} MXN</>
-                                      }
+                                        : <>${Number(dc.value)}</>}
                                     </span>
                                   </td>
-                                  <td className="py-2 text-muted-foreground">
+                                  <td className="py-2 text-muted-foreground pr-3">
                                     {dc.usedCount}{dc.maxUses !== null ? `/${dc.maxUses}` : ""}
                                   </td>
-                                  <td className="py-2 text-muted-foreground">
+                                  <td className="py-2 text-muted-foreground pr-3">
                                     {dc.expiresAt ? format(new Date(dc.expiresAt), "dd/MM/yy") : "—"}
                                   </td>
-                                  <td className="py-2">
+                                  <td className="py-2 pr-3">
                                     {isExpired || isExhausted ? (
-                                      <Badge className="bg-gray-100 text-gray-600 border-0 text-[10px]">
+                                      <Badge className="bg-gray-100 text-gray-500 border-0 text-[10px] px-1.5 py-0">
                                         {isExpired ? "Expirado" : "Agotado"}
                                       </Badge>
                                     ) : dc.isActive ? (
-                                      <Badge className="bg-emerald-100 text-emerald-700 border-0 text-[10px]">Activo</Badge>
+                                      <Badge className="bg-emerald-100 text-emerald-700 border-0 text-[10px] px-1.5 py-0">Activo</Badge>
                                     ) : (
-                                      <Badge className="bg-amber-100 text-amber-700 border-0 text-[10px]">Inactivo</Badge>
+                                      <Badge className="bg-amber-100 text-amber-700 border-0 text-[10px] px-1.5 py-0">Inactivo</Badge>
                                     )}
                                   </td>
                                   <td className="py-2">
-                                    <div className="flex items-center gap-1 justify-end">
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                                    <div className="flex items-center gap-0.5 justify-end">
+                                      <Button size="sm" variant="ghost" className="h-6 w-6 p-0"
                                         title={dc.isActive ? "Desactivar" : "Activar"}
-                                        onClick={() => toggleDiscountMutation.mutate({ id: dc.id, isActive: !dc.isActive })}
-                                      >
+                                        onClick={() => toggleDiscountMutation.mutate({ id: dc.id, isActive: !dc.isActive })}>
                                         {dc.isActive
                                           ? <ToggleRight className="w-4 h-4 text-emerald-600" />
-                                          : <ToggleLeft className="w-4 h-4 text-muted-foreground" />
-                                        }
+                                          : <ToggleLeft className="w-4 h-4 text-muted-foreground" />}
                                       </Button>
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        className="h-6 w-6 p-0 text-muted-foreground hover:text-red-600"
+                                      <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-muted-foreground hover:text-red-600"
                                         title="Eliminar"
-                                        onClick={() => deleteDiscountMutation.mutate({ id: dc.id })}
-                                      >
+                                        onClick={() => deleteDiscountMutation.mutate({ id: dc.id })}>
                                         <Trash2 className="w-3.5 h-3.5" />
                                       </Button>
                                     </div>
@@ -1481,173 +1474,155 @@ export default function AdminDashboard() {
                         </table>
                       </div>
                     )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Formulario nuevo código */}
-              <Card className="border-border">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm">Nuevo código</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <Input
-                    placeholder="CÓDIGO (ej. BIENVENIDA20)"
-                    value={discountForm.code}
-                    onChange={(e) => setDiscountForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))}
-                    className="text-xs h-8 font-mono"
-                    maxLength={50}
-                  />
-                  <div className="grid grid-cols-2 gap-2">
-                    <select
-                      value={discountForm.type}
-                      onChange={(e) => setDiscountForm((f) => ({ ...f, type: e.target.value as "percentage" | "fixed" }))}
-                      className="h-8 rounded-md border border-input bg-background px-2 text-xs"
-                    >
-                      <option value="percentage">Porcentaje (%)</option>
-                      <option value="fixed">Monto fijo ($)</option>
-                    </select>
-                    <Input
-                      type="number"
-                      placeholder={discountForm.type === "percentage" ? "Valor (ej. 20)" : "Valor MXN (ej. 100)"}
-                      value={discountForm.value}
-                      onChange={(e) => setDiscountForm((f) => ({ ...f, value: e.target.value }))}
-                      className="text-xs h-8"
-                      min={0}
-                    />
-                  </div>
-                  <Input
-                    type="number"
-                    placeholder="Usos máximos (opcional)"
-                    value={discountForm.maxUses}
-                    onChange={(e) => setDiscountForm((f) => ({ ...f, maxUses: e.target.value }))}
-                    className="text-xs h-8"
-                    min={1}
-                  />
-                  <Input
-                    type="date"
-                    placeholder="Fecha de vencimiento (opcional)"
-                    value={discountForm.expiresAt}
-                    onChange={(e) => setDiscountForm((f) => ({ ...f, expiresAt: e.target.value }))}
-                    className="text-xs h-8"
-                  />
-                  <Button
-                    size="sm"
-                    className="gradient-brand text-white border-0 w-full"
-                    disabled={!discountForm.code.trim() || !discountForm.value || createDiscountMutation.isPending}
-                    onClick={() => createDiscountMutation.mutate({
-                      code: discountForm.code.trim(),
-                      type: discountForm.type,
-                      value: parseFloat(discountForm.value),
-                      maxUses: discountForm.maxUses ? parseInt(discountForm.maxUses) : null,
-                      expiresAt: discountForm.expiresAt ? new Date(discountForm.expiresAt).toISOString() : null,
-                    })}
-                  >
-                    <Plus className="w-3.5 h-3.5 mr-1" />
-                    {createDiscountMutation.isPending ? "Creando..." : "Crear código"}
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* ── Tarjetas prepago ─────────────────────────────────────────── */}
-            <div>
-              <h3 className="text-base font-bold flex items-center gap-2 mb-4" style={{ fontFamily: "Poppins, sans-serif" }}>
-                <CardIcon className="w-4 h-4 text-primary" />
-                Tarjetas prepago
-              </h3>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Lista */}
-                <Card className="border-border">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm">Tarjetas generadas</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2 max-h-[480px] overflow-y-auto pr-1">
-                      {(!prepaidCards || prepaidCards.length === 0) ? (
-                        <p className="text-sm text-muted-foreground text-center py-8">No hay tarjetas generadas</p>
-                      ) : (
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-xs">
-                            <thead>
-                              <tr className="text-muted-foreground border-b">
-                                <th className="text-left pb-2 font-medium">Código</th>
-                                <th className="text-left pb-2 font-medium">Tipo</th>
-                                <th className="text-left pb-2 font-medium">Cr.</th>
-                                <th className="text-left pb-2 font-medium">Estado</th>
-                                <th className="pb-2" />
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-border">
-                              {(prepaidCards as any[]).map((card) => (
-                                <tr key={card.id} className="hover:bg-muted/30 transition-colors">
-                                  <td className="py-2 font-mono text-[11px] font-semibold tracking-wider">{card.code}</td>
-                                  <td className="py-2 text-muted-foreground capitalize">
-                                    {card.productType === "individual_basic" ? "Básica" :
-                                     card.productType === "individual_premium" ? "Premium" :
-                                     card.productType === "plan_basic" ? "Plan Básico" : "Plan Pro"}
-                                  </td>
-                                  <td className="py-2 text-muted-foreground">{card.credits}</td>
-                                  <td className="py-2">
-                                    {card.isUsed ? (
-                                      <div>
-                                        <Badge className="bg-gray-100 text-gray-600 border-0 text-[10px]">Usada</Badge>
-                                        {card.usedByEmail && (
-                                          <p className="text-[10px] text-muted-foreground mt-0.5 truncate max-w-[100px]">{card.usedByEmail}</p>
-                                        )}
-                                      </div>
-                                    ) : (
-                                      <Badge className="bg-emerald-100 text-emerald-700 border-0 text-[10px]">Disponible</Badge>
-                                    )}
-                                  </td>
-                                  <td className="py-2">
-                                    <div className="flex items-center gap-1 justify-end">
-                                      <Button
-                                        size="sm" variant="ghost"
-                                        className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
-                                        title="Copiar código"
-                                        onClick={() => { navigator.clipboard.writeText(card.code); toast.success("Código copiado"); }}
-                                      >
-                                        <Copy className="w-3.5 h-3.5" />
-                                      </Button>
-                                      {!card.isUsed && (
-                                        <Button
-                                          size="sm" variant="ghost"
-                                          className="h-6 w-6 p-0 text-muted-foreground hover:text-red-600"
-                                          title="Eliminar"
-                                          onClick={() => deletePrepaidMutation.mutate({ id: card.id })}
-                                        >
-                                          <Trash2 className="w-3.5 h-3.5" />
-                                        </Button>
-                                      )}
-                                    </div>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </div>
                   </CardContent>
                 </Card>
 
-                {/* Formulario */}
+                {/* Formulario nuevo código */}
                 <Card className="border-border">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm">Generar tarjeta</CardTitle>
+                  <CardHeader className="pb-2 pt-4 px-4">
+                    <CardTitle className="text-sm text-muted-foreground">Nuevo código</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-3">
-                    <select
-                      value={prepaidProductType}
-                      onChange={(e) => setPrepaidProductType(e.target.value as typeof prepaidProductType)}
-                      className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
+                  <CardContent className="px-4 pb-4 space-y-2.5">
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input
+                        placeholder="CÓDIGO (ej. BIENVENIDA20)"
+                        value={discountForm.code}
+                        onChange={(e) => setDiscountForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))}
+                        className="text-xs h-8 font-mono col-span-2"
+                        maxLength={50}
+                      />
+                      <Select
+                        value={discountForm.type}
+                        onValueChange={(v) => setDiscountForm((f) => ({ ...f, type: v as "percentage" | "fixed" }))}
+                      >
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="percentage">Porcentaje (%)</SelectItem>
+                          <SelectItem value="fixed">Monto fijo ($)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Input
+                        type="number"
+                        placeholder={discountForm.type === "percentage" ? "Valor (ej. 20)" : "Valor MXN"}
+                        value={discountForm.value}
+                        onChange={(e) => setDiscountForm((f) => ({ ...f, value: e.target.value }))}
+                        className="text-xs h-8"
+                        min={0}
+                      />
+                      <Input
+                        type="number"
+                        placeholder="Usos máx. (opcional)"
+                        value={discountForm.maxUses}
+                        onChange={(e) => setDiscountForm((f) => ({ ...f, maxUses: e.target.value }))}
+                        className="text-xs h-8"
+                        min={1}
+                      />
+                      <Input
+                        type="date"
+                        value={discountForm.expiresAt}
+                        onChange={(e) => setDiscountForm((f) => ({ ...f, expiresAt: e.target.value }))}
+                        className="text-xs h-8"
+                      />
+                    </div>
+                    <Button
+                      size="sm"
+                      className="gradient-brand text-white border-0 w-full h-8"
+                      disabled={!discountForm.code.trim() || !discountForm.value || createDiscountMutation.isPending}
+                      onClick={() => createDiscountMutation.mutate({
+                        code: discountForm.code.trim(),
+                        type: discountForm.type,
+                        value: parseFloat(discountForm.value),
+                        maxUses: discountForm.maxUses ? parseInt(discountForm.maxUses) : null,
+                        expiresAt: discountForm.expiresAt ? new Date(discountForm.expiresAt).toISOString() : null,
+                      })}
                     >
-                      <option value="individual_basic">Sesión Básica — 350 créditos</option>
-                      <option value="individual_premium">Sesión Premium — 1,500 créditos</option>
-                      <option value="plan_basic">Plan Básico — 980 créditos</option>
-                      <option value="plan_pro">Plan Pro — 2,500 créditos</option>
-                    </select>
+                      <Plus className="w-3.5 h-3.5 mr-1" />
+                      {createDiscountMutation.isPending ? "Creando..." : "Crear código"}
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* ── Columna derecha: Tarjetas prepago ── */}
+              <div className="space-y-4">
+                {/* Lista tarjetas */}
+                <Card className="border-border">
+                  <CardHeader className="pb-2 pt-4 px-4">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <CardIcon className="w-4 h-4 text-primary" />
+                      Tarjetas prepago
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="px-4 pb-4">
+                    {(!prepaidCards || prepaidCards.length === 0) ? (
+                      <p className="text-xs text-muted-foreground text-center py-6">No hay tarjetas generadas</p>
+                    ) : (
+                      <div className="max-h-[300px] overflow-y-auto" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
+                        <div className="space-y-1.5">
+                          {(prepaidCards as any[]).map((card) => (
+                            <div
+                              key={card.id}
+                              className={`flex items-center gap-2 px-3 py-2 rounded-lg border border-border transition-colors ${card.isUsed ? "opacity-50 bg-muted/30" : "bg-background hover:bg-muted/20"}`}
+                            >
+                              <span className="font-mono text-[11px] font-semibold tracking-wider flex-1 min-w-0 truncate">{card.code}</span>
+                              <span className="text-[10px] text-muted-foreground shrink-0">
+                                {card.productType === "individual_basic" ? "Básica" :
+                                 card.productType === "individual_premium" ? "Premium" :
+                                 card.productType === "plan_basic" ? "Plan B" : "Plan Pro"}
+                              </span>
+                              <span className="text-[10px] text-muted-foreground shrink-0">{card.credits} cr</span>
+                              {card.isUsed ? (
+                                <div className="shrink-0 text-right">
+                                  <Badge className="bg-gray-100 text-gray-500 border-0 text-[10px] px-1.5 py-0 block">Usada</Badge>
+                                  {card.usedByEmail && (
+                                    <p className="text-[9px] text-muted-foreground truncate max-w-[80px]">{card.usedByEmail}</p>
+                                  )}
+                                </div>
+                              ) : (
+                                <Badge className="bg-emerald-100 text-emerald-700 border-0 text-[10px] px-1.5 py-0 shrink-0">Disponible</Badge>
+                              )}
+                              <div className="flex items-center gap-0.5 shrink-0">
+                                <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                                  title="Copiar" onClick={() => { navigator.clipboard.writeText(card.code); toast.success("Código copiado"); }}>
+                                  <Copy className="w-3.5 h-3.5" />
+                                </Button>
+                                {!card.isUsed && (
+                                  <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-muted-foreground hover:text-red-600"
+                                    title="Eliminar" onClick={() => deletePrepaidMutation.mutate({ id: card.id })}>
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Formulario generar tarjeta */}
+                <Card className="border-border">
+                  <CardHeader className="pb-2 pt-4 px-4">
+                    <CardTitle className="text-sm text-muted-foreground">Generar tarjeta</CardTitle>
+                  </CardHeader>
+                  <CardContent className="px-4 pb-4 space-y-2.5">
+                    <Select
+                      value={prepaidProductType}
+                      onValueChange={(v) => setPrepaidProductType(v as typeof prepaidProductType)}
+                    >
+                      <SelectTrigger className="text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="individual_basic">Sesión Básica — 350 créditos</SelectItem>
+                        <SelectItem value="individual_premium">Sesión Premium — 1,500 créditos</SelectItem>
+                        <SelectItem value="plan_basic">Plan Básico — 980 créditos</SelectItem>
+                        <SelectItem value="plan_pro">Plan Pro — 2,500 créditos</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <Button
                       className="gradient-brand text-white border-0 w-full"
                       disabled={createPrepaidMutation.isPending}
@@ -1657,7 +1632,7 @@ export default function AdminDashboard() {
                       {createPrepaidMutation.isPending ? "Generando..." : "Generar tarjeta"}
                     </Button>
                     <p className="text-[11px] text-muted-foreground leading-relaxed">
-                      Se genera un código único formato XXXX-XXXX-XXXX-XXXX que el usuario puede canjear en su wallet para acreditar créditos.
+                      Código único XXXX-XXXX-XXXX-XXXX que el usuario canjea en su wallet para acreditar créditos.
                     </p>
                   </CardContent>
                 </Card>
