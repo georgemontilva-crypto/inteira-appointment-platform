@@ -30,7 +30,9 @@ async function sendEmail(data: EmailData): Promise<boolean> {
       },
       body: JSON.stringify({
         from: `Inteira <${FROM_EMAIL}>`,
-        to: data.to,
+        to: Array.isArray(data.to)
+          ? data.to
+          : data.to.split(",").map((e) => e.trim()).filter(Boolean),
         subject: data.subject,
         html: data.html,
         ...(data.attachments?.length ? { attachments: data.attachments } : {}),
