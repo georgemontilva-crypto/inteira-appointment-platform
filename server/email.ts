@@ -86,7 +86,7 @@ function baseTemplate(content: string): string {
           </div>
           <div class="footer">
             <p>© 2026 Inteira. Todos los derechos reservados.</p>
-            <p style="margin-top:8px;"><a href="https://inteira.mx">inteira.mx</a> · <a href="https://inteira.mx/privacidad">Privacidad</a> · <a href="https://inteira.mx/terminos">Términos</a></p>
+            <p style="margin-top:8px;"><a href="https://inteira.app">inteira.app</a> · <a href="https://inteira.app/privacidad">Privacidad</a> · <a href="https://inteira.app/terminos">Términos</a></p>
           </div>
         </div>
       </div>
@@ -200,7 +200,7 @@ export async function sendProfessionalApproval(params: {
         <p><strong>Estado:</strong> Activo y visible para los usuarios</p>
       </div>
       <p>Ya puedes configurar tu disponibilidad horaria y comenzar a recibir citas. Inicia sesión en tu panel de profesional para completar tu perfil.</p>
-      <a href="https://inteira.mx" class="btn">Ir a mi panel</a>
+      <a href="https://inteira.app" class="btn">Ir a mi panel</a>
     `
     : `
       <p>Hola <strong>${params.professionalName}</strong>,</p>
@@ -252,7 +252,7 @@ export async function sendAppointmentCancellation(params: {
     </div>
     ${creditsLine}
     <p>Puedes agendar una nueva cita cuando lo desees.</p>
-    <a href="https://inteira.mx" class="btn">Agendar nueva cita</a>
+    <a href="https://inteira.app" class="btn">Agendar nueva cita</a>
   `;
 
   return sendEmail({
@@ -292,7 +292,7 @@ export async function sendAppointmentCancelledToProfessional(params: {
       <p><strong>Hora:</strong> ${timeStr} hrs</p>
     </div>
     <p>El horario quedó disponible nuevamente para nuevas reservas.</p>
-    <a href="https://inteira.mx" class="btn">Ver mi panel</a>
+    <a href="https://inteira.app" class="btn">Ver mi panel</a>
   `;
 
   return sendEmail({
@@ -317,7 +317,7 @@ export async function sendProfessionalEarningNotification(params: {
       <p><strong>Monto acreditado:</strong> $${params.netAmount.toFixed(2)} MXN</p>
     </div>
     <p>Puedes solicitar un retiro desde tu panel cuando tu saldo sea de al menos $500 MXN.</p>
-    <a href="https://inteira.mx" class="btn">Ver mi wallet</a>
+    <a href="https://inteira.app" class="btn">Ver mi wallet</a>
   `;
 
   return sendEmail({
@@ -357,7 +357,7 @@ export async function sendSubscriptionUpdate(params: {
   const content = `
     <p>Hola <strong>${params.userName}</strong>,</p>
     <p>${msg.body}</p>
-    <a href="https://inteira.mx" class="btn">Ir a mi dashboard</a>
+    <a href="https://inteira.app" class="btn">Ir a mi dashboard</a>
   `;
 
   return sendEmail({
@@ -415,7 +415,7 @@ export async function sendProfessionalAppointmentConfirmation(params: {
       <p><strong>Duración:</strong> ${params.durationMinutes} minutos</p>
     </div>
     <p>Recuerda estar disponible 5 minutos antes del inicio de la sesión.</p>
-    <a href="https://inteira.mx/panel-profesional" class="btn">Ver mi panel</a>
+    <a href="https://inteira.app/panel-profesional" class="btn">Ver mi panel</a>
     <div class="divider"></div>
     <p style="font-size:13px; color:#6b7280;">Si necesitas cancelar, hazlo con al menos 12 horas de anticipación para evitar penalizaciones.</p>
   `;
@@ -442,7 +442,7 @@ export async function sendWelcomeEmail(params: {
       <p><strong>3. Conéctate</strong> — Únete a tu sesión por videollamada integrada, sin apps externas.</p>
     </div>
     <p>Tus primeros créditos te esperan. Comienza explorando nuestros especialistas disponibles.</p>
-    <a href="https://inteira.mx" class="btn">Explorar especialistas</a>
+    <a href="https://inteira.app" class="btn">Explorar especialistas</a>
     <div class="divider"></div>
     <p style="font-size:13px; color:#6b7280;">¿Tienes preguntas? Escríbenos a <a href="mailto:soporte@inteira.mx" style="color:#607562;">soporte@inteira.mx</a></p>
   `;
@@ -475,7 +475,7 @@ export async function sendCreditsPurchaseConfirmation(params: {
       <p><strong>Válidos hasta:</strong> ${expiresStr}</p>
     </div>
     <p>Ya puedes usar tus créditos para agendar sesiones con nuestros especialistas.</p>
-    <a href="https://inteira.mx/especialidades" class="btn">Agendar una sesión</a>
+    <a href="https://inteira.app/especialidades" class="btn">Agendar una sesión</a>
     <div class="divider"></div>
     <p style="font-size:13px; color:#6b7280;">Los créditos tienen una vigencia de 60 días a partir de su adquisición. Consulta tu saldo en tu wallet.</p>
   `;
@@ -501,7 +501,7 @@ export async function sendAdminNewUserRegistration(params: {
       <p><strong>Email:</strong> ${params.userEmail}</p>
       <p><strong>Fecha:</strong> ${new Date().toLocaleDateString("es-MX", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
     </div>
-    <a href="https://inteira.mx" class="btn">Ver panel admin</a>
+    <a href="https://inteira.app" class="btn">Ver panel admin</a>
   `;
 
   const results = await Promise.all(
@@ -557,7 +557,7 @@ export async function sendAdminNewProfessionalRequest(params: {
       <p><strong>Nombre:</strong> ${params.professionalName}</p>
       <p><strong>Email:</strong> ${params.professionalEmail}</p>
     </div>
-    <a href="https://inteira.mx" class="btn">Revisar solicitud</a>
+    <a href="https://inteira.app" class="btn">Revisar solicitud</a>
   `;
 
   return sendEmail({
@@ -585,7 +585,7 @@ export async function sendCreditsDebitedEmail(params: {
       <p><strong>Fecha de sesión:</strong> ${dateStr}</p>
     </div>
     <p>Gracias por usar Inteira. Recuerda calificar a tu especialista al finalizar la sesión.</p>
-    <a href="https://inteira.mx" class="btn">Ver mis citas</a>
+    <a href="https://inteira.app" class="btn">Ver mis citas</a>
   `;
   return sendEmail({
     to: params.userEmail,
@@ -622,7 +622,7 @@ export async function sendWithdrawalRequestEmail(params: {
       ${params.notes ? `<p><strong>Nota del profesional:</strong> ${params.notes}</p>` : ""}
       <p><strong>Fecha de solicitud:</strong> ${new Date().toLocaleDateString("es-MX", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
     </div>
-    <a href="https://inteira.mx/admin" class="btn">Ver panel admin</a>
+    <a href="https://inteira.app/admin" class="btn">Ver panel admin</a>
   `;
   return sendEmail({
     to: params.adminEmail,
@@ -647,7 +647,7 @@ export async function sendWithdrawalRejectedEmail(params: {
     </div>` : ""}
     <p>Tu balance no ha sido modificado. Puedes enviar una nueva solicitud desde tu panel de ganancias cuando lo desees.</p>
     <p>Si tienes dudas, responde a este correo o contáctanos desde la plataforma.</p>
-    <a href="https://inteira.mx/panel-profesional#ganancias" class="btn">Ver mis ganancias</a>
+    <a href="https://inteira.app/panel-profesional#ganancias" class="btn">Ver mis ganancias</a>
   `;
   return sendEmail({
     to: params.professionalEmail,
@@ -680,7 +680,7 @@ export async function sendWithdrawalReceivedEmail(params: {
       <p><strong>Fecha de solicitud:</strong> ${new Date().toLocaleDateString("es-MX", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
     </div>
     <p>Recibirás otro correo cuando tu retiro haya sido procesado. Si tienes alguna pregunta, responde a este mensaje.</p>
-    <a href="https://inteira.mx/panel-profesional#ganancias" class="btn">Ver mis ganancias</a>
+    <a href="https://inteira.app/panel-profesional#ganancias" class="btn">Ver mis ganancias</a>
   `;
   return sendEmail({
     to: params.professionalEmail,
@@ -713,7 +713,7 @@ export async function sendWithdrawalPaidEmail(params: {
     </div>
     <p>El dinero puede tardar hasta <strong>7 días hábiles</strong> en llegar dependiendo de tu método de pago.</p>
     <p>Si tienes alguna pregunta, responde a este correo o contáctanos desde la plataforma.</p>
-    <a href="https://inteira.mx/panel-profesional#ganancias" class="btn">Ver mis ganancias</a>
+    <a href="https://inteira.app/panel-profesional#ganancias" class="btn">Ver mis ganancias</a>
   `;
   return sendEmail({
     to: params.professionalEmail,

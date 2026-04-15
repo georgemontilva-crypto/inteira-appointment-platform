@@ -898,8 +898,8 @@ export default function Home() {
                 alt="Inteira"
                 className="h-7 w-auto object-contain"
               />
-              <a href="https://inteira.mx" className="text-xs text-white/70 hover:text-white transition-colors">
-                inteira.mx
+              <a href="https://inteira.app" className="text-xs text-white/70 hover:text-white transition-colors">
+                inteira.app
               </a>
             </div>
             <div className="grid grid-cols-3 gap-4 mb-5">
@@ -935,7 +935,7 @@ export default function Home() {
               © {new Date().getFullYear()} Inteira. Todos los derechos reservados.
             </p>
             <p className="hidden md:block text-sm text-white/70">
-              <a href="https://inteira.mx" className="hover:text-white transition-colors">inteira.mx</a>
+              <a href="https://inteira.app" className="hover:text-white transition-colors">inteira.app</a>
             </p>
           </div>
         </div>
