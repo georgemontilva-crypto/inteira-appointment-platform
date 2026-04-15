@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { PRICING } from "@/lib/pricing";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -50,6 +50,21 @@ export default function BookAppointment() {
     { id: professionalId },
     { enabled: professionalId > 0 }
   );
+
+  // Filter session types based on professional tier
+  const availableSessionTypes = useMemo(() => {
+    if (!professional) return ["basic", "premium"] as const;
+    if (professional.tier === "basic") return ["basic"] as const;
+    if (professional.tier === "pro") return ["premium"] as const;
+    return ["basic", "premium"] as const;
+  }, [professional?.tier]);
+
+  // Auto-select when only one option is available
+  useEffect(() => {
+    if (availableSessionTypes.length === 1) {
+      setSessionType(availableSessionTypes[0]);
+    }
+  }, [availableSessionTypes]);
 
   const { data: availableSlots, isLoading: loadingSlots } = trpc.appointment.getAvailableSlots.useQuery(
     {
@@ -231,21 +246,30 @@ export default function BookAppointment() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                  {(["basic", "premium"] as const).map((type) => {
+                <div style={{ display: "grid", gridTemplateColumns: availableSessionTypes.length === 1 ? "1fr" : "1fr 1fr", gap: "12px" }}>
+                  {availableSessionTypes.map((type) => {
                     const info = SESSION_INFO[type];
                     const effectiveCost = hasMembership ? info.memberCredits : info.credits;
+                    const locked = availableSessionTypes.length === 1;
                     return (
                       <div
                         key={type}
-                        onClick={() => handleSessionTypeChange(type)}
+                        onClick={() => !locked && handleSessionTypeChange(type)}
                         style={{
-                          padding: "16px", borderRadius: "12px", cursor: "pointer",
-                          border: sessionType === type ? "2px solid #607562" : "1px solid #e0e8e0",
-                          background: sessionType === type ? "#eef2ee" : "#fff",
+                          padding: "16px", borderRadius: "12px",
+                          cursor: locked ? "default" : "pointer",
+                          border: "2px solid #607562",
+                          background: "#eef2ee",
                         }}
                       >
-                        <p style={{ fontWeight: 600, color: "#333", margin: 0 }}>{info.label}</p>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "4px" }}>
+                          <p style={{ fontWeight: 600, color: "#333", margin: 0 }}>{info.label}</p>
+                          {locked && (
+                            <span style={{ fontSize: "11px", fontWeight: 600, color: "#607562", background: "#d4e0d4", borderRadius: "20px", padding: "2px 8px" }}>
+                              Incluido en este plan
+                            </span>
+                          )}
+                        </div>
                         <p style={{ fontSize: "13px", color: "#666", margin: "4px 0" }}>{info.duration}</p>
                         {hasMembership ? (
                           <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
