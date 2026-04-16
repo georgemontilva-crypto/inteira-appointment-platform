@@ -166,23 +166,21 @@ const defaultSpecialties = [
 
 function SpecialtyCard({ specialty }: { specialty: { id: number; name: string } }) {
   return (
-    <div className="flex-shrink-0 w-[85vw] md:w-[calc(50%-6px)] lg:w-[calc(25%-9px)]">
+    <div className="flex-shrink-0 w-[85vw] md:w-[220px]">
       {/* Mobile */}
-      <div className="md:hidden flex flex-col items-center gap-2 active:scale-95 transition-transform">
+      <div className="md:hidden h-[140px] flex flex-col items-center justify-center gap-3 bg-white rounded-2xl border border-border/50 shadow-sm px-4 active:scale-95 transition-transform">
         <div className={`w-14 h-14 rounded-2xl ${homeSpecialtyBg[specialty.name] ?? "bg-[#607562]"} flex items-center justify-center shadow-md`}>
-          {homeSpecialtyIcon[specialty.name] ?? <Compass className="w-5 h-5 text-white" />}
+          {homeSpecialtyIcon[specialty.name] ?? <Compass className="w-6 h-6 text-white" />}
         </div>
-        <span className="text-[11px] font-semibold text-center text-foreground leading-tight">{specialty.name}</span>
+        <span className="text-[12px] font-semibold text-center text-foreground leading-tight">{specialty.name}</span>
       </div>
       {/* Desktop */}
-      <Card className="hidden md:block group cursor-pointer border-border hover:border-primary/30 hover:shadow-md transition-all duration-200 hover:-translate-y-0.5">
-        <CardContent className="p-4 flex flex-col items-center text-center gap-3">
-          <div className={`w-12 h-12 rounded-2xl ${homeSpecialtyBg[specialty.name] ?? "bg-[#607562]"} flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform duration-200`}>
-            {homeSpecialtyIcon[specialty.name] ?? <Compass className="w-6 h-6 text-white" />}
-          </div>
-          <span className="text-xs font-semibold text-foreground leading-tight">{specialty.name}</span>
-        </CardContent>
-      </Card>
+      <div className="hidden md:flex h-[140px] flex-col items-center justify-center gap-3 bg-white rounded-2xl border border-border/50 shadow-sm p-6 cursor-pointer group hover:border-primary/30 hover:shadow-md transition-all duration-200 hover:-translate-y-0.5">
+        <div className={`w-12 h-12 rounded-2xl ${homeSpecialtyBg[specialty.name] ?? "bg-[#607562]"} flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform duration-200`}>
+          {homeSpecialtyIcon[specialty.name] ?? <Compass className="w-6 h-6 text-white" />}
+        </div>
+        <span className="text-xs font-semibold text-center text-foreground leading-tight">{specialty.name}</span>
+      </div>
     </div>
   );
 }
@@ -477,11 +475,11 @@ export default function Home() {
           </div>
 
           {/* Carousel — all breakpoints */}
-          <div className="relative">
-            {/* Left arrow */}
+          <div className="relative md:px-10">
+            {/* Left arrow — outside scroll area */}
             <button
               onClick={() => scrollSpecialties("left")}
-              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-3 z-10 hidden md:flex w-8 h-8 rounded-full bg-background border border-border shadow-md items-center justify-center text-muted-foreground hover:text-foreground hover:shadow-lg transition-all"
+              className="absolute left-0 top-1/2 -translate-y-1/2 z-10 hidden md:flex w-9 h-9 rounded-full bg-white border border-border shadow-md items-center justify-center text-muted-foreground hover:text-foreground hover:shadow-lg transition-all"
               aria-label="Anterior"
             >
               <ChevronLeft className="w-4 h-4" />
@@ -500,10 +498,10 @@ export default function Home() {
               ))}
             </div>
 
-            {/* Right arrow */}
+            {/* Right arrow — outside scroll area */}
             <button
               onClick={() => scrollSpecialties("right")}
-              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-3 z-10 hidden md:flex w-8 h-8 rounded-full bg-background border border-border shadow-md items-center justify-center text-muted-foreground hover:text-foreground hover:shadow-lg transition-all"
+              className="absolute right-0 top-1/2 -translate-y-1/2 z-10 hidden md:flex w-9 h-9 rounded-full bg-white border border-border shadow-md items-center justify-center text-muted-foreground hover:text-foreground hover:shadow-lg transition-all"
               aria-label="Siguiente"
             >
               <ChevronRight className="w-4 h-4" />
