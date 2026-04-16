@@ -572,7 +572,7 @@ export default function Home() {
             {/* Left: image */}
             <div className="relative rounded-2xl overflow-hidden shadow-xl" style={{ height: "480px" }}>
               <img
-                src="https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/loyo.webp"
+                src="https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/full-shot-young-woman-undergoing-therapy.jpg"
                 alt="Asesoría profesional"
                 className="w-full h-full object-cover object-top"
               />
