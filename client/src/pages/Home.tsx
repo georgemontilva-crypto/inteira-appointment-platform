@@ -199,7 +199,7 @@ export default function Home() {
     ? user.name.split(" ").map((n: string) => n[0]).slice(0, 2).join("").toUpperCase()
     : "?";
 
-  const displaySpecialties = specialties ?? defaultSpecialties;
+  const featuredSpecialties = specialties?.filter((s) => SPECIALTY_IMAGES[s.name]) ?? [];
 
   const specialtiesScrollRef = useRef<HTMLDivElement>(null);
   const [activeDot, setActiveDot] = useState(0);
@@ -219,7 +219,7 @@ export default function Home() {
   };
 
   useEffect(() => {
-    const total = displaySpecialties.length;
+    const total = featuredSpecialties.length;
     if (total === 0) return;
     const interval = setInterval(() => {
       setActiveDot((prev) => {
@@ -233,7 +233,7 @@ export default function Home() {
       });
     }, 3000);
     return () => clearInterval(interval);
-  }, [displaySpecialties.length]);
+  }, [featuredSpecialties.length]);
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-0">
@@ -521,44 +521,24 @@ export default function Home() {
               className="flex gap-4 overflow-x-auto px-10"
               style={{ scrollbarWidth: "none" }}
             >
-              {displaySpecialties.map((s, i) => {
-                const img = SPECIALTY_IMAGES[s.name];
-                return img ? (
-                  <a
-                    href={`/especialidades/${s.id}`}
-                    key={s.id}
-                    onClick={() => setActiveDot(i)}
-                    style={{
-                      minWidth: "calc(25% - 12px)",
-                      flexShrink: 0,
-                      height: "220px",
-                      backgroundImage: `url(${img})`,
-                      backgroundSize: "cover",
-                      backgroundPosition: "center",
-                    }}
-                    className="relative rounded-2xl overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform"
-                  >
-                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/75 to-transparent p-4">
-                      <span className="text-white font-bold text-lg leading-tight block">{s.name}</span>
-                    </div>
-                  </a>
-                ) : (
-                  <a
-                    href={`/especialidades/${s.id}`}
-                    key={s.id}
-                    onClick={() => setActiveDot(i)}
-                    style={{ minWidth: "calc(25% - 12px)", flexShrink: 0, height: "220px" }}
-                    className={`relative rounded-2xl overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform ${homeSpecialtyBg[s.name] ?? "bg-primary/10"} flex flex-col items-center justify-end`}
-                  >
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      {homeSpecialtyIcon[s.name] ?? <Compass className="w-10 h-10 text-white/80" />}
-                    </div>
-                    <div className="relative w-full bg-gradient-to-t from-black/60 to-transparent p-4">
-                      <span className="text-white font-bold text-lg leading-tight block">{s.name}</span>
-                    </div>
-                  </a>
-                );
-              })}
+              {featuredSpecialties.map((s, i) => (
+                <a
+                  href={`/especialidades/${s.id}`}
+                  key={s.id}
+                  onClick={() => setActiveDot(i)}
+                  style={{
+                    minWidth: "calc(25% - 12px)",
+                    flexShrink: 0,
+                    height: "220px",
+                    backgroundImage: `url(${SPECIALTY_IMAGES[s.name]})`,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                  }}
+                  className="relative rounded-2xl overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                </a>
+              ))}
             </div>
 
             {/* Flecha derecha */}
@@ -573,7 +553,7 @@ export default function Home() {
 
           {/* Navigation dots */}
           <div className="flex justify-center gap-2 mt-4">
-            {displaySpecialties.map((_, i) => (
+            {featuredSpecialties.map((_, i) => (
               <button
                 key={i}
                 onClick={() => scrollToIndex(i)}
