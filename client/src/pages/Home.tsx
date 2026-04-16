@@ -348,13 +348,20 @@ export default function Home() {
           HERO — Mobile: app-style greeting card
                  Desktop: split layout
           ══════════════════════════════════════════ */}
-      <section className="relative pt-14 md:pt-24 overflow-hidden">
-        {/* Desktop background blobs */}
-        <div className="hidden md:block absolute top-20 right-0 w-96 h-96 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="hidden md:block absolute bottom-0 left-0 w-64 h-64 bg-accent/10 rounded-full blur-3xl pointer-events-none" />
+      <section
+        className="relative pt-14 md:pt-24 overflow-hidden"
+        style={{
+          backgroundImage: "url(https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/banner_Mesa%20de%20trabajo%201.jpg)",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}
+      >
+        {/* Overlay for text readability */}
+        <div className="absolute inset-0 bg-white/70" />
+
 
         {/* ── Mobile Hero ── */}
-        <div className="md:hidden">
+        <div className="md:hidden relative z-10">
           {/* Gradient header card */}
           <div className="gradient-hero px-5 pt-8 pb-16 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
@@ -410,7 +417,7 @@ export default function Home() {
         </div>
 
         {/* ── Desktop Hero ── */}
-        <div className="hidden md:block pb-20">
+        <div className="hidden md:block pb-20 relative z-10">
           <div className="container relative">
             <div className="grid lg:grid-cols-2 gap-12 items-center">
               <div className="space-y-8">
