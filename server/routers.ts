@@ -9,7 +9,7 @@ import { users } from "../drizzle/schema";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { appointmentRouter } from "./routers-appointments";
-import { sendProfessionalApproval, sendAdminNewProfessionalRequest } from "./email";
+import { sendProfessionalApproval, sendAdminNewProfessionalRequest, sendProfessionalApplicationReceived } from "./email";
 import {
   createNotification,
   getUnreadNotifications,
@@ -468,6 +468,86 @@ export const appRouter = router({
             }
           } catch (err: any) {
             console.error("[Register] Error enviando notificaciones al admin:", err?.message);
+          }
+        });
+
+        return { success: true };
+      }),
+
+    registerNew: publicProcedure
+      .input(professionalRegistrationSchema.extend({
+        email: z.string().email(),
+        fullName: z.string().min(1).max(100),
+      }))
+      .mutation(async ({ input }) => {
+        const email = input.email.toLowerCase().trim();
+
+        // Reject if user already exists — they should log in instead
+        const existing = await db.getUserByEmail(email);
+        if (existing) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "Ya tienes una cuenta, inicia sesión primero",
+          });
+        }
+
+        // Create user via raw SQL (TiDB callback pattern)
+        const dbInst = await db.getDb();
+        if (!dbInst) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB no disponible" });
+
+        const openId = `email_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+        const safeName = input.fullName.trim().replace(/'/g, "''");
+        const safeEmail = email.replace(/'/g, "''");
+        const safeOpenId = openId.replace(/'/g, "''");
+        const now = new Date().toISOString().slice(0, 19).replace("T", " ");
+
+        const newUser = await new Promise<{ id: number }>((resolve, reject) => {
+          dbInst.execute(
+            `INSERT INTO \`users\` (\`openId\`, \`email\`, \`name\`, \`role\`, \`loginMethod\`, \`createdAt\`, \`updatedAt\`)
+             VALUES ('${safeOpenId}', '${safeEmail}', '${safeName}', 'user', 'email', '${now}', '${now}')`,
+            [],
+            (err: any, result: any) => {
+              if (err) return reject(err);
+              resolve({ id: result.insertId });
+            }
+          );
+        });
+
+        const userId = newUser.id;
+        const licenseNum = (input.licenseNumber ?? "").trim() || `NOLIC_${userId}_${Date.now()}`;
+
+        await db.createProfessional(userId, input.specialtyId, licenseNum, {
+          yearsOfExperience: input.yearsOfExperience,
+          education: input.education,
+          certifications: input.certifications,
+          bio: input.bio,
+          hourlyRate: input.hourlyRate ? input.hourlyRate : undefined,
+          profilePhoto: input.profilePhoto ?? null,
+          licenseDocument: input.licenseDocument ?? null,
+        });
+
+        // Notify admin + send confirmation to specialist (fire and forget)
+        setImmediate(async () => {
+          try {
+            const admins = await db.getAdminUsers();
+            const adminEmail = process.env.ADMIN_EMAIL ?? "marketingdedsm@gmail.com";
+            const targets = admins.length > 0
+              ? admins.map((a) => a.email).filter(Boolean)
+              : [adminEmail];
+            for (const aEmail of targets) {
+              await sendAdminNewProfessionalRequest({
+                adminEmail: aEmail,
+                professionalName: input.fullName,
+                professionalEmail: email,
+              });
+            }
+            // Confirmation email to specialist
+            await sendProfessionalApplicationReceived({
+              professionalEmail: email,
+              professionalName: input.fullName,
+            });
+          } catch (err: any) {
+            console.error("[registerNew] Error enviando notificaciones:", err?.message);
           }
         });
 

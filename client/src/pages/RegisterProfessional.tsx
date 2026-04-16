@@ -148,6 +148,16 @@ export default function RegisterProfessional() {
     },
   });
 
+  const registerNewMutation = trpc.professional.registerNew.useMutation({
+    onSuccess: () => {
+      setSubmitted(true);
+      toast.success("Solicitud enviada. Recibirás un correo cuando sea aprobada.");
+    },
+    onError: (err: { message?: string }) => {
+      toast.error(err.message ?? "Error al enviar la solicitud");
+    },
+  });
+
   const handleChange = (field: string, value: string) =>
     setForm((prev) => ({ ...prev, [field]: value }));
 
@@ -165,20 +175,21 @@ export default function RegisterProfessional() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.firstName || !form.lastName) return toast.error("Nombre y apellido son obligatorios");
+    if (!isAuthenticated && !form.email.trim()) return toast.error("El email es obligatorio");
     if (!form.specialtyId) return toast.error("Selecciona la especialidad en la plataforma");
     if (!form.bio.trim()) return toast.error("La descripción profesional es obligatoria");
     if (!profilePhoto) return toast.error("La foto de perfil es obligatoria");
     if (!identityDoc) return toast.error("El documento de identidad es obligatorio");
 
     setUploading(true);
+    const fullName = `${form.firstName.trim()} ${form.lastName.trim()}`.trim();
     try {
       const profilePhotoUrl = await uploadFile(profilePhoto);
       const identityDocUrl = await uploadFile(identityDoc);
       let certificationsUrl: string | undefined;
       if (certifications) certificationsUrl = await uploadFile(certifications);
 
-      console.log("[Register] specialtyId enviado:", form.specialtyId, "→ parseInt:", parseInt(form.specialtyId));
-      registerMutation.mutate({
+      const payload = {
         specialtyId: parseInt(form.specialtyId),
         licenseNumber: form.licenseNumber.trim() || undefined,
         licenseDocument: identityDocUrl,
@@ -187,8 +198,14 @@ export default function RegisterProfessional() {
         certifications: certificationsUrl,
         yearsOfExperience: form.yearsOfExperience ? parseInt(form.yearsOfExperience) : undefined,
         profilePhoto: profilePhotoUrl,
-        fullName: `${form.firstName.trim()} ${form.lastName.trim()}`.trim() || undefined,
-      });
+        fullName: fullName || undefined,
+      };
+
+      if (isAuthenticated) {
+        registerMutation.mutate(payload);
+      } else {
+        registerNewMutation.mutate({ ...payload, email: form.email.trim(), fullName });
+      }
     } catch (err: unknown) {
       toast.error((err as Error).message ?? "Error al subir archivos");
     } finally {
@@ -200,29 +217,6 @@ export default function RegisterProfessional() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background px-4">
-        <Card className="max-w-md w-full border-border">
-          <CardContent className="p-8 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-              <User className="w-8 h-8 text-primary" />
-            </div>
-            <h2 className="text-xl font-bold text-foreground mb-2" style={{ fontFamily: "Poppins, sans-serif" }}>
-              Inicia sesión para continuar
-            </h2>
-            <p className="text-muted-foreground mb-6 text-sm">
-              Necesitas una cuenta para registrarte como asesor en inteira.
-            </p>
-            <a href={getLoginUrl()}>
-              <Button className="w-full bg-primary hover:bg-primary/90 text-white">Iniciar sesión</Button>
-            </a>
-          </CardContent>
-        </Card>
       </div>
     );
   }
@@ -253,7 +247,7 @@ export default function RegisterProfessional() {
     );
   }
 
-  const isSubmitting = uploading || registerMutation.isPending;
+  const isSubmitting = uploading || registerMutation.isPending || registerNewMutation.isPending;
 
   return (
     <div className="min-h-screen bg-background">
@@ -278,6 +272,43 @@ export default function RegisterProfessional() {
       <div className="container py-10">
         <div className="max-w-2xl mx-auto">
           <form onSubmit={handleSubmit} className="space-y-8">
+
+            {/* ── Email (solo usuarios no autenticados) ── */}
+            {!isAuthenticated && (
+              <Card className="border-primary/30 bg-primary/5">
+                <CardContent className="p-6 space-y-4">
+                  <div className="flex items-center gap-3 mb-1">
+                    <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <User className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-foreground" style={{ fontFamily: "Poppins, sans-serif" }}>
+                        Crea tu cuenta
+                      </h3>
+                      <p className="text-xs text-muted-foreground">Ingresa tu email para registrarte</p>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="tu@email.com"
+                      value={form.email}
+                      onChange={(e) => handleChange("email", e.target.value)}
+                      required
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    ¿Ya tienes cuenta?{" "}
+                    <a href="/login" className="text-primary hover:underline font-medium">
+                      Inicia sesión
+                    </a>
+                    {" "}y vuelve a este formulario.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
 
             {/* ── Sección 1: Datos personales ── */}
             <Card className="border-border">

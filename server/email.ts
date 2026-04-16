@@ -201,8 +201,12 @@ export async function sendProfessionalApproval(params: {
         <p><strong>Especialidad:</strong> ${params.specialty}</p>
         <p><strong>Estado:</strong> Activo y visible para los usuarios</p>
       </div>
-      <p>Ya puedes configurar tu disponibilidad horaria y comenzar a recibir citas. Inicia sesión en tu panel de profesional para completar tu perfil.</p>
-      <a href="https://inteira.app" class="btn">Ir a mi panel</a>
+      <p>Ya puedes configurar tu disponibilidad horaria y comenzar a recibir citas.</p>
+      <div class="info-box">
+        <p><strong>¿Cómo acceder?</strong></p>
+        <p>Ve a <a href="https://inteira.app/login" style="color:#607562;">inteira.app/login</a> e ingresa con tu correo <strong>${params.professionalEmail}</strong> — recibirás un código de verificación por email.</p>
+      </div>
+      <a href="https://inteira.app/login" class="btn">Ir a mi panel</a>
     `
     : `
       <p>Hola <strong>${params.professionalName}</strong>,</p>
@@ -745,6 +749,27 @@ export async function sendProfessionalRevocationEmail(params: {
   return sendEmail({
     to: params.professionalEmail,
     subject: 'Tu acceso como profesional en Inteira ha sido revocado',
+    html: baseTemplate(content),
+  });
+}
+
+// Confirmation to specialist when their application is received (no account yet)
+export async function sendProfessionalApplicationReceived(params: {
+  professionalEmail: string;
+  professionalName: string;
+}): Promise<boolean> {
+  const content = `
+    <p>Hola <strong>${params.professionalName}</strong>,</p>
+    <p>Hemos recibido tu solicitud para unirte a <strong>Inteira</strong> como especialista. Nuestro equipo la revisará en los próximos días hábiles.</p>
+    <div class="info-box">
+      <p><strong>¿Qué sigue?</strong></p>
+      <p>Una vez aprobada tu solicitud, recibirás un correo con instrucciones para acceder a tu panel de especialista.</p>
+    </div>
+    <p>Si tienes preguntas, escríbenos a <a href="mailto:soporte@inteira.app">soporte@inteira.app</a>.</p>
+  `;
+  return sendEmail({
+    to: params.professionalEmail,
+    subject: "📋 Solicitud recibida — Inteira",
     html: baseTemplate(content),
   });
 }
