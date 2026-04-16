@@ -164,26 +164,6 @@ const defaultSpecialties = [
   { id: 7, name: "Vocación" },
 ] as Array<{ id: number; name: string }>;
 
-function SpecialtyCard({ specialty }: { specialty: { id: number; name: string } }) {
-  return (
-    <div className="flex-shrink-0 w-[85vw] md:w-[calc(25%-12px)]">
-      {/* Mobile */}
-      <div className="md:hidden h-[180px] flex flex-col items-center justify-center gap-3 bg-white rounded-2xl border border-border/50 shadow-sm px-4 active:scale-95 transition-transform">
-        <div className={`w-16 h-16 rounded-2xl ${homeSpecialtyBg[specialty.name] ?? "bg-[#607562]"} flex items-center justify-center shadow-md`}>
-          {homeSpecialtyIcon[specialty.name] ?? <Compass className="w-7 h-7 text-white" />}
-        </div>
-        <span className="text-base font-medium text-center text-foreground leading-tight">{specialty.name}</span>
-      </div>
-      {/* Desktop */}
-      <div className="hidden md:flex h-[180px] flex-col items-center justify-center gap-3 bg-white rounded-2xl border border-border/50 shadow-sm p-6 cursor-pointer group hover:border-primary/30 hover:shadow-md transition-all duration-200 hover:-translate-y-0.5">
-        <div className={`w-16 h-16 rounded-2xl ${homeSpecialtyBg[specialty.name] ?? "bg-[#607562]"} flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform duration-200`}>
-          {homeSpecialtyIcon[specialty.name] ?? <Compass className="w-7 h-7 text-white" />}
-        </div>
-        <span className="text-base font-medium text-center text-foreground leading-tight">{specialty.name}</span>
-      </div>
-    </div>
-  );
-}
 
 export default function Home() {
   const { user, isAuthenticated } = useAuth();
@@ -474,37 +454,45 @@ export default function Home() {
             </p>
           </div>
 
-          {/* Carousel — all breakpoints */}
-          <div className="relative md:px-10 overflow-hidden">
-            {/* Left arrow — outside scroll area */}
+          {/* Carousel */}
+          <div className="relative">
+            {/* Flecha izquierda */}
             <button
               onClick={() => scrollSpecialties("left")}
-              className="absolute left-0 top-1/2 -translate-y-1/2 z-10 hidden md:flex w-9 h-9 rounded-full bg-white border border-border shadow-md items-center justify-center text-muted-foreground hover:text-foreground hover:shadow-lg transition-all"
+              className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white rounded-full shadow p-2 hidden md:block"
               aria-label="Anterior"
             >
-              <ChevronLeft className="w-4 h-4" />
+              <ChevronLeft className="w-5 h-5" />
             </button>
 
             {/* Scroll container */}
             <div
               ref={specialtiesScrollRef}
-              className="flex gap-3 overflow-x-auto pb-2"
-              style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+              className="flex gap-4 overflow-x-auto px-10"
+              style={{ scrollbarWidth: "none" }}
             >
-              {displaySpecialties.map((specialty) => (
-                <Link key={specialty.id} href={`/especialidades/${specialty.id}`}>
-                  <SpecialtyCard specialty={specialty} />
-                </Link>
+              {displaySpecialties.map((s) => (
+                <a
+                  href={`/especialidades/${s.id}`}
+                  key={s.id}
+                  style={{ minWidth: "calc(25% - 12px)", flexShrink: 0 }}
+                  className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col items-center gap-3 hover:shadow-md transition-shadow cursor-pointer"
+                >
+                  <div className={`w-14 h-14 rounded-2xl ${homeSpecialtyBg[s.name] ?? "bg-primary/10"} flex items-center justify-center`}>
+                    {homeSpecialtyIcon[s.name] ?? <Compass className="w-7 h-7 text-primary" />}
+                  </div>
+                  <span className="text-sm font-medium text-center text-gray-800">{s.name}</span>
+                </a>
               ))}
             </div>
 
-            {/* Right arrow — outside scroll area */}
+            {/* Flecha derecha */}
             <button
               onClick={() => scrollSpecialties("right")}
-              className="absolute right-0 top-1/2 -translate-y-1/2 z-10 hidden md:flex w-9 h-9 rounded-full bg-white border border-border shadow-md items-center justify-center text-muted-foreground hover:text-foreground hover:shadow-lg transition-all"
+              className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white rounded-full shadow p-2 hidden md:block"
               aria-label="Siguiente"
             >
-              <ChevronRight className="w-4 h-4" />
+              <ChevronRight className="w-5 h-5" />
             </button>
           </div>
 
