@@ -105,7 +105,6 @@ const CAROUSEL_ITEMS = [
   { name: "Finanzas",         image: "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Finanzas.webp",           specialtyNames: ["Asesor Financiero", "Mercadotecnia"] },
   { name: "Idiomas",          image: "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Idiomas.webp",             specialtyNames: ["Inglés", "Ingles", "Francés", "Lenguaje de Señas", "Oratoria"] },
   { name: "Imagen Personal",  image: "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Imagen-Personal.webp",    specialtyNames: ["Asesor de Imagen", "Maquillaje"] },
-  { name: "Legal",            image: "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Legal%20(1).webp",         specialtyNames: ["Abogado"] },
   { name: "Psicología",       image: "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Psicologia.webp",          specialtyNames: ["Psicología", "Mindfulness y meditación", "Desarrollo Personal"] },
   { name: "Vocación",         image: "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Vocacion.webp",            specialtyNames: ["Coaching de vida", "Orientación vocacional", "Guía Motivacional"] },
 ];
