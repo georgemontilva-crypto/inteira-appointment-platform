@@ -1,6 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { PRICING, PRICING_DISPLAY } from "@/lib/pricing";
-import UserDashboard from "./UserDashboard";
 import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -178,10 +177,6 @@ export default function Home() {
 
   const displaySpecialties = specialties ?? defaultSpecialties;
 
-  if (isAuthenticated) {
-    return <UserDashboard />;
-  }
-
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-0">
       {/* ══════════════════════════════════════════
@@ -222,6 +217,12 @@ export default function Home() {
             {/* Auth buttons */}
             <div className="flex items-center gap-2 md:gap-3">
               {isAuthenticated ? (
+                <>
+                  <Link href="/dashboard">
+                    <Button size="sm" className="hidden md:flex gradient-brand text-white border-0 shadow-md shadow-primary/30">
+                      Mi dashboard
+                    </Button>
+                  </Link>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button className="flex items-center gap-2 rounded-full pl-1 pr-2 py-1 hover:bg-muted transition-colors active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary">
@@ -269,6 +270,7 @@ export default function Home() {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+                </>
               ) : (
                 <>
                   {/* Mobile */}
