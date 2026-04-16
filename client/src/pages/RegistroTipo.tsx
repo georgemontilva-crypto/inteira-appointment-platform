@@ -33,7 +33,7 @@ export default function RegistroTipo() {
     <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-background">
       {/* Logo */}
       <a href="/">
-        <img src="https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/Inteira-Verde-1.webp" alt="Inteira" className="h-10 mb-8" />
+        <img src="https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/Inteira-Verde-1.webp" alt="Inteira" className="h-16 mb-8" />
       </a>
 
       <h1 className="text-2xl md:text-3xl font-bold mb-2 text-center" style={{ fontFamily: "Poppins, sans-serif" }}>
