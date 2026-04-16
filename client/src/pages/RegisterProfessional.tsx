@@ -35,7 +35,7 @@ async function uploadFile(file: File): Promise<string> {
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
-  const res = await fetch("/api/upload/professional-file", {
+  const res = await fetch("/api/upload/professional-photo", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
