@@ -1,5 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import { PRICING, PRICING_DISPLAY } from "@/lib/pricing";
 import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
@@ -100,6 +100,27 @@ const homeSpecialtyBg: Record<string, string> = {
   "Recursos Humanos": "bg-[#4a5c4c]",
 };
 
+const SPECIALTY_IMAGES: Record<string, string> = {
+  "Emprendimiento":           "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Emprendimiento.webp",
+  "Coach Deportivo":          "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Emprendimiento.webp",
+  "Asesor Financiero":        "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Finanzas.webp",
+  "Mercadotecnia":            "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Finanzas.webp",
+  "Inglés":                   "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Idiomas.webp",
+  "Ingles":                   "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Idiomas.webp",
+  "Francés":                  "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Idiomas.webp",
+  "Lenguaje de Señas":        "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Idiomas.webp",
+  "Oratoria":                 "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Idiomas.webp",
+  "Asesor de Imagen":         "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Imagen-Personal.webp",
+  "Maquillaje":               "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Imagen-Personal.webp",
+  "Abogado":                  "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Legal%20(1).webp",
+  "Psicología":               "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Psicologia.webp",
+  "Mindfulness y meditación": "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Psicologia.webp",
+  "Desarrollo Personal":      "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Psicologia.webp",
+  "Coaching de vida":         "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Vocacion.webp",
+  "Orientación vocacional":   "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Vocacion.webp",
+  "Guía Motivacional":        "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Vocacion.webp",
+};
+
 const steps = [
   {
     icon: <Users className="w-5 h-5" />,
@@ -181,9 +202,38 @@ export default function Home() {
   const displaySpecialties = specialties ?? defaultSpecialties;
 
   const specialtiesScrollRef = useRef<HTMLDivElement>(null);
+  const [activeDot, setActiveDot] = useState(0);
+
   const scrollSpecialties = (dir: "left" | "right") => {
     specialtiesScrollRef.current?.scrollBy({ left: dir === "left" ? -300 : 300, behavior: "smooth" });
   };
+
+  const scrollToIndex = (index: number) => {
+    const container = specialtiesScrollRef.current;
+    if (!container) return;
+    const card = container.children[index] as HTMLElement;
+    if (card) {
+      container.scrollTo({ left: card.offsetLeft - container.offsetLeft, behavior: "smooth" });
+    }
+    setActiveDot(index);
+  };
+
+  useEffect(() => {
+    const total = displaySpecialties.length;
+    if (total === 0) return;
+    const interval = setInterval(() => {
+      setActiveDot((prev) => {
+        const next = (prev + 1) % total;
+        const container = specialtiesScrollRef.current;
+        if (container) {
+          const card = container.children[next] as HTMLElement;
+          if (card) container.scrollTo({ left: card.offsetLeft - container.offsetLeft, behavior: "smooth" });
+        }
+        return next;
+      });
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [displaySpecialties.length]);
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-0">
@@ -471,19 +521,44 @@ export default function Home() {
               className="flex gap-4 overflow-x-auto px-10"
               style={{ scrollbarWidth: "none" }}
             >
-              {displaySpecialties.map((s) => (
-                <a
-                  href={`/especialidades/${s.id}`}
-                  key={s.id}
-                  style={{ minWidth: "calc(25% - 12px)", flexShrink: 0 }}
-                  className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col items-center gap-3 hover:shadow-md transition-shadow cursor-pointer"
-                >
-                  <div className={`w-14 h-14 rounded-2xl ${homeSpecialtyBg[s.name] ?? "bg-primary/10"} flex items-center justify-center`}>
-                    {homeSpecialtyIcon[s.name] ?? <Compass className="w-7 h-7 text-primary" />}
-                  </div>
-                  <span className="text-sm font-medium text-center text-gray-800">{s.name}</span>
-                </a>
-              ))}
+              {displaySpecialties.map((s, i) => {
+                const img = SPECIALTY_IMAGES[s.name];
+                return img ? (
+                  <a
+                    href={`/especialidades/${s.id}`}
+                    key={s.id}
+                    onClick={() => setActiveDot(i)}
+                    style={{
+                      minWidth: "calc(25% - 12px)",
+                      flexShrink: 0,
+                      height: "220px",
+                      backgroundImage: `url(${img})`,
+                      backgroundSize: "cover",
+                      backgroundPosition: "center",
+                    }}
+                    className="relative rounded-2xl overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform"
+                  >
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/75 to-transparent p-4">
+                      <span className="text-white font-bold text-lg leading-tight block">{s.name}</span>
+                    </div>
+                  </a>
+                ) : (
+                  <a
+                    href={`/especialidades/${s.id}`}
+                    key={s.id}
+                    onClick={() => setActiveDot(i)}
+                    style={{ minWidth: "calc(25% - 12px)", flexShrink: 0, height: "220px" }}
+                    className={`relative rounded-2xl overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform ${homeSpecialtyBg[s.name] ?? "bg-primary/10"} flex flex-col items-center justify-end`}
+                  >
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      {homeSpecialtyIcon[s.name] ?? <Compass className="w-10 h-10 text-white/80" />}
+                    </div>
+                    <div className="relative w-full bg-gradient-to-t from-black/60 to-transparent p-4">
+                      <span className="text-white font-bold text-lg leading-tight block">{s.name}</span>
+                    </div>
+                  </a>
+                );
+              })}
             </div>
 
             {/* Flecha derecha */}
@@ -494,6 +569,20 @@ export default function Home() {
             >
               <ChevronRight className="w-5 h-5" />
             </button>
+          </div>
+
+          {/* Navigation dots */}
+          <div className="flex justify-center gap-2 mt-4">
+            {displaySpecialties.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => scrollToIndex(i)}
+                className={`rounded-full transition-all ${
+                  i === activeDot ? "bg-primary w-5 h-2" : "bg-gray-300 w-2 h-2"
+                }`}
+                aria-label={`Ir a especialidad ${i + 1}`}
+              />
+            ))}
           </div>
 
           <div className="text-center mt-5 md:mt-8">
