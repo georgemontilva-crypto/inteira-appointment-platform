@@ -204,7 +204,7 @@ export default function Login() {
                         <p className="text-xs text-red-500 text-center">{authError}</p>
                         {notRegistered && (
                           <a
-                            href={`/registro?email=${encodeURIComponent(email)}`}
+                            href={`/registro/usuario?email=${encodeURIComponent(email)}`}
                             className="block w-full text-center py-2.5 rounded-2xl border border-primary text-primary text-sm font-semibold hover:bg-primary/5 transition-colors"
                           >
                             Crear cuenta

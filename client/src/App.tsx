@@ -20,6 +20,7 @@ import UserProfile from "./pages/UserProfile";
 import Subscription from "./pages/Subscription";
 import Login from "./pages/Login";
 import Registro from "./pages/Registro";
+import RegistroTipo from "./pages/RegistroTipo";
 import SpecialtiesPage from "./pages/SpecialtiesPage";
 import AppointmentsPage from "./pages/AppointmentsPage";
 
@@ -62,7 +63,8 @@ function Router() {
 
       {/* Auth */}
       <Route path="/login" component={Login} />
-      <Route path="/registro" component={Registro} />
+      <Route path="/registro" component={RegistroTipo} />
+      <Route path="/registro/usuario" component={Registro} />
 
       {/* Fallback */}
       <Route path="/404" component={NotFound} />
