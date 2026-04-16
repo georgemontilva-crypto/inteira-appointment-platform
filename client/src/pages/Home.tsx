@@ -371,7 +371,7 @@ export default function Home() {
                   Consultas con especialistas en psicología, finanzas, legal y más. Todo en línea.
                 </p>
               )}
-              <a href={getLoginUrl()}>
+              <a href={isAuthenticated ? "/especialidades" : "/registro"}>
                 <Button className="bg-white text-primary font-semibold px-6 shadow-lg active:scale-95 transition-transform">
                   {isAuthenticated ? "Ver especialistas" : "Comenzar gratis"}
                   <ArrowRight className="ml-2 w-4 h-4" />
@@ -427,7 +427,7 @@ export default function Home() {
                   Todo desde la comodidad de tu hogar, con videollamadas en tiempo real.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4">
-                  <a href={getLoginUrl()}>
+                  <a href="/registro">
                     <Button size="lg" className="gradient-brand text-white border-0 shadow-lg shadow-primary/30 px-8 text-base">
                       Comenzar ahora
                       <ArrowRight className="ml-2 w-4 h-4" />
@@ -914,7 +914,7 @@ export default function Home() {
               <p className="text-[#F5F0E8]/80 text-sm md:text-lg mb-6 md:mb-8 max-w-xl mx-auto">
                 Únete a miles de personas que ya confían en Inteira para conectar con especialistas de calidad.
               </p>
-              <a href={getLoginUrl()}>
+              <a href="/registro">
                 <Button size="lg" className="bg-white text-primary hover:bg-white/90 font-semibold px-8 md:px-10 shadow-lg active:scale-95 transition-transform">
                   Comenzar gratis hoy
                   <ArrowRight className="ml-2 w-4 h-4" />
