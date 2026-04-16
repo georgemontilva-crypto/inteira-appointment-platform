@@ -100,26 +100,15 @@ const homeSpecialtyBg: Record<string, string> = {
   "Recursos Humanos": "bg-[#4a5c4c]",
 };
 
-const SPECIALTY_IMAGES: Record<string, string> = {
-  "Emprendimiento":           "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Emprendimiento.webp",
-  "Coach Deportivo":          "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Emprendimiento.webp",
-  "Asesor Financiero":        "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Finanzas.webp",
-  "Mercadotecnia":            "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Finanzas.webp",
-  "Inglés":                   "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Idiomas.webp",
-  "Ingles":                   "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Idiomas.webp",
-  "Francés":                  "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Idiomas.webp",
-  "Lenguaje de Señas":        "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Idiomas.webp",
-  "Oratoria":                 "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Idiomas.webp",
-  "Asesor de Imagen":         "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Imagen-Personal.webp",
-  "Maquillaje":               "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Imagen-Personal.webp",
-  "Abogado":                  "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Legal%20(1).webp",
-  "Psicología":               "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Psicologia.webp",
-  "Mindfulness y meditación": "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Psicologia.webp",
-  "Desarrollo Personal":      "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Psicologia.webp",
-  "Coaching de vida":         "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Vocacion.webp",
-  "Orientación vocacional":   "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Vocacion.webp",
-  "Guía Motivacional":        "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Vocacion.webp",
-};
+const CAROUSEL_ITEMS = [
+  { name: "Emprendimiento",   image: "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Emprendimiento.webp",    specialtyNames: ["Emprendimiento", "Coach Deportivo"] },
+  { name: "Finanzas",         image: "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Finanzas.webp",           specialtyNames: ["Asesor Financiero", "Mercadotecnia"] },
+  { name: "Idiomas",          image: "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Idiomas.webp",             specialtyNames: ["Inglés", "Ingles", "Francés", "Lenguaje de Señas", "Oratoria"] },
+  { name: "Imagen Personal",  image: "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Imagen-Personal.webp",    specialtyNames: ["Asesor de Imagen", "Maquillaje"] },
+  { name: "Legal",            image: "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Legal%20(1).webp",         specialtyNames: ["Abogado"] },
+  { name: "Psicología",       image: "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Psicologia.webp",          specialtyNames: ["Psicología", "Mindfulness y meditación", "Desarrollo Personal"] },
+  { name: "Vocación",         image: "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Vocacion.webp",            specialtyNames: ["Coaching de vida", "Orientación vocacional", "Guía Motivacional"] },
+];
 
 const steps = [
   {
@@ -199,7 +188,6 @@ export default function Home() {
     ? user.name.split(" ").map((n: string) => n[0]).slice(0, 2).join("").toUpperCase()
     : "?";
 
-  const featuredSpecialties = specialties?.filter((s) => SPECIALTY_IMAGES[s.name]) ?? [];
 
   const specialtiesScrollRef = useRef<HTMLDivElement>(null);
   const [activeDot, setActiveDot] = useState(0);
@@ -219,8 +207,7 @@ export default function Home() {
   };
 
   useEffect(() => {
-    const total = featuredSpecialties.length;
-    if (total === 0) return;
+    const total = CAROUSEL_ITEMS.length;
     const interval = setInterval(() => {
       setActiveDot((prev) => {
         const next = (prev + 1) % total;
@@ -233,7 +220,7 @@ export default function Home() {
       });
     }, 3000);
     return () => clearInterval(interval);
-  }, [featuredSpecialties.length]);
+  }, []);
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-0">
@@ -521,16 +508,16 @@ export default function Home() {
               className="flex gap-4 overflow-x-auto px-10"
               style={{ scrollbarWidth: "none" }}
             >
-              {featuredSpecialties.map((s, i) => (
+              {CAROUSEL_ITEMS.map((item, i) => (
                 <a
-                  href={`/especialidades/${s.id}`}
-                  key={s.id}
+                  href="/especialidades"
+                  key={item.name}
                   onClick={() => setActiveDot(i)}
                   style={{
                     minWidth: "calc(25% - 12px)",
                     flexShrink: 0,
                     height: "220px",
-                    backgroundImage: `url(${SPECIALTY_IMAGES[s.name]})`,
+                    backgroundImage: `url(${item.image})`,
                     backgroundSize: "cover",
                     backgroundPosition: "center",
                   }}
@@ -553,7 +540,7 @@ export default function Home() {
 
           {/* Navigation dots */}
           <div className="flex justify-center gap-2 mt-4">
-            {featuredSpecialties.map((_, i) => (
+            {CAROUSEL_ITEMS.map((_, i) => (
               <button
                 key={i}
                 onClick={() => scrollToIndex(i)}
