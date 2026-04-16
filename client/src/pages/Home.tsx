@@ -513,14 +513,11 @@ export default function Home() {
                   key={item.name}
                   onClick={() => setActiveDot(i)}
                   style={{
-                    minWidth: "calc(25% - 12px)",
-                    flexShrink: 0,
-                    height: "220px",
                     backgroundImage: `url(${item.image})`,
                     backgroundSize: "cover",
                     backgroundPosition: "center",
                   }}
-                  className="relative rounded-2xl overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform"
+                  className="relative flex-shrink-0 w-[85vw] md:w-[calc(50%-8px)] lg:w-[calc(25%-12px)] h-[240px] md:h-[220px] rounded-2xl overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform"
                 >
                   <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
                 </a>
