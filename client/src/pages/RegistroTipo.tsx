@@ -32,11 +32,8 @@ export default function RegistroTipo() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-background">
       {/* Logo */}
-      <a href="/" className="flex items-center gap-2 mb-8">
-        <div className="w-9 h-9 rounded-xl gradient-brand flex items-center justify-center overflow-hidden shadow-md">
-          <img src="/logo-icon.webp" alt="Inteira" className="w-6 h-6 object-contain" />
-        </div>
-        <span className="font-bold text-xl" style={{ fontFamily: "Poppins, sans-serif" }}>inteira</span>
+      <a href="/">
+        <img src="https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/Inteira-Verde-1.webp" alt="Inteira" className="h-10 mb-8" />
       </a>
 
       <h1 className="text-2xl md:text-3xl font-bold mb-2 text-center" style={{ fontFamily: "Poppins, sans-serif" }}>
