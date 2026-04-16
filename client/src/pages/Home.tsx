@@ -570,15 +570,14 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-16 items-center">
 
             {/* Left: image */}
-            <div className="relative">
+            <div className="relative rounded-2xl overflow-hidden shadow-xl" style={{ height: "480px" }}>
               <img
                 src="https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/loyo.webp"
                 alt="Asesoría profesional"
-                className="w-full rounded-3xl object-cover shadow-xl"
-                style={{ maxHeight: "480px" }}
+                className="w-full h-full object-cover object-top"
               />
               {/* Quote card floating */}
-              <div className="absolute bottom-4 left-4 right-4 md:left-6 md:right-auto md:w-64 bg-white rounded-2xl shadow-lg p-4 border border-gray-100">
+              <div className="absolute bottom-4 left-4 w-64 bg-white rounded-2xl shadow-lg p-4 border border-gray-100">
                 <p className="text-sm font-medium text-gray-800 leading-snug">
                   "Encontré al experto ideal en minutos. Fue una experiencia increíble."
                 </p>
