@@ -687,8 +687,7 @@ export default function Home() {
       </section>
 
       {/* ══════════════════════════════════════════
-          PLANS — Mobile: stacked cards app-style
-                  Desktop: grid
+          PLANS — 3-col desktop, stacked mobile
           ══════════════════════════════════════════ */}
       <section id="planes" className="py-8 md:py-20 bg-secondary/20 md:bg-secondary/30">
         <div className="container">
@@ -704,115 +703,120 @@ export default function Home() {
             </p>
           </div>
 
-          {/* Suscripciones */}
-          <div className="mb-4 md:mb-6">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3 md:text-center">
-              Suscripciones Mensuales
-            </p>
-            <div className="grid md:grid-cols-2 gap-3 md:gap-8 md:max-w-3xl md:mx-auto">
-              {/* Plan Básico */}
-              <Card className="border border-border active:scale-[0.99] transition-transform md:hover:border-primary/30 md:hover:shadow-xl md:hover:-translate-y-1">
-                <CardContent className="p-5 md:p-8">
-                  <div className="flex items-start justify-between md:block">
-                    <div>
-                      <h3 className="text-base md:text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>Plan Básico</h3>
-                      <div className="flex items-baseline gap-1 mt-1">
-                        <span className="text-2xl md:text-4xl font-bold text-primary" style={{ fontFamily: "Poppins, sans-serif" }}>${PRICING.PLAN_BASIC_MXN}</span>
-                        <span className="text-muted-foreground text-xs md:text-sm">MXN/mes</span>
-                      </div>
-                    </div>
-                    <Badge className="bg-primary/10 text-primary border-0 text-[10px] md:hidden mt-1">4 asesorías</Badge>
+          {/* Desktop: 3 columns | Mobile: Pro first, then Básico, then Individual */}
+          <div className="flex flex-col-reverse md:grid md:grid-cols-3 md:gap-6 md:items-start gap-4">
+
+            {/* Col 1 — Plan Básico (mobile: shows last via flex-col-reverse ordering) */}
+            <div className="order-2 md:order-1">
+              <Card className="border border-border bg-white hover:shadow-lg transition-shadow">
+                <CardContent className="p-6 md:p-8">
+                  <h3 className="text-lg font-bold text-gray-900" style={{ fontFamily: "Poppins, sans-serif" }}>Plan Básico</h3>
+                  <div className="flex items-baseline gap-1 mt-2 mb-6">
+                    <span className="text-4xl font-bold text-primary" style={{ fontFamily: "Poppins, sans-serif" }}>${PRICING.PLAN_BASIC_MXN}</span>
+                    <span className="text-muted-foreground text-sm">/mes</span>
                   </div>
-                  <ul className="space-y-2 my-4 md:my-6">
-                    {["980 créditos mensuales", "4 asesorías básicas", "Vigencia 60 días", "Todas las especialidades"].map((f, j) => (
-                      <li key={j} className="flex items-center gap-2 text-xs md:text-sm">
-                        <CheckCircle2 className="w-3.5 h-3.5 md:w-4 md:h-4 text-primary flex-shrink-0" />
-                        <span>{f}</span>
+                  <ul className="space-y-3 mb-6">
+                    {[
+                      "980 créditos mensuales",
+                      "4 sesiones básicas",
+                      "Vigencia 60 días",
+                      "Todas las especialidades",
+                    ].map((f, j) => (
+                      <li key={j} className="flex items-center gap-2 text-sm text-gray-700">
+                        <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
+                        {f}
                       </li>
                     ))}
                   </ul>
                   <a href={getLoginUrl()}>
-                    <Button variant="outline" className="w-full border-primary/30 text-primary hover:bg-primary/5 text-sm active:scale-95 transition-transform">
+                    <Button variant="outline" className="w-full border-primary/40 text-primary hover:bg-primary/5">
                       Elegir Plan Básico
                     </Button>
                   </a>
                 </CardContent>
               </Card>
+            </div>
 
-              {/* Plan Pro */}
-              <Card className="relative border-2 border-primary shadow-lg shadow-primary/20 active:scale-[0.99] transition-transform">
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <Badge className="gradient-brand text-white border-0 px-3 py-0.5 text-xs shadow-md">Mas popular</Badge>
+            {/* Col 2 — Plan Pro destacado (mobile: shows first via order) */}
+            <div className="order-1 md:order-2 md:-mt-4 md:-mb-4">
+              <Card className="relative border-0 shadow-2xl shadow-primary/25 overflow-hidden" style={{ background: "linear-gradient(135deg, #3d5e40 0%, #4f7a53 100%)" }}>
+                <div className="absolute top-0 left-0 right-0 flex justify-center pt-4">
+                  <Badge className="bg-white/20 text-white border-white/30 text-xs font-semibold px-3 py-1 backdrop-blur-sm">
+                    ⭐ Más popular
+                  </Badge>
                 </div>
-                <CardContent className="p-5 md:p-8">
-                  <div className="flex items-start justify-between md:block">
-                    <div>
-                      <h3 className="text-base md:text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>Plan Pro</h3>
-                      <div className="flex items-baseline gap-1 mt-1">
-                        <span className="text-2xl md:text-4xl font-bold text-primary" style={{ fontFamily: "Poppins, sans-serif" }}>{PRICING_DISPLAY.PLAN_PRO}</span>
-                        <span className="text-muted-foreground text-xs md:text-sm">MXN/mes</span>
-                      </div>
-                    </div>
-                    <Badge className="gradient-brand text-white border-0 text-[10px] md:hidden mt-1">Premium</Badge>
+                <CardContent className="p-6 md:p-8 pt-14">
+                  <h3 className="text-lg font-bold text-white" style={{ fontFamily: "Poppins, sans-serif" }}>Plan Pro</h3>
+                  <div className="flex items-baseline gap-1 mt-2 mb-6">
+                    <span className="text-5xl font-bold text-white" style={{ fontFamily: "Poppins, sans-serif" }}>{PRICING_DISPLAY.PLAN_PRO}</span>
+                    <span className="text-white/70 text-sm">/mes</span>
                   </div>
-                  <ul className="space-y-2 my-4 md:my-6">
-                    {["2,500 créditos mensuales", "2 asesorías premium", "Vigencia 60 días", "Acceso prioritario", "Soporte 24/7"].map((f, j) => (
-                      <li key={j} className="flex items-center gap-2 text-xs md:text-sm">
-                        <CheckCircle2 className="w-3.5 h-3.5 md:w-4 md:h-4 text-primary flex-shrink-0" />
-                        <span>{f}</span>
+                  <ul className="space-y-3 mb-6">
+                    {[
+                      "2,500 créditos mensuales",
+                      "2 sesiones premium",
+                      "Vigencia 60 días",
+                      "Acceso prioritario",
+                      "Soporte 24/7",
+                      "Precio especial en sesiones",
+                    ].map((f, j) => (
+                      <li key={j} className="flex items-center gap-2 text-sm text-white/90">
+                        <CheckCircle2 className="w-4 h-4 text-white flex-shrink-0" />
+                        {f}
                       </li>
                     ))}
                   </ul>
                   <a href={getLoginUrl()}>
-                    <Button className="w-full gradient-brand text-white border-0 shadow-md shadow-primary/30 text-sm active:scale-95 transition-transform">
+                    <Button className="w-full bg-white text-primary hover:bg-white/90 font-semibold shadow-lg">
                       Elegir Plan Pro
                     </Button>
                   </a>
                 </CardContent>
               </Card>
             </div>
-          </div>
 
-          {/* Compra Individual */}
-          <div className="mt-6 md:mt-12">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3 md:text-center">
-              Compra Individual
-            </p>
-            <div className="grid grid-cols-2 md:grid-cols-2 gap-3 md:gap-6 md:max-w-2xl md:mx-auto">
-              <Card className="border border-border active:scale-[0.99] transition-transform">
-                <CardContent className="p-4 md:p-6">
-                  <h4 className="font-semibold text-sm md:text-base">Sesión Básica</h4>
-                  <p className="text-xs text-muted-foreground mt-1">60 min · Videollamada integrada</p>
-                  <div className="mt-3">
-                    <span className="text-xl md:text-2xl font-bold text-primary" style={{ fontFamily: "Poppins, sans-serif" }}>${PRICING.SESSION_BASIC_MXN}</span>
-                    <span className="text-xs text-muted-foreground ml-1">MXN</span>
-                  </div>
-                  <a href={getLoginUrl()}>
-                    <Button variant="outline" size="sm" className="w-full mt-3 border-primary/30 text-primary text-xs active:scale-95 transition-transform">
-                      Comprar
-                    </Button>
-                  </a>
-                </CardContent>
-              </Card>
-              <Card className="border border-border active:scale-[0.99] transition-transform">
-                <CardContent className="p-4 md:p-6">
-                  <h4 className="font-semibold text-sm md:text-base">Sesión Premium</h4>
-                  <p className="text-xs text-muted-foreground mt-1">60 min · Experto top</p>
-                  <div className="mt-3">
-                    <span className="text-xl md:text-2xl font-bold text-primary" style={{ fontFamily: "Poppins, sans-serif" }}>{PRICING_DISPLAY.SESSION_PREMIUM}</span>
-                    <span className="text-xs text-muted-foreground ml-1">MXN</span>
-                  </div>
-                  <a href={getLoginUrl()}>
-                    <Button variant="outline" size="sm" className="w-full mt-3 border-primary/30 text-primary text-xs active:scale-95 transition-transform">
-                      Comprar
-                    </Button>
-                  </a>
-                </CardContent>
-              </Card>
+            {/* Col 3 — Sesiones individuales (mobile: shows between Pro and Básico) */}
+            <div className="order-3 md:order-3">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3">
+                O paga por sesión
+              </p>
+              <div className="flex flex-col gap-3">
+                <Card className="border border-border bg-white hover:shadow-md transition-shadow">
+                  <CardContent className="p-5">
+                    <h4 className="font-semibold text-gray-900">Sesión Básica</h4>
+                    <p className="text-xs text-muted-foreground mt-0.5">60 min · Videollamada integrada</p>
+                    <div className="flex items-baseline gap-1 mt-3">
+                      <span className="text-2xl font-bold text-primary" style={{ fontFamily: "Poppins, sans-serif" }}>${PRICING.SESSION_BASIC_MXN}</span>
+                      <span className="text-xs text-muted-foreground">MXN</span>
+                    </div>
+                    <a href={getLoginUrl()}>
+                      <Button variant="outline" size="sm" className="w-full mt-3 border-primary/30 text-primary hover:bg-primary/5 text-xs">
+                        Comprar sesión
+                      </Button>
+                    </a>
+                  </CardContent>
+                </Card>
+                <Card className="border border-border bg-white hover:shadow-md transition-shadow">
+                  <CardContent className="p-5">
+                    <h4 className="font-semibold text-gray-900">Sesión Premium</h4>
+                    <p className="text-xs text-muted-foreground mt-0.5">60 min · Experto top</p>
+                    <div className="flex items-baseline gap-1 mt-3">
+                      <span className="text-2xl font-bold text-primary" style={{ fontFamily: "Poppins, sans-serif" }}>{PRICING_DISPLAY.SESSION_PREMIUM}</span>
+                      <span className="text-xs text-muted-foreground">MXN</span>
+                    </div>
+                    <a href={getLoginUrl()}>
+                      <Button variant="outline" size="sm" className="w-full mt-3 border-primary/30 text-primary hover:bg-primary/5 text-xs">
+                        Comprar sesión
+                      </Button>
+                    </a>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
+
           </div>
 
-          <div className="text-center mt-5 md:mt-8">
+          <div className="text-center mt-8 md:mt-10">
             <Link href="/planes">
               <Button variant="ghost" className="text-primary text-sm">
                 Ver todos los planes y detalles
