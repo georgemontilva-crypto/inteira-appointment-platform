@@ -5,6 +5,8 @@ import { useAuth } from "../_core/hooks/useAuth";
 import { trpc } from "../lib/trpc";
 import { toast } from "sonner";
 import logo from "../assets/logo.webp";
+import ChangelogModal from "./ChangelogModal";
+import { APP_VERSION } from "../data/changelog";
 
 const NAV_ITEMS = [
   { label: "Inicio",          icon: "home",     href: "/" },
@@ -81,6 +83,16 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
   const [panelOpen, setPanelOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<PanelTab>("notifications");
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [changelogOpen, setChangelogOpen] = useState(false);
+  const [hasUnseenVersion, setHasUnseenVersion] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("inteira_seen_version") !== APP_VERSION;
+  });
+  const openChangelog = () => {
+    setChangelogOpen(true);
+    setHasUnseenVersion(false);
+    localStorage.setItem("inteira_seen_version", APP_VERSION);
+  };
   const [currentHash, setCurrentHash] = useState(
     typeof window !== "undefined" ? window.location.hash : ""
   );
@@ -425,6 +437,19 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
 
           {/* Footer fixed at bottom */}
           <div className="mt-auto border-t border-[rgba(96,117,98,0.1)]">
+            {/* Changelog button */}
+            <button
+              onClick={openChangelog}
+              className="hover:bg-primary/5 transition-colors relative"
+              style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 12px", width: "100%", border: "none", background: "transparent", color: "#607562", fontSize: "13px", cursor: "pointer" }}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="w-4 h-4 flex-shrink-0"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+              <span>Novedades</span>
+              <span className="ml-auto text-[10px] font-semibold text-primary/70">v{APP_VERSION}</span>
+              {hasUnseenVersion && (
+                <span className="absolute top-2 left-2 w-2 h-2 bg-red-500 rounded-full" />
+              )}
+            </button>
             <button
               onClick={logout}
               className="hover:bg-red-50 hover:text-red-500 transition-colors"
@@ -436,10 +461,11 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
             <div className="p-2 border-t border-[rgba(96,117,98,0.1)]">
               <div className="flex items-center gap-2 px-2 py-1.5 rounded-[9px] bg-[#F7FAFC] border border-[rgba(96,117,98,0.15)] cursor-pointer" onClick={() => openPanel("profile")}>
                 <div className="flex-shrink-0"><UserAvatar size="md" /></div>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="text-[11px] font-medium text-[#333333] truncate">{user?.name ?? "Usuario"}</p>
                   <p className="text-[9px] text-[#607562]">{user?.role === "admin" ? "Admin" : user?.role === "professional" ? "Profesional" : "Usuario"}</p>
                 </div>
+                <span className="text-[9px] text-gray-400 flex-shrink-0">v{APP_VERSION}</span>
               </div>
             </div>
           </div>
@@ -544,8 +570,22 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
               ))}
             </div>
 
-            {/* Sign out */}
-            <div className="p-3 border-t border-[rgba(96,117,98,0.1)]">
+            {/* Changelog + Sign out */}
+            <div className="p-3 border-t border-[rgba(96,117,98,0.1)] space-y-1">
+              <button
+                onClick={() => { openChangelog(); setDrawerOpen(false); }}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-primary/5 transition-colors relative"
+                style={{ border: "none", background: "transparent", cursor: "pointer" }}
+              >
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "rgba(96,117,98,0.1)" }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#607562" strokeWidth="1.8" strokeLinecap="round" className="w-4 h-4"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                </div>
+                <span className="text-[13px] font-medium text-[#607562]">Novedades</span>
+                <span className="ml-auto text-[11px] font-semibold text-primary/60">v{APP_VERSION}</span>
+                {hasUnseenVersion && (
+                  <span className="absolute top-3 left-3 w-2 h-2 bg-red-500 rounded-full" />
+                )}
+              </button>
               <button
                 onClick={() => { logout(); setDrawerOpen(false); }}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-[#fff5f5] transition-colors"
@@ -846,6 +886,9 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
           </div>
         </div>
       )}
+
+      {/* Changelog modal */}
+      <ChangelogModal open={changelogOpen} onClose={() => setChangelogOpen(false)} />
 
       {/* Onboarding modal — blocks UI until user sets their name */}
       {needsOnboarding && (
