@@ -1,4 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import { useRef } from "react";
 import { PRICING, PRICING_DISPLAY } from "@/lib/pricing";
 import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
@@ -17,6 +18,7 @@ import {
   Clock,
   Award,
   ChevronRight,
+  ChevronLeft,
   Brain,
   Scale,
   TrendingUp,
@@ -162,6 +164,29 @@ const defaultSpecialties = [
   { id: 7, name: "Vocación" },
 ] as Array<{ id: number; name: string }>;
 
+function SpecialtyCard({ specialty }: { specialty: { id: number; name: string } }) {
+  return (
+    <div className="flex-shrink-0 w-[85vw] md:w-[calc(50%-6px)] lg:w-[calc(25%-9px)]">
+      {/* Mobile */}
+      <div className="md:hidden flex flex-col items-center gap-2 active:scale-95 transition-transform">
+        <div className={`w-14 h-14 rounded-2xl ${homeSpecialtyBg[specialty.name] ?? "bg-[#607562]"} flex items-center justify-center shadow-md`}>
+          {homeSpecialtyIcon[specialty.name] ?? <Compass className="w-5 h-5 text-white" />}
+        </div>
+        <span className="text-[11px] font-semibold text-center text-foreground leading-tight">{specialty.name}</span>
+      </div>
+      {/* Desktop */}
+      <Card className="hidden md:block group cursor-pointer border-border hover:border-primary/30 hover:shadow-md transition-all duration-200 hover:-translate-y-0.5">
+        <CardContent className="p-4 flex flex-col items-center text-center gap-3">
+          <div className={`w-12 h-12 rounded-2xl ${homeSpecialtyBg[specialty.name] ?? "bg-[#607562]"} flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform duration-200`}>
+            {homeSpecialtyIcon[specialty.name] ?? <Compass className="w-6 h-6 text-white" />}
+          </div>
+          <span className="text-xs font-semibold text-foreground leading-tight">{specialty.name}</span>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 export default function Home() {
   const { user, isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
@@ -176,6 +201,11 @@ export default function Home() {
     : "?";
 
   const displaySpecialties = specialties ?? defaultSpecialties;
+
+  const specialtiesScrollRef = useRef<HTMLDivElement>(null);
+  const scrollSpecialties = (dir: "left" | "right") => {
+    specialtiesScrollRef.current?.scrollBy({ left: dir === "left" ? -300 : 300, behavior: "smooth" });
+  };
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-0">
@@ -446,44 +476,38 @@ export default function Home() {
             </p>
           </div>
 
-          {/* Mobile: horizontal scroll carousel */}
-          <div className="md:hidden overflow-x-auto scrollbar-none pb-2">
-            <div className="flex gap-3 px-5" style={{ width: "max-content" }}>
+          {/* Carousel — all breakpoints */}
+          <div className="relative">
+            {/* Left arrow */}
+            <button
+              onClick={() => scrollSpecialties("left")}
+              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-3 z-10 hidden md:flex w-8 h-8 rounded-full bg-background border border-border shadow-md items-center justify-center text-muted-foreground hover:text-foreground hover:shadow-lg transition-all"
+              aria-label="Anterior"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+
+            {/* Scroll container */}
+            <div
+              ref={specialtiesScrollRef}
+              className="flex gap-3 overflow-x-auto pb-2"
+              style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+            >
               {displaySpecialties.map((specialty) => (
                 <Link key={specialty.id} href={`/especialidades/${specialty.id}`}>
-                  <div className="flex flex-col items-center gap-2 w-20 active:scale-95 transition-transform">
-                    <div
-                      className={`w-14 h-14 rounded-2xl ${homeSpecialtyBg[specialty.name] ?? "bg-[#607562]"} flex items-center justify-center shadow-md`}
-                    >
-                      {homeSpecialtyIcon[specialty.name] ?? <Compass className="w-5 h-5 text-white" />}
-                    </div>
-                    <span className="text-[11px] font-semibold text-center text-foreground leading-tight">
-                      {specialty.name}
-                    </span>
-                  </div>
+                  <SpecialtyCard specialty={specialty} />
                 </Link>
               ))}
             </div>
-          </div>
 
-          {/* Desktop: grid */}
-          <div className="hidden md:grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-            {displaySpecialties.map((specialty) => (
-              <Link key={specialty.id} href={`/especialidades/${specialty.id}`}>
-                <Card className="group cursor-pointer border-border hover:border-primary/30 hover:shadow-md transition-all duration-200 hover:-translate-y-0.5">
-                  <CardContent className="p-4 flex flex-col items-center text-center gap-3">
-                    <div
-                      className={`w-12 h-12 rounded-2xl ${homeSpecialtyBg[specialty.name] ?? "bg-[#607562]"} flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform duration-200`}
-                    >
-                      {homeSpecialtyIcon[specialty.name] ?? <Compass className="w-6 h-6 text-white" />}
-                    </div>
-                    <span className="text-xs font-semibold text-foreground leading-tight">
-                      {specialty.name}
-                    </span>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
+            {/* Right arrow */}
+            <button
+              onClick={() => scrollSpecialties("right")}
+              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-3 z-10 hidden md:flex w-8 h-8 rounded-full bg-background border border-border shadow-md items-center justify-center text-muted-foreground hover:text-foreground hover:shadow-lg transition-all"
+              aria-label="Siguiente"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
           </div>
 
           <div className="text-center mt-5 md:mt-8">
