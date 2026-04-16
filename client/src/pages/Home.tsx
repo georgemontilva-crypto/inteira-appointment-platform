@@ -103,6 +103,11 @@ const homeSpecialtyBg: Record<string, string> = {
   "Recursos Humanos": "bg-[#4a5c4c]",
 };
 
+const EVENT_BANNERS = [
+  { image: "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/Eventos-1.webp" },
+  { image: "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/Interfaz-Inteira.webp" },
+];
+
 const CAROUSEL_ITEMS = [
   { name: "Emprendimiento",   image: "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Emprendimiento.webp",    specialtyNames: ["Emprendimiento", "Coach Deportivo"] },
   { name: "Finanzas",         image: "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Finanzas.webp",           specialtyNames: ["Asesor Financiero", "Mercadotecnia"] },
@@ -207,6 +212,14 @@ export default function Home() {
     }
     setActiveDot(index);
   };
+
+  const [activeEventIndex, setActiveEventIndex] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveEventIndex((prev) => (prev + 1) % EVENT_BANNERS.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const total = CAROUSEL_ITEMS.length;
@@ -688,6 +701,30 @@ export default function Home() {
                   <p className="text-sm text-muted-foreground leading-relaxed">{step.description}</p>
                 </div>
               </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════
+          EVENTS — Auto-sliding banner
+          ══════════════════════════════════════════ */}
+      <section className="py-12 px-4 max-w-6xl mx-auto">
+        <h2 className="text-lg font-semibold text-primary mb-4">Próximos Eventos</h2>
+        <div className="relative rounded-2xl overflow-hidden">
+          <img
+            src={EVENT_BANNERS[activeEventIndex].image}
+            alt="Próximo evento"
+            className="w-full object-cover rounded-2xl transition-opacity duration-500 h-[220px] md:h-[400px]"
+          />
+          <div className="flex justify-center gap-2 mt-3">
+            {EVENT_BANNERS.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setActiveEventIndex(i)}
+                className={`h-2 rounded-full transition-all ${i === activeEventIndex ? "w-6 bg-primary" : "w-2 bg-gray-300"}`}
+                aria-label={`Banner ${i + 1}`}
+              />
             ))}
           </div>
         </div>
