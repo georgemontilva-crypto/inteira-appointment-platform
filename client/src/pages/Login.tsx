@@ -105,13 +105,8 @@ export default function Login() {
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="px-6 py-5 flex items-center">
-        <a href="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl gradient-brand flex items-center justify-center overflow-hidden">
-            <img src="/logo-icon.webp" alt="Inteira" className="w-5 h-5 object-contain" />
-          </div>
-          <span className="font-bold text-lg" style={{ fontFamily: "Poppins, sans-serif" }}>
-            inteira
-          </span>
+        <a href="/">
+          <img src="https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/Inteira-Horizontal-Verde-1%20(1).webp" alt="Inteira" className="h-8" />
         </a>
       </header>
 
