@@ -321,18 +321,18 @@ export default function Home() {
               ) : (
                 <>
                   {/* Mobile */}
-                  <a href={getLoginUrl()} className="md:hidden">
+                  <a href="/login" className="md:hidden">
                     <Button size="sm" variant="outline" className="text-primary border-primary/40 hover:bg-primary/5 text-xs px-3 rounded-full">
                       Entrar
                     </Button>
                   </a>
                   {/* Desktop */}
-                  <a href={getLoginUrl()} className="hidden md:block">
+                  <a href="/login" className="hidden md:block">
                     <Button variant="ghost" size="sm" className="text-primary hover:text-primary">
                       Iniciar sesión
                     </Button>
                   </a>
-                  <a href={getLoginUrl()} className="hidden md:block">
+                  <a href="/registro" className="hidden md:block">
                     <Button size="sm" className="gradient-brand text-white border-0 shadow-md shadow-primary/30">
                       Comenzar gratis
                     </Button>
