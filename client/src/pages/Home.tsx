@@ -166,20 +166,20 @@ const defaultSpecialties = [
 
 function SpecialtyCard({ specialty }: { specialty: { id: number; name: string } }) {
   return (
-    <div className="flex-shrink-0 w-[85vw] md:w-[220px]">
+    <div className="flex-shrink-0 w-[85vw] md:w-[calc(25%-12px)]">
       {/* Mobile */}
-      <div className="md:hidden h-[140px] flex flex-col items-center justify-center gap-3 bg-white rounded-2xl border border-border/50 shadow-sm px-4 active:scale-95 transition-transform">
-        <div className={`w-14 h-14 rounded-2xl ${homeSpecialtyBg[specialty.name] ?? "bg-[#607562]"} flex items-center justify-center shadow-md`}>
-          {homeSpecialtyIcon[specialty.name] ?? <Compass className="w-6 h-6 text-white" />}
+      <div className="md:hidden h-[180px] flex flex-col items-center justify-center gap-3 bg-white rounded-2xl border border-border/50 shadow-sm px-4 active:scale-95 transition-transform">
+        <div className={`w-16 h-16 rounded-2xl ${homeSpecialtyBg[specialty.name] ?? "bg-[#607562]"} flex items-center justify-center shadow-md`}>
+          {homeSpecialtyIcon[specialty.name] ?? <Compass className="w-7 h-7 text-white" />}
         </div>
-        <span className="text-[12px] font-semibold text-center text-foreground leading-tight">{specialty.name}</span>
+        <span className="text-base font-medium text-center text-foreground leading-tight">{specialty.name}</span>
       </div>
       {/* Desktop */}
-      <div className="hidden md:flex h-[140px] flex-col items-center justify-center gap-3 bg-white rounded-2xl border border-border/50 shadow-sm p-6 cursor-pointer group hover:border-primary/30 hover:shadow-md transition-all duration-200 hover:-translate-y-0.5">
-        <div className={`w-12 h-12 rounded-2xl ${homeSpecialtyBg[specialty.name] ?? "bg-[#607562]"} flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform duration-200`}>
-          {homeSpecialtyIcon[specialty.name] ?? <Compass className="w-6 h-6 text-white" />}
+      <div className="hidden md:flex h-[180px] flex-col items-center justify-center gap-3 bg-white rounded-2xl border border-border/50 shadow-sm p-6 cursor-pointer group hover:border-primary/30 hover:shadow-md transition-all duration-200 hover:-translate-y-0.5">
+        <div className={`w-16 h-16 rounded-2xl ${homeSpecialtyBg[specialty.name] ?? "bg-[#607562]"} flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform duration-200`}>
+          {homeSpecialtyIcon[specialty.name] ?? <Compass className="w-7 h-7 text-white" />}
         </div>
-        <span className="text-xs font-semibold text-center text-foreground leading-tight">{specialty.name}</span>
+        <span className="text-base font-medium text-center text-foreground leading-tight">{specialty.name}</span>
       </div>
     </div>
   );
@@ -475,7 +475,7 @@ export default function Home() {
           </div>
 
           {/* Carousel — all breakpoints */}
-          <div className="relative md:px-10">
+          <div className="relative md:px-10 overflow-hidden">
             {/* Left arrow — outside scroll area */}
             <button
               onClick={() => scrollSpecialties("left")}
