@@ -42,6 +42,9 @@ import {
   Briefcase,
   Globe,
   Activity,
+  Search,
+  CalendarCheck,
+  CreditCard,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -555,6 +558,66 @@ export default function Home() {
                 <ChevronRight className="ml-1 w-4 h-4" />
               </Button>
             </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════
+          WHY INTEIRA — Image left + 4 steps right
+          ══════════════════════════════════════════ */}
+      <section className="py-8 md:py-20">
+        <div className="container">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-16 items-center">
+
+            {/* Left: image */}
+            <div className="relative">
+              <img
+                src="https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/loyo.webp"
+                alt="Asesoría profesional"
+                className="w-full rounded-3xl object-cover shadow-xl"
+                style={{ maxHeight: "480px" }}
+              />
+              {/* Quote card floating */}
+              <div className="absolute bottom-4 left-4 right-4 md:left-6 md:right-auto md:w-64 bg-white rounded-2xl shadow-lg p-4 border border-gray-100">
+                <p className="text-sm font-medium text-gray-800 leading-snug">
+                  "Encontré al experto ideal en minutos. Fue una experiencia increíble."
+                </p>
+                <div className="flex items-center gap-2 mt-2">
+                  <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
+                    <Star className="w-3 h-3 text-primary fill-primary" />
+                  </div>
+                  <span className="text-xs text-gray-500">María G. — Cliente verificada</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Right: 4 steps */}
+            <div className="space-y-4">
+              <p className="text-xs font-semibold text-primary uppercase tracking-widest">
+                Por qué Inteira
+              </p>
+              <h2 className="text-2xl md:text-3xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
+                La forma más simple de conectar con expertos
+              </h2>
+
+              {[
+                { icon: <Search className="w-5 h-5 text-primary" />, title: "Búsqueda Simple", description: "Encuentra al especialista que necesitas con filtros inteligentes por área y disponibilidad." },
+                { icon: <CalendarCheck className="w-5 h-5 text-primary" />, title: "Elección fácil y rápida", description: "Revisa perfiles verificados, reseñas reales y agenda en segundos." },
+                { icon: <CreditCard className="w-5 h-5 text-primary" />, title: "Pagos en Línea", description: "Paga de forma segura con tarjeta o saldo de tu cuenta. Sin sorpresas." },
+                { icon: <Video className="w-5 h-5 text-primary" />, title: "Conéctate en Vivo", description: "Sesiones por videollamada integrada desde cualquier dispositivo, sin instalar nada." },
+              ].map((step, i) => (
+                <div key={i} className="flex items-start gap-4 p-4 bg-gray-50 rounded-xl">
+                  <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                    {step.icon}
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900">{step.title}</h3>
+                    <p className="text-sm text-gray-600 mt-1">{step.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
           </div>
         </div>
       </section>
