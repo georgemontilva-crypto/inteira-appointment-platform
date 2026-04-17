@@ -16,7 +16,7 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
     },
-    icon: path.join(__dirname, 'icons', process.platform === 'win32' ? 'icon.ico' : 'icon.png'),
+    icon: path.join(__dirname, 'icons', 'icon.png'),
     title: 'Inteira',
     show: false,
   });
