@@ -6,7 +6,8 @@
   "scripts": {
     "start": "electron .",
     "build:win": "electron-builder --win",
-    "build:mac": "electron-builder --mac"
+    "build:mac": "electron-builder --mac",
+    "icons:generate": "node scripts/generate-icons.cjs"
   },
   "build": {
     "appId": "app.inteira.desktop",
@@ -25,6 +26,7 @@
   },
   "devDependencies": {
     "electron": "^29.0.0",
-    "electron-builder": "^24.0.0"
+    "electron-builder": "^24.0.0",
+    "sharp": "^0.34.5"
   }
 }
