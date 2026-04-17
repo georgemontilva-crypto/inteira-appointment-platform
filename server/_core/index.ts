@@ -820,6 +820,42 @@ async function runStartupMigrations() {
       console.warn('[Migration] restore balance v3 error:', e?.message);
     }
 
+    // Ensure eventBanners table exists
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS \`eventBanners\` (
+        \`id\` INT AUTO_INCREMENT PRIMARY KEY,
+        \`imageUrl\` VARCHAR(500) NOT NULL,
+        \`title\` VARCHAR(200) NULL,
+        \`linkUrl\` VARCHAR(500) NULL,
+        \`position\` INT DEFAULT 0,
+        \`isActive\` TINYINT(1) DEFAULT 1,
+        \`createdAt\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `).catch(() => {});
+    console.log("[Migration] eventBanners table ready");
+
+    // Seed initial event banners if table is empty
+    await new Promise<void>((resolve) => {
+      client.execute(
+        `INSERT INTO eventBanners (imageUrl, title, position, isActive)
+         SELECT * FROM (
+           SELECT 'https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/Eventos-1.webp' AS imageUrl,
+                  'Eventos' AS title, 0 AS position, 1 AS isActive
+           UNION ALL
+           SELECT 'https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/Interfaz-Inteira.webp',
+                  'Interfaz Inteira', 1, 1
+         ) AS rows
+         WHERE NOT EXISTS (SELECT 1 FROM eventBanners LIMIT 1)`,
+        [],
+        (err: any, result: any) => {
+          if (err) console.warn("[Migration] eventBanners seed:", err?.message);
+          else if (result?.affectedRows > 0) console.log("[Migration] eventBanners seeded with 2 initial banners");
+          else console.log("[Migration] eventBanners already has data, skipping seed");
+          resolve();
+        }
+      );
+    });
+
   } catch (err) {
     console.error("[Migration] Startup migration failed:", err);
   }

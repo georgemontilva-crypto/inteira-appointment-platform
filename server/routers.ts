@@ -1727,6 +1727,92 @@ export const appRouter = router({
         });
         return { success: true };
       }),
+
+    listBanners: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+      const dbInst = await db.getDb();
+      if (!dbInst) return [];
+      const client = (dbInst as any).$client;
+      return new Promise<{ id: number; imageUrl: string; title: string | null; linkUrl: string | null; position: number; isActive: number }[]>((resolve) => {
+        client.execute(
+          "SELECT id, imageUrl, title, linkUrl, position, isActive FROM eventBanners ORDER BY position ASC",
+          [],
+          (err: any, rows: any) => {
+            if (err) { console.error("[listBanners]", err?.message); resolve([]); }
+            else resolve(Array.isArray(rows) ? rows : []);
+          }
+        );
+      });
+    }),
+
+    createBanner: protectedProcedure
+      .input(z.object({
+        imageUrl: z.string().url(),
+        title: z.string().optional(),
+        linkUrl: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+        const dbInst = await db.getDb();
+        if (!dbInst) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const client = (dbInst as any).$client;
+        // Get max position
+        const maxPos = await new Promise<number>((resolve) => {
+          client.execute("SELECT COALESCE(MAX(position), -1) AS maxPos FROM eventBanners", [], (err: any, rows: any) => {
+            const pos = Array.isArray(rows) ? rows[0]?.maxPos : rows?.maxPos;
+            resolve(Number(pos ?? -1));
+          });
+        });
+        await new Promise<void>((resolve, reject) => {
+          client.execute(
+            "INSERT INTO eventBanners (imageUrl, title, linkUrl, position, isActive) VALUES (?, ?, ?, ?, 1)",
+            [input.imageUrl, input.title ?? null, input.linkUrl ?? null, maxPos + 1],
+            (err: any) => { if (err) reject(err); else resolve(); }
+          );
+        });
+        return { success: true };
+      }),
+
+    deleteBanner: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+        const dbInst = await db.getDb();
+        if (!dbInst) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const client = (dbInst as any).$client;
+        await new Promise<void>((resolve, reject) => {
+          client.execute("DELETE FROM eventBanners WHERE id = ?", [input.id], (err: any) => { if (err) reject(err); else resolve(); });
+        });
+        return { success: true };
+      }),
+
+    toggleBanner: protectedProcedure
+      .input(z.object({ id: z.number(), isActive: z.boolean() }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+        const dbInst = await db.getDb();
+        if (!dbInst) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const client = (dbInst as any).$client;
+        await new Promise<void>((resolve, reject) => {
+          client.execute("UPDATE eventBanners SET isActive = ? WHERE id = ?", [input.isActive ? 1 : 0, input.id], (err: any) => { if (err) reject(err); else resolve(); });
+        });
+        return { success: true };
+      }),
+
+    reorderBanners: protectedProcedure
+      .input(z.object({ ids: z.array(z.number()) }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+        const dbInst = await db.getDb();
+        if (!dbInst) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const client = (dbInst as any).$client;
+        for (let i = 0; i < input.ids.length; i++) {
+          await new Promise<void>((resolve) => {
+            client.execute("UPDATE eventBanners SET position = ? WHERE id = ?", [i, input.ids[i]], (err: any) => { if (err) console.error("[reorderBanners]", err?.message); resolve(); });
+          });
+        }
+        return { success: true };
+      }),
   }),
   // Specialty routes
   specialty: router({
@@ -1866,7 +1952,25 @@ export const appRouter = router({
       }),
   }),
 
-  // Notifications routes
+  // Public routes (no auth required)
+  public: router({
+    getBanners: publicProcedure.query(async () => {
+      const dbInst = await db.getDb();
+      if (!dbInst) return [];
+      const client = (dbInst as any).$client;
+      return new Promise<{ id: number; imageUrl: string; title: string | null; linkUrl: string | null; position: number }[]>((resolve) => {
+        client.execute(
+          "SELECT id, imageUrl, title, linkUrl, position FROM eventBanners WHERE isActive = 1 ORDER BY position ASC",
+          [],
+          (err: any, rows: any) => {
+            if (err) { console.error("[getBanners]", err?.message); resolve([]); }
+            else resolve(Array.isArray(rows) ? rows : []);
+          }
+        );
+      });
+    }),
+  }),
+
   notifications: router({
     getAll: protectedProcedure
       .input(z.object({ audience: z.enum(["user", "professional", "all"]).default("user") }).optional())

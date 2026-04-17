@@ -27,7 +27,7 @@ import {
   Star, Activity, CreditCard, UserCheck, RefreshCw, Wrench,
   ChevronDown, ChevronUp, FileText, ExternalLink, User,
   Trash2, Pencil, Stethoscope, Tag, Percent, ToggleLeft, ToggleRight,
-  FolderOpen, X, Search,
+  FolderOpen, X, Search, Image, Link2, Upload,
   // specialty icons
   Brain, Apple, Target, Leaf, Heart, Compass, Scale, DollarSign,
   Mic2, Sparkles, Sun, GraduationCap, Briefcase, Globe,
@@ -193,7 +193,9 @@ const STATUS_MAP: Record<string, { label: string; cls: string }> = {
 
 export default function AdminDashboard() {
   const { user, isAuthenticated, loading } = useAuth();
-  const [activeTab, setActiveTab] = useState<"overview" | "profesionales" | "activos" | "especialidades" | "planes" | "herramientas" | "codigos" | "retiros">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "profesionales" | "activos" | "especialidades" | "planes" | "herramientas" | "codigos" | "retiros" | "banners">("overview");
+  const [bannerForm, setBannerForm] = useState({ imageUrl: "", title: "", linkUrl: "" });
+  const [bannerUploading, setBannerUploading] = useState(false);
   const [rejectReason, setRejectReason] = useState<Record<number, string>>({});
   const [proofFile, setProofFile] = useState<Record<number, { base64: string; name: string; mimeType: string } | null>>({});
   const [tierSelect, setTierSelect] = useState<Record<number, "basic" | "pro">>({});
@@ -231,6 +233,20 @@ export default function AdminDashboard() {
   const { data: profsBySpecialty } = trpc.admin.getProfessionalsBySpecialty.useQuery(undefined, { enabled: isAuthenticated });
   const { data: activeProfessionals, refetch: refetchActiveProfessionals } = trpc.admin.getActiveProfessionals.useQuery(undefined, { enabled: isAuthenticated });
   const { data: allWithdrawals, refetch: refetchWithdrawals } = trpc.admin.getPendingWithdrawals.useQuery(undefined, { enabled: isAuthenticated });
+  const { data: banners, refetch: refetchBanners } = trpc.admin.listBanners.useQuery(undefined, { enabled: isAuthenticated });
+
+  const createBannerMutation = trpc.admin.createBanner.useMutation({
+    onSuccess: () => { refetchBanners(); setBannerForm({ imageUrl: "", title: "", linkUrl: "" }); toast.success("Banner agregado"); },
+    onError: () => toast.error("Error al agregar banner"),
+  });
+  const deleteBannerMutation = trpc.admin.deleteBanner.useMutation({
+    onSuccess: () => { refetchBanners(); toast.success("Banner eliminado"); },
+    onError: () => toast.error("Error al eliminar banner"),
+  });
+  const toggleBannerMutation = trpc.admin.toggleBanner.useMutation({
+    onSuccess: () => refetchBanners(),
+    onError: () => toast.error("Error al actualizar banner"),
+  });
 
   const approveMutation = trpc.admin.approveProfessional.useMutation({
     onSuccess: () => {
@@ -432,6 +448,7 @@ export default function AdminDashboard() {
           <div className="flex gap-1 overflow-x-auto scrollbar-none" style={{ WebkitOverflowScrolling: "touch" }}>
             {([
               { key: "overview",        label: "Resumen",        icon: <BarChart3 className="w-4 h-4" /> },
+              { key: "banners",         label: "Banners",        icon: <Image className="w-4 h-4" /> },
               { key: "profesionales",   label: "Solicitudes",          icon: <Users className="w-4 h-4" /> },
               { key: "activos",         label: "Profesionales activos", icon: <UserCheck className="w-4 h-4" /> },
               { key: "especialidades",  label: "Especialidades", icon: <Award className="w-4 h-4" /> },
@@ -468,6 +485,151 @@ export default function AdminDashboard() {
       </div>
 
       <div className="container py-6 space-y-6">
+
+        {/* ══ TAB: BANNERS ══════════════════════════════════════════════════ */}
+        {activeTab === "banners" && (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Image className="w-5 h-5 text-primary" />
+                  Banners de eventos
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Current banners list */}
+                {(banners ?? []).length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-6">Sin banners. Agrega uno abajo.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {(banners ?? []).map((banner) => (
+                      <div key={banner.id} className="flex items-center gap-3 p-3 border rounded-xl">
+                        <img
+                          src={banner.imageUrl}
+                          alt={banner.title ?? "Banner"}
+                          className="w-20 h-12 object-cover rounded-lg flex-shrink-0"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{banner.title ?? <span className="text-muted-foreground italic">Sin título</span>}</p>
+                          {banner.linkUrl && (
+                            <p className="text-xs text-muted-foreground flex items-center gap-1 truncate">
+                              <Link2 className="w-3 h-3" /> {banner.linkUrl}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <button
+                            onClick={() => toggleBannerMutation.mutate({ id: banner.id, isActive: !banner.isActive })}
+                            title={banner.isActive ? "Desactivar" : "Activar"}
+                            className="text-muted-foreground hover:text-primary transition-colors"
+                          >
+                            {banner.isActive ? <ToggleRight className="w-6 h-6 text-primary" /> : <ToggleLeft className="w-6 h-6" />}
+                          </button>
+                          <button
+                            onClick={() => { if (confirm("¿Eliminar este banner?")) deleteBannerMutation.mutate({ id: banner.id }); }}
+                            className="text-muted-foreground hover:text-destructive transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Add banner form */}
+                <div className="border-t pt-4 space-y-3">
+                  <p className="text-sm font-semibold">Agregar banner</p>
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-muted-foreground">URL de imagen *</label>
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="https://..."
+                        value={bannerForm.imageUrl}
+                        onChange={(e) => setBannerForm((f) => ({ ...f, imageUrl: e.target.value }))}
+                        className="flex-1"
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-shrink-0"
+                        onClick={() => {
+                          const input = document.createElement("input");
+                          input.type = "file";
+                          input.accept = "image/*";
+                          input.onchange = async () => {
+                            const file = input.files?.[0];
+                            if (!file) return;
+                            setBannerUploading(true);
+                            try {
+                              const reader = new FileReader();
+                              reader.onload = async () => {
+                                const base64 = (reader.result as string).split(",")[1];
+                                const resp = await fetch("/api/upload/professional-photo", {
+                                  method: "POST",
+                                  headers: { "Content-Type": "application/json" },
+                                  credentials: "include",
+                                  body: JSON.stringify({ base64, mimeType: file.type, fileName: file.name }),
+                                });
+                                const data = await resp.json();
+                                if (data.url) setBannerForm((f) => ({ ...f, imageUrl: data.url }));
+                                else toast.error("Error al subir imagen");
+                              };
+                              reader.readAsDataURL(file);
+                            } catch {
+                              toast.error("Error al subir imagen");
+                            } finally {
+                              setBannerUploading(false);
+                            }
+                          };
+                          input.click();
+                        }}
+                        disabled={bannerUploading}
+                      >
+                        <Upload className="w-4 h-4 mr-1" />
+                        {bannerUploading ? "Subiendo..." : "Subir"}
+                      </Button>
+                    </div>
+                    {bannerForm.imageUrl && (
+                      <img src={bannerForm.imageUrl} alt="Preview" className="w-full max-h-32 object-cover rounded-lg" />
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Título (opcional)</label>
+                    <Input
+                      placeholder="Ej: Webinar gratuito de mindfulness"
+                      value={bannerForm.title}
+                      onChange={(e) => setBannerForm((f) => ({ ...f, title: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Link al hacer clic (opcional)</label>
+                    <Input
+                      placeholder="https://..."
+                      value={bannerForm.linkUrl}
+                      onChange={(e) => setBannerForm((f) => ({ ...f, linkUrl: e.target.value }))}
+                    />
+                  </div>
+                  <Button
+                    onClick={() => {
+                      if (!bannerForm.imageUrl) { toast.error("La URL de imagen es requerida"); return; }
+                      createBannerMutation.mutate({
+                        imageUrl: bannerForm.imageUrl,
+                        title: bannerForm.title || undefined,
+                        linkUrl: bannerForm.linkUrl || undefined,
+                      });
+                    }}
+                    disabled={createBannerMutation.isPending || !bannerForm.imageUrl}
+                    className="w-full"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    {createBannerMutation.isPending ? "Agregando..." : "Agregar banner"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* ══ TAB: OVERVIEW ══════════════════════════════════════════════════ */}
         {activeTab === "overview" && (

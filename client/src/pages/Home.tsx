@@ -103,9 +103,9 @@ const homeSpecialtyBg: Record<string, string> = {
   "Recursos Humanos": "bg-[#4a5c4c]",
 };
 
-const EVENT_BANNERS = [
-  { image: "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/Eventos-1.webp" },
-  { image: "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/Interfaz-Inteira.webp" },
+const FALLBACK_BANNERS = [
+  { imageUrl: "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/Eventos-1.webp", title: null, linkUrl: null },
+  { imageUrl: "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/Interfaz-Inteira.webp", title: null, linkUrl: null },
 ];
 
 const CAROUSEL_ITEMS = [
@@ -187,6 +187,8 @@ export default function Home() {
   const [, navigate] = useLocation();
   const { data: specialties } = trpc.specialty.getAll.useQuery();
   const { data: plans } = trpc.subscriptionPlan.getAll.useQuery();
+  const { data: bannersData } = trpc.public.getBanners.useQuery();
+  const eventBanners = (bannersData && bannersData.length > 0) ? bannersData : FALLBACK_BANNERS;
   const logout = trpc.auth.logout.useMutation({
     onSuccess: () => window.location.reload(),
   });
@@ -216,10 +218,10 @@ export default function Home() {
   const [activeEventIndex, setActiveEventIndex] = useState(0);
   useEffect(() => {
     const interval = setInterval(() => {
-      setActiveEventIndex((prev) => (prev + 1) % EVENT_BANNERS.length);
+      setActiveEventIndex((prev) => (prev + 1) % eventBanners.length);
     }, 4000);
     return () => clearInterval(interval);
-  }, []);
+  }, [eventBanners.length]);
 
   useEffect(() => {
     const total = CAROUSEL_ITEMS.length;
@@ -712,13 +714,23 @@ export default function Home() {
       <section className="py-12 px-4 max-w-6xl mx-auto">
         <h2 className="text-lg font-semibold text-primary mb-4">Próximos Eventos</h2>
         <div className="relative rounded-2xl overflow-hidden">
-          <img
-            src={EVENT_BANNERS[activeEventIndex].image}
-            alt="Próximo evento"
-            className="w-full object-cover rounded-2xl transition-opacity duration-500 h-[220px] md:h-[400px]"
-          />
+          {eventBanners[activeEventIndex]?.linkUrl ? (
+            <a href={eventBanners[activeEventIndex].linkUrl!} target="_blank" rel="noopener noreferrer">
+              <img
+                src={eventBanners[activeEventIndex].imageUrl}
+                alt={eventBanners[activeEventIndex].title ?? "Próximo evento"}
+                className="w-full object-cover rounded-2xl transition-opacity duration-500 h-[220px] md:h-[400px]"
+              />
+            </a>
+          ) : (
+            <img
+              src={eventBanners[activeEventIndex]?.imageUrl}
+              alt={eventBanners[activeEventIndex]?.title ?? "Próximo evento"}
+              className="w-full object-cover rounded-2xl transition-opacity duration-500 h-[220px] md:h-[400px]"
+            />
+          )}
           <div className="flex justify-center gap-2 mt-3">
-            {EVENT_BANNERS.map((_, i) => (
+            {eventBanners.map((_, i) => (
               <button
                 key={i}
                 onClick={() => setActiveEventIndex(i)}
