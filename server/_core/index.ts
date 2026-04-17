@@ -15,6 +15,9 @@ import { storagePut } from "../storage";
 import { registerStripeRoutes } from "../stripe";
 import { sdk } from "./sdk";
 
+// In-memory rate limit for anonymous uploads (10 per IP per hour)
+const anonUploadLimit = new Map<string, { count: number; resetAt: number }>();
+
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
     const server = net.createServer();
@@ -891,7 +894,18 @@ async function startServer() {
     try {
       let user = null;
       try { user = await sdk.authenticateRequest(req); } catch { user = null; }
-      if (!user) return res.status(401).json({ error: "Unauthorized" });
+
+      // Anonymous uploads (new specialist registration) — rate-limit strictly
+      if (!user) {
+        const ip = String(req.headers["x-forwarded-for"] ?? req.ip ?? "unknown");
+        const now = Date.now();
+        const limit = anonUploadLimit.get(ip);
+        if (limit && now < limit.resetAt && limit.count >= 10) {
+          return res.status(429).json({ error: "Demasiados intentos. Espera una hora." });
+        }
+        if (limit && now < limit.resetAt) limit.count++;
+        else anonUploadLimit.set(ip, { count: 1, resetAt: now + 3_600_000 });
+      }
 
       const { base64, mimeType, fileName } = req.body as {
         base64: string;
@@ -914,7 +928,8 @@ async function startServer() {
       }
 
       const ext = mimeType.split("/")[1] ?? "jpg";
-      const key = `professional-photos/${user.id}-${Date.now()}.${ext}`;
+      const folder = user ? "professional-photos" : "register-temp";
+      const key = `${folder}/${user?.id ?? "anon"}-${Date.now()}.${ext}`;
       const { url } = await storagePut(key, buffer, mimeType);
 
       return res.json({ url });
