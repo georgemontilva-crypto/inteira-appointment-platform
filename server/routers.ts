@@ -494,6 +494,7 @@ export const appRouter = router({
         // Create user via raw SQL (TiDB callback pattern)
         const dbInst = await db.getDb();
         if (!dbInst) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB no disponible" });
+        const rawClient = (dbInst as any).$client;
 
         const openId = `email_${Date.now()}_${Math.random().toString(36).slice(2)}`;
         const safeName = input.fullName.trim().replace(/'/g, "''");
@@ -502,7 +503,7 @@ export const appRouter = router({
         const now = new Date().toISOString().slice(0, 19).replace("T", " ");
 
         const newUser = await new Promise<{ id: number }>((resolve, reject) => {
-          dbInst.execute(
+          rawClient.execute(
             `INSERT INTO \`users\` (\`openId\`, \`email\`, \`name\`, \`role\`, \`loginMethod\`, \`createdAt\`, \`updatedAt\`)
              VALUES ('${safeOpenId}', '${safeEmail}', '${safeName}', 'user', 'email', '${now}', '${now}')`,
             [],
