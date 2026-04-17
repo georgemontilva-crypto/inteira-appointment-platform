@@ -108,3 +108,7 @@ temp/
 
 # Webdev artifacts (checkpoint zips, migrations, etc.)
 .webdev/
+
+# Electron desktop app — generated artifacts
+electron/node_modules/
+electron/dist/
