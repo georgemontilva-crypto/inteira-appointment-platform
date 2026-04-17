@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      height: 100vh;
+      display: flex;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    /* Mitad izquierda — imagen de fondo */
+    .left {
+      width: 55%;
+      background-image: url('https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/banner%20windows-01.jpg');
+      background-size: cover;
+      background-position: center;
+      position: relative;
+    }
+    .left-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to right, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.1) 100%);
+    }
+    .left-content {
+      position: absolute;
+      bottom: 40px;
+      left: 40px;
+      color: white;
+    }
+    .left-content h2 {
+      font-size: 26px;
+      font-weight: 700;
+      line-height: 1.3;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.4);
+      max-width: 280px;
+    }
+    .left-content p {
+      font-size: 14px;
+      opacity: 0.85;
+      margin-top: 8px;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    }
+
+    /* Mitad derecha — formulario */
+    .right {
+      width: 45%;
+      background: #ffffff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 40px;
+    }
+    .logo { width: 160px; margin-bottom: 32px; }
+    .welcome { font-size: 22px; font-weight: 700; color: #1a2e26; margin-bottom: 6px; }
+    .subtitle { font-size: 13px; color: #6b7280; margin-bottom: 36px; text-align: center; }
+
+    .btn {
+      width: 100%;
+      padding: 13px 24px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+      margin-bottom: 10px;
+    }
+    .btn-primary {
+      background: #2d4a3e;
+      color: white;
+    }
+    .btn-primary:hover { background: #1a2e26; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(45,74,62,0.3); }
+    .btn-secondary {
+      background: white;
+      color: #2d4a3e;
+      border: 2px solid #2d4a3e;
+    }
+    .btn-secondary:hover { background: #f0f7f4; transform: translateY(-1px); }
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      margin: 8px 0 16px;
+      color: #9ca3af;
+      font-size: 12px;
+    }
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #e5e7eb;
+    }
+    .btn-ghost {
+      background: none;
+      border: none;
+      color: #6b7280;
+      font-size: 12px;
+      cursor: pointer;
+      text-decoration: underline;
+      margin-top: 16px;
+    }
+    .version { font-size: 11px; color: #d1d5db; margin-top: 24px; }
+  </style>
+</head>
+<body>
+  <div class="left">
+    <div class="left-overlay"></div>
+    <div class="left-content">
+      <h2>Tu bienestar, a un clic de distancia</h2>
+      <p>Expertos verificados disponibles cuando los necesitas</p>
+    </div>
+  </div>
+
+  <div class="right">
+    <img class="logo" src="https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/Inteira-Verde-1.webp" />
+    <p class="welcome">Bienvenido a Inteira</p>
+    <p class="subtitle">Conecta con especialistas de calidad</p>
+
+    <button class="btn btn-primary" onclick="navigate('/login')">Iniciar sesión</button>
+    <div class="divider">o</div>
+    <button class="btn btn-secondary" onclick="navigate('/registro')">Crear cuenta gratis</button>
+    <button class="btn-ghost" onclick="navigate('/')">Explorar la plataforma</button>
+    <span class="version">Inteira Desktop v1.2.0</span>
+  </div>
+
+  <script>
+    function navigate(path) {
+      window.electronAPI.navigate(path);
+    }
+  </script>
+</body>
+</html>

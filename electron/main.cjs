@@ -1,6 +1,8 @@
 const { app, BrowserWindow, Notification, ipcMain } = require('electron');
 const path = require('path');
 
+const BASE_URL = 'https://inteira.app';
+
 let mainWindow;
 
 function createWindow() {
@@ -19,10 +21,18 @@ function createWindow() {
     show: false,
   });
 
-  mainWindow.loadURL('https://inteira.app');
+  // Load splash screen first
+  mainWindow.loadFile(path.join(__dirname, 'splash.html'));
   mainWindow.setMenuBarVisibility(false);
   mainWindow.once('ready-to-show', () => mainWindow.show());
 }
+
+// Navigate from splash to a path on inteira.app
+ipcMain.on('navigate', (_, routePath) => {
+  if (!mainWindow) return;
+  const safe = routePath.startsWith('/') ? routePath : '/' + routePath;
+  mainWindow.loadURL(BASE_URL + safe);
+});
 
 ipcMain.on('notify', (_, { title, body }) => {
   if (Notification.isSupported()) {
