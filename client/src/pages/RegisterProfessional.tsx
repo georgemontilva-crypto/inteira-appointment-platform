@@ -498,8 +498,13 @@ export default function RegisterProfessional() {
                       Opcional — da más confianza
                     </span>
                   </div>
-                  <Input id="licenseNumber" placeholder="Ej: 12345678 (opcional)"
+                  <Input id="licenseNumber" placeholder="Ej: 12345678 — Cédula SEP (no CURP)"
                     value={form.licenseNumber} onChange={(e) => handleChange("licenseNumber", e.target.value)} />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Este es el número de cédula profesional emitido por la SEP que certifica tu título universitario —{" "}
+                    <strong> no es tu CURP ni tu cédula de identidad personal</strong>.{" "}
+                    Puedes verificarlo en <a href="https://cedulaprofesional.sep.gob.mx" target="_blank" className="text-primary underline">cedulaprofesional.sep.gob.mx</a>
+                  </p>
                 </div>
 
                 {/* Certificaciones (opcional) */}
