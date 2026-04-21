@@ -866,8 +866,8 @@ export async function getRecentAppointments(limit: number = 10) {
        LEFT JOIN users pu ON p.userId = pu.id
        LEFT JOIN specialties s ON a.specialtyId = s.id
        ORDER BY a.appointmentDate DESC
-       LIMIT ?`,
-      [limit],
+       LIMIT ${Number(limit)}`,
+      [],
       (err: any, results: any) => {
         if (err) reject(err);
         else resolve(Array.isArray(results) ? results : []);
