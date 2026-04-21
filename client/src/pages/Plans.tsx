@@ -1,9 +1,9 @@
 import DashboardLayout from "../components/DashboardLayout";
-import { getLoginUrl } from "@/const";
 import { PRICING_DISPLAY } from "@/lib/pricing";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 
 // Mapa de nombre de plan → productType de Stripe
 const PLAN_PRODUCT_MAP: Record<string, string> = {
@@ -99,6 +99,7 @@ const NORMAS = [
 
 export default function Plans() {
   const { isAuthenticated, user } = useAuth();
+  const [, navigate] = useLocation();
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
   // Detectar retorno de Stripe
@@ -115,7 +116,8 @@ export default function Plans() {
 
   const handleSelectPlan = async (planName: string) => {
     if (!isAuthenticated) {
-      window.location.href = getLoginUrl();
+      toast.info("Crea una cuenta para continuar");
+      navigate("/registro");
       return;
     }
     const productType = PLAN_PRODUCT_MAP[planName];

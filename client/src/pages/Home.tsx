@@ -1,5 +1,6 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useRef, useState, useEffect } from "react";
+import { toast } from "sonner";
 import { PRICING, PRICING_DISPLAY } from "@/lib/pricing";
 import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
@@ -185,6 +186,7 @@ const defaultSpecialties = [
 export default function Home() {
   const { user, isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const { data: specialties } = trpc.specialty.getAll.useQuery();
   const { data: plans } = trpc.subscriptionPlan.getAll.useQuery();
   const { data: bannersData } = trpc.public.getBanners.useQuery();
@@ -197,6 +199,32 @@ export default function Home() {
     ? user.name.split(" ").map((n: string) => n[0]).slice(0, 2).join("").toUpperCase()
     : "?";
 
+
+  const handlePlanClick = async (productType: string, label: string) => {
+    if (!isAuthenticated) {
+      toast.info("Crea una cuenta para continuar");
+      navigate("/registro");
+      return;
+    }
+    setLoadingPlan(label);
+    try {
+      const res = await fetch("/api/stripe/create-checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productType }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error(data.error ?? "Error desconocido");
+      }
+    } catch (err) {
+      toast.error("Error al iniciar el pago. Intenta de nuevo.");
+      console.error("[Stripe]", err);
+      setLoadingPlan(null);
+    }
+  };
 
   const specialtiesScrollRef = useRef<HTMLDivElement>(null);
   const [activeDot, setActiveDot] = useState(0);
@@ -760,12 +788,12 @@ export default function Home() {
           </div>
 
           {/* Desktop: 3 columns | Mobile: Pro first, then Básico, then Individual */}
-          <div className="flex flex-col-reverse md:grid md:grid-cols-3 md:gap-6 md:items-start gap-4">
+          <div className="flex flex-col-reverse md:grid md:grid-cols-3 md:gap-6 md:items-stretch gap-4">
 
             {/* Col 1 — Plan Básico (mobile: shows last via flex-col-reverse ordering) */}
             <div className="order-2 md:order-1">
-              <Card className="border border-border bg-white hover:shadow-lg transition-shadow">
-                <CardContent className="p-6 md:p-8">
+              <Card className="border border-border bg-white hover:shadow-lg transition-shadow h-full flex flex-col">
+                <CardContent className="p-6 md:p-8 flex flex-col flex-1">
                   <h3 className="text-lg font-bold text-gray-900" style={{ fontFamily: "Poppins, sans-serif" }}>Plan Básico</h3>
                   <div className="flex items-baseline gap-1 mt-2 mb-6">
                     <span className="text-4xl font-bold text-primary" style={{ fontFamily: "Poppins, sans-serif" }}>${PRICING.PLAN_BASIC_MXN}</span>
@@ -784,24 +812,27 @@ export default function Home() {
                       </li>
                     ))}
                   </ul>
-                  <a href={getLoginUrl()}>
-                    <Button variant="outline" className="w-full border-primary/40 text-primary hover:bg-primary/5">
-                      Elegir Plan Básico
-                    </Button>
-                  </a>
+                  <Button
+                    variant="outline"
+                    className="w-full border-primary/40 text-primary hover:bg-primary/5 mt-auto"
+                    disabled={loadingPlan === "Plan Básico"}
+                    onClick={() => handlePlanClick("plan_basic", "Plan Básico")}
+                  >
+                    {loadingPlan === "Plan Básico" ? "Procesando..." : "Elegir Plan Básico"}
+                  </Button>
                 </CardContent>
               </Card>
             </div>
 
             {/* Col 2 — Plan Pro destacado (mobile: shows first via order) */}
             <div className="order-1 md:order-2 md:-mt-4 md:-mb-4">
-              <Card className="relative border-0 shadow-2xl shadow-primary/25 overflow-hidden" style={{ background: "linear-gradient(135deg, #3d5e40 0%, #4f7a53 100%)" }}>
+              <Card className="relative border-0 shadow-2xl shadow-primary/25 overflow-hidden h-full flex flex-col" style={{ background: "linear-gradient(135deg, #3d5e40 0%, #4f7a53 100%)" }}>
                 <div className="absolute top-0 left-0 right-0 flex justify-center pt-4">
                   <Badge className="bg-white/20 text-white border-white/30 text-xs font-semibold px-3 py-1 backdrop-blur-sm">
                     ⭐ Más popular
                   </Badge>
                 </div>
-                <CardContent className="p-6 md:p-8 pt-14">
+                <CardContent className="p-6 md:p-8 pt-14 flex flex-col flex-1">
                   <h3 className="text-lg font-bold text-white" style={{ fontFamily: "Poppins, sans-serif" }}>Plan Pro</h3>
                   <div className="flex items-baseline gap-1 mt-2 mb-6">
                     <span className="text-5xl font-bold text-white" style={{ fontFamily: "Poppins, sans-serif" }}>{PRICING_DISPLAY.PLAN_PRO}</span>
@@ -822,11 +853,13 @@ export default function Home() {
                       </li>
                     ))}
                   </ul>
-                  <a href={getLoginUrl()}>
-                    <Button className="w-full bg-white text-primary hover:bg-white/90 font-semibold shadow-lg">
-                      Elegir Plan Pro
-                    </Button>
-                  </a>
+                  <Button
+                    className="w-full bg-white text-primary hover:bg-white/90 font-semibold shadow-lg mt-auto"
+                    disabled={loadingPlan === "Plan Pro"}
+                    onClick={() => handlePlanClick("plan_pro", "Plan Pro")}
+                  >
+                    {loadingPlan === "Plan Pro" ? "Procesando..." : "Elegir Plan Pro"}
+                  </Button>
                 </CardContent>
               </Card>
             </div>
@@ -837,34 +870,42 @@ export default function Home() {
                 O paga por sesión
               </p>
               <div className="flex flex-col gap-3">
-                <Card className="border border-border bg-white hover:shadow-md transition-shadow">
-                  <CardContent className="p-5">
+                <Card className="border border-border bg-white hover:shadow-md transition-shadow h-full flex flex-col">
+                  <CardContent className="p-5 flex flex-col flex-1">
                     <h4 className="font-semibold text-gray-900">Sesión Básica</h4>
                     <p className="text-xs text-muted-foreground mt-0.5">60 min · Videollamada integrada</p>
                     <div className="flex items-baseline gap-1 mt-3">
                       <span className="text-2xl font-bold text-primary" style={{ fontFamily: "Poppins, sans-serif" }}>${PRICING.SESSION_BASIC_MXN}</span>
                       <span className="text-xs text-muted-foreground">MXN</span>
                     </div>
-                    <a href={getLoginUrl()}>
-                      <Button variant="outline" size="sm" className="w-full mt-3 border-primary/30 text-primary hover:bg-primary/5 text-xs">
-                        Comprar sesión
-                      </Button>
-                    </a>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full mt-auto border-primary/30 text-primary hover:bg-primary/5 text-xs"
+                      disabled={loadingPlan === "Sesión Básica"}
+                      onClick={() => handlePlanClick("individual_basic", "Sesión Básica")}
+                    >
+                      {loadingPlan === "Sesión Básica" ? "Procesando..." : "Comprar sesión"}
+                    </Button>
                   </CardContent>
                 </Card>
-                <Card className="border border-border bg-white hover:shadow-md transition-shadow">
-                  <CardContent className="p-5">
+                <Card className="border border-border bg-white hover:shadow-md transition-shadow h-full flex flex-col">
+                  <CardContent className="p-5 flex flex-col flex-1">
                     <h4 className="font-semibold text-gray-900">Sesión Premium</h4>
                     <p className="text-xs text-muted-foreground mt-0.5">60 min · Experto top</p>
                     <div className="flex items-baseline gap-1 mt-3">
                       <span className="text-2xl font-bold text-primary" style={{ fontFamily: "Poppins, sans-serif" }}>{PRICING_DISPLAY.SESSION_PREMIUM}</span>
                       <span className="text-xs text-muted-foreground">MXN</span>
                     </div>
-                    <a href={getLoginUrl()}>
-                      <Button variant="outline" size="sm" className="w-full mt-3 border-primary/30 text-primary hover:bg-primary/5 text-xs">
-                        Comprar sesión
-                      </Button>
-                    </a>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full mt-auto border-primary/30 text-primary hover:bg-primary/5 text-xs"
+                      disabled={loadingPlan === "Sesión Premium"}
+                      onClick={() => handlePlanClick("individual_premium", "Sesión Premium")}
+                    >
+                      {loadingPlan === "Sesión Premium" ? "Procesando..." : "Comprar sesión"}
+                    </Button>
                   </CardContent>
                 </Card>
               </div>
