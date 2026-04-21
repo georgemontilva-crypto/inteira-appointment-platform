@@ -219,6 +219,9 @@ export default function AdminDashboard() {
   const [activosSearch, setActivosSearch] = useState("");
   const [activosSpecialty, setActivosSpecialty] = useState("");
   const [usersSearch, setUsersSearch] = useState("");
+  const [usersRolFilter, setUsersRolFilter] = useState("Todos");
+  const [usersPlanFilter, setUsersPlanFilter] = useState("all");
+  const [usersCreditFilter, setUsersCreditFilter] = useState("all");
 
   const { data: pendingProfessionals, refetch: refetchPending, isLoading: loadingPending } =
     trpc.admin.getPendingProfessionals.useQuery(undefined, {
@@ -492,16 +495,22 @@ export default function AdminDashboard() {
         {/* ══ TAB: USUARIOS ═════════════════════════════════════════════════ */}
         {activeTab === "usuarios" && (() => {
           const q = usersSearch.toLowerCase().trim();
-          const filtered = (allUsers ?? []).filter(u =>
-            !q || u.name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q)
-          );
+          const filtered = (allUsers ?? []).filter(u => {
+            if (q && !u.name?.toLowerCase().includes(q) && !u.email?.toLowerCase().includes(q)) return false;
+            if (usersRolFilter === "Usuarios"       && u.role !== "user")         return false;
+            if (usersRolFilter === "Profesionales"  && u.role !== "professional") return false;
+            if (usersRolFilter === "Admins"         && u.role !== "admin")        return false;
+            if (usersPlanFilter === "plan_basic" && u.activePlan !== "plan_basic") return false;
+            if (usersPlanFilter === "plan_pro"   && u.activePlan !== "plan_pro")   return false;
+            if (usersPlanFilter === "none"       && u.activePlan != null)          return false;
+            if (usersCreditFilter === "with"    && Number(u.creditBalance) <= 0) return false;
+            if (usersCreditFilter === "without" && Number(u.creditBalance) >  0) return false;
+            return true;
+          });
           return (
             <div className="space-y-4">
-              <div className="flex items-center justify-between gap-3 flex-wrap">
-                <p className="text-sm text-muted-foreground font-medium">
-                  {filtered.length} {filtered.length === 1 ? "usuario registrado" : "usuarios registrados"}
-                </p>
-                <div className="relative w-full max-w-xs">
+              <div className="flex flex-wrap gap-2 items-center mb-4">
+                <div className="relative flex-1 min-w-[200px]">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <input
                     type="text"
@@ -511,7 +520,42 @@ export default function AdminDashboard() {
                     className="w-full pl-9 pr-3 py-2 text-sm border border-border rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-primary"
                   />
                 </div>
+                <div className="flex gap-1">
+                  {(["Todos", "Usuarios", "Profesionales", "Admins"] as const).map(r => (
+                    <button
+                      key={r}
+                      onClick={() => setUsersRolFilter(r)}
+                      className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${usersRolFilter === r ? "bg-primary text-white" : "bg-muted text-muted-foreground hover:bg-muted/70"}`}
+                    >
+                      {r}
+                    </button>
+                  ))}
+                </div>
+                <Select value={usersPlanFilter} onValueChange={setUsersPlanFilter}>
+                  <SelectTrigger className="w-[150px] h-8 text-xs">
+                    <SelectValue placeholder="Plan" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos los planes</SelectItem>
+                    <SelectItem value="plan_basic">Plan Básico</SelectItem>
+                    <SelectItem value="plan_pro">Plan Pro</SelectItem>
+                    <SelectItem value="none">Sin plan</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={usersCreditFilter} onValueChange={setUsersCreditFilter}>
+                  <SelectTrigger className="w-[140px] h-8 text-xs">
+                    <SelectValue placeholder="Saldo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Cualquier saldo</SelectItem>
+                    <SelectItem value="with">Con créditos</SelectItem>
+                    <SelectItem value="without">Sin créditos</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
+              <p className="text-sm text-muted-foreground font-medium -mt-2">
+                {filtered.length} {filtered.length === 1 ? "usuario encontrado" : "usuarios encontrados"}
+              </p>
               <Card>
                 <CardContent className="p-0">
                   <div className="max-h-[600px] overflow-y-auto scrollbar-hide">
