@@ -1182,6 +1182,30 @@ export const appRouter = router({
       }>;
     }),
 
+    // ── DIAGNÓSTICO TEMPORAL — remover después ────────────────────────────
+    diagnoseCreditBatches: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+      const dbInstance = await db.getDb();
+      if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      const client = (dbInstance as any).$client;
+
+      const batches = await new Promise<any[]>((resolve, reject) => {
+        client.execute(`
+          SELECT cb.id, cb.userId, cb.amount, cb.remaining, cb.source, cb.createdAt,
+                 u.email, u.name
+          FROM creditBatches cb
+          JOIN users u ON u.id = cb.userId
+          WHERE u.createdAt > DATE_SUB(NOW(), INTERVAL 2 DAY)
+          ORDER BY cb.createdAt DESC LIMIT 20
+        `, [], (err: any, results: any) => {
+          if (err) reject(err);
+          else resolve(Array.isArray(results) ? results : []);
+        });
+      });
+
+      return { batches };
+    }),
+
     // ── Cron Jobs ─────────────────────────────────────────────────────────
     runCronJobs: protectedProcedure.mutation(async ({ ctx }) => {
       if (ctx.user.role !== "admin") {
