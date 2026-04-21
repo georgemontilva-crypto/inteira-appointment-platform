@@ -1135,7 +1135,11 @@ export const appRouter = router({
       if (ctx.user.role !== "admin") {
         throw new TRPCError({ code: "FORBIDDEN", message: "User is not an admin" });
       }
-      const [rows] = await (db as any).execute(`
+      const dbInstance = await db.getDb();
+      if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      const client = (dbInstance as any).$client;
+
+      const sql = `
         SELECT
           u.id, u.name, u.email, u.role, u.createdAt, u.loginMethod, u.profileImage,
           (SELECT cb.source FROM \`creditBatches\` cb
@@ -1155,7 +1159,15 @@ export const appRouter = router({
         FROM \`users\` u
         WHERE u.role IN ('user', 'professional', 'admin')
         ORDER BY u.createdAt DESC
-      `) as any;
+      `;
+
+      const rows = await new Promise<any[]>((resolve, reject) => {
+        client.execute(sql, [], (err: any, results: any) => {
+          if (err) reject(err);
+          else resolve(Array.isArray(results) ? results : []);
+        });
+      });
+
       return rows as Array<{
         id: number;
         name: string;
