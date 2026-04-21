@@ -187,6 +187,13 @@ emailAuthRouter.post("/verify-otp", async (req: Request, res: Response) => {
     lastSignedIn: new Date(),
   });
 
+  // Verificar que el usuario quedó persistido antes de emitir cookie
+  const dbUser = await db.getUserByOpenId(openId).catch(() => null);
+  if (!dbUser) {
+    console.error("[Email OTP] Usuario no persistido en BD después de upsert");
+    return res.status(500).json({ error: "Error al crear sesión. Intenta de nuevo." });
+  }
+
   // Crear sesión JWT — mismo patrón que oauth.ts
   const sessionToken = await sdk.createSessionToken(openId, {
     name: fullName,
@@ -196,6 +203,11 @@ emailAuthRouter.post("/verify-otp", async (req: Request, res: Response) => {
   // Setear cookie — mismo patrón que oauth.ts
   const cookieOptions = getSessionCookieOptions(req);
   res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+
+  // Destino siempre determinado por el rol
+  let destination = "/dashboard";
+  if (dbUser.role === "professional") destination = "/panel-profesional";
+  else if (dbUser.role === "admin") destination = "/admin";
 
   // Emails de bienvenida solo para usuarios nuevos (fire-and-forget)
   if (isNewUser) {
@@ -209,5 +221,5 @@ emailAuthRouter.post("/verify-otp", async (req: Request, res: Response) => {
     }).catch(() => {});
   }
 
-  return res.json({ success: true, redirectTo: "/dashboard" });
+  return res.json({ success: true, redirectTo: destination });
 });

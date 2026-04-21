@@ -32,10 +32,7 @@ export default function Login() {
   }, [isAuthenticated, loading, user, navigate]);
 
   const handleGoogleLogin = () => {
-    const params = new URLSearchParams(window.location.search);
-    const returnTo = params.get("returnTo") ?? "/dashboard";
-    const safeReturn = returnTo.startsWith("/") ? returnTo : "/dashboard";
-    window.location.href = `/api/auth/google?returnTo=${encodeURIComponent(safeReturn)}`;
+    window.location.href = "/api/auth/google";
   };
 
   const handleRequestOtp = async () => {

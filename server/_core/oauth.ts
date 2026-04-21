@@ -124,11 +124,10 @@ export function registerOAuthRoutes(app: Express) {
         return res.redirect("/?error=auth_failed");
       }
 
-      // Usar dbUser para el rol (elimina el segundo query redundante)
-      if (returnTo === "/dashboard") {
-        if (dbUser.role === "professional") returnTo = "/panel-profesional";
-        else if (dbUser.role === "admin") returnTo = "/admin";
-      }
+      // Destino siempre determinado por el rol — ignorar cualquier returnTo externo
+      let destination = "/dashboard";
+      if (dbUser.role === "professional") destination = "/panel-profesional";
+      else if (dbUser.role === "admin") destination = "/admin";
 
       // 3c. Emails para usuarios nuevos (fire-and-forget)
       if (isNewUser && userInfo.email) {
@@ -154,13 +153,13 @@ export function registerOAuthRoutes(app: Express) {
       const cookieOptions = getSessionCookieOptions(req);
       console.log("[Google OAuth] Setting cookie:", COOKIE_NAME, "options:", JSON.stringify(cookieOptions));
       res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
-      console.log("[Google OAuth] Cookie set, redirecting to:", returnTo);
+      console.log("[Google OAuth] Cookie set, redirecting to:", destination);
       console.log("[Google OAuth] Response headers:", JSON.stringify(res.getHeaders()));
 
       // Delay redirect by 300ms so the browser has time to persist the Set-Cookie
       // header before navigating. A 302 or instant meta-refresh can race against
       // cookie processing in Safari/Chrome on cross-origin OAuth flows.
-      const safeReturnTo = returnTo.startsWith("/") ? returnTo : "/dashboard";
+      const safeReturnTo = destination;
       return res.send(`<!DOCTYPE html>
 <html>
 <head><meta charset="UTF-8"><title>Iniciando sesión...</title></head>
