@@ -151,20 +151,23 @@ export function registerOAuthRoutes(app: Express) {
       console.log("[Google OAuth] Cookie set, redirecting to:", returnTo);
       console.log("[Google OAuth] Response headers:", JSON.stringify(res.getHeaders()));
 
-      // Use an HTML page with meta-refresh instead of a direct 302 redirect.
-      // This ensures the browser persists the Set-Cookie header before navigating,
-      // which some browsers (Safari, Chrome) drop when following a cross-origin redirect.
+      // Delay redirect by 300ms so the browser has time to persist the Set-Cookie
+      // header before navigating. A 302 or instant meta-refresh can race against
+      // cookie processing in Safari/Chrome on cross-origin OAuth flows.
       const safeReturnTo = returnTo.startsWith("/") ? returnTo : "/dashboard";
       return res.send(`<!DOCTYPE html>
 <html>
-<head>
-  <meta charset="utf-8">
-  <meta http-equiv="refresh" content="0;url=${safeReturnTo}">
-  <title>Redirigiendo...</title>
-</head>
-<body>
-  <script>window.location.replace(${JSON.stringify(safeReturnTo)});</script>
-  <p>Redirigiendo...</p>
+<head><meta charset="UTF-8"><title>Iniciando sesión...</title></head>
+<body style="font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f9fafb;">
+  <div style="text-align:center;">
+    <img src="https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/Inteira-Verde-1.webp" style="height:40px;margin-bottom:16px;" />
+    <p style="color:#6b7280;font-size:14px;">Iniciando sesión...</p>
+  </div>
+  <script>
+    setTimeout(function() {
+      window.location.replace(${JSON.stringify(safeReturnTo)});
+    }, 300);
+  </script>
 </body>
 </html>`);
     } catch (err) {
