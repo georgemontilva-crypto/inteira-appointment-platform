@@ -117,11 +117,17 @@ export function registerOAuthRoutes(app: Express) {
         profileImage: userInfo.picture ?? null,
       });
 
-      // 3b. Sobreescribir returnTo según el role real del usuario (solo si viene con /dashboard por defecto)
+      // 3b. Verificar que el usuario quedó persistido antes de emitir cookie
+      const dbUser = await db.getUserByOpenId(`google:${userInfo.sub}`);
+      if (!dbUser) {
+        console.error("[Google OAuth] Usuario no persistido en BD después de upsert");
+        return res.redirect("/?error=auth_failed");
+      }
+
+      // Usar dbUser para el rol (elimina el segundo query redundante)
       if (returnTo === "/dashboard") {
-        const dbUser = await db.getUserByOpenId(`google:${userInfo.sub}`);
-        if (dbUser?.role === "professional") returnTo = "/panel-profesional";
-        else if (dbUser?.role === "admin") returnTo = "/admin";
+        if (dbUser.role === "professional") returnTo = "/panel-profesional";
+        else if (dbUser.role === "admin") returnTo = "/admin";
       }
 
       // 3c. Emails para usuarios nuevos (fire-and-forget)
