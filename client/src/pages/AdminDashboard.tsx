@@ -193,7 +193,7 @@ const STATUS_MAP: Record<string, { label: string; cls: string }> = {
 
 export default function AdminDashboard() {
   const { user, isAuthenticated, loading } = useAuth();
-  const [activeTab, setActiveTab] = useState<"overview" | "profesionales" | "activos" | "especialidades" | "planes" | "herramientas" | "codigos" | "retiros" | "banners">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "usuarios" | "profesionales" | "activos" | "especialidades" | "planes" | "herramientas" | "codigos" | "retiros" | "banners">("overview");
   const [bannerForm, setBannerForm] = useState({ imageUrl: "", title: "", linkUrl: "" });
   const [bannerUploading, setBannerUploading] = useState(false);
   const [rejectReason, setRejectReason] = useState<Record<number, string>>({});
@@ -218,6 +218,7 @@ export default function AdminDashboard() {
   const [revokeReason, setRevokeReason] = useState("");
   const [activosSearch, setActivosSearch] = useState("");
   const [activosSpecialty, setActivosSpecialty] = useState("");
+  const [usersSearch, setUsersSearch] = useState("");
 
   const { data: pendingProfessionals, refetch: refetchPending, isLoading: loadingPending } =
     trpc.admin.getPendingProfessionals.useQuery(undefined, {
@@ -326,6 +327,7 @@ export default function AdminDashboard() {
   });
 
   // ── Discount codes ─────────────────────────────────────────────────────────
+  const { data: allUsers } = trpc.admin.getUsers.useQuery(undefined, { enabled: isAuthenticated });
   const { data: discountCodes, refetch: refetchDiscountCodes } = trpc.admin.listDiscountCodes.useQuery(undefined, { enabled: isAuthenticated });
 
   const createDiscountMutation = trpc.admin.createDiscountCode.useMutation({
@@ -448,6 +450,7 @@ export default function AdminDashboard() {
           <div className="flex gap-1 overflow-x-auto scrollbar-none" style={{ WebkitOverflowScrolling: "touch" }}>
             {([
               { key: "overview",        label: "Resumen",        icon: <BarChart3 className="w-4 h-4" /> },
+              { key: "usuarios",        label: "Usuarios",       icon: <User className="w-4 h-4" /> },
               { key: "banners",         label: "Banners",        icon: <Image className="w-4 h-4" /> },
               { key: "profesionales",   label: "Solicitudes",          icon: <Users className="w-4 h-4" /> },
               { key: "activos",         label: "Profesionales activos", icon: <UserCheck className="w-4 h-4" /> },
@@ -485,6 +488,123 @@ export default function AdminDashboard() {
       </div>
 
       <div className="container py-6 space-y-6">
+
+        {/* ══ TAB: USUARIOS ═════════════════════════════════════════════════ */}
+        {activeTab === "usuarios" && (() => {
+          const q = usersSearch.toLowerCase().trim();
+          const filtered = (allUsers ?? []).filter(u =>
+            !q || u.name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q)
+          );
+          return (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <p className="text-sm text-muted-foreground font-medium">
+                  {filtered.length} {filtered.length === 1 ? "usuario registrado" : "usuarios registrados"}
+                </p>
+                <div className="relative w-full max-w-xs">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <input
+                    type="text"
+                    placeholder="Buscar por nombre o email..."
+                    value={usersSearch}
+                    onChange={e => setUsersSearch(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 text-sm border border-border rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+              </div>
+              <Card>
+                <CardContent className="p-0">
+                  <div className="max-h-[600px] overflow-y-auto scrollbar-hide">
+                    <table className="w-full text-sm">
+                      <thead className="sticky top-0 bg-white border-b border-border z-10">
+                        <tr className="text-left text-xs text-muted-foreground uppercase tracking-wider">
+                          <th className="px-4 py-3 font-medium">Usuario</th>
+                          <th className="px-4 py-3 font-medium">Rol</th>
+                          <th className="px-4 py-3 font-medium">Plan</th>
+                          <th className="px-4 py-3 font-medium text-right">Créditos</th>
+                          <th className="px-4 py-3 font-medium text-right">Citas</th>
+                          <th className="px-4 py-3 font-medium">Registro</th>
+                          <th className="px-4 py-3 font-medium">Login</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {filtered.slice(0, 20).map(u => {
+                          const initials = u.name
+                            ? u.name.split(" ").map((n: string) => n[0]).slice(0, 2).join("").toUpperCase()
+                            : u.email?.[0]?.toUpperCase() ?? "?";
+                          const roleBadge =
+                            u.role === "admin"        ? "bg-red-100 text-red-700" :
+                            u.role === "professional" ? "bg-blue-100 text-blue-700" :
+                                                        "bg-gray-100 text-gray-600";
+                          const roleLabel =
+                            u.role === "admin"        ? "Admin" :
+                            u.role === "professional" ? "Profesional" : "Usuario";
+                          const planLabel =
+                            u.activePlan === "plan_pro"   ? "Plan Pro" :
+                            u.activePlan === "plan_basic" ? "Plan Básico" : null;
+                          return (
+                            <tr key={u.id} className="hover:bg-muted/30 transition-colors">
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-3 min-w-0">
+                                  {u.profileImage ? (
+                                    <img src={u.profileImage} alt="" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+                                  ) : (
+                                    <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-semibold flex-shrink-0">
+                                      {initials}
+                                    </div>
+                                  )}
+                                  <div className="min-w-0">
+                                    <p className="font-medium text-[13px] text-gray-900 truncate">{u.name ?? "—"}</p>
+                                    <p className="text-[11px] text-muted-foreground truncate">{u.email}</p>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${roleBadge}`}>
+                                  {roleLabel}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3">
+                                {planLabel ? (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-green-100 text-green-700">
+                                    {planLabel}
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-gray-100 text-gray-500">
+                                    Sin plan
+                                  </span>
+                                )}
+                              </td>
+                              <td className="px-4 py-3 text-right font-medium text-[13px]">
+                                {Number(u.creditBalance).toLocaleString()}
+                              </td>
+                              <td className="px-4 py-3 text-right text-[13px] text-muted-foreground">
+                                {Number(u.totalAppointments)}
+                              </td>
+                              <td className="px-4 py-3 text-[12px] text-muted-foreground whitespace-nowrap">
+                                {u.createdAt ? format(new Date(u.createdAt), "d MMM yyyy", { locale: es }) : "—"}
+                              </td>
+                              <td className="px-4 py-3 text-[12px] text-muted-foreground capitalize">
+                                {u.loginMethod ?? "—"}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                        {filtered.length === 0 && (
+                          <tr>
+                            <td colSpan={7} className="px-4 py-10 text-center text-sm text-muted-foreground">
+                              No se encontraron usuarios
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          );
+        })()}
 
         {/* ══ TAB: BANNERS ══════════════════════════════════════════════════ */}
         {activeTab === "banners" && (

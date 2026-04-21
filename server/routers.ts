@@ -1131,6 +1131,45 @@ export const appRouter = router({
         return await db.getTopProfessionals(input.limit);
       }),
 
+    getUsers: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "User is not an admin" });
+      }
+      const [rows] = await (db as any).execute(`
+        SELECT
+          u.id, u.name, u.email, u.role, u.createdAt, u.loginMethod, u.profileImage,
+          (SELECT cb.source FROM \`creditBatches\` cb
+           WHERE cb.userId = u.id
+             AND cb.source IN ('plan_basic', 'plan_pro')
+             AND cb.expiresAt > NOW()
+             AND cb.remaining > 0
+             AND cb.expiredEarly = 0
+           ORDER BY cb.createdAt DESC LIMIT 1) AS activePlan,
+          COALESCE((SELECT SUM(GREATEST(0, cb2.remaining - cb2.reservedAmount))
+           FROM \`creditBatches\` cb2
+           WHERE cb2.userId = u.id
+             AND cb2.remaining > 0
+             AND cb2.expiredEarly = 0
+             AND cb2.expiresAt > NOW()), 0) AS creditBalance,
+          (SELECT COUNT(*) FROM \`appointments\` a WHERE a.userId = u.id) AS totalAppointments
+        FROM \`users\` u
+        WHERE u.role IN ('user', 'professional', 'admin')
+        ORDER BY u.createdAt DESC
+      `) as any;
+      return rows as Array<{
+        id: number;
+        name: string;
+        email: string;
+        role: string;
+        createdAt: string;
+        loginMethod: string;
+        profileImage: string | null;
+        activePlan: string | null;
+        creditBalance: number;
+        totalAppointments: number;
+      }>;
+    }),
+
     // ── Cron Jobs ─────────────────────────────────────────────────────────
     runCronJobs: protectedProcedure.mutation(async ({ ctx }) => {
       if (ctx.user.role !== "admin") {
