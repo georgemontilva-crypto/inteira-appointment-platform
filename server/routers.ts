@@ -1189,6 +1189,8 @@ export const appRouter = router({
       if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
       const client = (dbInstance as any).$client;
 
+      console.log("[diagnoseCreditBatches] iniciando query");
+
       const batches = await new Promise<any[]>((resolve, reject) => {
         client.execute(`
           SELECT cb.id, cb.userId, cb.amount, cb.remaining, cb.source, cb.createdAt,
@@ -1198,11 +1200,18 @@ export const appRouter = router({
           WHERE u.createdAt > DATE_SUB(NOW(), INTERVAL 2 DAY)
           ORDER BY cb.createdAt DESC LIMIT 20
         `, [], (err: any, results: any) => {
-          if (err) reject(err);
-          else resolve(Array.isArray(results) ? results : []);
+          if (err) {
+            console.error("[diagnoseCreditBatches] error:", err?.message);
+            reject(err);
+          } else {
+            console.log("[diagnoseCreditBatches] results type:", typeof results, Array.isArray(results), JSON.stringify(results)?.slice(0, 300));
+            const rows = Array.isArray(results) ? results : (results?.rows ?? []);
+            resolve(rows);
+          }
         });
       });
 
+      console.log("[diagnoseCreditBatches] batches encontrados:", batches.length, JSON.stringify(batches[0]));
       return { batches };
     }),
 
