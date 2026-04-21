@@ -1194,11 +1194,10 @@ export const appRouter = router({
       const batches = await new Promise<any[]>((resolve, reject) => {
         client.execute(`
           SELECT cb.id, cb.userId, cb.amount, cb.remaining, cb.source, cb.createdAt,
-                 u.email, u.name
+                 u.email, u.name, u.createdAt as userCreatedAt
           FROM creditBatches cb
           JOIN users u ON u.id = cb.userId
-          WHERE u.createdAt > DATE_SUB(NOW(), INTERVAL 2 DAY)
-          ORDER BY cb.createdAt DESC LIMIT 20
+          ORDER BY cb.createdAt DESC LIMIT 30
         `, [], (err: any, results: any) => {
           if (err) {
             console.error("[diagnoseCreditBatches] error:", err?.message);
