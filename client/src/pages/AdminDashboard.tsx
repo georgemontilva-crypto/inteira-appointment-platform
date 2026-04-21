@@ -528,7 +528,7 @@ export default function AdminDashboard() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border">
-                        {filtered.slice(0, 20).map(u => {
+                        {filtered.map(u => {
                           const initials = u.name
                             ? u.name.split(" ").map((n: string) => n[0]).slice(0, 2).join("").toUpperCase()
                             : u.email?.[0]?.toUpperCase() ?? "?";
