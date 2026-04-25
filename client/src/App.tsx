@@ -1,9 +1,10 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
-import { Route, Switch } from "wouter";
+import { Redirect, Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { useAuth } from "./_core/hooks/useAuth";
 import Home from "./pages/Home";
 import UserDashboard from "./pages/UserDashboard";
 import ProfessionalDashboard from "./pages/ProfessionalDashboard";
@@ -24,11 +25,28 @@ import RegistroTipo from "./pages/RegistroTipo";
 import SpecialtiesPage from "./pages/SpecialtiesPage";
 import AppointmentsPage from "./pages/AppointmentsPage";
 
+function RootRedirect() {
+  const { isAuthenticated, loading, user } = useAuth();
+
+  if (loading) return (
+    <div className="flex items-center justify-center h-screen">
+      <img src="https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/Inteira-Verde-1.webp" className="h-10 animate-pulse" />
+    </div>
+  );
+
+  if (!isAuthenticated) return <Redirect to="/login" />;
+  if (user?.role === "professional") return <Redirect to="/panel-profesional" />;
+  if (user?.role === "admin") return <Redirect to="/admin" />;
+  return <Redirect to="/dashboard" />;
+}
+
 function Router() {
   return (
     <Switch>
-      {/* Public routes */}
-      <Route path="/" component={Home} />
+      {/* Root redirect */}
+      <Route path="/" component={RootRedirect} />
+      {/* Landing (acceso directo) */}
+      <Route path="/landing" component={Home} />
       <Route path="/especialidades" component={SpecialtiesPage} />
       <Route path="/especialidades/:id" component={ProfessionalsList} />
       <Route path="/profesional/:id" component={ProfessionalProfile} />
