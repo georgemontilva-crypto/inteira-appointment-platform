@@ -281,14 +281,22 @@ export default function Login() {
               </div>
             )}
 
-            {/* ¿No tienes cuenta? — visible en idle y form */}
+            {/* Registro destacado — visible en idle y form */}
             {emailStep !== "verify" && (
-              <p className="text-center text-xs text-muted-foreground">
-                ¿No tienes cuenta?{" "}
-                <a href="/registro" className="text-primary hover:underline font-medium">
-                  Crear cuenta →
+              <>
+                <div className="flex items-center gap-3 my-4">
+                  <div className="flex-1 h-px bg-border" />
+                  <span className="text-xs text-muted-foreground">¿Eres nuevo?</span>
+                  <div className="flex-1 h-px bg-border" />
+                </div>
+
+                <a href="/registro" className="block w-full text-center py-3 px-4 rounded-2xl border-2 border-primary text-primary font-semibold text-sm hover:bg-primary hover:text-white transition-all duration-200">
+                  Crear cuenta — Usuarios y Profesionales
                 </a>
-              </p>
+                <p className="text-xs text-muted-foreground text-center mt-2">
+                  Gratis · Sin tarjeta de crédito · Cancela cuando quieras
+                </p>
+              </>
             )}
 
             {/* Nota de privacidad — solo en idle */}
