@@ -121,6 +121,7 @@ export function registerOAuthRoutes(app: Express) {
       const dbUser = await db.getUserByOpenId(`google:${userInfo.sub}`);
       if (!dbUser) {
         console.error("[Google OAuth] Usuario no persistido en BD después de upsert");
+        console.error("[OAuth] auth_failed - openId:", `google:${userInfo.sub}`, "email:", userInfo.email);
         return res.redirect("/?error=auth_failed");
       }
 
@@ -171,7 +172,7 @@ export function registerOAuthRoutes(app: Express) {
   <script>
     setTimeout(function() {
       window.location.replace(${JSON.stringify(safeReturnTo)});
-    }, 300);
+    }, 800);
   </script>
 </body>
 </html>`);

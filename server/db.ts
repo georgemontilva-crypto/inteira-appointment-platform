@@ -282,7 +282,9 @@ export async function getProfessionalsBySpecialty(specialtyId: number) {
   const client = (db as any).$client;
   return new Promise<any[]>((resolve, reject) => {
     client.execute(
-      `SELECT p.*, u.name as professionalName, u.email as userEmail, u.profileImage as userProfileImage
+      `SELECT p.id, p.userId, p.specialtyId, p.status, p.tier, p.bio, p.profilePhoto,
+              p.averageRating, p.totalReviews, p.isAvailable, p.yearsOfExperience, p.hourlyRate,
+              u.name as professionalName, u.email as userEmail, u.profileImage as userProfileImage
        FROM professionals p
        LEFT JOIN users u ON p.userId = u.id
        WHERE p.specialtyId = ? AND p.status = 'approved'

@@ -218,6 +218,7 @@ export default function ProfessionalsList() {
                           src={(pro as any).profilePhoto ?? (pro as any).userProfileImage}
                           alt={(pro as any).professionalName ?? "Especialista"}
                           className="w-full h-full object-cover"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                         />
                       ) : (
                         <div className="w-full h-full gradient-brand flex items-center justify-center text-white text-2xl font-bold">

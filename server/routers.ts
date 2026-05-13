@@ -1593,7 +1593,7 @@ export const appRouter = router({
       return new Promise<any[]>((resolve, reject) => {
         client.execute(
           `SELECT p.id, p.userId, p.tier, p.specialtyId, p.hourlyRate, p.bio, p.profilePhoto, p.createdAt,
-            u.name as userName, u.email as userEmail,
+            u.name as userName, u.email as userEmail, u.profileImage as userProfileImage,
             s.name as specialtyName
            FROM professionals p
            LEFT JOIN users u ON p.userId = u.id
