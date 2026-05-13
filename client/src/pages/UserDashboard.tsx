@@ -640,9 +640,18 @@ export default function UserDashboard() {
                   {featuredProfessionals.map((pro) => (
                     <button key={pro.id} onClick={() => navigate(`/profesional/${pro.id}`)}
                       className="bg-white rounded-2xl p-3.5 border border-border/60 shadow-sm hover:shadow-md hover:border-primary/30 active:scale-[0.98] transition-all text-left">
-                      <div className="w-10 h-10 rounded-xl gradient-brand flex items-center justify-center text-white font-bold mb-2.5">
-                        {((pro as any).name ?? "P").charAt(0).toUpperCase()}
-                      </div>
+                      {((pro as any).profilePhoto || (pro as any).profileImage) ? (
+                        <img
+                          src={(pro as any).profilePhoto ?? (pro as any).profileImage}
+                          alt={(pro as any).name ?? "P"}
+                          className="w-10 h-10 rounded-xl object-cover mb-2.5"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-xl gradient-brand flex items-center justify-center text-white font-bold mb-2.5">
+                          {((pro as any).name ?? "P").charAt(0).toUpperCase()}
+                        </div>
+                      )}
                       <p className="text-xs font-semibold truncate">{(pro as any).name ?? "Profesional"}</p>
                       <p className="text-[10px] text-muted-foreground truncate mt-0.5">{(pro as any).specialtyName ?? "Especialista"}</p>
                       {pro.averageRating && (
