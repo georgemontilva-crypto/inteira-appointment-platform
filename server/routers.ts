@@ -1660,11 +1660,15 @@ export const appRouter = router({
         if (!dbConn) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
         const client = (dbConn as any).$client;
 
+        const expiresAtMysql = input.expiresAt
+          ? new Date(input.expiresAt).toISOString().slice(0, 19).replace("T", " ")
+          : null;
+
         await new Promise<void>((resolve, reject) => {
           client.execute(
             `INSERT INTO discountCodes (code, type, value, maxUses, expiresAt, isActive)
              VALUES (?, ?, ?, ?, ?, 1)`,
-            [input.code.toUpperCase().trim(), input.type, input.value, input.maxUses ?? null, input.expiresAt ?? null],
+            [input.code.toUpperCase().trim(), input.type, input.value, input.maxUses ?? null, expiresAtMysql],
             (err: any) => { if (err) reject(err); else resolve(); }
           );
         });
