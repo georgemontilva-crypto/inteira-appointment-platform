@@ -186,6 +186,7 @@ emailAuthRouter.post("/verify-otp", async (req: Request, res: Response) => {
     loginMethod: "email",
     lastSignedIn: new Date(),
   });
+  console.log("[Email OTP] upsertUser completed for:", email);
 
   // Verificar que el usuario quedó persistido antes de emitir cookie
   const dbUser = await db.getUserByOpenId(openId).catch(() => null);

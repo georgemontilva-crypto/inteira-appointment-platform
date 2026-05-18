@@ -128,8 +128,14 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 
     const client = (db as any).$client;
     await new Promise<void>((resolve, reject) => {
-      client.execute(insertSQL, [...insertParams, ...updateParams], (err: any) => {
-        if (err) reject(err); else resolve();
+      client.execute(insertSQL, [...insertParams, ...updateParams], (err: any, results: any) => {
+        if (err) {
+          console.error("[upsertUser] INSERT error:", err?.message, "code:", err?.code, "sql:", insertSQL.substring(0, 100));
+          reject(err);
+        } else {
+          console.log("[upsertUser] INSERT success, affectedRows:", results?.affectedRows);
+          resolve();
+        }
       });
     });
 
