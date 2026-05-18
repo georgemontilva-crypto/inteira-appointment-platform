@@ -117,6 +117,9 @@ export function registerOAuthRoutes(app: Express) {
         profileImage: userInfo.picture ?? null,
       });
 
+      // Small delay for TiDB replication consistency
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       // 3b. Verificar que el usuario quedó persistido antes de emitir cookie
       const dbUser = await db.getUserByOpenId(`google:${userInfo.sub}`);
       if (!dbUser) {

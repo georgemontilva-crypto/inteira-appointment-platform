@@ -188,6 +188,9 @@ emailAuthRouter.post("/verify-otp", async (req: Request, res: Response) => {
   });
   console.log("[Email OTP] upsertUser completed for:", email);
 
+  // Small delay for TiDB replication consistency
+  await new Promise(resolve => setTimeout(resolve, 500));
+
   // Verificar que el usuario quedó persistido antes de emitir cookie
   const dbUser = await db.getUserByOpenId(openId).catch(() => null);
   if (!dbUser) {
