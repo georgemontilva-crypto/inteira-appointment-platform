@@ -188,9 +188,9 @@ emailAuthRouter.post("/verify-otp", async (req: Request, res: Response) => {
   });
   console.log("[Email OTP] upsertUser completed for:", email);
 
-  const client = (dbConn as any).$client;
+  const client2 = (dbConn as any).$client;
   const selectUser = () => new Promise<any>((resolve) => {
-    client.execute(
+    client2.execute(
       "SELECT id, role, name, email FROM users WHERE openId = ? LIMIT 1",
       [openId],
       (err: any, results: any) => resolve(Array.isArray(results) ? results[0] ?? null : null)
