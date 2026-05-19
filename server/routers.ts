@@ -1182,6 +1182,22 @@ export const appRouter = router({
       }>;
     }),
 
+    deleteUser: protectedProcedure
+      .input(z.object({ userId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+        if (input.userId === ctx.user.id) throw new TRPCError({ code: "BAD_REQUEST", message: "No puedes eliminarte a ti mismo" });
+        const dbInstance = await db.getDb();
+        if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const client = (dbInstance as any).$client;
+        await new Promise<void>((resolve, reject) => {
+          client.execute("DELETE FROM users WHERE id = ? AND role != 'admin'", [input.userId],
+            (err: any) => { if (err) reject(err); else resolve(); }
+          );
+        });
+        return { success: true };
+      }),
+
     // ── DIAGNÓSTICO TEMPORAL — remover después ────────────────────────────
     diagnoseCreditBatches: protectedProcedure.query(async ({ ctx }) => {
       if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });

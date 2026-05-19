@@ -330,7 +330,7 @@ export default function AdminDashboard() {
   });
 
   // ── Discount codes ─────────────────────────────────────────────────────────
-  const { data: allUsers } = trpc.admin.getUsers.useQuery(undefined, { enabled: isAuthenticated });
+  const { data: allUsers, refetch: refetchUsers } = trpc.admin.getUsers.useQuery(undefined, { enabled: isAuthenticated });
   const { data: discountCodes, refetch: refetchDiscountCodes } = trpc.admin.listDiscountCodes.useQuery(undefined, { enabled: isAuthenticated });
 
   const createDiscountMutation = trpc.admin.createDiscountCode.useMutation({
@@ -350,6 +350,11 @@ export default function AdminDashboard() {
   const deleteDiscountMutation = trpc.admin.deleteDiscountCode.useMutation({
     onSuccess: () => { refetchDiscountCodes(); toast.success("Código eliminado"); },
     onError: () => toast.error("Error al eliminar"),
+  });
+
+  const deleteUserMutation = trpc.admin.deleteUser.useMutation({
+    onSuccess: () => { refetchUsers(); toast.success("Usuario eliminado"); },
+    onError: (err: any) => toast.error(err?.message ?? "Error al eliminar usuario"),
   });
 
   // ── Prepaid cards ─────────────────────────────────────────────────────────
@@ -569,6 +574,7 @@ export default function AdminDashboard() {
                           <th className="px-4 py-3 font-medium text-right">Citas</th>
                           <th className="px-4 py-3 font-medium">Registro</th>
                           <th className="px-4 py-3 font-medium">Login</th>
+                          <th className="px-4 py-3 font-medium"></th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border">
@@ -631,12 +637,26 @@ export default function AdminDashboard() {
                               <td className="px-4 py-3 text-[12px] text-muted-foreground capitalize">
                                 {u.loginMethod ?? "—"}
                               </td>
+                              <td className="px-4 py-3 text-right">
+                                {u.role !== "admin" && (
+                                  <button
+                                    onClick={() => {
+                                      if (window.confirm(`¿Eliminar a ${u.name ?? u.email}? Esta acción no se puede deshacer.`)) {
+                                        deleteUserMutation.mutate({ userId: u.id });
+                                      }
+                                    }}
+                                    className="text-xs text-red-600 hover:text-red-800 font-medium px-2 py-1 rounded hover:bg-red-50 transition-colors"
+                                  >
+                                    Eliminar
+                                  </button>
+                                )}
+                              </td>
                             </tr>
                           );
                         })}
                         {filtered.length === 0 && (
                           <tr>
-                            <td colSpan={7} className="px-4 py-10 text-center text-sm text-muted-foreground">
+                            <td colSpan={8} className="px-4 py-10 text-center text-sm text-muted-foreground">
                               No se encontraron usuarios
                             </td>
                           </tr>
