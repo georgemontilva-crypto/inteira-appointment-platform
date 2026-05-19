@@ -111,7 +111,7 @@ export function registerStripeRoutes(app: Express) {
             const discountCents = row.type === "percentage"
               ? Math.round(product.amount * Number(row.value) / 100)
               : Math.round(Number(row.value) * 100);
-            finalAmount = Math.max(product.amount - discountCents, 50); // Stripe mínimo 50 centavos
+            finalAmount = Math.max(product.amount - discountCents, 1000); // mínimo $10 MXN (exigido por Stripe)
             discountCodeId = row.id;
           }
         }
