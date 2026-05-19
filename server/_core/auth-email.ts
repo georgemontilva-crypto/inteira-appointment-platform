@@ -188,15 +188,12 @@ emailAuthRouter.post("/verify-otp", async (req: Request, res: Response) => {
   });
   console.log("[Email OTP] upsertUser completed for:", email);
 
-  // Small delay for TiDB replication consistency
-  await new Promise(resolve => setTimeout(resolve, 500));
-
-  // Verificar que el usuario quedó persistido antes de emitir cookie
-  const dbUser = await db.getUserByOpenId(openId).catch(() => null);
-  if (!dbUser) {
-    console.error("[Email OTP] Usuario no persistido en BD después de upsert");
-    return res.status(500).json({ error: "Error al crear sesión. Intenta de nuevo." });
-  }
+  const dbUser = await new Promise<any>((resolve) => {
+    const client = (dbConn as any).$client;
+    client.execute("SELECT id, role FROM users WHERE openId = ? LIMIT 1", [openId],
+      (err: any, results: any) => resolve(Array.isArray(results) ? results[0] : null));
+  });
+  if (!dbUser) return res.status(500).json({ error: "Error al crear sesión" });
 
   // Crear sesión JWT — mismo patrón que oauth.ts
   const sessionToken = await sdk.createSessionToken(openId, {

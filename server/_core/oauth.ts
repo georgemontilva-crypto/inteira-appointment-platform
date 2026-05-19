@@ -117,11 +117,13 @@ export function registerOAuthRoutes(app: Express) {
         profileImage: userInfo.picture ?? null,
       });
 
-      // Small delay for TiDB replication consistency
-      await new Promise(resolve => setTimeout(resolve, 500));
-
       // 3b. Verificar que el usuario quedó persistido antes de emitir cookie
-      const dbUser = await db.getUserByOpenId(`google:${userInfo.sub}`);
+      const oauthDbConn = await db.getDb();
+      const dbUser = await new Promise<any>((resolve) => {
+        const client = (oauthDbConn as any).$client;
+        client.execute("SELECT id, role FROM users WHERE openId = ? LIMIT 1", [`google:${userInfo.sub}`],
+          (err: any, results: any) => resolve(Array.isArray(results) ? results[0] : null));
+      });
       if (!dbUser) {
         console.error("[Google OAuth] Usuario no persistido en BD después de upsert");
         console.error("[OAuth] auth_failed - openId:", `google:${userInfo.sub}`, "email:", userInfo.email);
