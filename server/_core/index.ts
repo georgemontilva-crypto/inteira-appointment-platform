@@ -868,7 +868,7 @@ async function runStartupMigrations() {
            UNION ALL
            SELECT 'https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/Interfaz-Inteira.webp',
                   'Interfaz Inteira', 1, 1
-         ) AS rows
+         ) AS tmp
          WHERE NOT EXISTS (SELECT 1 FROM eventBanners LIMIT 1)`,
         [],
         (err: any, result: any) => {
