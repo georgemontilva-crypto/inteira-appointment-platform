@@ -188,12 +188,23 @@ emailAuthRouter.post("/verify-otp", async (req: Request, res: Response) => {
   });
   console.log("[Email OTP] upsertUser completed for:", email);
 
-  const dbUser = await new Promise<any>((resolve) => {
-    const client = (dbConn as any).$client;
-    client.execute("SELECT id, role FROM users WHERE openId = ? LIMIT 1", [openId],
-      (err: any, results: any) => resolve(Array.isArray(results) ? results[0] : null));
+  const client = (dbConn as any).$client;
+  const selectUser = () => new Promise<any>((resolve) => {
+    client.execute(
+      "SELECT id, role, name, email FROM users WHERE openId = ? LIMIT 1",
+      [openId],
+      (err: any, results: any) => resolve(Array.isArray(results) ? results[0] ?? null : null)
+    );
   });
-  if (!dbUser) return res.status(500).json({ error: "Error al crear sesión" });
+  let dbUser = await selectUser();
+  if (!dbUser) {
+    await new Promise(r => setTimeout(r, 1500));
+    dbUser = await selectUser();
+  }
+  if (!dbUser) {
+    console.error("[Email OTP] Usuario no persistido en BD después de upsert y retry");
+    return res.status(500).json({ error: "Error al crear la sesión. Por favor intenta de nuevo." });
+  }
 
   // Crear sesión JWT — mismo patrón que oauth.ts
   const sessionToken = await sdk.createSessionToken(openId, {

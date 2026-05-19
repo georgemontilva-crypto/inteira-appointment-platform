@@ -118,14 +118,23 @@ export function registerOAuthRoutes(app: Express) {
       });
 
       // 3b. Verificar que el usuario quedó persistido antes de emitir cookie
-      const oauthDbConn = await db.getDb();
-      const dbUser = await new Promise<any>((resolve) => {
-        const client = (oauthDbConn as any).$client;
-        client.execute("SELECT id, role FROM users WHERE openId = ? LIMIT 1", [`google:${userInfo.sub}`],
-          (err: any, results: any) => resolve(Array.isArray(results) ? results[0] : null));
+      const dbInstance = await db.getDb();
+      const client = (dbInstance as any).$client;
+      const selectUser = () => new Promise<any>((resolve) => {
+        client.execute(
+          "SELECT id, role, name, email FROM users WHERE openId = ? LIMIT 1",
+          [`google:${userInfo.sub}`],
+          (err: any, results: any) => resolve(Array.isArray(results) ? results[0] ?? null : null)
+        );
       });
+
+      let dbUser = await selectUser();
       if (!dbUser) {
-        console.error("[Google OAuth] Usuario no persistido en BD después de upsert");
+        await new Promise(r => setTimeout(r, 1500));
+        dbUser = await selectUser();
+      }
+      if (!dbUser) {
+        console.error("[Google OAuth] Usuario no persistido en BD después de upsert y retry");
         console.error("[OAuth] auth_failed - openId:", `google:${userInfo.sub}`, "email:", userInfo.email);
         return res.redirect("/?error=auth_failed");
       }
