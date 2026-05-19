@@ -206,6 +206,27 @@ async function runStartupMigrations() {
       console.warn("[Migration] Could not add tier column:", colErr?.message);
     }
 
+    // Ensure professionals.identityDocUrl and documentNationality columns exist
+    for (const col of [
+      { name: "identityDocUrl",      definition: "TEXT NULL" },
+      { name: "documentNationality", definition: "VARCHAR(100) NULL" },
+    ]) {
+      try {
+        const [cols] = await db.execute(
+          `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'professionals' AND COLUMN_NAME = '${col.name}'`
+        ) as any;
+        const exists = Array.isArray(cols) ? cols.length > 0 : false;
+        if (!exists) {
+          await db.execute(`ALTER TABLE \`professionals\` ADD COLUMN \`${col.name}\` ${col.definition}`);
+          console.log(`[Migration] professionals.${col.name} column added`);
+        } else {
+          console.log(`[Migration] professionals.${col.name} column already exists`);
+        }
+      } catch (colErr: any) {
+        console.warn(`[Migration] Could not add professionals.${col.name}:`, colErr?.message);
+      }
+    }
+
     // Ensure appointments.penaltyAmount and penaltyType columns exist
     await db.execute("ALTER TABLE `appointments` ADD COLUMN IF NOT EXISTS `penaltyAmount` int DEFAULT 0").catch(() => {});
     await db.execute("ALTER TABLE `appointments` ADD COLUMN IF NOT EXISTS `penaltyType` ENUM('none','partial','full','credits_lost')").catch(() => {});

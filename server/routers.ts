@@ -58,6 +58,8 @@ const professionalRegistrationSchema = z.object({
   hourlyRate: z.string().max(20).optional(),
   profilePhoto: z.string().url().max(500).optional(),
   fullName: z.string().max(100).optional(),           // nombre completo del profesional
+  identityDocUrl: z.string().url().max(500).optional(),
+  documentNationality: z.string().max(100).optional(),
 });
 
 const userProfileUpdateSchema = z.object({
@@ -446,6 +448,8 @@ export const appRouter = router({
             hourlyRate: input.hourlyRate ? input.hourlyRate : undefined,
             profilePhoto: input.profilePhoto ?? null,
             licenseDocument: input.licenseDocument ?? null,
+            identityDocUrl: input.identityDocUrl ?? null,
+            documentNationality: input.documentNationality ?? null,
           }
         );
 
@@ -1690,7 +1694,7 @@ export const appRouter = router({
         const client = (dbConn as any).$client;
         return new Promise<any>((resolve, reject) => {
           client.execute(
-            `SELECT licenseDocument, certifications, licenseNumber FROM professionals WHERE id = ? LIMIT 1`,
+            `SELECT licenseDocument, certifications, licenseNumber, identityDocUrl, documentNationality FROM professionals WHERE id = ? LIMIT 1`,
             [input.professionalId],
             (err: any, results: any) => {
               if (err) reject(err);

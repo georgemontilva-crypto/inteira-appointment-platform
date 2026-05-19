@@ -129,12 +129,16 @@ export default function RegisterProfessional() {
     yearsOfExperience: "",
     education: "",
     licenseNumber: "",
+    documentNationality: "",
   });
 
   const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [professionalLicense, setProfessionalLicense] = useState<File | null>(null);
   const [identityDoc, setIdentityDoc] = useState<File | null>(null);
   const [certifications, setCertifications] = useState<File | null>(null);
+  const [showLicenseConfirm, setShowLicenseConfirm] = useState(false);
+  const [pendingLicenseFile, setPendingLicenseFile] = useState<File | null>(null);
 
   const { data: specialties } = trpc.specialty.getAll.useQuery();
 
@@ -179,12 +183,14 @@ export default function RegisterProfessional() {
     if (!form.specialtyId) return toast.error("Selecciona la especialidad en la plataforma");
     if (!form.bio.trim()) return toast.error("La descripción profesional es obligatoria");
     if (!profilePhoto) return toast.error("La foto de perfil es obligatoria");
-    if (!identityDoc) return toast.error("El documento de identidad es obligatorio");
+    if (!identityDoc) return toast.error("El documento de identidad ciudadana es obligatorio");
 
     setUploading(true);
     const fullName = `${form.firstName.trim()} ${form.lastName.trim()}`.trim();
     try {
       const profilePhotoUrl = await uploadFile(profilePhoto);
+      let professionalLicenseUrl: string | undefined;
+      if (professionalLicense) professionalLicenseUrl = await uploadFile(professionalLicense);
       const identityDocUrl = await uploadFile(identityDoc);
       let certificationsUrl: string | undefined;
       if (certifications) certificationsUrl = await uploadFile(certifications);
@@ -192,7 +198,9 @@ export default function RegisterProfessional() {
       const payload = {
         specialtyId: parseInt(form.specialtyId),
         licenseNumber: form.licenseNumber.trim() || undefined,
-        licenseDocument: identityDocUrl,
+        licenseDocument: professionalLicenseUrl,
+        identityDocUrl,
+        documentNationality: form.documentNationality || undefined,
         bio: form.bio || undefined,
         education: form.education || undefined,
         certifications: certificationsUrl,
@@ -478,17 +486,50 @@ export default function RegisterProfessional() {
                   </div>
                 </div>
 
-                {/* Identity doc — always required */}
+                {/* Nacionalidad del documento */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold">
+                    País del documento de identidad <span className="text-red-500">*</span>
+                  </Label>
+                  <select
+                    value={form.documentNationality}
+                    onChange={(e) => handleChange("documentNationality", e.target.value)}
+                    className="w-full border border-border rounded-xl px-3 py-2.5 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                  >
+                    <option value="">Selecciona el país del documento</option>
+                    {["México","Colombia","Argentina","Chile","Perú","Venezuela","Ecuador","Bolivia","Paraguay","Uruguay","Costa Rica","Guatemala","Honduras","El Salvador","Nicaragua","Panamá","Cuba","República Dominicana","España","Otro"].map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Cédula profesional (con popup de confirmación) */}
                 <FileUploadField
-                  label="Documento de identidad"
-                  description="INE, pasaporte o cédula — PDF, JPG o PNG — máximo 10 MB"
+                  label="Cédula profesional"
+                  description="Documento que acredita tu título universitario — PDF, JPG o PNG — máximo 10 MB (opcional)"
+                  accept="application/pdf,image/jpeg,image/png,image/webp"
+                  file={professionalLicense}
+                  onChange={(file) => {
+                    if (file) {
+                      setPendingLicenseFile(file);
+                      setShowLicenseConfirm(true);
+                    } else {
+                      setProfessionalLicense(null);
+                    }
+                  }}
+                />
+
+                {/* Identificación oficial — obligatoria */}
+                <FileUploadField
+                  label="Identificación oficial"
+                  description="INE, pasaporte o cédula de ciudadanía — PDF, JPG o PNG — máximo 10 MB"
                   accept="application/pdf,image/jpeg,image/png,image/webp"
                   file={identityDoc}
                   onChange={setIdentityDoc}
                   required
                 />
 
-                {/* Cédula profesional (opcional) */}
+                {/* Número de cédula (opcional) */}
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <Label htmlFor="licenseNumber" className="text-sm font-semibold">
@@ -517,6 +558,38 @@ export default function RegisterProfessional() {
                 />
               </CardContent>
             </Card>
+
+            {/* ── Modal confirmación cédula profesional ── */}
+            {showLicenseConfirm && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+                <div className="bg-background rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
+                  <h3 className="font-bold text-base" style={{ fontFamily: "Poppins, sans-serif" }}>
+                    Confirma tu documento
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Este campo es exclusivamente para tu <strong>CÉDULA PROFESIONAL</strong> que acredita tu título universitario. No es para tu documento de identidad ciudadana (INE, pasaporte, cédula de ciudadanía).
+                  </p>
+                  <div className="flex gap-2 justify-end pt-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => { setPendingLicenseFile(null); setShowLicenseConfirm(false); }}
+                    >
+                      Cambiar documento
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="bg-primary hover:bg-primary/90 text-white border-0"
+                      onClick={() => { setProfessionalLicense(pendingLicenseFile); setPendingLicenseFile(null); setShowLicenseConfirm(false); }}
+                    >
+                      Sí, es mi cédula profesional
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* ── Submit ── */}
             <div className="pb-8">

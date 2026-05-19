@@ -1162,45 +1162,36 @@ export default function AdminDashboard() {
                         )}
 
                         {/* ── Documentos ── */}
-                        {(pro.licenseDocument || pro.certifications) && (
+                        {(pro.licenseDocument || pro.identityDocUrl || pro.certifications) && (
                           <div className="flex flex-wrap gap-2 pt-1 border-t border-border">
-                            {pro.licenseDocument && (
-                              pro.licenseDocument.startsWith("http") ? (
-                                <a
-                                  href={pro.licenseDocument}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="flex items-center gap-1 text-xs text-primary border border-primary/30 rounded-lg px-2 py-1 hover:bg-primary/5"
-                                >
-                                  <FileText className="w-3 h-3" />
-                                  Cédula profesional
-                                  <ExternalLink className="w-3 h-3" />
-                                </a>
-                              ) : (
-                                <span className="flex items-center gap-1 text-xs text-muted-foreground border border-border rounded-lg px-2 py-1">
-                                  <FileText className="w-3 h-3" />
-                                  {pro.licenseDocument}
-                                </span>
-                              )
+                            {pro.documentNationality && (
+                              <span className="flex items-center gap-1 text-xs text-muted-foreground border border-border rounded-lg px-2 py-1">
+                                {pro.documentNationality}
+                              </span>
                             )}
-                            {pro.certifications && (
-                              pro.certifications.startsWith("http") ? (
-                                <a
-                                  href={pro.certifications}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="flex items-center gap-1 text-xs text-primary border border-primary/30 rounded-lg px-2 py-1 hover:bg-primary/5"
-                                >
-                                  <FileText className="w-3 h-3" />
-                                  Certificaciones
-                                  <ExternalLink className="w-3 h-3" />
-                                </a>
-                              ) : (
-                                <span className="flex items-center gap-1 text-xs text-muted-foreground border border-border rounded-lg px-2 py-1">
-                                  <FileText className="w-3 h-3" />
-                                  {pro.certifications}
-                                </span>
-                              )
+                            {pro.licenseDocument && pro.licenseDocument.startsWith("http") && (
+                              <a href={pro.licenseDocument} target="_blank" rel="noopener noreferrer"
+                                className="flex items-center gap-1 text-xs text-primary border border-primary/30 rounded-lg px-2 py-1 hover:bg-primary/5">
+                                <FileText className="w-3 h-3" />
+                                Cédula profesional
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
+                            )}
+                            {pro.identityDocUrl && pro.identityDocUrl.startsWith("http") && (
+                              <a href={pro.identityDocUrl} target="_blank" rel="noopener noreferrer"
+                                className="flex items-center gap-1 text-xs text-primary border border-primary/30 rounded-lg px-2 py-1 hover:bg-primary/5">
+                                <FileText className="w-3 h-3" />
+                                Identificación oficial
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
+                            )}
+                            {pro.certifications && pro.certifications.startsWith("http") && (
+                              <a href={pro.certifications} target="_blank" rel="noopener noreferrer"
+                                className="flex items-center gap-1 text-xs text-primary border border-primary/30 rounded-lg px-2 py-1 hover:bg-primary/5">
+                                <FileText className="w-3 h-3" />
+                                Certificaciones
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
                             )}
                           </div>
                         )}
@@ -1432,22 +1423,49 @@ export default function AdminDashboard() {
                           )}
                         </div>
 
-                        {/* Documento de identidad */}
+                        {/* Nacionalidad del documento */}
+                        {proDocuments.documentNationality && (
+                          <div>
+                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Nacionalidad del documento</p>
+                            <p className="text-sm font-medium">{proDocuments.documentNationality}</p>
+                          </div>
+                        )}
+
+                        {/* Cédula profesional */}
                         <div>
-                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Documento de identidad</p>
+                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Cédula profesional</p>
                           {proDocuments.licenseDocument ? (
                             /\.(jpg|jpeg|png|gif|webp)$/i.test(proDocuments.licenseDocument) ? (
-                              <img src={proDocuments.licenseDocument} alt="Documento de identidad" className="w-full rounded-xl border border-border object-contain max-h-64" />
+                              <img src={proDocuments.licenseDocument} alt="Cédula profesional" className="w-full rounded-xl border border-border object-contain max-h-64" />
                             ) : (
                               <a href={proDocuments.licenseDocument} target="_blank" rel="noopener noreferrer"
                                 className="flex items-center gap-2 text-sm text-primary hover:underline bg-primary/5 px-3 py-2.5 rounded-lg">
                                 <FileText className="w-4 h-4 flex-shrink-0" />
-                                Abrir documento (PDF)
+                                Abrir cédula profesional (PDF)
                                 <ExternalLink className="w-3.5 h-3.5 ml-auto flex-shrink-0" />
                               </a>
                             )
                           ) : (
-                            <p className="text-xs text-muted-foreground italic">No proporcionado</p>
+                            <p className="text-xs text-muted-foreground italic">No proporcionada</p>
+                          )}
+                        </div>
+
+                        {/* Identificación oficial */}
+                        <div>
+                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Identificación oficial</p>
+                          {proDocuments.identityDocUrl ? (
+                            /\.(jpg|jpeg|png|gif|webp)$/i.test(proDocuments.identityDocUrl) ? (
+                              <img src={proDocuments.identityDocUrl} alt="Identificación oficial" className="w-full rounded-xl border border-border object-contain max-h-64" />
+                            ) : (
+                              <a href={proDocuments.identityDocUrl} target="_blank" rel="noopener noreferrer"
+                                className="flex items-center gap-2 text-sm text-primary hover:underline bg-primary/5 px-3 py-2.5 rounded-lg">
+                                <FileText className="w-4 h-4 flex-shrink-0" />
+                                Abrir identificación oficial (PDF)
+                                <ExternalLink className="w-3.5 h-3.5 ml-auto flex-shrink-0" />
+                              </a>
+                            )
+                          ) : (
+                            <p className="text-xs text-muted-foreground italic">No proporcionada</p>
                           )}
                         </div>
 

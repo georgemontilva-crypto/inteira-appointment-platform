@@ -74,6 +74,8 @@ export const professionals = mysqlTable("professionals", {
   totalReviews: int("totalReviews").default(0),
   isAvailable: boolean("isAvailable").default(true),
   tier: mysqlEnum("tier", ["basic", "pro"]).default("basic").notNull(),
+  identityDocUrl: text("identityDocUrl"),
+  documentNationality: varchar("documentNationality", { length: 100 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

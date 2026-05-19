@@ -227,8 +227,8 @@ export async function createProfessional(
 
   await client.execute(
     `INSERT INTO professionals
-     (userId, specialtyId, licenseNumber, status, bio, profilePhoto, licenseDocument, education, certifications, yearsOfExperience, hourlyRate)
-     VALUES (?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?)`,
+     (userId, specialtyId, licenseNumber, status, bio, profilePhoto, licenseDocument, education, certifications, yearsOfExperience, hourlyRate, identityDocUrl, documentNationality)
+     VALUES (?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       userId,
       specialtyId,
@@ -240,6 +240,8 @@ export async function createProfessional(
       data?.certifications ?? null,
       data?.yearsOfExperience ?? null,
       data?.hourlyRate ?? null,
+      data?.identityDocUrl ?? null,
+      data?.documentNationality ?? null,
     ]
   );
 }
