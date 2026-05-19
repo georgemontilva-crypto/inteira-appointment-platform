@@ -11,7 +11,7 @@ import DashboardLayout from "../components/DashboardLayout";
 import { toast } from "sonner";
 import {
   User, Phone, FileText, Save, Shield, Wallet,
-  Calendar, Star,
+  Calendar, Star, Trash2, Briefcase,
 } from "lucide-react";
 
 export default function UserProfile() {
@@ -39,6 +39,7 @@ export default function UserProfile() {
   const [phone, setPhone] = useState("");
   const [bio, setBio] = useState("");
   const [isDirty, setIsDirty] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   useEffect(() => {
     if (profile) {
@@ -47,6 +48,11 @@ export default function UserProfile() {
       setBio(profile.bio ?? "");
     }
   }, [profile]);
+
+  const deleteAccountMutation = trpc.user.deleteAccount.useMutation({
+    onSuccess: () => { window.location.href = "/"; },
+    onError: (err) => toast.error(err.message ?? "Error al eliminar la cuenta"),
+  });
 
   const updateMutation = trpc.user.updateProfile.useMutation({
     onSuccess: async () => {
@@ -287,6 +293,87 @@ export default function UserProfile() {
           </div>
         </div>
       </div>
+
+      {/* ── ¿Quieres ser profesional? ── */}
+      {profile?.role === "user" && (
+        <div className="container pb-6">
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="p-5 flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <Briefcase className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <p className="font-semibold text-sm">¿Quieres ser profesional?</p>
+                  <p className="text-xs text-muted-foreground">Ofrece consultas y gestiona tus citas desde tu propio panel.</p>
+                </div>
+              </div>
+              <Link href="/registro-profesional">
+                <Button size="sm" className="gradient-brand text-white border-0 whitespace-nowrap">
+                  Registrarme como profesional
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* ── Zona de peligro ── */}
+      <div className="container pb-10">
+        <Card className="border-red-200">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base text-red-600">
+              <Trash2 className="w-4 h-4" />
+              Zona de peligro
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center justify-between gap-4 flex-wrap">
+            <p className="text-sm text-muted-foreground">
+              Eliminar tu cuenta es permanente. Perderás todos tus datos, historial y créditos.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-red-300 text-red-600 hover:bg-red-50 whitespace-nowrap"
+              onClick={() => setShowDeleteModal(true)}
+            >
+              Dar de baja mi cuenta
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ── Modal confirmación baja ── */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <Card className="w-full max-w-sm">
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2 text-red-600">
+                <Trash2 className="w-4 h-4" />
+                Confirmar eliminación
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Esta acción es <strong>irreversible</strong>. Se eliminarán tu cuenta, historial y créditos. ¿Estás seguro?
+              </p>
+              <div className="flex gap-2 justify-end">
+                <Button variant="ghost" size="sm" onClick={() => setShowDeleteModal(false)}>
+                  Cancelar
+                </Button>
+                <Button
+                  size="sm"
+                  className="bg-red-600 hover:bg-red-700 text-white border-0"
+                  disabled={deleteAccountMutation.isPending}
+                  onClick={() => deleteAccountMutation.mutate()}
+                >
+                  {deleteAccountMutation.isPending ? "Eliminando…" : "Sí, eliminar mi cuenta"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </DashboardLayout>
   );
 }

@@ -357,6 +357,12 @@ export default function AdminDashboard() {
     onError: (err: any) => toast.error(err?.message ?? "Error al eliminar usuario"),
   });
 
+  const [roleChanges, setRoleChanges] = useState<Record<number, string>>({});
+  const changeUserRoleMutation = trpc.admin.changeUserRole.useMutation({
+    onSuccess: () => { refetchUsers(); setRoleChanges({}); toast.success("Rol actualizado"); },
+    onError: (err: any) => toast.error(err?.message ?? "Error al cambiar rol"),
+  });
+
   // ── Prepaid cards ─────────────────────────────────────────────────────────
   const [prepaidProductType, setPrepaidProductType] = useState<"individual_basic" | "individual_premium" | "plan_basic" | "plan_pro">("individual_basic");
   const { data: prepaidCards, refetch: refetchPrepaidCards } = trpc.admin.listPrepaidCards.useQuery(undefined, { enabled: isAuthenticated });
@@ -610,9 +616,21 @@ export default function AdminDashboard() {
                                 </div>
                               </td>
                               <td className="px-4 py-3">
-                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${roleBadge}`}>
-                                  {roleLabel}
-                                </span>
+                                {u.role === "admin" ? (
+                                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${roleBadge}`}>
+                                    {roleLabel}
+                                  </span>
+                                ) : (
+                                  <select
+                                    value={roleChanges[u.id] ?? u.role}
+                                    onChange={(e) => setRoleChanges(prev => ({ ...prev, [u.id]: e.target.value }))}
+                                    className="text-xs border border-border rounded px-2 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-primary"
+                                  >
+                                    <option value="user">Usuario</option>
+                                    <option value="professional">Profesional</option>
+                                    <option value="admin">Admin</option>
+                                  </select>
+                                )}
                               </td>
                               <td className="px-4 py-3">
                                 {planLabel ? (
@@ -638,18 +656,28 @@ export default function AdminDashboard() {
                                 {u.loginMethod ?? "—"}
                               </td>
                               <td className="px-4 py-3 text-right">
-                                {u.role !== "admin" && (
-                                  <button
-                                    onClick={() => {
-                                      if (window.confirm(`¿Eliminar a ${u.name ?? u.email}? Esta acción no se puede deshacer.`)) {
-                                        deleteUserMutation.mutate({ userId: u.id });
-                                      }
-                                    }}
-                                    className="text-xs text-red-600 hover:text-red-800 font-medium px-2 py-1 rounded hover:bg-red-50 transition-colors"
-                                  >
-                                    Eliminar
-                                  </button>
-                                )}
+                                <div className="flex flex-col items-end gap-1">
+                                  {roleChanges[u.id] && roleChanges[u.id] !== u.role && (
+                                    <button
+                                      onClick={() => changeUserRoleMutation.mutate({ userId: u.id, role: roleChanges[u.id] as any })}
+                                      className="text-xs text-primary hover:text-primary/80 font-medium px-2 py-1 rounded hover:bg-primary/10 transition-colors"
+                                    >
+                                      Guardar rol
+                                    </button>
+                                  )}
+                                  {u.role !== "admin" && (
+                                    <button
+                                      onClick={() => {
+                                        if (window.confirm(`¿Eliminar a ${u.name ?? u.email}? Esta acción no se puede deshacer.`)) {
+                                          deleteUserMutation.mutate({ userId: u.id });
+                                        }
+                                      }}
+                                      className="text-xs text-red-600 hover:text-red-800 font-medium px-2 py-1 rounded hover:bg-red-50 transition-colors"
+                                    >
+                                      Eliminar
+                                    </button>
+                                  )}
+                                </div>
                               </td>
                             </tr>
                           );

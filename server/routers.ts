@@ -378,6 +378,28 @@ export const appRouter = router({
           amount: Number(card.amount),
         };
       }),
+
+    deleteAccount: protectedProcedure.mutation(async ({ ctx }) => {
+      const dbInstance = await db.getDb();
+      if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      const client = (dbInstance as any).$client;
+      const active = await new Promise<any[]>((resolve) => {
+        client.execute(
+          "SELECT id FROM appointments WHERE userId = ? AND status IN ('scheduled','pending_review') LIMIT 1",
+          [ctx.user.id],
+          (err: any, r: any) => resolve(Array.isArray(r) ? r : [])
+        );
+      });
+      if (active.length > 0) throw new TRPCError({ code: "BAD_REQUEST", message: "Tienes citas activas. Cancélalas antes de eliminar tu cuenta." });
+      await new Promise<void>((resolve, reject) => {
+        client.execute(
+          "DELETE FROM users WHERE id = ? AND role = 'user'",
+          [ctx.user.id],
+          (err: any) => { if (err) reject(err); else resolve(); }
+        );
+      });
+      return { success: true };
+    }),
   }),
 
   // Professional routes
@@ -1192,6 +1214,23 @@ export const appRouter = router({
         const client = (dbInstance as any).$client;
         await new Promise<void>((resolve, reject) => {
           client.execute("DELETE FROM users WHERE id = ? AND role != 'admin'", [input.userId],
+            (err: any) => { if (err) reject(err); else resolve(); }
+          );
+        });
+        return { success: true };
+      }),
+
+    changeUserRole: protectedProcedure
+      .input(z.object({ userId: z.number(), role: z.enum(["user", "professional", "admin"]) }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+        const dbInstance = await db.getDb();
+        if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const client = (dbInstance as any).$client;
+        await new Promise<void>((resolve, reject) => {
+          client.execute(
+            "UPDATE users SET role = ? WHERE id = ?",
+            [input.role, input.userId],
             (err: any) => { if (err) reject(err); else resolve(); }
           );
         });
