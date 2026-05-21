@@ -196,10 +196,13 @@ emailAuthRouter.post("/verify-otp", async (req: Request, res: Response) => {
       (err: any, results: any) => resolve(Array.isArray(results) ? results[0] ?? null : null)
     );
   });
+  console.log("[Email OTP] Searching for openId:", openId, "email:", email);
   let dbUser = await selectUser();
+  console.log("[Email OTP] First SELECT result:", dbUser ? `found id=${dbUser.id}` : "NOT FOUND", "openId:", openId);
   if (!dbUser) {
     await new Promise(r => setTimeout(r, 1500));
     dbUser = await selectUser();
+    console.log("[Email OTP] Retry SELECT result:", dbUser ? `found id=${dbUser.id}` : "STILL NOT FOUND");
   }
   if (!dbUser) {
     console.error("[Email OTP] Usuario no persistido en BD después de upsert y retry");
