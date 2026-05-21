@@ -188,6 +188,16 @@ emailAuthRouter.post("/verify-otp", async (req: Request, res: Response) => {
   });
   console.log("[Email OTP] upsertUser completed for:", email);
 
+  // Debug: buscar también por email para ver si el problema es el openId
+  const userByEmail = await new Promise<any>((resolve) => {
+    client.execute(
+      "SELECT id, openId, email FROM users WHERE email = ? LIMIT 1",
+      [email],
+      (err: any, results: any) => resolve(Array.isArray(results) ? results[0] ?? null : null)
+    );
+  });
+  console.log("[Email OTP] SELECT by email result:", userByEmail ? `found id=${userByEmail.id} openId=${userByEmail.openId}` : "NOT FOUND BY EMAIL EITHER");
+
   const dbClient = (dbConn as any).$client;
   const selectUser = () => new Promise<any>((resolve) => {
     dbClient.execute(
