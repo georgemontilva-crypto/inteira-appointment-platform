@@ -1216,10 +1216,30 @@ export const appRouter = router({
         const dbInstance = await db.getDb();
         if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
         const client = (dbInstance as any).$client;
+        const q = (sql: string, params: any[]) => new Promise<void>((resolve) => {
+          client.execute(sql, params, () => resolve());
+        });
+        // Obtener professionalId si existe
+        const profRows = await new Promise<any[]>((resolve) => {
+          client.execute("SELECT id FROM professionals WHERE userId = ?", [input.userId],
+            (err: any, r: any) => resolve(Array.isArray(r) ? r : []));
+        });
+        const profId = profRows[0]?.id;
+        if (profId) {
+          await q("DELETE FROM professionalAvailability WHERE professionalId = ?", [profId]);
+          await q("DELETE FROM professionalEarnings WHERE professionalId = ?", [profId]);
+          await q("DELETE FROM professionalWallet WHERE professionalId = ?", [profId]);
+          await q("DELETE FROM reviews WHERE professionalId = ?", [profId]);
+          await q("DELETE FROM professionals WHERE id = ?", [profId]);
+        }
+        await q("DELETE FROM appointments WHERE userId = ?", [input.userId]);
+        await q("DELETE FROM creditBatches WHERE userId = ?", [input.userId]);
+        await q("DELETE FROM creditTransactions WHERE userId = ?", [input.userId]);
+        await q("DELETE FROM notifications WHERE userId = ?", [input.userId]);
+        await q("DELETE FROM emailOtps WHERE email = (SELECT email FROM users WHERE id = ?)", [input.userId]);
         await new Promise<void>((resolve, reject) => {
           client.execute("DELETE FROM users WHERE id = ? AND role != 'admin'", [input.userId],
-            (err: any) => { if (err) reject(err); else resolve(); }
-          );
+            (err: any) => { if (err) reject(err); else resolve(); });
         });
         return { success: true };
       }),
