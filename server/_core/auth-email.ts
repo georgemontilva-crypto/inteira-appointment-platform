@@ -215,7 +215,28 @@ emailAuthRouter.post("/verify-otp", async (req: Request, res: Response) => {
     console.log("[Email OTP] Retry SELECT result:", dbUser ? `found id=${dbUser.id}` : "STILL NOT FOUND");
   }
   if (!dbUser) {
-    console.error("[Email OTP] Usuario no persistido en BD después de upsert y retry");
+    // Último intento: buscar por email (el usuario puede tener openId diferente)
+    dbUser = await new Promise<any>((resolve) => {
+      client.execute(
+        "SELECT id, role, name, email FROM users WHERE email = ? LIMIT 1",
+        [email],
+        (err: any, results: any) => resolve(Array.isArray(results) ? results[0] ?? null : null)
+      );
+    });
+    if (dbUser) {
+      console.log("[Email OTP] Found user by email fallback, id:", dbUser.id);
+      // Actualizar openId para futuros logins por email
+      await new Promise<void>((resolve) => {
+        client.execute(
+          "UPDATE users SET openId = ? WHERE id = ?",
+          [openId, dbUser.id],
+          () => resolve()
+        );
+      });
+    }
+  }
+  if (!dbUser) {
+    console.error("[Email OTP] Usuario no encontrado ni por openId ni por email");
     return res.status(500).json({ error: "Error al crear la sesión. Por favor intenta de nuevo." });
   }
 

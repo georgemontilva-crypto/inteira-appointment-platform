@@ -134,7 +134,28 @@ export function registerOAuthRoutes(app: Express) {
         dbUser = await selectUser();
       }
       if (!dbUser) {
-        console.error("[Google OAuth] Usuario no persistido en BD después de upsert y retry");
+        // Último intento: buscar por email (el usuario puede tener openId diferente)
+        dbUser = await new Promise<any>((resolve) => {
+          client.execute(
+            "SELECT id, role, name, email FROM users WHERE email = ? LIMIT 1",
+            [userInfo.email],
+            (err: any, results: any) => resolve(Array.isArray(results) ? results[0] ?? null : null)
+          );
+        });
+        if (dbUser) {
+          console.log("[Google OAuth] Found user by email fallback, id:", dbUser.id);
+          // Actualizar openId para futuros logins con Google
+          await new Promise<void>((resolve) => {
+            client.execute(
+              "UPDATE users SET openId = ? WHERE id = ?",
+              [`google:${userInfo.sub}`, dbUser.id],
+              () => resolve()
+            );
+          });
+        }
+      }
+      if (!dbUser) {
+        console.error("[Google OAuth] Usuario no encontrado ni por openId ni por email");
         console.error("[OAuth] auth_failed - openId:", `google:${userInfo.sub}`, "email:", userInfo.email);
         return res.redirect("/?error=auth_failed");
       }
