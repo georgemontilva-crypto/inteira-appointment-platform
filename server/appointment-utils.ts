@@ -17,12 +17,12 @@ export interface AvailabilitySlot {
 /**
  * Check if an appointment can be scheduled (10 minutes minimum anticipation)
  */
-export function canScheduleAppointment(appointmentDate: Date, clientOffsetMinutes: number = 0): boolean {
+export function canScheduleAppointment(appointmentDate: Date, clientOffsetMinutes: number = -300): boolean {
   const nowUTC = Date.now();
-  const minTimeUTC = nowUTC + 10 * 60 * 1000;
-  // Convertir el slot (que está en hora local del cliente) a UTC
-  const appointmentUTC = appointmentDate.getTime() - (clientOffsetMinutes * 60 * 1000);
-  return appointmentUTC > minTimeUTC;
+  const nowLocal = nowUTC + (clientOffsetMinutes * 60 * 1000);
+  const minTime = nowLocal + (30 * 60 * 1000);
+  const appointmentMs = appointmentDate.getTime();
+  return appointmentMs > minTime;
 }
 
 /**
@@ -52,11 +52,9 @@ export function getAvailableSlots(
 
     let currentTime = new Date(date);
     currentTime.setHours(startHour, startMinute, 0, 0);
-    currentTime.setMinutes(currentTime.getMinutes() - clientOffsetMinutes);
 
     const endTime = new Date(date);
     endTime.setHours(endHour, endMinute, 0, 0);
-    endTime.setMinutes(endTime.getMinutes() - clientOffsetMinutes);
 
     while (currentTime.getTime() + durationMinutes * 60 * 1000 <= endTime.getTime()) {
       const slotEnd = new Date(currentTime.getTime() + durationMinutes * 60 * 1000);
