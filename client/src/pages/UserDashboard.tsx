@@ -44,6 +44,7 @@ import {
 } from "lucide-react";
 import { format, isToday, isTomorrow, formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
+import { parseLocalDate } from "@/lib/utils";
 import { getLoginUrl } from "@/const";
 import DashboardLayout from "../components/DashboardLayout";
 import { Link } from "wouter";
@@ -433,11 +434,11 @@ export default function UserDashboard() {
                         <div className="flex items-center gap-3 mt-0.5 flex-wrap">
                           <span className="flex items-center gap-1 text-xs text-primary font-semibold capitalize">
                             <Calendar className="w-3 h-3" />
-                            {getDateLabel(new Date(nextAppointment.appointmentDate))}
+                            {getDateLabel(parseLocalDate(nextAppointment.appointmentDate))}
                           </span>
                           <span className="flex items-center gap-1 text-xs text-muted-foreground">
                             <Clock className="w-3 h-3" />
-                            {format(new Date(nextAppointment.appointmentDate), "HH:mm", { locale: es })}
+                            {format(parseLocalDate(nextAppointment.appointmentDate), "HH:mm", { locale: es })}
                             {nextAppointment.durationMinutes ? ` · ${nextAppointment.durationMinutes} min` : ""}
                           </span>
                         </div>
@@ -512,10 +513,10 @@ export default function UserDashboard() {
                             </p>
                             <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                               <span className="flex items-center gap-1 text-xs text-primary font-medium capitalize">
-                                <Calendar className="w-3 h-3" /> {getDateLabel(new Date(apt.appointmentDate))}
+                                <Calendar className="w-3 h-3" /> {getDateLabel(parseLocalDate(apt.appointmentDate))}
                               </span>
                               <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                                <Clock className="w-3 h-3" /> {format(new Date(apt.appointmentDate), "HH:mm", { locale: es })}
+                                <Clock className="w-3 h-3" /> {format(parseLocalDate(apt.appointmentDate), "HH:mm", { locale: es })}
                                 {apt.durationMinutes ? ` · ${apt.durationMinutes} min` : ""}
                               </span>
                             </div>
@@ -565,7 +566,7 @@ export default function UserDashboard() {
                               </div>
                               <div>
                                 <p className="text-sm font-semibold">Califica tu sesión con {(apt as any).professionalName ?? "el especialista"}</p>
-                                <p className="text-xs text-muted-foreground">{format(new Date(apt.appointmentDate), "d 'de' MMMM", { locale: es })}</p>
+                                <p className="text-xs text-muted-foreground">{format(parseLocalDate(apt.appointmentDate), "d 'de' MMMM", { locale: es })}</p>
                               </div>
                             </div>
                             <StarRating value={rating} onChange={setRating} />
@@ -595,7 +596,7 @@ export default function UserDashboard() {
                               <p className="font-medium text-sm truncate">
                                 {(apt as any).professionalName ?? `Especialista #${apt.professionalId}`}
                               </p>
-                              <p className="text-xs text-muted-foreground">{format(new Date(apt.appointmentDate), "d MMM yyyy", { locale: es })}</p>
+                              <p className="text-xs text-muted-foreground">{format(parseLocalDate(apt.appointmentDate), "d MMM yyyy", { locale: es })}</p>
                             </div>
                             <div className="flex items-center gap-1.5 flex-shrink-0">
                               <Badge className={`${statusColors[apt.status]} border-0 text-[10px]`}>{statusLabels[apt.status]}</Badge>

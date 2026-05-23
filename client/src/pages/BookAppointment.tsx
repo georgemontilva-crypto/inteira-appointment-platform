@@ -108,12 +108,12 @@ export default function BookAppointment() {
   const handleConfirm = () => {
     if (!selectedDate || !selectedSlot) return;
     const [hours, minutes] = selectedSlot.split(":").map(Number);
-    const appointmentDate = new Date(selectedDate);
-    appointmentDate.setHours(hours, minutes, 0, 0);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const localISO = `${selectedDate.getFullYear()}-${pad(selectedDate.getMonth() + 1)}-${pad(selectedDate.getDate())}T${pad(hours)}:${pad(minutes)}:00`;
 
     bookMutation.mutate({
       professionalId,
-      appointmentDate: appointmentDate.toISOString(),
+      appointmentDate: localISO,
       sessionType,
       notes: notes || undefined,
     });

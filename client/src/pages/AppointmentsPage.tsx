@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { sessionCostByDuration } from "@/lib/pricing";
+import { parseLocalDate } from "@/lib/utils";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { toast } from "sonner";
 import { format, isToday, isTomorrow, differenceInHours } from "date-fns";
@@ -113,11 +114,11 @@ export default function AppointmentsPage() {
       const now = Date.now();
       const upcoming = appointments.find((a) => {
         if (a.status !== "scheduled") return false;
-        const start = new Date(a.appointmentDate).getTime();
+        const start = parseLocalDate(a.appointmentDate).getTime();
         return now >= start - fiveMin && now < start + (((a as any).durationMinutes ?? 60) * 60 * 1000);
       });
       if (upcoming && (upcoming as any).videoCallLink) {
-        const start = new Date(upcoming.appointmentDate);
+        const start = parseLocalDate(upcoming.appointmentDate);
         const end = new Date(start.getTime() + ((upcoming as any).durationMinutes ?? 60) * 60 * 1000);
         setActiveCall((prev) =>
           prev?.appointmentId === upcoming.id ? prev : {
@@ -179,10 +180,10 @@ export default function AppointmentsPage() {
   const now = new Date();
   const pendingReviewApt = appointments?.find((a) => a.status === "pending_review") ?? null;
   const upcomingAppointments: Apt[] = appointments?.filter((a) =>
-    a.status === "scheduled" && new Date(a.appointmentDate) > now
+    a.status === "scheduled" && parseLocalDate(a.appointmentDate) > now
   ) ?? [];
   const pastAppointments: Apt[] = appointments?.filter((a) =>
-    a.status !== "scheduled" || new Date(a.appointmentDate) <= now
+    a.status !== "scheduled" || parseLocalDate(a.appointmentDate) <= now
   ) ?? [];
   const completedCount = appointments?.filter((a) => a.status === "completed").length ?? 0;
   const pendingReviews = pastAppointments.filter(
@@ -205,7 +206,7 @@ export default function AppointmentsPage() {
 
   /* ─── Appointment Card ─── */
   const UpcomingCard = ({ apt }: { apt: Apt }) => {
-    const date = new Date(apt.appointmentDate);
+    const date = parseLocalDate(apt.appointmentDate);
     const sc = statusColors["scheduled"];
     const [nowMs, setNowMs] = useState(Date.now());
     useEffect(() => {
@@ -274,8 +275,8 @@ export default function AppointmentsPage() {
                       url: (apt as any).videoCallLink,
                       appointmentId: apt.id,
                       professionalName: (apt as any).professionalName ?? `Especialista #${apt.professionalId}`,
-                      startTime: new Date(apt.appointmentDate),
-                      endTime: new Date(new Date(apt.appointmentDate).getTime() + ((apt as any).durationMinutes ?? 55) * 60 * 1000),
+                      startTime: parseLocalDate(apt.appointmentDate),
+                      endTime: new Date(parseLocalDate(apt.appointmentDate).getTime() + ((apt as any).durationMinutes ?? 55) * 60 * 1000),
                     });
                   }}
                   className="flex-1 w-full flex items-center justify-center gap-1.5 text-xs font-semibold text-white rounded-xl h-8 px-3 transition-opacity"
@@ -311,7 +312,7 @@ export default function AppointmentsPage() {
   };
 
   const HistoryCard = ({ apt }: { apt: Apt }) => {
-    const date = new Date(apt.appointmentDate);
+    const date = parseLocalDate(apt.appointmentDate);
     const sc = statusColors[apt.status] ?? statusColors["completed"];
     const isRating = ratingId === apt.id;
 
@@ -614,7 +615,7 @@ export default function AppointmentsPage() {
       {confirmCancelId !== null && (() => {
         const apt = upcomingAppointments.find((a) => a.id === confirmCancelId);
         if (!apt) return null;
-        const hoursUntil = (new Date(apt.appointmentDate).getTime() - Date.now()) / 3_600_000;
+        const hoursUntil = (parseLocalDate(apt.appointmentDate).getTime() - Date.now()) / 3_600_000;
         const isFree = hoursUntil >= 4;
         const sessionCost = sessionCostByDuration(apt.durationMinutes);
         return (
@@ -665,7 +666,7 @@ export default function AppointmentsPage() {
               <h2 className="text-base font-bold text-[#1a1a1a]">Califica tu sesión</h2>
               <p className="text-xs text-[#93A295]">
                 Con {(pendingReviewApt as any).professionalName ?? "el especialista"} ·{" "}
-                {format(new Date(pendingReviewApt.appointmentDate), "d 'de' MMMM yyyy", { locale: es })}
+                {format(parseLocalDate(pendingReviewApt.appointmentDate), "d 'de' MMMM yyyy", { locale: es })}
               </p>
               <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded-xl px-3 py-1.5">
                 El pago al profesional se libera al enviar tu reseña.

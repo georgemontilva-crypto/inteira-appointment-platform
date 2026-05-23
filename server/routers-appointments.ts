@@ -190,7 +190,7 @@ export const appointmentRouter = router({
         userId: ctx.user.id,
         professionalId: input.professionalId,
         specialtyId: professional.specialtyId,
-        appointmentDate: appointmentDateObj,
+        appointmentDate: input.appointmentDate, // store the local-time string; mysql2 Date objects get UTC-shifted
         durationMinutes,
         videoCallType: "daily",
         videoCallLink: undefined,

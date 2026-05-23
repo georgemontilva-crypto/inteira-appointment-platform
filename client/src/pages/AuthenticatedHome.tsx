@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "wouter";
 import { format } from "date-fns";
+import { parseLocalDate } from "@/lib/utils";
 import { es } from "date-fns/locale";
 import {
   Calendar,
@@ -184,8 +185,8 @@ export default function AuthenticatedHome() {
         {(() => {
           const nextWithVideo = upcomingApts.find((a) => a.videoCallLink && a.status === "scheduled");
           if (!nextWithVideo) return null;
-          const msUntil = new Date(nextWithVideo.appointmentDate).getTime() - Date.now();
-          const isToday = new Date(nextWithVideo.appointmentDate).toDateString() === new Date().toDateString();
+          const msUntil = parseLocalDate(nextWithVideo.appointmentDate).getTime() - Date.now();
+          const isToday = parseLocalDate(nextWithVideo.appointmentDate).toDateString() === new Date().toDateString();
           const isSoon = msUntil > 0 && msUntil < 60 * 60 * 1000;
           if (!isToday && !isSoon) return null;
           return (
@@ -199,7 +200,7 @@ export default function AuthenticatedHome() {
                     {isSoon ? "¡Tu cita comienza pronto!" : "Tienes una cita hoy"}
                   </p>
                   <p className="text-xs text-muted-foreground truncate">
-                    {format(new Date(nextWithVideo.appointmentDate), "HH:mm", { locale: es })} · {nextWithVideo.durationMinutes} min · {(nextWithVideo as any).professionalName ?? `Especialista #${nextWithVideo.professionalId}`}
+                    {format(parseLocalDate(nextWithVideo.appointmentDate), "HH:mm", { locale: es })} · {nextWithVideo.durationMinutes} min · {(nextWithVideo as any).professionalName ?? `Especialista #${nextWithVideo.professionalId}`}
                   </p>
                 </div>
                 <a href={nextWithVideo.videoCallLink!} target="_blank" rel="noopener noreferrer">
@@ -334,7 +335,7 @@ export default function AuthenticatedHome() {
                     <div className="flex items-center gap-1.5 mt-0.5">
                       <Clock className="w-3 h-3 text-muted-foreground flex-shrink-0" />
                       <span className="text-xs text-muted-foreground">
-                        {format(new Date(apt.appointmentDate), "d MMM 'a las' HH:mm", { locale: es })}
+                        {format(parseLocalDate(apt.appointmentDate), "d MMM 'a las' HH:mm", { locale: es })}
                       </span>
                     </div>
                   </div>
@@ -564,7 +565,7 @@ export default function AuthenticatedHome() {
                         {(apt as any).professionalName ?? `Especialista #${apt.professionalId}`}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {format(new Date(apt.appointmentDate), "d MMM yyyy", { locale: es })}
+                        {format(parseLocalDate(apt.appointmentDate), "d MMM yyyy", { locale: es })}
                       </p>
                     </div>
                     <Badge className="bg-emerald-100 text-emerald-700 border-0 text-[10px] flex-shrink-0">

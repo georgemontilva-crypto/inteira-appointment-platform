@@ -20,6 +20,7 @@ import {
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { parseLocalDate } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import {
   Users, CheckCircle2, XCircle, Clock, Shield, Plus,
@@ -949,7 +950,7 @@ export default function AdminDashboard() {
                               Cita #{apt.id} · {apt.userName ?? `Usuario #${apt.userId}`} → {apt.professionalName ?? `Profesional #${apt.professionalId}`}
                             </p>
                             <p className="text-[11px] text-muted-foreground">
-                              {format(new Date(apt.appointmentDate), "d MMM yyyy, HH:mm", { locale: es })}
+                              {format(parseLocalDate(apt.appointmentDate), "d MMM yyyy, HH:mm", { locale: es })}
                             </p>
                           </div>
                           <Badge className={`${s.cls} border-0 text-[10px]`}>{s.label}</Badge>

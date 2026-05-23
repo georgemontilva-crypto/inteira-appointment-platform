@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { parseLocalDate } from "@/lib/utils";
 import DashboardLayout from "../components/DashboardLayout";
 import { VideoCallPanel } from "../components/VideoCallPanel";
 
@@ -79,9 +80,9 @@ export default function ProfessionalDashboard() {
     return () => clearInterval(id);
   }, []);
   const canJoin = (apt: { appointmentDate: string | Date }) =>
-    nowMs >= new Date(apt.appointmentDate).getTime() - 5 * 60 * 1000;
+    nowMs >= parseLocalDate(apt.appointmentDate).getTime() - 5 * 60 * 1000;
   const joinCountdown = (apt: { appointmentDate: string | Date }) => {
-    const ms = new Date(apt.appointmentDate).getTime() - 5 * 60 * 1000 - nowMs;
+    const ms = parseLocalDate(apt.appointmentDate).getTime() - 5 * 60 * 1000 - nowMs;
     if (ms <= 0) return "";
     const days = Math.floor(ms / (1000 * 60 * 60 * 24));
     const hours = Math.floor((ms % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
@@ -565,8 +566,8 @@ export default function ProfessionalDashboard() {
       {(() => {
         const nextWithVideo = upcomingAppointments.find((a) => (a as any).videoCallLink && a.status === "scheduled");
         if (!nextWithVideo) return null;
-        const msUntil = new Date(nextWithVideo.appointmentDate).getTime() - Date.now();
-        const isToday = new Date(nextWithVideo.appointmentDate).toDateString() === new Date().toDateString();
+        const msUntil = parseLocalDate(nextWithVideo.appointmentDate).getTime() - Date.now();
+        const isToday = parseLocalDate(nextWithVideo.appointmentDate).toDateString() === new Date().toDateString();
         const isSoon = msUntil > 0 && msUntil < 60 * 60 * 1000;
         if (!isToday && !isSoon) return null;
         return (
@@ -581,7 +582,7 @@ export default function ProfessionalDashboard() {
                     {isSoon ? "¡Tu próxima cita comienza pronto!" : "Tienes una cita hoy"}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {format(new Date(nextWithVideo.appointmentDate), "HH:mm", { locale: es })} · {nextWithVideo.durationMinutes} min
+                    {format(parseLocalDate(nextWithVideo.appointmentDate), "HH:mm", { locale: es })} · {nextWithVideo.durationMinutes} min
                   </p>
                 </div>
                 <Button
@@ -592,8 +593,8 @@ export default function ProfessionalDashboard() {
                     url: (nextWithVideo as any).videoCallLink,
                     appointmentId: nextWithVideo.id,
                     professionalName: (nextWithVideo as any).userName ?? `Usuario #${nextWithVideo.userId}`,
-                    startTime: new Date(nextWithVideo.appointmentDate),
-                    endTime: new Date(new Date(nextWithVideo.appointmentDate).getTime() + (nextWithVideo.durationMinutes ?? 55) * 60 * 1000),
+                    startTime: parseLocalDate(nextWithVideo.appointmentDate),
+                    endTime: new Date(parseLocalDate(nextWithVideo.appointmentDate).getTime() + (nextWithVideo.durationMinutes ?? 55) * 60 * 1000),
                   })}
                 >
                   <Video className="w-3 h-3 mr-1" />
@@ -685,7 +686,7 @@ export default function ProfessionalDashboard() {
                         </div>
                         <div className="flex items-center gap-1.5 mt-1.5 ml-10">
                           <Clock className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-                          <span className="text-xs text-muted-foreground truncate">{format(new Date(apt.appointmentDate), "d MMM · HH:mm", { locale: es })}</span>
+                          <span className="text-xs text-muted-foreground truncate">{format(parseLocalDate(apt.appointmentDate), "d MMM · HH:mm", { locale: es })}</span>
                           <span className="text-xs text-muted-foreground flex-shrink-0">· {apt.durationMinutes}m</span>
                         </div>
                       </div>
@@ -777,7 +778,7 @@ export default function ProfessionalDashboard() {
                 ) : (
                   <div className="space-y-3">
                     {upcomingAppointments.map((apt) => {
-                      const startDate = new Date(apt.appointmentDate);
+                      const startDate = parseLocalDate(apt.appointmentDate);
                       const endTime = new Date(startDate);
                       endTime.setMinutes(endTime.getMinutes() + (apt.durationMinutes ?? 55));
                       const joinable = canJoin(apt);
@@ -825,7 +826,7 @@ export default function ProfessionalDashboard() {
                           </div>
 
                           {/* Action buttons */}
-                          {(apt.videoCallLink || new Date(apt.appointmentDate).getTime() + 55 * 60 * 1000 < Date.now()) && (
+                          {(apt.videoCallLink || parseLocalDate(apt.appointmentDate).getTime() + 55 * 60 * 1000 < Date.now()) && (
                             <div className="flex gap-2 mt-3 pl-[52px]">
                               {apt.videoCallLink && (
                                 <Button
@@ -836,15 +837,15 @@ export default function ProfessionalDashboard() {
                                     url: apt.videoCallLink!,
                                     appointmentId: apt.id,
                                     professionalName: (apt as any).userName ?? `Usuario #${apt.userId}`,
-                                    startTime: new Date(apt.appointmentDate),
-                                    endTime: new Date(new Date(apt.appointmentDate).getTime() + (apt.durationMinutes ?? 55) * 60 * 1000),
+                                    startTime: parseLocalDate(apt.appointmentDate),
+                                    endTime: new Date(parseLocalDate(apt.appointmentDate).getTime() + (apt.durationMinutes ?? 55) * 60 * 1000),
                                   })}
                                 >
                                   <Video className="w-3 h-3 mr-1.5" />
                                   Unirse
                                 </Button>
                               )}
-                              {new Date(apt.appointmentDate).getTime() + 55 * 60 * 1000 < Date.now() && (
+                              {parseLocalDate(apt.appointmentDate).getTime() + 55 * 60 * 1000 < Date.now() && (
                                 <Button
                                   size="sm"
                                   variant="outline"
@@ -889,7 +890,7 @@ export default function ProfessionalDashboard() {
                 ) : (
                   <div className="max-h-[520px] overflow-y-auto scroll-smooth rounded-2xl border border-border divide-y divide-border" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
                     {pastAppointments.map((apt, idx) => {
-                      const startDate = new Date(apt.appointmentDate);
+                      const startDate = parseLocalDate(apt.appointmentDate);
                       const endTime = new Date(startDate);
                       endTime.setMinutes(endTime.getMinutes() + (apt.durationMinutes ?? 55));
                       const isPremium = (apt.durationMinutes ?? 55) >= 60;
@@ -1470,7 +1471,7 @@ export default function ProfessionalDashboard() {
                     <div key={e.id} className="flex items-center justify-between px-4 py-3">
                       <div>
                         <p className="text-sm font-medium text-[#2d3a2e]">Cita #{e.appointmentId}</p>
-                        <p className="text-xs text-[#93A295]">{e.appointmentDate ? format(new Date(e.appointmentDate), "d MMM yyyy 'a las' HH:mm", { locale: es }) : "—"}</p>
+                        <p className="text-xs text-[#93A295]">{e.appointmentDate ? format(parseLocalDate(e.appointmentDate), "d MMM yyyy 'a las' HH:mm", { locale: es }) : "—"}</p>
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-bold text-[#607562]">+${parseFloat(e.netAmount).toFixed(2)} MXN</p>
@@ -1843,7 +1844,7 @@ export default function ProfessionalDashboard() {
               <h2 className="text-base font-bold mt-2">¿El usuario asistió a la consulta?</h2>
               <p className="text-xs text-muted-foreground">
                 {attendanceModal.userName ?? `Usuario #${attendanceModal.userId}`} ·{" "}
-                {format(new Date(attendanceModal.appointmentDate), "d MMM yyyy 'a las' HH:mm", { locale: es })}
+                {format(parseLocalDate(attendanceModal.appointmentDate), "d MMM yyyy 'a las' HH:mm", { locale: es })}
               </p>
             </div>
             <div className="flex gap-3">
