@@ -1260,6 +1260,44 @@ export const appRouter = router({
         return { success: true };
       }),
 
+    // ── TEMPORAL — remover después ───────────────────────────────────────
+    getRecentAppointmentsByProfessional: protectedProcedure
+      .input(z.object({ name: z.string() }))
+      .query(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+        const dbInstance = await db.getDb();
+        if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const client = (dbInstance as any).$client;
+        const sql = `
+          SELECT
+            a.id,
+            a.appointmentDate,
+            a.status,
+            a.videoCallLink,
+            a.videoCallType,
+            a.durationMinutes,
+            a.notes,
+            a.createdAt,
+            u.name  AS userName,
+            u.email AS userEmail,
+            pu.name AS professionalName
+          FROM appointments a
+          LEFT JOIN professionals p  ON a.professionalId = p.id
+          LEFT JOIN users pu         ON p.userId = pu.id
+          LEFT JOIN users u          ON a.userId  = u.id
+          WHERE pu.name LIKE ?
+          ORDER BY a.appointmentDate DESC
+          LIMIT 5
+        `;
+        const rows = await new Promise<any[]>((resolve, reject) => {
+          client.execute(sql, [`%${input.name}%`], (err: any, results: any) => {
+            if (err) reject(err);
+            else resolve(Array.isArray(results) ? results : []);
+          });
+        });
+        return rows;
+      }),
+
     // ── DIAGNÓSTICO TEMPORAL — remover después ────────────────────────────
     diagnoseCreditBatches: protectedProcedure.query(async ({ ctx }) => {
       if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
