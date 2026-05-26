@@ -1298,6 +1298,23 @@ export const appRouter = router({
         return rows;
       }),
 
+    reactivateAppointment: protectedProcedure
+      .input(z.object({ appointmentId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+        const dbInstance = await db.getDb();
+        if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const client = (dbInstance as any).$client;
+        await new Promise<void>((resolve, reject) => {
+          client.execute(
+            "UPDATE appointments SET status = 'scheduled', updatedAt = NOW() WHERE id = ?",
+            [input.appointmentId],
+            (err: any) => { if (err) reject(err); else resolve(); }
+          );
+        });
+        return { success: true };
+      }),
+
     // ── DIAGNÓSTICO TEMPORAL — remover después ────────────────────────────
     diagnoseCreditBatches: protectedProcedure.query(async ({ ctx }) => {
       if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
