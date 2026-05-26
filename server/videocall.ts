@@ -21,8 +21,8 @@ export async function generateVideoCallLink(
 ): Promise<VideoCallResult> {
   const roomName = `cita-${appointmentId}-${Date.now()}`;
 
-  // Expira 1 hora después del fin de la cita
-  const exp = Math.floor(endTime.getTime() / 1000) + 3600;
+  // Expira 3 horas después del fin de la cita
+  const exp = Math.floor(endTime.getTime() / 1000) + 3 * 3600;
 
   try {
     const response = await fetch(`${DAILY_BASE_URL}/rooms`, {

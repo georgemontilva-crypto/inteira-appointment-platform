@@ -153,7 +153,7 @@ export const appointments = mysqlTable("appointments", {
   specialtyId: int("specialtyId").notNull(),
   appointmentDate: datetime("appointmentDate").notNull(),
   durationMinutes: int("durationMinutes").notNull(),
-  status: mysqlEnum("status", ["scheduled", "completed", "canceled", "no-show", "pending_review"]).default("scheduled").notNull(),
+  status: mysqlEnum("status", ["scheduled", "in_progress", "completed", "canceled", "no-show", "pending_review"]).default("scheduled").notNull(),
   videoCallType: mysqlEnum("videoCallType", ["zoom", "google_meet", "daily"]).default("daily").notNull(),
   videoCallLink: text("videoCallLink"),
   videoCallId: varchar("videoCallId", { length: 255 }),

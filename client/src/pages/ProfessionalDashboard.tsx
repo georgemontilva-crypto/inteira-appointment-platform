@@ -13,7 +13,7 @@ import {
   Calendar, Clock, CheckCircle2, User, Video,
   Plus, Star, BarChart3, ArrowLeft, AlertCircle, XCircle,
   Camera, Trash2, MessageSquare, CalendarX,
-  ChevronLeft, ChevronRight, LayoutDashboard, DollarSign, Wallet,
+  ChevronLeft, ChevronRight, LayoutDashboard, DollarSign, Wallet, ExternalLink,
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -25,6 +25,7 @@ const DAYS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "
 
 const statusColors: Record<string, string> = {
   scheduled: "bg-blue-100 text-blue-700 border-blue-200",
+  in_progress: "bg-green-100 text-green-700 border-green-200",
   confirmed: "bg-green-100 text-green-700 border-green-200",
   completed: "bg-gray-100 text-gray-600 border-gray-200",
   cancelled: "bg-red-100 text-red-700 border-red-200",
@@ -33,6 +34,7 @@ const statusColors: Record<string, string> = {
 
 const statusLabels: Record<string, string> = {
   scheduled: "Agendada",
+  in_progress: "En curso",
   confirmed: "Confirmada",
   completed: "Completada",
   cancelled: "Cancelada",
@@ -74,6 +76,7 @@ export default function ProfessionalDashboard() {
     paymentDetails: "",
     notes: "",
   });
+  const [expandedLinkId, setExpandedLinkId] = useState<number | null>(null);
   const [nowMs, setNowMs] = useState(Date.now());
   useEffect(() => {
     const id = setInterval(() => setNowMs(Date.now()), 30_000);
@@ -477,8 +480,8 @@ export default function ProfessionalDashboard() {
     );
   }
 
-  const upcomingAppointments = appointments?.filter((a) => a.status === "scheduled") ?? [];
-  const pastAppointments = appointments?.filter((a) => a.status !== "scheduled") ?? [];
+  const upcomingAppointments = appointments?.filter((a) => a.status === "scheduled" || a.status === "in_progress") ?? [];
+  const pastAppointments = appointments?.filter((a) => a.status !== "scheduled" && a.status !== "in_progress") ?? [];
 
   // Card width: 3 on desktop (≥1024), 2 on tablet (≥640), 1.2 on mobile
   const cardMinWidth: React.CSSProperties =
@@ -564,7 +567,7 @@ export default function ProfessionalDashboard() {
 
       {/* Banner: próxima cita con videollamada */}
       {(() => {
-        const nextWithVideo = upcomingAppointments.find((a) => (a as any).videoCallLink && a.status === "scheduled");
+        const nextWithVideo = upcomingAppointments.find((a) => (a as any).videoCallLink && (a.status === "scheduled" || a.status === "in_progress"));
         if (!nextWithVideo) return null;
         const msUntil = parseLocalDate(nextWithVideo.appointmentDate).getTime() - Date.now();
         const isToday = parseLocalDate(nextWithVideo.appointmentDate).toDateString() === new Date().toDateString();
@@ -680,8 +683,12 @@ export default function ProfessionalDashboard() {
                             </div>
                           )}
                           <p className="font-semibold text-sm truncate flex-1">{(apt as any).userName ?? `Usuario #${apt.userId}`}</p>
-                          <span className="text-[10px] font-medium text-primary bg-primary/10 rounded-full px-2 py-0.5 flex-shrink-0 whitespace-nowrap">
-                            {canJoin(apt) ? "¡Ahora!" : `En ${joinCountdown(apt)}`}
+                          <span className={`text-[10px] font-medium rounded-full px-2 py-0.5 flex-shrink-0 whitespace-nowrap ${
+                            apt.status === "in_progress"
+                              ? "bg-green-100 text-green-700"
+                              : "text-primary bg-primary/10"
+                          }`}>
+                            {apt.status === "in_progress" ? "En curso" : canJoin(apt) ? "¡Ahora!" : `En ${joinCountdown(apt)}`}
                           </span>
                         </div>
                         <div className="flex items-center gap-1.5 mt-1.5 ml-10">
@@ -808,9 +815,10 @@ export default function ProfessionalDashboard() {
                                   {(apt as any).userName ?? `Usuario #${apt.userId}`}
                                 </p>
                                 <span className={`text-[10px] font-semibold rounded-full px-2 py-0.5 whitespace-nowrap flex-shrink-0 ${
-                                  joinable ? "bg-green-100 text-green-700" : "bg-primary/10 text-primary"
+                                  apt.status === "in_progress" ? "bg-green-100 text-green-700"
+                                  : joinable ? "bg-green-100 text-green-700" : "bg-primary/10 text-primary"
                                 }`}>
-                                  {joinable ? "¡Ahora!" : `En ${joinCountdown(apt)}`}
+                                  {apt.status === "in_progress" ? "En curso" : joinable ? "¡Ahora!" : `En ${joinCountdown(apt)}`}
                                 </span>
                               </div>
                               <div className="flex items-center gap-1.5 mt-0.5">
@@ -829,21 +837,38 @@ export default function ProfessionalDashboard() {
                           {(apt.videoCallLink || parseLocalDate(apt.appointmentDate).getTime() + 55 * 60 * 1000 < Date.now()) && (
                             <div className="flex gap-2 mt-3 pl-[52px]">
                               {apt.videoCallLink && (
-                                <Button
-                                  size="sm"
-                                  disabled={!joinable}
-                                  className="gradient-brand text-white border-0 h-7 text-xs px-3 disabled:opacity-50"
-                                  onClick={() => joinable && setActiveCall({
-                                    url: apt.videoCallLink!,
-                                    appointmentId: apt.id,
-                                    professionalName: (apt as any).userName ?? `Usuario #${apt.userId}`,
-                                    startTime: parseLocalDate(apt.appointmentDate),
-                                    endTime: new Date(parseLocalDate(apt.appointmentDate).getTime() + (apt.durationMinutes ?? 55) * 60 * 1000),
-                                  })}
-                                >
-                                  <Video className="w-3 h-3 mr-1.5" />
-                                  Unirse
-                                </Button>
+                                apt.status === "in_progress" ? (
+                                  <Button
+                                    size="sm"
+                                    className="gradient-brand text-white border-0 h-8 text-xs px-4 font-semibold shadow-md"
+                                    onClick={() => setActiveCall({
+                                      url: apt.videoCallLink!,
+                                      appointmentId: apt.id,
+                                      professionalName: (apt as any).userName ?? `Usuario #${apt.userId}`,
+                                      startTime: parseLocalDate(apt.appointmentDate),
+                                      endTime: new Date(parseLocalDate(apt.appointmentDate).getTime() + (apt.durationMinutes ?? 55) * 60 * 1000),
+                                    })}
+                                  >
+                                    <Video className="w-3.5 h-3.5 mr-1.5" />
+                                    Unirse ahora
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    disabled={!joinable}
+                                    className="gradient-brand text-white border-0 h-7 text-xs px-3 disabled:opacity-50"
+                                    onClick={() => joinable && setActiveCall({
+                                      url: apt.videoCallLink!,
+                                      appointmentId: apt.id,
+                                      professionalName: (apt as any).userName ?? `Usuario #${apt.userId}`,
+                                      startTime: parseLocalDate(apt.appointmentDate),
+                                      endTime: new Date(parseLocalDate(apt.appointmentDate).getTime() + (apt.durationMinutes ?? 55) * 60 * 1000),
+                                    })}
+                                  >
+                                    <Video className="w-3 h-3 mr-1.5" />
+                                    Unirse
+                                  </Button>
+                                )
                               )}
                               {parseLocalDate(apt.appointmentDate).getTime() + 55 * 60 * 1000 < Date.now() && (
                                 <Button
@@ -895,11 +920,10 @@ export default function ProfessionalDashboard() {
                       endTime.setMinutes(endTime.getMinutes() + (apt.durationMinutes ?? 55));
                       const isPremium = (apt.durationMinutes ?? 55) >= 60;
 
+                      const isRecent24h = Date.now() - parseLocalDate(apt.appointmentDate).getTime() < 24 * 60 * 60 * 1000;
                       return (
-                        <div
-                          key={apt.id}
-                          className="flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors"
-                        >
+                        <div key={apt.id} className="hover:bg-muted/30 transition-colors">
+                        <div className="flex items-center gap-3 px-4 py-3">
                           {/* Avatar 36px */}
                           {(apt as any).userProfileImage ? (
                             <img
@@ -932,10 +956,33 @@ export default function ProfessionalDashboard() {
                             }`}>
                               {isPremium ? "Premium" : "Básica"}
                             </Badge>
-                            <Badge className={`text-[10px] px-1.5 py-0 border ${statusColors[apt.status]}`}>
-                              {statusLabels[apt.status]}
+                            <Badge className={`text-[10px] px-1.5 py-0 border ${statusColors[apt.status] ?? "bg-muted text-muted-foreground border-muted"}`}>
+                              {statusLabels[apt.status] ?? apt.status}
                             </Badge>
                           </div>
+                        </div>
+                        {/* Ver enlace — últimas 24h */}
+                        {apt.videoCallLink && (apt.status === "completed" || apt.status === "no-show") && isRecent24h && (
+                          <div className="px-4 pb-3 pt-0">
+                            <button
+                              className="flex items-center gap-1.5 text-xs text-primary hover:underline"
+                              onClick={() => setExpandedLinkId(expandedLinkId === apt.id ? null : apt.id)}
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                              {expandedLinkId === apt.id ? "Ocultar enlace" : "Ver enlace"}
+                            </button>
+                            {expandedLinkId === apt.id && (
+                              <a
+                                href={apt.videoCallLink}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="block mt-1.5 text-[11px] text-primary/80 break-all hover:underline"
+                              >
+                                {apt.videoCallLink}
+                              </a>
+                            )}
+                          </div>
+                        )}
                         </div>
                       );
                     })}

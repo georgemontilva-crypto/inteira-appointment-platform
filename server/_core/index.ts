@@ -339,6 +339,12 @@ async function runStartupMigrations() {
     ).catch(() => {});
     console.log("[Migration] appointments pending_review status ready");
 
+    // Ensure in_progress in appointments status enum
+    await db.execute(
+      "ALTER TABLE `appointments` MODIFY COLUMN `status` ENUM('scheduled','in_progress','completed','canceled','no-show','pending_review') DEFAULT 'scheduled'"
+    ).catch(() => {});
+    console.log("[Migration] appointments in_progress status ready");
+
     // Ensure 'late' in penaltyType enums
     await db.execute(
       "ALTER TABLE `appointments` MODIFY COLUMN `penaltyType` ENUM('none','partial','full','credits_lost','late')"
@@ -1005,7 +1011,23 @@ setInterval(async () => {
     if (!db) return;
     const client = (db as any).$client;
 
-    // Check 1: auto no-show para citas scheduled sin atender después de 4 horas
+    // Check 0: activar in_progress para citas que comenzaron hace menos de 55 min
+    await new Promise<void>((resolve) => {
+      client.execute(
+        `UPDATE appointments SET status = 'in_progress', updatedAt = NOW()
+         WHERE status = 'scheduled'
+         AND appointmentDate <= NOW()
+         AND DATE_ADD(appointmentDate, INTERVAL 55 MINUTE) > NOW()`,
+        [],
+        (err: any, result: any) => {
+          if (err) console.error("[Cron] in_progress update error:", err?.message);
+          else if (result?.affectedRows > 0) console.log(`[Cron] ${result.affectedRows} cita(s) → in_progress`);
+          resolve();
+        }
+      );
+    });
+
+    // Check 1: auto no-show para citas scheduled/in_progress sin atender después de 3 horas
     // El no-show es del USUARIO — el profesional recibe su pago igual
     const noShowCandidates = await new Promise<any[]>((resolve) => {
       client.execute(
@@ -1013,8 +1035,8 @@ setInterval(async () => {
          FROM appointments a
          JOIN professionals p ON p.id = a.professionalId
          JOIN \`users\` u ON u.id = a.userId
-         WHERE a.status = 'scheduled'
-         AND DATE_ADD(a.appointmentDate, INTERVAL 4 HOUR) < NOW()`,
+         WHERE a.status IN ('scheduled', 'in_progress')
+         AND DATE_ADD(a.appointmentDate, INTERVAL 3 HOUR) < NOW()`,
         [],
         (err: any, results: any) => {
           if (err) { console.error("[Cron] noshow-select error:", err?.message); resolve([]); }
@@ -1026,8 +1048,8 @@ setInterval(async () => {
     await new Promise<void>((resolve) => {
       client.execute(
         `UPDATE appointments SET status = 'no-show', updatedAt = NOW()
-         WHERE status = 'scheduled'
-         AND DATE_ADD(appointmentDate, INTERVAL 4 HOUR) < NOW()`,
+         WHERE status IN ('scheduled', 'in_progress')
+         AND DATE_ADD(appointmentDate, INTERVAL 3 HOUR) < NOW()`,
         [],
         (err: any) => {
           if (err) console.error("[Cron] auto-noshow error:", err?.message);
