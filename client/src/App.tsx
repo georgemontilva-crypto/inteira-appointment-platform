@@ -43,8 +43,8 @@ function RootRedirect() {
 function Router() {
   return (
     <Switch>
-      {/* Root redirect */}
-      <Route path="/" component={RootRedirect} />
+      {/* Landing pública */}
+      <Route path="/" component={Home} />
       {/* Landing (acceso directo) */}
       <Route path="/landing" component={Home} />
       <Route path="/especialidades" component={SpecialtiesPage} />
