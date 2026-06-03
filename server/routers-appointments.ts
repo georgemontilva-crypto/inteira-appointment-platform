@@ -306,10 +306,19 @@ export const appointmentRouter = router({
         });
       }
 
+      // Fix 1: guard — no cancelar citas en estado terminal
+      if (["canceled", "completed", "no-show"].includes(appointment.status)) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Esta cita no puede ser cancelada" });
+      }
+
       // ── Política de cancelación ───────────────────────────────────────────
       const now = new Date();
       const appointmentTime = new Date(appointment.appointmentDate);
       const hoursUntil = (appointmentTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+      // Fix 2: log temporal para auditar timezone del hoursUntil en producción
+      console.log("[Cancel] hoursUntil:", hoursUntil, "appointmentDate:", appointment.appointmentDate, "now:", now.toISOString());
+
       const canceledByRole =
         ctx.user.role === "professional" ? "professional" :
         ctx.user.role === "admin"
@@ -331,6 +340,7 @@ export const appointmentRouter = router({
 
       if (canceledByRole === "professional") {
         // Profesional cancela: siempre devolver los créditos reservados al cliente
+        // Fix 4: solo actuar sobre créditos si el status es "scheduled" (pending_review ya los tiene confirmados)
         if (appointment.status === "scheduled") {
           await refundCredits(appointment.userId, input.appointmentId).catch((err: any) => console.error("[Credits] refundCredits error (professional cancel):", err?.message));
         }
@@ -348,10 +358,18 @@ export const appointmentRouter = router({
           penaltyAmount = isPro ? 250 : 150;
           penaltyType = "late";
         }
+      } else if (canceledByRole === "admin") {
+        // Fix 3: admin cancela cita de tercero — siempre reembolsar créditos al usuario
+        if (appointment.status === "scheduled") {
+          await refundCredits(appointment.userId, input.appointmentId).catch((err: any) => console.error("[Credits] refundCredits error (admin cancel):", err?.message));
+        }
+        penaltyAmount = 0;
+        penaltyType = "none";
       } else {
         // Cliente cancela
         if (hoursUntil >= 4) {
           // Con suficiente anticipación: devolver créditos reservados
+          // Fix 4: solo reembolsar si el status es "scheduled" (no "pending_review" donde ya están confirmados)
           if (appointment.status === "scheduled") {
             await refundCredits(appointment.userId, input.appointmentId).catch((err: any) => console.error("[Credits] refundCredits error (user cancel early):", err?.message));
           }
@@ -359,6 +377,7 @@ export const appointmentRouter = router({
           penaltyType = "none";
         } else {
           // Cancelación tardía: confirmar consumo de créditos reservados (cliente los pierde)
+          // Fix 4: solo confirmar si el status es "scheduled" (pending_review ya los confirmó en joinAppointment)
           if (appointment.status === "scheduled") {
             await confirmCredits(input.appointmentId).catch((err: any) => console.error("[Credits] confirmCredits error (user cancel late):", err?.message));
           }
