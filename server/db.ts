@@ -533,7 +533,7 @@ export async function getProfessionalAvailability(professionalId: number) {
   const client = (db as any).$client;
   return new Promise<any[]>((resolve, reject) => {
     client.execute(
-      "SELECT * FROM professionalAvailability WHERE professionalId = ? ORDER BY dayOfWeek, startTime",
+      "SELECT * FROM professionalAvailability WHERE professionalId = ? AND isAvailable = 1 ORDER BY dayOfWeek, startTime",
       [professionalId],
       (err: any, results: any) => {
         if (err) reject(err);

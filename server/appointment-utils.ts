@@ -148,28 +148,22 @@ export function isTimeWithinAvailability(
   availabilitySchedule: AvailabilitySlot[]
 ): boolean {
   const dayOfWeek = appointmentTime.getDay();
-  const daySchedule = availabilitySchedule.find(
-    (slot) => slot.dayOfWeek === dayOfWeek
-  );
-
-  if (!daySchedule) {
-    return false;
-  }
-
-  const [startHour, startMinute] = daySchedule.startTime.split(":").map(Number);
-  const [endHour, endMinute] = daySchedule.endTime.split(":").map(Number);
-
-  const dayStart = new Date(appointmentTime);
-  dayStart.setHours(startHour, startMinute, 0, 0);
-
-  const dayEnd = new Date(appointmentTime);
-  dayEnd.setHours(endHour, endMinute, 0, 0);
-
   const appointmentEnd = calculateEndTime(appointmentTime, durationMinutes);
 
-  return (
-    appointmentTime >= dayStart &&
-    appointmentEnd <= dayEnd &&
-    canScheduleAppointment(appointmentTime)
-  );
+  const fitsInAnyBlock = availabilitySchedule
+    .filter((slot) => slot.dayOfWeek === dayOfWeek)
+    .some((daySchedule) => {
+      const [startHour, startMinute] = daySchedule.startTime.split(":").map(Number);
+      const [endHour, endMinute] = daySchedule.endTime.split(":").map(Number);
+
+      const dayStart = new Date(appointmentTime);
+      dayStart.setHours(startHour, startMinute, 0, 0);
+
+      const dayEnd = new Date(appointmentTime);
+      dayEnd.setHours(endHour, endMinute, 0, 0);
+
+      return appointmentTime >= dayStart && appointmentEnd <= dayEnd;
+    });
+
+  return fitsInAnyBlock && canScheduleAppointment(appointmentTime);
 }

@@ -61,14 +61,7 @@ export async function generateVideoCallLink(
     };
   } catch (err) {
     console.error('[Daily] Failed to create room:', err);
-    // Fallback: link directo al subdominio con nombre aleatorio
-    const fallbackUrl = `https://inteira.daily.co/${roomName}`;
-    console.warn(`[Daily] Using fallback URL: ${fallbackUrl}`);
-    return {
-      url: fallbackUrl,
-      provider: 'daily',
-      roomName,
-    };
+    throw new Error('No se pudo crear la videollamada. Por favor intenta de nuevo.');
   }
 }
 

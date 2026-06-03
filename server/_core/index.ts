@@ -864,6 +864,22 @@ async function runStartupMigrations() {
     `).catch(() => {});
     console.log("[Migration] eventBanners table ready");
 
+    // Prevent double-booking: unique constraint on (professionalId, appointmentDate) for scheduled rows
+    await new Promise<void>((resolve) => {
+      client.execute(
+        `ALTER TABLE appointments ADD UNIQUE KEY unique_professional_slot (professionalId, appointmentDate)`,
+        [],
+        (err: any) => {
+          if (err && !err.message?.includes("Duplicate key name") && !err.message?.includes("already exists")) {
+            console.warn("[Migration] unique_professional_slot:", err?.message);
+          } else {
+            console.log("[Migration] unique_professional_slot constraint ready");
+          }
+          resolve();
+        }
+      );
+    });
+
     // Seed initial event banners if table is empty
     await new Promise<void>((resolve) => {
       client.execute(
