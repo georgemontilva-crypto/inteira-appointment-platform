@@ -317,11 +317,12 @@ export const appointmentRouter = router({
 
       // ── Política de cancelación ───────────────────────────────────────────
       const now = new Date();
+      const createdAt = new Date(appointment.createdAt);
+      const hoursSinceBooked = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
       const appointmentTime = new Date(appointment.appointmentDate);
       const hoursUntil = (appointmentTime.getTime() - now.getTime()) / (1000 * 60 * 60);
 
-      // Fix 2: log temporal para auditar timezone del hoursUntil en producción
-      console.log("[Cancel] hoursUntil:", hoursUntil, "appointmentDate:", appointment.appointmentDate, "now:", now.toISOString());
+      console.log("[Cancel] hoursUntil:", hoursUntil, "hoursSinceBooked:", hoursSinceBooked);
 
       const canceledByRole =
         ctx.user.role === "professional" ? "professional" :
@@ -370,18 +371,17 @@ export const appointmentRouter = router({
         penaltyAmount = 0;
         penaltyType = "none";
       } else {
-        // Cliente cancela
-        if (hoursUntil >= 4) {
-          // Con suficiente anticipación: devolver créditos reservados
-          // Fix 4: solo reembolsar si el status es "scheduled" (no "pending_review" donde ya están confirmados)
+        // Cliente cancela:
+        // Reembolso si canceló dentro de las primeras 4h desde que agendó,
+        // O si cancela con más de 4h de anticipación a la cita.
+        if (hoursSinceBooked <= 4 || hoursUntil >= 4) {
           if (appointment.status === "scheduled") {
-            await refundCredits(appointment.userId, input.appointmentId).catch((err: any) => console.error("[Credits] refundCredits error (user cancel early):", err?.message));
+            await refundCredits(appointment.userId, input.appointmentId).catch((err: any) => console.error("[Credits] refundCredits error (user cancel):", err?.message));
           }
           penaltyAmount = 0;
           penaltyType = "none";
         } else {
-          // Cancelación tardía: confirmar consumo de créditos reservados (cliente los pierde)
-          // Fix 4: solo confirmar si el status es "scheduled" (pending_review ya los confirmó en joinAppointment)
+          // Fuera de ventana de gracia y menos de 4h para la cita: créditos perdidos
           if (appointment.status === "scheduled") {
             await confirmCredits(input.appointmentId).catch((err: any) => console.error("[Credits] confirmCredits error (user cancel late):", err?.message));
           }
