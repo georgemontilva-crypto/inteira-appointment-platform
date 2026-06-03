@@ -116,6 +116,7 @@ export default function BookAppointment() {
       appointmentDate: localISO,
       sessionType,
       notes: notes || undefined,
+      timezoneOffset: new Date().getTimezoneOffset() * -1,
     });
   };
 

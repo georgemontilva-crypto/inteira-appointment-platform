@@ -126,6 +126,7 @@ export const appointmentRouter = router({
         appointmentDate: z.string(), // ISO string from frontend
         sessionType: z.enum(["basic", "premium"]).optional().default("basic"),
         notes: z.string().max(2000).optional(),
+        timezoneOffset: z.number().optional().default(0), // client's getTimezoneOffset() * -1
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -157,11 +158,13 @@ export const appointmentRouter = router({
       const availability = await db.getProfessionalAvailability(
         input.professionalId
       );
+      const tzOffsetMs = (input.timezoneOffset ?? 0) * 60 * 1000;
       if (
         !isTimeWithinAvailability(
           appointmentDateObj,
           durationMinutes,
-          availability
+          availability,
+          tzOffsetMs
         )
       ) {
         throw new TRPCError({

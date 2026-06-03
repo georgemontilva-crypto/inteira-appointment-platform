@@ -47,13 +47,17 @@ export function getAvailableSlots(
     const [startHour, startMinute] = daySchedule.startTime.split(":").map(Number);
     const [endHour, endMinute] = daySchedule.endTime.split(":").map(Number);
 
-    console.log("[Slots] dateObj:", date.toISOString(), "first slot would be:", startHour + ":" + startMinute, "offsetMs:", offsetMs);
+    // Convert professional's local hours to UTC using client offset.
+    // e.g. for UTC-6 (clientOffsetMinutes=-360): 9 - (-6) = 15 UTC = 9am Mexico ✅
+    const clientOffsetMinutes = offsetMs / (60 * 1000);
+
+    console.log("[Slots] dateObj:", date.toISOString(), "first slot would be:", startHour + ":" + startMinute, "offsetMs:", offsetMs, "clientOffsetMinutes:", clientOffsetMinutes);
 
     let currentTime = new Date(date);
-    currentTime.setHours(startHour, startMinute, 0, 0);
+    currentTime.setUTCHours(startHour - (clientOffsetMinutes / 60), startMinute, 0, 0);
 
     const endTime = new Date(date);
-    endTime.setHours(endHour, endMinute, 0, 0);
+    endTime.setUTCHours(endHour - (clientOffsetMinutes / 60), endMinute, 0, 0);
 
     while (currentTime.getTime() + durationMinutes * 60 * 1000 <= endTime.getTime()) {
       const slotEnd = new Date(currentTime.getTime() + durationMinutes * 60 * 1000);
@@ -148,10 +152,12 @@ export function calculateEndTime(
 export function isTimeWithinAvailability(
   appointmentTime: Date,
   durationMinutes: number,
-  availabilitySchedule: AvailabilitySlot[]
+  availabilitySchedule: AvailabilitySlot[],
+  offsetMs: number = 0
 ): boolean {
   const dayOfWeek = appointmentTime.getDay();
   const appointmentEnd = calculateEndTime(appointmentTime, durationMinutes);
+  const clientOffsetMinutes = offsetMs / (60 * 1000);
 
   const fitsInAnyBlock = availabilitySchedule
     .filter((slot) => slot.dayOfWeek === dayOfWeek)
@@ -160,10 +166,10 @@ export function isTimeWithinAvailability(
       const [endHour, endMinute] = daySchedule.endTime.split(":").map(Number);
 
       const dayStart = new Date(appointmentTime);
-      dayStart.setHours(startHour, startMinute, 0, 0);
+      dayStart.setUTCHours(startHour - (clientOffsetMinutes / 60), startMinute, 0, 0);
 
       const dayEnd = new Date(appointmentTime);
-      dayEnd.setHours(endHour, endMinute, 0, 0);
+      dayEnd.setUTCHours(endHour - (clientOffsetMinutes / 60), endMinute, 0, 0);
 
       return appointmentTime >= dayStart && appointmentEnd <= dayEnd;
     });
