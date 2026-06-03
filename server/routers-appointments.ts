@@ -102,13 +102,17 @@ export const appointmentRouter = router({
 
       console.log("[DIAG slots v2] date:", input.date, "professionalId:", input.professionalId, "availability count:", availability.length, "availability:", JSON.stringify(availability));
 
-      const dateObj = new Date(input.date + "T12:00:00");
+      // Construir la fecha en hora local del cliente
+      const offsetMs = (input.timezoneOffset ?? -300) * 60 * 1000;
+      const dateObj = new Date(input.date + "T00:00:00Z"); // medianoche UTC
+      // Ajustar al inicio del día en la zona del cliente
+      const clientMidnight = new Date(dateObj.getTime() - offsetMs);
       const slots = getAvailableSlots(
-        dateObj,
+        clientMidnight,
         availability,
         durationMinutes,
         bookedTimes,
-        input.timezoneOffset ?? 0
+        offsetMs,
       );
       // Return simple time strings like "09:00", "10:00"
       return slots.map((s) => s.startTime);

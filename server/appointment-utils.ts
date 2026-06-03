@@ -29,7 +29,8 @@ export function getAvailableSlots(
   date: Date,
   availabilitySchedule: AvailabilitySlot[],
   durationMinutes: number,
-  bookedAppointments: Date[] = []
+  bookedAppointments: Date[] = [],
+  offsetMs: number = 0
 ): TimeSlot[] {
   const dayOfWeek = date.getDay();
   const daySchedules = availabilitySchedule.filter(
@@ -45,6 +46,8 @@ export function getAvailableSlots(
   for (const daySchedule of daySchedules) {
     const [startHour, startMinute] = daySchedule.startTime.split(":").map(Number);
     const [endHour, endMinute] = daySchedule.endTime.split(":").map(Number);
+
+    console.log("[Slots] dateObj:", date.toISOString(), "first slot would be:", startHour + ":" + startMinute, "offsetMs:", offsetMs);
 
     let currentTime = new Date(date);
     currentTime.setHours(startHour, startMinute, 0, 0);
