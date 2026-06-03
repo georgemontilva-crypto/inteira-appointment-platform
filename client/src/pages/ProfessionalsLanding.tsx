@@ -719,165 +719,79 @@ function Comunidad() {
   );
 }
 
-/* ─── Formulario de Registro ─── */
-function FormularioRegistro() {
-  const [form, setForm] = useState({
-    nombre: "", email: "", telefono: "", profesion: "", especialidad: "",
-    experiencia: "", bibliaKnowledge: "", motivacion: "",
-  });
-  const [submitted, setSubmitted] = useState(false);
-  const [loading, setLoading] = useState(false);
-
-  const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      setSubmitted(true);
-    }, 1500);
-  };
-
-  const inputStyle: React.CSSProperties = {
-    width: "100%",
-    padding: "12px 16px",
-    borderRadius: 10,
-    border: "1px solid rgba(96,117,98,0.25)",
-    fontSize: 14,
-    fontFamily: "'Poppins', sans-serif",
-    color: "#333",
-    background: "#fff",
-    boxSizing: "border-box",
-    outline: "none",
-    transition: "border-color 0.2s",
-  };
-
-  const labelStyle: React.CSSProperties = {
-    display: "block",
-    fontSize: 13,
-    fontWeight: 600,
-    color: "#3d4e3f",
-    marginBottom: 6,
-    fontFamily: "'Poppins', sans-serif",
-  };
-
+/* ─── CTA Registro ─── */
+function CTARegistro() {
   return (
-    <Section id="registro" style={{ padding: "80px 24px", background: "linear-gradient(180deg, #f7faf7, #eef4ee)" }}>
-      <div style={{ maxWidth: 700, margin: "0 auto" }}>
-        <div style={{ textAlign: "center", marginBottom: 48 }}>
-          <span style={{ display: "inline-block", background: "rgba(96,117,98,0.15)", color: "#3d4e3f", fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", padding: "5px 14px", borderRadius: 20, marginBottom: 14 }}>
-            Únete a Inteira
+    <Section id="registro" style={{ padding: "100px 24px", background: "linear-gradient(180deg, #f7faf7, #eef4ee)" }}>
+      <div style={{ maxWidth: 680, margin: "0 auto", textAlign: "center" }}>
+        <span style={{ display: "inline-block", background: "rgba(96,117,98,0.15)", color: "#3d4e3f", fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", padding: "5px 14px", borderRadius: 20, marginBottom: 20 }}>
+          Únete a Inteira
+        </span>
+        <h2 style={{ fontSize: "clamp(28px, 4.5vw, 48px)", fontWeight: 800, color: "#1a2e1a", marginBottom: 20, lineHeight: 1.2 }}>
+          Da el primer paso hoy.
+          <br />
+          <span style={{ background: "linear-gradient(90deg, #3d4e3f, #607562)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+            Tu práctica te espera.
           </span>
-          <h2 style={{ fontSize: "clamp(26px, 4vw, 40px)", fontWeight: 800, color: "#1a2e1a", marginBottom: 12 }}>
-            Da el primer paso hoy
-          </h2>
-          <p style={{ fontSize: 15, color: "#666", lineHeight: 1.7, margin: 0 }}>
-            Completa el formulario y un miembro de nuestro equipo se pondrá en contacto contigo en menos de 48 horas.
-          </p>
+        </h2>
+        <p style={{ fontSize: 16, color: "#555", lineHeight: 1.8, marginBottom: 48, maxWidth: 520, margin: "0 auto 48px" }}>
+          Completa tu registro como profesional en Inteira. El proceso toma menos de 5 minutos y un miembro de nuestro equipo revisará tu perfil personalmente.
+        </p>
+
+        {/* CTA principal */}
+        <a
+          href="/registro-profesional"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 12,
+            padding: "18px 44px",
+            background: "linear-gradient(135deg, #3d4e3f, #607562)",
+            color: "#fff",
+            textDecoration: "none",
+            borderRadius: 14,
+            fontSize: 18,
+            fontWeight: 700,
+            fontFamily: "'Poppins', sans-serif",
+            boxShadow: "0 8px 32px rgba(61,78,63,0.35), 0 2px 8px rgba(61,78,63,0.2)",
+            transition: "transform 0.2s, box-shadow 0.2s",
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-2px)";
+            (e.currentTarget as HTMLAnchorElement).style.boxShadow = "0 12px 40px rgba(61,78,63,0.45), 0 4px 12px rgba(61,78,63,0.25)";
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(0)";
+            (e.currentTarget as HTMLAnchorElement).style.boxShadow = "0 8px 32px rgba(61,78,63,0.35), 0 2px 8px rgba(61,78,63,0.2)";
+          }}
+        >
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <line x1="19" y1="8" x2="19" y2="14"/>
+            <line x1="22" y1="11" x2="16" y2="11"/>
+          </svg>
+          Comenzar mi registro
+        </a>
+
+        {/* Garantías */}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 24, justifyContent: "center", marginTop: 40 }}>
+          {[
+            { icon: "⚡", text: "Proceso de 5 minutos" },
+            { icon: "🔒", text: "Datos 100% seguros" },
+            { icon: "💚", text: "Sin costo de registro" },
+          ].map((g) => (
+            <div key={g.text} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 16 }}>{g.icon}</span>
+              <span style={{ fontSize: 13, color: "#607562", fontWeight: 500 }}>{g.text}</span>
+            </div>
+          ))}
         </div>
 
-        {submitted ? (
-          <div style={{ background: "#fff", borderRadius: 20, padding: 48, textAlign: "center", border: "1px solid rgba(96,117,98,0.2)" }}>
-            <div style={{ width: 72, height: 72, borderRadius: "50%", background: "linear-gradient(135deg, #3d4e3f, #607562)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
-              <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
-            </div>
-            <h3 style={{ fontSize: 22, fontWeight: 700, color: "#3d4e3f", marginBottom: 12 }}>¡Solicitud recibida!</h3>
-            <p style={{ fontSize: 15, color: "#666", lineHeight: 1.7, maxWidth: 440, margin: "0 auto" }}>
-              Gracias por tu interés en unirte a Inteira. Revisaremos tu perfil y nos pondremos en contacto en los próximos 1-2 días hábiles. Bienvenido a la comunidad.
-            </p>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} style={{ background: "#fff", borderRadius: 20, padding: "40px", border: "1px solid rgba(96,117,98,0.15)" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 20, marginBottom: 20 }}>
-              <div>
-                <label style={labelStyle}>Nombre completo *</label>
-                <input required style={inputStyle} type="text" placeholder="Tu nombre" value={form.nombre} onChange={(e) => set("nombre", e.target.value)} />
-              </div>
-              <div>
-                <label style={labelStyle}>Correo electrónico *</label>
-                <input required style={inputStyle} type="email" placeholder="tu@email.com" value={form.email} onChange={(e) => set("email", e.target.value)} />
-              </div>
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 20, marginBottom: 20 }}>
-              <div>
-                <label style={labelStyle}>Teléfono *</label>
-                <input required style={inputStyle} type="tel" placeholder="+52 55 0000 0000" value={form.telefono} onChange={(e) => set("telefono", e.target.value)} />
-              </div>
-              <div>
-                <label style={labelStyle}>Profesión *</label>
-                <input required style={inputStyle} type="text" placeholder="Ej: Psicóloga, Coach, Terapeuta" value={form.profesion} onChange={(e) => set("profesion", e.target.value)} />
-              </div>
-            </div>
-
-            <div style={{ marginBottom: 20 }}>
-              <label style={labelStyle}>Especialidad principal *</label>
-              <input required style={inputStyle} type="text" placeholder="Ej: Terapia cognitivo-conductual, Mindfulness, PNL" value={form.especialidad} onChange={(e) => set("especialidad", e.target.value)} />
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 20, marginBottom: 20 }}>
-              <div>
-                <label style={labelStyle}>Años de experiencia *</label>
-                <select required style={{ ...inputStyle, appearance: "none" }} value={form.experiencia} onChange={(e) => set("experiencia", e.target.value)}>
-                  <option value="">Selecciona...</option>
-                  <option value="menos1">Menos de 1 año</option>
-                  <option value="1-2">1 - 2 años</option>
-                  <option value="3-5">3 - 5 años</option>
-                  <option value="6-10">6 - 10 años</option>
-                  <option value="mas10">Más de 10 años</option>
-                </select>
-              </div>
-              <div>
-                <label style={labelStyle}>¿Conoces la Biblia Inteira? *</label>
-                <select required style={{ ...inputStyle, appearance: "none" }} value={form.bibliaKnowledge} onChange={(e) => set("bibliaKnowledge", e.target.value)}>
-                  <option value="">Selecciona...</option>
-                  <option value="si-completa">Sí, la leí completa</option>
-                  <option value="si-parcial">La conozco parcialmente</option>
-                  <option value="no-pero-quiero">No, pero quiero conocerla</option>
-                  <option value="no">No la conozco</option>
-                </select>
-              </div>
-            </div>
-
-            <div style={{ marginBottom: 28 }}>
-              <label style={labelStyle}>¿Por qué quieres unirte a Inteira? *</label>
-              <textarea
-                required
-                style={{ ...inputStyle, minHeight: 120, resize: "vertical" }}
-                placeholder="Cuéntanos tu motivación, qué esperas de la plataforma y cómo crees que puedes contribuir a la comunidad..."
-                value={form.motivacion}
-                onChange={(e) => set("motivacion", e.target.value)}
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              style={{
-                width: "100%",
-                padding: "14px",
-                background: loading ? "rgba(96,117,98,0.5)" : "linear-gradient(135deg, #3d4e3f, #607562)",
-                color: "#fff",
-                border: "none",
-                borderRadius: 10,
-                fontSize: 15,
-                fontWeight: 700,
-                cursor: loading ? "not-allowed" : "pointer",
-                fontFamily: "'Poppins', sans-serif",
-                transition: "opacity 0.2s",
-              }}
-            >
-              {loading ? "Enviando..." : "Enviar solicitud →"}
-            </button>
-
-            <p style={{ textAlign: "center", fontSize: 12, color: "#999", marginTop: 16, marginBottom: 0 }}>
-              Al enviar, aceptas nuestra{" "}
-              <a href="/privacidad" style={{ color: "#607562" }}>política de privacidad</a>.
-              Tu información es confidencial y nunca la compartiremos.
-            </p>
-          </form>
-        )}
+        <p style={{ marginTop: 28, fontSize: 12, color: "#aaa" }}>
+          Al registrarte aceptas nuestra{" "}
+          <a href="/privacidad" style={{ color: "#607562", textDecoration: "none" }}>política de privacidad</a>.
+        </p>
       </div>
     </Section>
   );
@@ -945,7 +859,7 @@ export default function ProfessionalsLanding() {
         <Biblia />
         <ModeloTrabajo />
         <Comunidad />
-        <FormularioRegistro />
+        <CTARegistro />
         <Footer />
       </div>
     </>
