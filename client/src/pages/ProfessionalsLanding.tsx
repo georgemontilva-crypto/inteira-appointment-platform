@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import RegisterProfessional from "./RegisterProfessional";
 
 /* ─── Video Modal ─── */
 function VideoModal({ onComplete }: { onComplete: () => void }) {
@@ -719,81 +720,12 @@ function Comunidad() {
   );
 }
 
-/* ─── CTA Registro ─── */
-function CTARegistro() {
+/* ─── Sección 8: Únete — embebe RegisterProfessional directamente ─── */
+function SeccionRegistro() {
   return (
-    <Section id="registro" style={{ padding: "100px 24px", background: "linear-gradient(180deg, #f7faf7, #eef4ee)" }}>
-      <div style={{ maxWidth: 680, margin: "0 auto", textAlign: "center" }}>
-        <span style={{ display: "inline-block", background: "rgba(96,117,98,0.15)", color: "#3d4e3f", fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", padding: "5px 14px", borderRadius: 20, marginBottom: 20 }}>
-          Únete a Inteira
-        </span>
-        <h2 style={{ fontSize: "clamp(28px, 4.5vw, 48px)", fontWeight: 800, color: "#1a2e1a", marginBottom: 20, lineHeight: 1.2 }}>
-          Da el primer paso hoy.
-          <br />
-          <span style={{ background: "linear-gradient(90deg, #3d4e3f, #607562)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-            Tu práctica te espera.
-          </span>
-        </h2>
-        <p style={{ fontSize: 16, color: "#555", lineHeight: 1.8, marginBottom: 48, maxWidth: 520, margin: "0 auto 48px" }}>
-          Completa tu registro como profesional en Inteira. El proceso toma menos de 5 minutos y un miembro de nuestro equipo revisará tu perfil personalmente.
-        </p>
-
-        {/* CTA principal */}
-        <a
-          href="/registro-profesional"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 12,
-            padding: "18px 44px",
-            background: "linear-gradient(135deg, #3d4e3f, #607562)",
-            color: "#fff",
-            textDecoration: "none",
-            borderRadius: 14,
-            fontSize: 18,
-            fontWeight: 700,
-            fontFamily: "'Poppins', sans-serif",
-            boxShadow: "0 8px 32px rgba(61,78,63,0.35), 0 2px 8px rgba(61,78,63,0.2)",
-            transition: "transform 0.2s, box-shadow 0.2s",
-          }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-2px)";
-            (e.currentTarget as HTMLAnchorElement).style.boxShadow = "0 12px 40px rgba(61,78,63,0.45), 0 4px 12px rgba(61,78,63,0.25)";
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(0)";
-            (e.currentTarget as HTMLAnchorElement).style.boxShadow = "0 8px 32px rgba(61,78,63,0.35), 0 2px 8px rgba(61,78,63,0.2)";
-          }}
-        >
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-            <circle cx="9" cy="7" r="4"/>
-            <line x1="19" y1="8" x2="19" y2="14"/>
-            <line x1="22" y1="11" x2="16" y2="11"/>
-          </svg>
-          Comenzar mi registro
-        </a>
-
-        {/* Garantías */}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 24, justifyContent: "center", marginTop: 40 }}>
-          {[
-            { icon: "⚡", text: "Proceso de 5 minutos" },
-            { icon: "🔒", text: "Datos 100% seguros" },
-            { icon: "💚", text: "Sin costo de registro" },
-          ].map((g) => (
-            <div key={g.text} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 16 }}>{g.icon}</span>
-              <span style={{ fontSize: 13, color: "#607562", fontWeight: 500 }}>{g.text}</span>
-            </div>
-          ))}
-        </div>
-
-        <p style={{ marginTop: 28, fontSize: 12, color: "#aaa" }}>
-          Al registrarte aceptas nuestra{" "}
-          <a href="/privacidad" style={{ color: "#607562", textDecoration: "none" }}>política de privacidad</a>.
-        </p>
-      </div>
-    </Section>
+    <section id="registro">
+      <RegisterProfessional />
+    </section>
   );
 }
 
@@ -859,7 +791,7 @@ export default function ProfessionalsLanding() {
         <Biblia />
         <ModeloTrabajo />
         <Comunidad />
-        <CTARegistro />
+        <SeccionRegistro />
         <Footer />
       </div>
     </>
