@@ -17,12 +17,9 @@ export interface AvailabilitySlot {
 /**
  * Check if an appointment can be scheduled (10 minutes minimum anticipation)
  */
-export function canScheduleAppointment(appointmentDate: Date, clientOffsetMinutes: number = -300): boolean {
-  const nowUTC = Date.now();
-  const nowLocal = nowUTC + (clientOffsetMinutes * 60 * 1000);
-  const minTime = nowLocal + (30 * 60 * 1000);
-  const appointmentMs = appointmentDate.getTime();
-  return appointmentMs > minTime;
+export function canScheduleAppointment(appointmentDate: Date): boolean {
+  const minTime = Date.now() + 30 * 60 * 1000;
+  return appointmentDate.getTime() > minTime;
 }
 
 /**
@@ -32,8 +29,7 @@ export function getAvailableSlots(
   date: Date,
   availabilitySchedule: AvailabilitySlot[],
   durationMinutes: number,
-  bookedAppointments: Date[] = [],
-  clientOffsetMinutes: number = 0
+  bookedAppointments: Date[] = []
 ): TimeSlot[] {
   const dayOfWeek = date.getDay();
   const daySchedules = availabilitySchedule.filter(
@@ -62,7 +58,7 @@ export function getAvailableSlots(
       // Check if slot is available (not booked and respects anticipation minimum)
       const isAvailable =
         !isSlotBooked(currentTime, slotEnd, bookedAppointments, durationMinutes + 30) &&
-        canScheduleAppointment(currentTime, clientOffsetMinutes);
+        canScheduleAppointment(currentTime);
 
       if (isAvailable) {
         slots.push({
@@ -149,8 +145,7 @@ export function calculateEndTime(
 export function isTimeWithinAvailability(
   appointmentTime: Date,
   durationMinutes: number,
-  availabilitySchedule: AvailabilitySlot[],
-  clientOffsetMinutes: number = -300
+  availabilitySchedule: AvailabilitySlot[]
 ): boolean {
   const dayOfWeek = appointmentTime.getDay();
   const daySchedule = availabilitySchedule.find(
@@ -166,11 +161,9 @@ export function isTimeWithinAvailability(
 
   const dayStart = new Date(appointmentTime);
   dayStart.setHours(startHour, startMinute, 0, 0);
-  dayStart.setMinutes(dayStart.getMinutes() - clientOffsetMinutes);
 
   const dayEnd = new Date(appointmentTime);
   dayEnd.setHours(endHour, endMinute, 0, 0);
-  dayEnd.setMinutes(dayEnd.getMinutes() - clientOffsetMinutes);
 
   const appointmentEnd = calculateEndTime(appointmentTime, durationMinutes);
 
