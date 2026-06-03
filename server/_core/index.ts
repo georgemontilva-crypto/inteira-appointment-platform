@@ -864,17 +864,32 @@ async function runStartupMigrations() {
     `).catch(() => {});
     console.log("[Migration] eventBanners table ready");
 
-    // Prevent double-booking: unique constraint on (professionalId, appointmentDate) for scheduled rows
+    // Prevent double-booking: clean duplicates first, then add UNIQUE constraint
+    // Step 1: remove duplicate rows keeping the lowest id per (professionalId, appointmentDate, status)
+    await new Promise<void>((resolve) => {
+      client.execute(
+        `DELETE a1 FROM appointments a1
+         INNER JOIN appointments a2
+         WHERE a1.id > a2.id
+           AND a1.professionalId = a2.professionalId
+           AND a1.appointmentDate = a2.appointmentDate
+           AND a1.status = a2.status`,
+        [],
+        (err: any) => {
+          if (err) console.log("[Migration] cleanup duplicates:", err?.message);
+          else console.log("[Migration] duplicate appointments cleaned");
+          resolve();
+        }
+      );
+    });
+    // Step 2: add UNIQUE KEY (idempotent — ignored if already exists)
     await new Promise<void>((resolve) => {
       client.execute(
         `ALTER TABLE appointments ADD UNIQUE KEY unique_professional_slot (professionalId, appointmentDate)`,
         [],
         (err: any) => {
-          if (err && !err.message?.includes("Duplicate key name") && !err.message?.includes("already exists")) {
-            console.warn("[Migration] unique_professional_slot:", err?.message);
-          } else {
-            console.log("[Migration] unique_professional_slot constraint ready");
-          }
+          if (err) console.log("[Migration] unique_professional_slot:", err?.message);
+          else console.log("[Migration] unique_professional_slot ready");
           resolve();
         }
       );
