@@ -63,9 +63,11 @@ export function getAvailableSlots(
       const slotEnd = new Date(currentTime.getTime() + durationMinutes * 60 * 1000);
 
       // Check if slot is available (not booked and respects anticipation minimum)
-      const isAvailable =
-        !isSlotBooked(currentTime, slotEnd, bookedAppointments, durationMinutes + 10) &&
-        canScheduleAppointment(currentTime);
+      const isBooked = isSlotBooked(currentTime, slotEnd, bookedAppointments, durationMinutes + 10);
+      const canSchedule = canScheduleAppointment(currentTime);
+      const isAvailable = !isBooked && canSchedule;
+
+      console.log("[SlotCheck]", formatTime(currentTime), "passes canSchedule:", canSchedule, "isBooked:", isBooked);
 
       if (isAvailable) {
         slots.push({
