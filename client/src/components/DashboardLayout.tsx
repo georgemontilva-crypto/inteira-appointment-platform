@@ -294,6 +294,7 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
             {[
               { label: "Especialidades", href: "/especialidades" },
               { label: "Planes", href: "/planes" },
+              { label: "Profesionales", href: "/profesionales" },
             ].map((item) => (
               <Link key={item.label} href={item.href}>
                 <a className="px-3 h-[58px] flex items-center text-[13px] font-medium text-[#93A295] hover:text-[#3d4e3f] cursor-pointer border-b-2 border-transparent hover:border-[#607562] transition-colors whitespace-nowrap">{item.label}</a>

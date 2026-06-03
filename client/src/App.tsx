@@ -24,6 +24,7 @@ import Registro from "./pages/Registro";
 import RegistroTipo from "./pages/RegistroTipo";
 import SpecialtiesPage from "./pages/SpecialtiesPage";
 import AppointmentsPage from "./pages/AppointmentsPage";
+import ProfessionalsLanding from "./pages/ProfessionalsLanding";
 
 function RootRedirect() {
   const { isAuthenticated, loading, user } = useAuth();
@@ -47,6 +48,8 @@ function Router() {
       <Route path="/" component={Home} />
       {/* Landing (acceso directo) */}
       <Route path="/landing" component={Home} />
+      {/* Landing profesionales */}
+      <Route path="/profesionales" component={ProfessionalsLanding} />
       <Route path="/especialidades" component={SpecialtiesPage} />
       <Route path="/especialidades/:id" component={ProfessionalsList} />
       <Route path="/profesional/:id" component={ProfessionalProfile} />
