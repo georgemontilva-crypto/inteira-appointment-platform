@@ -18,7 +18,7 @@ export interface AvailabilitySlot {
  * Check if an appointment can be scheduled (10 minutes minimum anticipation)
  */
 export function canScheduleAppointment(appointmentDate: Date): boolean {
-  const minTime = Date.now() + 30 * 60 * 1000;
+  const minTime = Date.now() + 10 * 60 * 1000; // 10 minutos de anticipación
   return appointmentDate.getTime() > minTime;
 }
 
@@ -57,7 +57,7 @@ export function getAvailableSlots(
 
       // Check if slot is available (not booked and respects anticipation minimum)
       const isAvailable =
-        !isSlotBooked(currentTime, slotEnd, bookedAppointments, durationMinutes + 30) &&
+        !isSlotBooked(currentTime, slotEnd, bookedAppointments, durationMinutes + 10) &&
         canScheduleAppointment(currentTime);
 
       if (isAvailable) {
@@ -68,7 +68,7 @@ export function getAvailableSlots(
         });
       }
 
-      currentTime = new Date(currentTime.getTime() + (durationMinutes + 30) * 60 * 1000); // session + 30 min buffer
+      currentTime = new Date(currentTime.getTime() + (durationMinutes + 10) * 60 * 1000); // session + 10 min buffer
     }
   }
 
