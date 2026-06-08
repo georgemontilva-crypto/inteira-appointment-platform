@@ -2034,6 +2034,23 @@ export const appRouter = router({
         }
         return { success: true };
       }),
+
+    setSiteConfig: protectedProcedure
+      .input(z.object({ key: z.string().max(100), value: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+        const dbInst = await db.getDb();
+        if (!dbInst) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const client = (dbInst as any).$client;
+        await new Promise<void>((resolve, reject) => {
+          client.execute(
+            "INSERT INTO siteConfig (`key`, `value`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `value` = VALUES(`value`), `updatedAt` = NOW()",
+            [input.key, input.value],
+            (err: any) => { if (err) reject(err); else resolve(); }
+          );
+        });
+        return { success: true };
+      }),
   }),
   // Specialty routes
   specialty: router({
@@ -2175,6 +2192,29 @@ export const appRouter = router({
 
   // Public routes (no auth required)
   public: router({
+    getSiteConfig: publicProcedure
+      .input(z.object({ keys: z.array(z.string()) }))
+      .query(async ({ input }) => {
+        const dbInst = await db.getDb();
+        if (!dbInst) return {} as Record<string, string | null>;
+        const client = (dbInst as any).$client;
+        const placeholders = input.keys.map(() => "?").join(", ");
+        const rows = await new Promise<{ key: string; value: string | null }[]>((resolve) => {
+          client.execute(
+            `SELECT \`key\`, \`value\` FROM siteConfig WHERE \`key\` IN (${placeholders})`,
+            input.keys,
+            (err: any, rows: any) => {
+              if (err) { console.error("[getSiteConfig]", err?.message); resolve([]); }
+              else resolve(Array.isArray(rows) ? rows : []);
+            }
+          );
+        });
+        const result: Record<string, string | null> = {};
+        for (const k of input.keys) result[k] = null;
+        for (const row of rows) result[row.key] = row.value;
+        return result;
+      }),
+
     getBanners: publicProcedure.query(async () => {
       const dbInst = await db.getDb();
       if (!dbInst) return [];

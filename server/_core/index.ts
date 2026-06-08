@@ -850,6 +850,17 @@ async function runStartupMigrations() {
       console.warn('[Migration] restore balance v3 error:', e?.message);
     }
 
+    // Ensure siteConfig table exists
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS \`siteConfig\` (
+        \`key\` VARCHAR(100) NOT NULL,
+        \`value\` TEXT,
+        \`updatedAt\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (\`key\`)
+      )
+    `).catch(() => {});
+    console.log("[Migration] siteConfig table ready");
+
     // Ensure eventBanners table exists
     await db.execute(`
       CREATE TABLE IF NOT EXISTS \`eventBanners\` (
@@ -996,6 +1007,46 @@ async function startServer() {
       return res.status(500).json({ error: "Upload failed" });
     }
   });
+  // ─── File upload: site assets (admin only — video thumbnails, hero banners) ──
+  app.post("/api/upload/site-asset", async (req, res) => {
+    try {
+      let user = null;
+      try { user = await sdk.authenticateRequest(req); } catch { user = null; }
+      if (!user || (user as any).role !== "admin") {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+
+      const { base64, mimeType, fileName } = req.body as {
+        base64: string;
+        mimeType: string;
+        fileName: string;
+      };
+
+      if (!base64 || !mimeType || !fileName) {
+        return res.status(400).json({ error: "base64, mimeType and fileName are required" });
+      }
+
+      const allowedTypes = ["image/jpeg", "image/png", "image/webp", "video/mp4", "video/webm"];
+      if (!allowedTypes.includes(mimeType)) {
+        return res.status(400).json({ error: "Only JPEG, PNG, WebP, MP4 and WebM files are allowed" });
+      }
+
+      const buffer = Buffer.from(base64, "base64");
+      if (buffer.length > 50 * 1024 * 1024) {
+        return res.status(400).json({ error: "File must be under 50 MB" });
+      }
+
+      const ext = fileName.split(".").pop() ?? mimeType.split("/")[1] ?? "bin";
+      const key = `site-assets/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { url } = await storagePut(key, buffer, mimeType);
+
+      return res.json({ url });
+    } catch (err) {
+      console.error("[Upload] Error uploading site asset:", err);
+      return res.status(500).json({ error: "Upload failed" });
+    }
+  });
+
   // tRPC API
   app.use(
     "/api/trpc",

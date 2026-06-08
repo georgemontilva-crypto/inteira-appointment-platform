@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
@@ -312,6 +312,54 @@ export default function AdminDashboard() {
     onSuccess: () => toast.success("Roles de profesionales sincronizados correctamente"),
     onError: () => toast.error("Error al sincronizar roles"),
   });
+
+  // ─── siteConfig state ────────────────────────────────────────────────────
+  const { data: siteConfigData, refetch: refetchSiteConfig } = trpc.public.getSiteConfig.useQuery(
+    { keys: ["professionals_video_url", "professionals_banner_url"] },
+    { enabled: activeTab === "herramientas" }
+  );
+  const [videoUrl, setVideoUrl] = useState("");
+  const [bannerUrl, setBannerUrl] = useState("");
+  const [heroVideoUploading, setHeroVideoUploading] = useState(false);
+  const [heroBannerUploading, setHeroBannerUploading] = useState(false);
+  const videoFileRef = useRef<HTMLInputElement>(null);
+  const heroBannerFileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (siteConfigData) {
+      setVideoUrl(siteConfigData.professionals_video_url ?? "");
+      setBannerUrl(siteConfigData.professionals_banner_url ?? "");
+    }
+  }, [siteConfigData]);
+
+  const setSiteConfigMutation = trpc.admin.setSiteConfig.useMutation({
+    onSuccess: () => { refetchSiteConfig(); toast.success("Configuración guardada"); },
+    onError: () => toast.error("Error al guardar la configuración"),
+  });
+
+  async function uploadSiteAsset(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        try {
+          const base64 = (reader.result as string).split(",")[1];
+          const res = await fetch("/api/upload/site-asset", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ base64, mimeType: file.type, fileName: file.name }),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error ?? "Upload failed");
+          resolve(data.url);
+        } catch (err: any) {
+          reject(err);
+        }
+      };
+      reader.onerror = () => reject(new Error("Error al leer el archivo"));
+      reader.readAsDataURL(file);
+    });
+  }
 
   const approveWithdrawalMutation = trpc.admin.approveWithdrawal.useMutation({
     onSuccess: () => {
@@ -1776,7 +1824,163 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
 
-            </div>{/* /herramientas */}
+            </div>{/* /herramientas left col */}
+
+            {/* Right column: landing media */}
+            <div className="space-y-6">
+
+            {/* Video de landing profesionales */}
+            <Card className="border-border">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Upload className="w-4 h-4 text-primary" />
+                  Video de landing profesionales
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-xs text-muted-foreground">
+                  URL del video que se mostrará en el modal de bienvenida de <code>/profesionales</code>. Pega un embed de YouTube o sube un archivo de video a R2.
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={videoUrl}
+                    onChange={(e) => setVideoUrl(e.target.value)}
+                    placeholder="https://www.youtube.com/embed/..."
+                    className="flex-1 text-sm border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                  <Button
+                    size="sm"
+                    className="gradient-brand text-white border-0 flex-shrink-0"
+                    disabled={setSiteConfigMutation.isPending}
+                    onClick={() => setSiteConfigMutation.mutate({ key: "professionals_video_url", value: videoUrl })}
+                  >
+                    Guardar
+                  </Button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    ref={videoFileRef}
+                    type="file"
+                    accept="video/mp4,video/webm"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setHeroVideoUploading(true);
+                      try {
+                        const url = await uploadSiteAsset(file);
+                        setVideoUrl(url);
+                        setSiteConfigMutation.mutate({ key: "professionals_video_url", value: url });
+                      } catch (err: any) {
+                        toast.error(err?.message ?? "Error al subir el video");
+                      } finally {
+                        setHeroVideoUploading(false);
+                        if (videoFileRef.current) videoFileRef.current.value = "";
+                      }
+                    }}
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex items-center gap-1.5"
+                    disabled={heroVideoUploading}
+                    onClick={() => videoFileRef.current?.click()}
+                  >
+                    {heroVideoUploading ? (
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Upload className="w-3.5 h-3.5" />
+                    )}
+                    {heroVideoUploading ? "Subiendo…" : "Subir archivo a R2"}
+                  </Button>
+                  <span className="text-xs text-muted-foreground">MP4 o WebM, máx 50 MB</span>
+                </div>
+                {videoUrl && (
+                  <div className="flex items-center gap-2 text-xs text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-xl p-3 truncate">
+                    <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                    <span className="truncate">{videoUrl}</span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Banner hero profesionales */}
+            <Card className="border-border">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Image className="w-4 h-4 text-primary" />
+                  Banner hero profesionales
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-xs text-muted-foreground">
+                  Imagen de fondo del hero en <code>/profesionales</code>. Se aplica con overlay oscuro sobre el gradiente. Pega una URL o sube una imagen a R2.
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={bannerUrl}
+                    onChange={(e) => setBannerUrl(e.target.value)}
+                    placeholder="https://..."
+                    className="flex-1 text-sm border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                  <Button
+                    size="sm"
+                    className="gradient-brand text-white border-0 flex-shrink-0"
+                    disabled={setSiteConfigMutation.isPending}
+                    onClick={() => setSiteConfigMutation.mutate({ key: "professionals_banner_url", value: bannerUrl })}
+                  >
+                    Guardar
+                  </Button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    ref={heroBannerFileRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setHeroBannerUploading(true);
+                      try {
+                        const url = await uploadSiteAsset(file);
+                        setBannerUrl(url);
+                        setSiteConfigMutation.mutate({ key: "professionals_banner_url", value: url });
+                      } catch (err: any) {
+                        toast.error(err?.message ?? "Error al subir la imagen");
+                      } finally {
+                        setHeroBannerUploading(false);
+                        if (heroBannerFileRef.current) heroBannerFileRef.current.value = "";
+                      }
+                    }}
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex items-center gap-1.5"
+                    disabled={heroBannerUploading}
+                    onClick={() => heroBannerFileRef.current?.click()}
+                  >
+                    {heroBannerUploading ? (
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Upload className="w-3.5 h-3.5" />
+                    )}
+                    {heroBannerUploading ? "Subiendo…" : "Subir imagen a R2"}
+                  </Button>
+                  <span className="text-xs text-muted-foreground">JPEG, PNG o WebP, máx 50 MB</span>
+                </div>
+                {bannerUrl && (
+                  <div className="rounded-xl overflow-hidden border border-border" style={{ maxHeight: 140 }}>
+                    <img src={bannerUrl} alt="Banner preview" className="w-full object-cover" style={{ maxHeight: 140 }} />
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            </div>{/* /right col */}
             </div>{/* /grid */}
           </div>
         )}

@@ -1,8 +1,21 @@
 import { useState, useEffect, useRef } from "react";
+import { trpc } from "@/lib/trpc";
 import RegisterProfessional from "./RegisterProfessional";
 
+// ─── Palette ────────────────────────────────────────────────────────────────
+const C = {
+  bg:        "#F2F0ED",
+  warm:      "#A7774E",
+  cool:      "#829BBF",
+  brand:     "#5B6A57",
+  nude:      "#CBADA6",
+  olive:     "#A3A884",
+  text:      "#2C2C2C",
+  textMuted: "#6B6259",
+};
+
 /* ─── Video Modal ─── */
-function VideoModal({ onComplete }: { onComplete: () => void }) {
+function VideoModal({ videoUrl, onComplete }: { videoUrl: string; onComplete: () => void }) {
   const [progress, setProgress] = useState(0);
   const [canClose, setCanClose] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -28,6 +41,8 @@ function VideoModal({ onComplete }: { onComplete: () => void }) {
   const mins = Math.floor(remaining / 60);
   const secs = remaining % 60;
 
+  const embedUrl = videoUrl || "https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1&rel=0&modestbranding=1";
+
   return (
     <div
       style={{
@@ -47,9 +62,9 @@ function VideoModal({ onComplete }: { onComplete: () => void }) {
         <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 12, marginBottom: 12, textAlign: "center", letterSpacing: "0.1em", textTransform: "uppercase" }}>
           Por favor ve el video completo antes de continuar
         </p>
-        <div style={{ position: "relative", paddingBottom: "56.25%", height: 0, borderRadius: 12, overflow: "hidden", background: "#0a1a0b" }}>
+        <div style={{ position: "relative", paddingBottom: "56.25%", height: 0, borderRadius: 12, overflow: "hidden", background: "#0a0a0a" }}>
           <iframe
-            src="https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1&rel=0&modestbranding=1"
+            src={embedUrl}
             style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: "none" }}
             allow="autoplay; encrypted-media"
             allowFullScreen
@@ -57,10 +72,9 @@ function VideoModal({ onComplete }: { onComplete: () => void }) {
           />
         </div>
 
-        {/* Progress */}
         <div style={{ marginTop: 20 }}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-            <span style={{ color: "#607562", fontSize: 13, fontWeight: 600 }}>
+            <span style={{ color: C.warm, fontSize: 13, fontWeight: 600 }}>
               {canClose ? "¡Video completado!" : `Progreso: ${pct}%`}
             </span>
             {!canClose && (
@@ -74,7 +88,7 @@ function VideoModal({ onComplete }: { onComplete: () => void }) {
               style={{
                 height: "100%",
                 width: `${pct}%`,
-                background: "linear-gradient(90deg, #3d4e3f, #607562)",
+                background: `linear-gradient(90deg, ${C.brand}, ${C.warm})`,
                 borderRadius: 6,
                 transition: "width 0.9s linear",
               }}
@@ -89,7 +103,7 @@ function VideoModal({ onComplete }: { onComplete: () => void }) {
               marginTop: 24,
               width: "100%",
               padding: "14px",
-              background: "linear-gradient(135deg, #3d4e3f, #607562)",
+              background: `linear-gradient(135deg, ${C.brand}, ${C.warm})`,
               color: "#fff",
               border: "none",
               borderRadius: 10,
@@ -111,131 +125,6 @@ function VideoModal({ onComplete }: { onComplete: () => void }) {
   );
 }
 
-/* ─── Navbar ─── */
-const NAV_LINKS = [
-  { label: "Nuestra Identidad", href: "#identidad" },
-  { label: "Nuestra Historia", href: "#historia" },
-  { label: "Misión y Valores", href: "#mision" },
-  { label: "Modelo de Trabajo", href: "#modelo" },
-  { label: "Comunidad", href: "#comunidad" },
-  { label: "Únete", href: "#registro" },
-];
-
-function Navbar() {
-  const [scrolled, setScrolled] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-
-  useEffect(() => {
-    const fn = () => setScrolled(window.scrollY > 40);
-    window.addEventListener("scroll", fn);
-    return () => window.removeEventListener("scroll", fn);
-  }, []);
-
-  const scroll = (href: string) => {
-    setMenuOpen(false);
-    const el = document.querySelector(href);
-    if (el) el.scrollIntoView({ behavior: "smooth" });
-  };
-
-  return (
-    <nav
-      style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        zIndex: 100,
-        fontFamily: "'Poppins', sans-serif",
-        background: scrolled ? "rgba(255,255,255,0.97)" : "transparent",
-        backdropFilter: scrolled ? "blur(12px)" : "none",
-        borderBottom: scrolled ? "1px solid rgba(96,117,98,0.15)" : "none",
-        transition: "all 0.3s ease",
-        padding: "0 24px",
-      }}
-    >
-      <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", alignItems: "center", height: 64 }}>
-        {/* Logo */}
-        <a href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{ width: 32, height: 32, borderRadius: "50%", background: "linear-gradient(135deg,#3d4e3f,#607562)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/></svg>
-          </div>
-          <span style={{ fontWeight: 700, fontSize: 18, color: scrolled ? "#3d4e3f" : "#fff" }}>Inteira</span>
-        </a>
-
-        {/* Desktop links */}
-        <div className="hidden md:flex" style={{ flex: 1, justifyContent: "center", gap: 4 }}>
-          {NAV_LINKS.map((l) => (
-            <button
-              key={l.label}
-              onClick={() => scroll(l.href)}
-              style={{
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                fontFamily: "'Poppins', sans-serif",
-                fontSize: 13,
-                fontWeight: 500,
-                color: scrolled ? "#3d4e3f" : "rgba(255,255,255,0.85)",
-                padding: "6px 10px",
-                borderRadius: 6,
-                transition: "color 0.2s",
-              }}
-            >
-              {l.label}
-            </button>
-          ))}
-        </div>
-
-        {/* CTA */}
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <button
-            onClick={() => scroll("#registro")}
-            style={{
-              padding: "8px 18px",
-              background: "linear-gradient(135deg,#3d4e3f,#607562)",
-              color: "#fff",
-              border: "none",
-              borderRadius: 8,
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: "pointer",
-              fontFamily: "'Poppins', sans-serif",
-              whiteSpace: "nowrap",
-            }}
-          >
-            Quiero unirme
-          </button>
-          {/* Mobile hamburger */}
-          <button
-            className="md:hidden"
-            onClick={() => setMenuOpen(!menuOpen)}
-            style={{ background: "none", border: "none", cursor: "pointer", color: scrolled ? "#3d4e3f" : "#fff", display: "flex" }}
-          >
-            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              {menuOpen ? <><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></> : <><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></>}
-            </svg>
-          </button>
-        </div>
-      </div>
-
-      {/* Mobile menu */}
-      {menuOpen && (
-        <div style={{ background: "#fff", borderTop: "1px solid rgba(96,117,98,0.15)", padding: "12px 24px 20px" }}>
-          {NAV_LINKS.map((l) => (
-            <button
-              key={l.label}
-              onClick={() => scroll(l.href)}
-              style={{ display: "block", width: "100%", textAlign: "left", background: "none", border: "none", cursor: "pointer", fontFamily: "'Poppins', sans-serif", fontSize: 14, color: "#3d4e3f", padding: "10px 0", fontWeight: 500, borderBottom: "1px solid rgba(96,117,98,0.08)" }}
-            >
-              {l.label}
-            </button>
-          ))}
-        </div>
-      )}
-    </nav>
-  );
-}
-
 /* ─── Section wrapper ─── */
 function Section({ id, children, style }: { id?: string; children: React.ReactNode; style?: React.CSSProperties }) {
   return (
@@ -246,74 +135,80 @@ function Section({ id, children, style }: { id?: string; children: React.ReactNo
 }
 
 /* ─── Hero ─── */
-function Hero() {
+function Hero({ bannerUrl }: { bannerUrl: string | null }) {
   const scroll = (href: string) => {
     const el = document.querySelector(href);
     if (el) el.scrollIntoView({ behavior: "smooth" });
   };
 
+  const bgStyle: React.CSSProperties = bannerUrl
+    ? {
+        backgroundImage: `linear-gradient(145deg, rgba(91,106,87,0.85) 0%, rgba(167,119,78,0.7) 100%), url(${bannerUrl})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      }
+    : {
+        background: `linear-gradient(145deg, ${C.brand} 0%, #7a8c76 40%, #9aaa96 70%, ${C.olive} 100%)`,
+      };
+
   return (
     <Section
       style={{
         minHeight: "100vh",
-        background: "linear-gradient(145deg, #0d1f10 0%, #1a3020 40%, #2d4e33 70%, #3d6040 100%)",
+        ...bgStyle,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        padding: "100px 24px 60px",
+        padding: "80px 24px 60px",
         position: "relative",
         overflow: "hidden",
       }}
     >
-      {/* Background circles */}
-      <div style={{ position: "absolute", top: "-10%", right: "-5%", width: 500, height: 500, borderRadius: "50%", background: "rgba(96,117,98,0.08)", pointerEvents: "none" }} />
-      <div style={{ position: "absolute", bottom: "-15%", left: "-8%", width: 400, height: 400, borderRadius: "50%", background: "rgba(61,78,63,0.12)", pointerEvents: "none" }} />
+      <div style={{ position: "absolute", top: "-10%", right: "-5%", width: 500, height: 500, borderRadius: "50%", background: `rgba(167,119,78,0.1)`, pointerEvents: "none" }} />
+      <div style={{ position: "absolute", bottom: "-15%", left: "-8%", width: 400, height: 400, borderRadius: "50%", background: `rgba(130,155,191,0.1)`, pointerEvents: "none" }} />
 
       <div style={{ maxWidth: 1100, width: "100%", position: "relative", zIndex: 1 }}>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 60, alignItems: "center" }}>
-          {/* Text */}
           <div style={{ flex: "1 1 500px" }}>
-            <span style={{ display: "inline-block", background: "rgba(96,117,98,0.25)", color: "#a8c5a0", fontSize: 11, fontWeight: 600, letterSpacing: "0.15em", textTransform: "uppercase", padding: "6px 14px", borderRadius: 20, marginBottom: 20, border: "1px solid rgba(96,117,98,0.3)" }}>
+            <span style={{ display: "inline-block", background: `rgba(242,240,237,0.18)`, color: "#F2F0ED", fontSize: 11, fontWeight: 600, letterSpacing: "0.15em", textTransform: "uppercase", padding: "6px 14px", borderRadius: 20, marginBottom: 20, border: `1px solid rgba(242,240,237,0.25)` }}>
               Plataforma para profesionales del bienestar
             </span>
             <h1 style={{ fontSize: "clamp(32px, 5vw, 56px)", fontWeight: 800, color: "#fff", lineHeight: 1.15, marginBottom: 20 }}>
               Transforma tu práctica.<br />
-              <span style={{ background: "linear-gradient(90deg, #8fbc8f, #c8e6c9)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+              <span style={{ color: C.nude }}>
                 Conecta con quienes te necesitan.
               </span>
             </h1>
-            <p style={{ fontSize: 17, color: "rgba(255,255,255,0.65)", lineHeight: 1.7, marginBottom: 40, maxWidth: 520 }}>
+            <p style={{ fontSize: 17, color: "rgba(255,255,255,0.72)", lineHeight: 1.7, marginBottom: 40, maxWidth: 520 }}>
               Inteira es la comunidad donde los profesionales del bienestar mental, emocional y espiritual construyen una práctica sostenible, con propósito y acompañamiento real.
             </p>
 
-            {/* CTAs */}
             <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
               <button
                 onClick={() => scroll("#registro")}
-                style={{ padding: "14px 28px", background: "linear-gradient(135deg, #607562, #3d4e3f)", color: "#fff", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "'Poppins', sans-serif" }}
+                style={{ padding: "14px 28px", background: C.warm, color: "#fff", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "'Poppins', sans-serif" }}
               >
                 Quiero ser parte →
               </button>
               <button
                 onClick={() => scroll("#identidad")}
-                style={{ padding: "14px 28px", background: "rgba(255,255,255,0.08)", color: "#fff", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 10, fontSize: 15, fontWeight: 500, cursor: "pointer", fontFamily: "'Poppins', sans-serif" }}
+                style={{ padding: "14px 28px", background: "rgba(255,255,255,0.1)", color: "#fff", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 10, fontSize: 15, fontWeight: 500, cursor: "pointer", fontFamily: "'Poppins', sans-serif" }}
               >
                 Conocer más
               </button>
             </div>
           </div>
 
-          {/* Stats */}
           <div style={{ flex: "0 1 auto", display: "flex", flexDirection: "column", gap: 16 }}>
             {[
               { value: "60%", label: "Comisión para el profesional", sub: "en cada sesión completada" },
               { value: "50 min", label: "Duración estándar de sesión", sub: "flexible según tu modalidad" },
               { value: "Lunes", label: "Día de pago semanal", sub: "sin complicaciones ni esperas" },
             ].map((s) => (
-              <div key={s.value} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 14, padding: "20px 28px", backdropFilter: "blur(8px)", minWidth: 220 }}>
-                <p style={{ fontSize: 36, fontWeight: 800, color: "#a8e6a0", margin: 0 }}>{s.value}</p>
+              <div key={s.value} style={{ background: "rgba(242,240,237,0.1)", border: `1px solid rgba(242,240,237,0.18)`, borderRadius: 14, padding: "20px 28px", backdropFilter: "blur(8px)", minWidth: 220 }}>
+                <p style={{ fontSize: 36, fontWeight: 800, color: C.nude, margin: 0 }}>{s.value}</p>
                 <p style={{ fontSize: 13, fontWeight: 600, color: "#fff", margin: "4px 0 2px" }}>{s.label}</p>
-                <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", margin: 0 }}>{s.sub}</p>
+                <p style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", margin: 0 }}>{s.sub}</p>
               </div>
             ))}
           </div>
@@ -346,20 +241,19 @@ function Identidad() {
   ];
 
   return (
-    <Section id="identidad" style={{ padding: "80px 24px", background: "#f7faf7" }}>
+    <Section id="identidad" style={{ padding: "80px 24px", background: C.bg }}>
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: 56 }}>
-          <span style={{ display: "inline-block", background: "rgba(96,117,98,0.12)", color: "#3d4e3f", fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", padding: "5px 14px", borderRadius: 20, marginBottom: 14 }}>
+          <span style={{ display: "inline-block", background: `rgba(163,168,132,0.18)`, color: C.brand, fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", padding: "5px 14px", borderRadius: 20, marginBottom: 14 }}>
             Nuestra Identidad
           </span>
-          <h2 style={{ fontSize: "clamp(26px, 4vw, 40px)", fontWeight: 800, color: "#1a2e1a", margin: 0 }}>
+          <h2 style={{ fontSize: "clamp(26px, 4vw, 40px)", fontWeight: 800, color: C.brand, margin: 0 }}>
             Sabemos lo que somos.<br />Y lo que no somos.
           </h2>
         </div>
 
-        {/* No somos / Sí somos */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 24, marginBottom: 56 }}>
-          <div style={{ background: "#fff", borderRadius: 16, padding: 32, border: "1px solid rgba(220,60,60,0.12)" }}>
+          <div style={{ background: "#fff", borderRadius: 16, padding: 32, border: `1px solid rgba(203,173,166,0.3)` }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 24 }}>
               <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(220,60,60,0.08)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#c0392b" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -369,33 +263,32 @@ function Identidad() {
             {noSomos.map((t, i) => (
               <div key={i} style={{ display: "flex", gap: 10, marginBottom: 12 }}>
                 <span style={{ color: "#c0392b", fontSize: 16, flexShrink: 0 }}>✕</span>
-                <p style={{ fontSize: 14, color: "#555", margin: 0, lineHeight: 1.5 }}>{t}</p>
+                <p style={{ fontSize: 14, color: C.textMuted, margin: 0, lineHeight: 1.5 }}>{t}</p>
               </div>
             ))}
           </div>
 
-          <div style={{ background: "#fff", borderRadius: 16, padding: 32, border: "1px solid rgba(96,117,98,0.2)" }}>
+          <div style={{ background: "#fff", borderRadius: 16, padding: 32, border: `1px solid ${C.olive}40` }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 24 }}>
-              <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(96,117,98,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#3d4e3f" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+              <div style={{ width: 36, height: 36, borderRadius: "50%", background: `rgba(91,106,87,0.1)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke={C.brand} strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
               </div>
-              <h3 style={{ fontSize: 16, fontWeight: 700, color: "#3d4e3f", margin: 0 }}>Lo que SÍ somos</h3>
+              <h3 style={{ fontSize: 16, fontWeight: 700, color: C.brand, margin: 0 }}>Lo que SÍ somos</h3>
             </div>
             {siSomos.map((t, i) => (
               <div key={i} style={{ display: "flex", gap: 10, marginBottom: 12 }}>
-                <span style={{ color: "#607562", fontSize: 16, flexShrink: 0 }}>✓</span>
-                <p style={{ fontSize: 14, color: "#555", margin: 0, lineHeight: 1.5 }}>{t}</p>
+                <span style={{ color: C.warm, fontSize: 16, flexShrink: 0 }}>✓</span>
+                <p style={{ fontSize: 14, color: C.textMuted, margin: 0, lineHeight: 1.5 }}>{t}</p>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Áreas */}
         <div style={{ textAlign: "center", marginBottom: 20 }}>
-          <h3 style={{ fontSize: 18, fontWeight: 700, color: "#3d4e3f", marginBottom: 20 }}>Áreas de práctica que acompañamos</h3>
+          <h3 style={{ fontSize: 18, fontWeight: 700, color: C.brand, marginBottom: 20 }}>Áreas de práctica que acompañamos</h3>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "center" }}>
             {areas.map((a) => (
-              <span key={a} style={{ background: "#fff", border: "1px solid rgba(96,117,98,0.25)", color: "#3d4e3f", fontSize: 13, fontWeight: 500, padding: "8px 16px", borderRadius: 20 }}>{a}</span>
+              <span key={a} style={{ background: "#fff", border: `1px solid ${C.olive}`, color: C.brand, fontSize: 13, fontWeight: 500, padding: "8px 16px", borderRadius: 20 }}>{a}</span>
             ))}
           </div>
         </div>
@@ -410,46 +303,43 @@ function Historia() {
     <Section id="historia" style={{ padding: "80px 24px", background: "#fff" }}>
       <div style={{ maxWidth: 800, margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: 48 }}>
-          <span style={{ display: "inline-block", background: "rgba(96,117,98,0.12)", color: "#3d4e3f", fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", padding: "5px 14px", borderRadius: 20, marginBottom: 14 }}>
+          <span style={{ display: "inline-block", background: `rgba(163,168,132,0.18)`, color: C.brand, fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", padding: "5px 14px", borderRadius: 20, marginBottom: 14 }}>
             Nuestra Historia
           </span>
-          <h2 style={{ fontSize: "clamp(26px, 4vw, 40px)", fontWeight: 800, color: "#1a2e1a", margin: 0 }}>
+          <h2 style={{ fontSize: "clamp(26px, 4vw, 40px)", fontWeight: 800, color: C.brand, margin: 0 }}>
             Todo comenzó con una pregunta honesta
           </h2>
         </div>
 
-        {/* Quote apertura */}
-        <blockquote style={{ borderLeft: "4px solid #607562", paddingLeft: 24, margin: "0 0 32px", background: "rgba(96,117,98,0.05)", borderRadius: "0 12px 12px 0", padding: "20px 24px" }}>
-          <p style={{ fontSize: 18, fontStyle: "italic", color: "#3d4e3f", lineHeight: 1.7, margin: 0, fontWeight: 500 }}>
+        <blockquote style={{ borderLeft: `4px solid ${C.warm}`, paddingLeft: 24, margin: "0 0 32px", background: `rgba(167,119,78,0.06)`, borderRadius: "0 12px 12px 0", padding: "20px 24px" }}>
+          <p style={{ fontSize: 18, fontStyle: "italic", color: C.brand, lineHeight: 1.7, margin: 0, fontWeight: 500 }}>
             "¿Por qué los profesionales del bienestar que más cuidan a otros son los que menos tienen herramientas para cuidarse a sí mismos?"
           </p>
         </blockquote>
 
-        <p style={{ fontSize: 15, color: "#555", lineHeight: 1.8, marginBottom: 20 }}>
+        <p style={{ fontSize: 15, color: C.textMuted, lineHeight: 1.8, marginBottom: 20 }}>
           Inteira nació de la necesidad real de crear un puente entre quienes tienen el conocimiento y vocación para sanar, y quienes buscan ese acompañamiento con urgencia. Nos dimos cuenta de que el problema no era la falta de buenos profesionales; era la falta de un espacio digno, coherente y humano donde pudieran ejercer.
         </p>
 
-        <p style={{ fontSize: 15, color: "#555", lineHeight: 1.8, marginBottom: 32 }}>
+        <p style={{ fontSize: 15, color: C.textMuted, lineHeight: 1.8, marginBottom: 32 }}>
           Durante meses conversamos con terapeutas, coaches, psicólogos y guías espirituales que trabajaban desde sus casas, sin estructura, sin visibilidad y sin comunidad. Escuchamos historias de agotamiento, de clientes no confiables, de plataformas que prometían mucho y cumplían poco. Esas historias se convirtieron en el mapa de lo que Inteira quería ser.
         </p>
 
-        {/* Anécdota */}
-        <div style={{ background: "linear-gradient(135deg, rgba(61,78,63,0.06), rgba(96,117,98,0.08))", borderRadius: 16, padding: 32, marginBottom: 32 }}>
-          <p style={{ fontSize: 13, fontWeight: 600, color: "#607562", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12 }}>Una historia que nos marcó</p>
-          <p style={{ fontSize: 15, color: "#444", lineHeight: 1.8, margin: 0 }}>
+        <div style={{ background: `linear-gradient(135deg, rgba(91,106,87,0.06), rgba(163,168,132,0.1))`, borderRadius: 16, padding: 32, marginBottom: 32 }}>
+          <p style={{ fontSize: 13, fontWeight: 600, color: C.warm, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12 }}>Una historia que nos marcó</p>
+          <p style={{ fontSize: 15, color: C.text, lineHeight: 1.8, margin: 0 }}>
             Una de las primeras profesionales que se unió a Inteira era terapeuta holística. Llevaba tres años trabajando sola, sin certeza de cuántos clientes tendría cada semana. "Vivía con miedo de que mi trabajo no alcanzara para pagar la renta", nos dijo. Hoy, seis meses dentro de la plataforma, tiene agenda completa y por primera vez pudo tomarse vacaciones. Esa transformación es la razón por la que existimos.
           </p>
         </div>
 
-        {/* Quote fundadora */}
         <div style={{ textAlign: "center", padding: "20px 0" }}>
-          <div style={{ width: 60, height: 60, borderRadius: "50%", background: "linear-gradient(135deg, #3d4e3f, #607562)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+          <div style={{ width: 60, height: 60, borderRadius: "50%", background: `linear-gradient(135deg, ${C.brand}, ${C.warm})`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
             <span style={{ fontSize: 24, color: "white", fontWeight: 800 }}>"</span>
           </div>
-          <p style={{ fontSize: 17, fontStyle: "italic", color: "#3d4e3f", lineHeight: 1.7, maxWidth: 600, margin: "0 auto 16px", fontWeight: 500 }}>
+          <p style={{ fontSize: 17, fontStyle: "italic", color: C.brand, lineHeight: 1.7, maxWidth: 600, margin: "0 auto 16px", fontWeight: 500 }}>
             Creamos Inteira para que ningún profesional del bienestar tenga que elegir entre su vocación y su estabilidad. Los dos pueden coexistir, y es nuestra misión demostrarlo.
           </p>
-          <p style={{ fontSize: 13, fontWeight: 600, color: "#607562", margin: 0 }}>— Fundadora, Inteira</p>
+          <p style={{ fontSize: 13, fontWeight: 600, color: C.warm, margin: 0 }}>— Fundadora, Inteira</p>
         </div>
       </div>
     </Section>
@@ -470,41 +360,39 @@ function MisionValores() {
   ];
 
   return (
-    <Section id="mision" style={{ padding: "80px 24px", background: "linear-gradient(180deg, #f7faf7 0%, #fff 100%)" }}>
+    <Section id="mision" style={{ padding: "80px 24px", background: C.bg }}>
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: 56 }}>
-          <span style={{ display: "inline-block", background: "rgba(96,117,98,0.12)", color: "#3d4e3f", fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", padding: "5px 14px", borderRadius: 20, marginBottom: 14 }}>
+          <span style={{ display: "inline-block", background: `rgba(163,168,132,0.18)`, color: C.brand, fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", padding: "5px 14px", borderRadius: 20, marginBottom: 14 }}>
             Misión, Visión y Valores
           </span>
-          <h2 style={{ fontSize: "clamp(26px, 4vw, 40px)", fontWeight: 800, color: "#1a2e1a", margin: 0 }}>
+          <h2 style={{ fontSize: "clamp(26px, 4vw, 40px)", fontWeight: 800, color: C.brand, margin: 0 }}>
             Lo que nos mueve cada día
           </h2>
         </div>
 
-        {/* Misión + Visión */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 20, marginBottom: 56 }}>
-          <div style={{ background: "linear-gradient(135deg, #0d1f10, #1a3020)", borderRadius: 16, padding: 32, color: "#fff" }}>
-            <p style={{ fontSize: 11, fontWeight: 700, color: "#607562", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 12 }}>Misión</p>
-            <p style={{ fontSize: 16, lineHeight: 1.7, margin: 0, color: "rgba(255,255,255,0.85)" }}>
+          <div style={{ background: C.brand, borderRadius: 16, padding: 32, color: "#fff" }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: C.olive, textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 12 }}>Misión</p>
+            <p style={{ fontSize: 16, lineHeight: 1.7, margin: 0, color: "rgba(255,255,255,0.88)" }}>
               Empoderar a los profesionales del bienestar con herramientas, comunidad y tecnología para que puedan ejercer con dignidad, impacto y estabilidad.
             </p>
           </div>
-          <div style={{ background: "linear-gradient(135deg, #3d4e3f, #607562)", borderRadius: 16, padding: 32, color: "#fff" }}>
-            <p style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.6)", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 12 }}>Visión</p>
-            <p style={{ fontSize: 16, lineHeight: 1.7, margin: 0, color: "rgba(255,255,255,0.85)" }}>
+          <div style={{ background: `linear-gradient(135deg, ${C.warm}, #c49060)`, borderRadius: 16, padding: 32, color: "#fff" }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.65)", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 12 }}>Visión</p>
+            <p style={{ fontSize: 16, lineHeight: 1.7, margin: 0, color: "rgba(255,255,255,0.88)" }}>
               Ser el ecosistema de referencia en Latinoamérica donde el bienestar integral es accesible, sostenible y transformador, tanto para quien lo busca como para quien lo facilita.
             </p>
           </div>
         </div>
 
-        {/* Valores */}
-        <h3 style={{ fontSize: 20, fontWeight: 700, color: "#3d4e3f", textAlign: "center", marginBottom: 28 }}>Nuestros 8 valores</h3>
+        <h3 style={{ fontSize: 20, fontWeight: 700, color: C.brand, textAlign: "center", marginBottom: 28 }}>Nuestros 8 valores</h3>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(230px, 1fr))", gap: 16 }}>
           {valores.map((v) => (
-            <div key={v.title} style={{ background: "#fff", borderRadius: 14, padding: "22px 20px", border: "1px solid rgba(96,117,98,0.15)", transition: "transform 0.2s, box-shadow 0.2s" }}>
+            <div key={v.title} style={{ background: "#fff", borderRadius: 14, padding: "22px 20px", border: `1px solid ${C.olive}40` }}>
               <span style={{ fontSize: 28, display: "block", marginBottom: 12 }}>{v.icon}</span>
-              <p style={{ fontSize: 14, fontWeight: 700, color: "#3d4e3f", margin: "0 0 8px" }}>{v.title}</p>
-              <p style={{ fontSize: 13, color: "#666", margin: 0, lineHeight: 1.5 }}>{v.desc}</p>
+              <p style={{ fontSize: 14, fontWeight: 700, color: C.brand, margin: "0 0 8px" }}>{v.title}</p>
+              <p style={{ fontSize: 13, color: C.textMuted, margin: 0, lineHeight: 1.5 }}>{v.desc}</p>
             </div>
           ))}
         </div>
@@ -540,21 +428,21 @@ function Biblia() {
     <Section style={{ padding: "80px 24px", background: "#fff" }}>
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: 48 }}>
-          <span style={{ display: "inline-block", background: "rgba(96,117,98,0.12)", color: "#3d4e3f", fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", padding: "5px 14px", borderRadius: 20, marginBottom: 14 }}>
+          <span style={{ display: "inline-block", background: `rgba(163,168,132,0.18)`, color: C.brand, fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", padding: "5px 14px", borderRadius: 20, marginBottom: 14 }}>
             La Biblia Inteira
           </span>
-          <h2 style={{ fontSize: "clamp(26px, 4vw, 40px)", fontWeight: 800, color: "#1a2e1a", margin: 0 }}>
+          <h2 style={{ fontSize: "clamp(26px, 4vw, 40px)", fontWeight: 800, color: C.brand, margin: 0 }}>
             El marco que da coherencia a todo
           </h2>
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 20 }}>
           {cards.map((c) => (
-            <div key={c.title} style={{ background: "linear-gradient(145deg, #f7faf7, #fff)", borderRadius: 16, padding: 32, border: "1px solid rgba(96,117,98,0.18)" }}>
+            <div key={c.title} style={{ background: C.bg, borderRadius: 16, padding: 32, border: `1px solid ${C.olive}50` }}>
               <span style={{ fontSize: 36, display: "block", marginBottom: 16 }}>{c.icon}</span>
-              <span style={{ display: "inline-block", background: "rgba(96,117,98,0.12)", color: "#607562", fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", padding: "4px 10px", borderRadius: 20, marginBottom: 12 }}>{c.tag}</span>
-              <h3 style={{ fontSize: 16, fontWeight: 700, color: "#3d4e3f", margin: "0 0 12px" }}>{c.title}</h3>
-              <p style={{ fontSize: 14, color: "#666", lineHeight: 1.6, margin: 0 }}>{c.desc}</p>
+              <span style={{ display: "inline-block", background: `rgba(130,155,191,0.15)`, color: C.cool, fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", padding: "4px 10px", borderRadius: 20, marginBottom: 12 }}>{c.tag}</span>
+              <h3 style={{ fontSize: 16, fontWeight: 700, color: C.brand, margin: "0 0 12px" }}>{c.title}</h3>
+              <p style={{ fontSize: 14, color: C.textMuted, lineHeight: 1.6, margin: 0 }}>{c.desc}</p>
             </div>
           ))}
         </div>
@@ -566,44 +454,37 @@ function Biblia() {
 /* ─── Modelo de Trabajo ─── */
 function ModeloTrabajo() {
   return (
-    <Section id="modelo" style={{ padding: "80px 24px", background: "linear-gradient(180deg, #f0f4f0 0%, #e8f0e8 100%)" }}>
+    <Section id="modelo" style={{ padding: "80px 24px", background: C.bg }}>
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: 56 }}>
-          <span style={{ display: "inline-block", background: "rgba(96,117,98,0.15)", color: "#3d4e3f", fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", padding: "5px 14px", borderRadius: 20, marginBottom: 14 }}>
+          <span style={{ display: "inline-block", background: `rgba(163,168,132,0.18)`, color: C.brand, fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", padding: "5px 14px", borderRadius: 20, marginBottom: 14 }}>
             Modelo de Trabajo
           </span>
-          <h2 style={{ fontSize: "clamp(26px, 4vw, 40px)", fontWeight: 800, color: "#1a2e1a", margin: 0 }}>
+          <h2 style={{ fontSize: "clamp(26px, 4vw, 40px)", fontWeight: 800, color: C.brand, margin: 0 }}>
             Claro, justo y predecible
           </h2>
         </div>
 
-        {/* Comisión y pagos */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 20, marginBottom: 40 }}>
-          <div style={{ background: "#fff", borderRadius: 16, padding: 32, border: "1px solid rgba(96,117,98,0.15)", textAlign: "center" }}>
-            <div style={{ fontSize: 48, fontWeight: 900, color: "#3d4e3f", lineHeight: 1, marginBottom: 8 }}>60%</div>
-            <p style={{ fontSize: 15, fontWeight: 600, color: "#333", marginBottom: 8 }}>Para el profesional</p>
-            <p style={{ fontSize: 13, color: "#888", lineHeight: 1.5, margin: 0 }}>De cada sesión cobrada. El 40% restante sostiene la plataforma, el soporte y la comunidad.</p>
-          </div>
-          <div style={{ background: "#fff", borderRadius: 16, padding: 32, border: "1px solid rgba(96,117,98,0.15)", textAlign: "center" }}>
-            <div style={{ fontSize: 48, fontWeight: 900, color: "#607562", lineHeight: 1, marginBottom: 8 }}>Lunes</div>
-            <p style={{ fontSize: 15, fontWeight: 600, color: "#333", marginBottom: 8 }}>Día de pago semanal</p>
-            <p style={{ fontSize: 13, color: "#888", lineHeight: 1.5, margin: 0 }}>Recibes tu saldo acumulado cada lunes. Sin demoras, sin misterios.</p>
-          </div>
-          <div style={{ background: "#fff", borderRadius: 16, padding: 32, border: "1px solid rgba(96,117,98,0.15)", textAlign: "center" }}>
-            <div style={{ fontSize: 48, fontWeight: 900, color: "#3d4e3f", lineHeight: 1, marginBottom: 8 }}>50'</div>
-            <p style={{ fontSize: 15, fontWeight: 600, color: "#333", marginBottom: 8 }}>Sesión estándar</p>
-            <p style={{ fontSize: 13, color: "#888", lineHeight: 1.5, margin: 0 }}>Puedes configurar formatos de 30, 50 o 80 minutos según tu práctica.</p>
-          </div>
+          {[
+            { value: "60%", color: C.brand, label: "Para el profesional", sub: "De cada sesión cobrada. El 40% restante sostiene la plataforma, el soporte y la comunidad." },
+            { value: "Lunes", color: C.warm, label: "Día de pago semanal", sub: "Recibes tu saldo acumulado cada lunes. Sin demoras, sin misterios." },
+            { value: "50'", color: C.cool, label: "Sesión estándar", sub: "Puedes configurar formatos de 30, 50 o 80 minutos según tu práctica." },
+          ].map((s) => (
+            <div key={s.value} style={{ background: "#fff", borderRadius: 16, padding: 32, border: `1px solid ${C.olive}40`, textAlign: "center" }}>
+              <div style={{ fontSize: 48, fontWeight: 900, color: s.color, lineHeight: 1, marginBottom: 8 }}>{s.value}</div>
+              <p style={{ fontSize: 15, fontWeight: 600, color: C.text, marginBottom: 8 }}>{s.label}</p>
+              <p style={{ fontSize: 13, color: C.textMuted, lineHeight: 1.5, margin: 0 }}>{s.sub}</p>
+            </div>
+          ))}
         </div>
 
-        {/* Niveles */}
-        <h3 style={{ fontSize: 20, fontWeight: 700, color: "#3d4e3f", textAlign: "center", marginBottom: 24 }}>Niveles de membresía</h3>
+        <h3 style={{ fontSize: 20, fontWeight: 700, color: C.brand, textAlign: "center", marginBottom: 24 }}>Niveles de membresía</h3>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 20 }}>
-          {/* Básico */}
-          <div style={{ background: "#fff", borderRadius: 20, padding: 32, border: "2px solid rgba(96,117,98,0.2)" }}>
-            <span style={{ display: "inline-block", background: "rgba(96,117,98,0.1)", color: "#3d4e3f", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", padding: "4px 12px", borderRadius: 20, marginBottom: 16 }}>Nivel Básico</span>
-            <p style={{ fontSize: 28, fontWeight: 800, color: "#3d4e3f", margin: "0 0 4px" }}>Gratuito</p>
-            <p style={{ fontSize: 13, color: "#888", marginBottom: 24 }}>Para comenzar sin riesgo</p>
+          <div style={{ background: "#fff", borderRadius: 20, padding: 32, border: `2px solid ${C.olive}50` }}>
+            <span style={{ display: "inline-block", background: `rgba(163,168,132,0.15)`, color: C.brand, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", padding: "4px 12px", borderRadius: 20, marginBottom: 16 }}>Nivel Básico</span>
+            <p style={{ fontSize: 28, fontWeight: 800, color: C.brand, margin: "0 0 4px" }}>Gratuito</p>
+            <p style={{ fontSize: 13, color: C.nude, marginBottom: 24 }}>Para comenzar sin riesgo</p>
             {[
               "Perfil público en la plataforma",
               "Agenda de citas automatizada",
@@ -613,18 +494,17 @@ function ModeloTrabajo() {
               "Pago semanal automatizado",
             ].map((f) => (
               <div key={f} style={{ display: "flex", gap: 10, marginBottom: 10 }}>
-                <span style={{ color: "#607562", fontSize: 15, flexShrink: 0 }}>✓</span>
-                <span style={{ fontSize: 14, color: "#555" }}>{f}</span>
+                <span style={{ color: C.warm, fontSize: 15, flexShrink: 0 }}>✓</span>
+                <span style={{ fontSize: 14, color: C.textMuted }}>{f}</span>
               </div>
             ))}
           </div>
 
-          {/* Pro */}
-          <div style={{ background: "linear-gradient(145deg, #0d1f10, #1a3020)", borderRadius: 20, padding: 32, border: "2px solid rgba(96,117,98,0.5)", position: "relative", overflow: "hidden" }}>
-            <div style={{ position: "absolute", top: 16, right: 16, background: "linear-gradient(135deg, #607562, #3d4e3f)", color: "#fff", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", padding: "4px 10px", borderRadius: 20 }}>Recomendado</div>
-            <span style={{ display: "inline-block", background: "rgba(96,117,98,0.3)", color: "#a8e6a0", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", padding: "4px 12px", borderRadius: 20, marginBottom: 16 }}>Nivel Pro</span>
+          <div style={{ background: `linear-gradient(145deg, ${C.brand}, #7a8c76)`, borderRadius: 20, padding: 32, border: `2px solid ${C.olive}`, position: "relative", overflow: "hidden" }}>
+            <div style={{ position: "absolute", top: 16, right: 16, background: C.warm, color: "#fff", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", padding: "4px 10px", borderRadius: 20 }}>Recomendado</div>
+            <span style={{ display: "inline-block", background: `rgba(242,240,237,0.2)`, color: C.bg, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", padding: "4px 12px", borderRadius: 20, marginBottom: 16 }}>Nivel Pro</span>
             <p style={{ fontSize: 28, fontWeight: 800, color: "#fff", margin: "0 0 4px" }}>$299 MXN/mes</p>
-            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginBottom: 24 }}>Para crecer sin límites</p>
+            <p style={{ fontSize: 13, color: C.nude, marginBottom: 24 }}>Para crecer sin límites</p>
             {[
               "Todo lo del nivel Básico",
               "Sesiones ilimitadas por mes",
@@ -636,8 +516,8 @@ function ModeloTrabajo() {
               "Acceso a la Biblia Inteira completa",
             ].map((f) => (
               <div key={f} style={{ display: "flex", gap: 10, marginBottom: 10 }}>
-                <span style={{ color: "#a8e6a0", fontSize: 15, flexShrink: 0 }}>✓</span>
-                <span style={{ fontSize: 14, color: "rgba(255,255,255,0.75)" }}>{f}</span>
+                <span style={{ color: C.nude, fontSize: 15, flexShrink: 0 }}>✓</span>
+                <span style={{ fontSize: 14, color: "rgba(255,255,255,0.82)" }}>{f}</span>
               </div>
             ))}
           </div>
@@ -667,50 +547,50 @@ function Comunidad() {
     <Section id="comunidad" style={{ padding: "80px 24px", background: "#fff" }}>
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: 56 }}>
-          <span style={{ display: "inline-block", background: "rgba(96,117,98,0.12)", color: "#3d4e3f", fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", padding: "5px 14px", borderRadius: 20, marginBottom: 14 }}>
+          <span style={{ display: "inline-block", background: `rgba(163,168,132,0.18)`, color: C.brand, fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", padding: "5px 14px", borderRadius: 20, marginBottom: 14 }}>
             Comunidad Inteira
           </span>
-          <h2 style={{ fontSize: "clamp(26px, 4vw, 40px)", fontWeight: 800, color: "#1a2e1a", marginBottom: 16 }}>
+          <h2 style={{ fontSize: "clamp(26px, 4vw, 40px)", fontWeight: 800, color: C.brand, marginBottom: 16 }}>
             Más que una plataforma. Un hogar profesional.
           </h2>
-          <p style={{ fontSize: 16, color: "#666", maxWidth: 600, margin: "0 auto", lineHeight: 1.7 }}>
+          <p style={{ fontSize: 16, color: C.textMuted, maxWidth: 600, margin: "0 auto", lineHeight: 1.7 }}>
             Estamos construyendo algo grande. Esto es lo que viene para los profesionales que se unan hoy.
           </p>
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 24 }}>
-          <div style={{ background: "linear-gradient(135deg, #f7faf7, #eef4ee)", borderRadius: 20, padding: 32, border: "1px solid rgba(96,117,98,0.15)" }}>
+          <div style={{ background: C.bg, borderRadius: 20, padding: 32, border: `1px solid ${C.olive}50` }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
-              <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(96,117,98,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div style={{ width: 40, height: 40, borderRadius: "50%", background: `rgba(163,168,132,0.2)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <span style={{ fontSize: 18 }}>🌿</span>
               </div>
               <div>
-                <p style={{ fontSize: 11, fontWeight: 600, color: "#607562", textTransform: "uppercase", letterSpacing: "0.1em", margin: 0 }}>Objetivos a mediano plazo</p>
-                <p style={{ fontSize: 14, fontWeight: 700, color: "#3d4e3f", margin: 0 }}>Próximos 12 meses</p>
+                <p style={{ fontSize: 11, fontWeight: 600, color: C.warm, textTransform: "uppercase", letterSpacing: "0.1em", margin: 0 }}>Objetivos a mediano plazo</p>
+                <p style={{ fontSize: 14, fontWeight: 700, color: C.brand, margin: 0 }}>Próximos 12 meses</p>
               </div>
             </div>
             {medioPlazoPlazo.map((o) => (
               <div key={o} style={{ display: "flex", gap: 10, marginBottom: 14 }}>
                 <span style={{ fontSize: 16, flexShrink: 0 }}>🌱</span>
-                <p style={{ fontSize: 14, color: "#555", margin: 0, lineHeight: 1.5 }}>{o}</p>
+                <p style={{ fontSize: 14, color: C.textMuted, margin: 0, lineHeight: 1.5 }}>{o}</p>
               </div>
             ))}
           </div>
 
-          <div style={{ background: "linear-gradient(145deg, #0d1f10, #1a3020)", borderRadius: 20, padding: 32 }}>
+          <div style={{ background: `linear-gradient(145deg, ${C.brand}, #7a8c76)`, borderRadius: 20, padding: 32 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
-              <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(96,117,98,0.25)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(242,240,237,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <span style={{ fontSize: 18 }}>🚀</span>
               </div>
               <div>
-                <p style={{ fontSize: 11, fontWeight: 600, color: "#607562", textTransform: "uppercase", letterSpacing: "0.1em", margin: 0 }}>Objetivos a largo plazo</p>
+                <p style={{ fontSize: 11, fontWeight: 600, color: C.nude, textTransform: "uppercase", letterSpacing: "0.1em", margin: 0 }}>Objetivos a largo plazo</p>
                 <p style={{ fontSize: 14, fontWeight: 700, color: "#fff", margin: 0 }}>Visión 2027</p>
               </div>
             </div>
             {largoPlazoPlazo.map((o) => (
               <div key={o} style={{ display: "flex", gap: 10, marginBottom: 14 }}>
                 <span style={{ fontSize: 16, flexShrink: 0 }}>⭐</span>
-                <p style={{ fontSize: 14, color: "rgba(255,255,255,0.7)", margin: 0, lineHeight: 1.5 }}>{o}</p>
+                <p style={{ fontSize: 14, color: "rgba(255,255,255,0.78)", margin: 0, lineHeight: 1.5 }}>{o}</p>
               </div>
             ))}
           </div>
@@ -720,7 +600,7 @@ function Comunidad() {
   );
 }
 
-/* ─── Sección 8: Únete — embebe RegisterProfessional directamente ─── */
+/* ─── Registro ─── */
 function SeccionRegistro() {
   return (
     <section id="registro">
@@ -732,35 +612,35 @@ function SeccionRegistro() {
 /* ─── Footer ─── */
 function Footer() {
   return (
-    <footer style={{ background: "linear-gradient(145deg, #0d1f10, #1a2e1a)", padding: "48px 24px 32px", fontFamily: "'Poppins', sans-serif" }}>
+    <footer style={{ background: C.brand, padding: "48px 24px 32px", fontFamily: "'Poppins', sans-serif" }}>
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 40, justifyContent: "space-between", marginBottom: 40 }}>
           <div style={{ flex: "1 1 260px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-              <div style={{ width: 32, height: 32, borderRadius: "50%", background: "linear-gradient(135deg,#3d4e3f,#607562)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div style={{ width: 32, height: 32, borderRadius: "50%", background: `linear-gradient(135deg, ${C.warm}, #c49060)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/></svg>
               </div>
               <span style={{ fontWeight: 700, fontSize: 18, color: "#fff" }}>Inteira</span>
             </div>
-            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", lineHeight: 1.7, margin: 0, maxWidth: 260 }}>
+            <p style={{ fontSize: 13, color: C.nude, lineHeight: 1.7, margin: 0, maxWidth: 260 }}>
               La plataforma de bienestar integral que conecta profesionales comprometidos con quienes los necesitan.
             </p>
           </div>
           <div style={{ flex: "0 1 auto" }}>
-            <p style={{ fontSize: 11, fontWeight: 600, color: "#607562", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 14 }}>Profesionales</p>
+            <p style={{ fontSize: 11, fontWeight: 600, color: C.olive, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 14 }}>Profesionales</p>
             {["Nuestra Identidad", "Modelo de Trabajo", "Comunidad", "Únete"].map((l) => (
-              <a key={l} href="#" style={{ display: "block", fontSize: 13, color: "rgba(255,255,255,0.5)", textDecoration: "none", marginBottom: 8, transition: "color 0.2s" }}>{l}</a>
+              <a key={l} href="#" style={{ display: "block", fontSize: 13, color: C.nude, textDecoration: "none", marginBottom: 8 }}>{l}</a>
             ))}
           </div>
           <div style={{ flex: "0 1 auto" }}>
-            <p style={{ fontSize: 11, fontWeight: 600, color: "#607562", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 14 }}>Legal</p>
+            <p style={{ fontSize: 11, fontWeight: 600, color: C.olive, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 14 }}>Legal</p>
             {[{ l: "Términos de servicio", h: "/terminos" }, { l: "Privacidad", h: "/privacidad" }].map(({ l, h }) => (
-              <a key={l} href={h} style={{ display: "block", fontSize: 13, color: "rgba(255,255,255,0.5)", textDecoration: "none", marginBottom: 8 }}>{l}</a>
+              <a key={l} href={h} style={{ display: "block", fontSize: 13, color: C.nude, textDecoration: "none", marginBottom: 8 }}>{l}</a>
             ))}
           </div>
         </div>
-        <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: 24, textAlign: "center" }}>
-          <p style={{ fontSize: 12, color: "rgba(255,255,255,0.25)", margin: 0 }}>
+        <div style={{ borderTop: `1px solid rgba(255,255,255,0.1)`, paddingTop: 24, textAlign: "center" }}>
+          <p style={{ fontSize: 12, color: `rgba(203,173,166,0.5)`, margin: 0 }}>
             © {new Date().getFullYear()} Inteira. Todos los derechos reservados.
           </p>
         </div>
@@ -773,18 +653,24 @@ function Footer() {
 export default function ProfessionalsLanding() {
   const [videoWatched, setVideoWatched] = useState(false);
 
+  const { data: siteConfig } = trpc.public.getSiteConfig.useQuery(
+    { keys: ["professionals_video_url", "professionals_banner_url"] },
+    { staleTime: 5 * 60 * 1000 }
+  );
+
+  const videoUrl = siteConfig?.professionals_video_url ?? "";
+  const bannerUrl = siteConfig?.professionals_banner_url ?? null;
+
   return (
     <>
-      {/* Poppins font */}
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
 
-      {!videoWatched && <VideoModal onComplete={() => setVideoWatched(true)} />}
+      {!videoWatched && <VideoModal videoUrl={videoUrl} onComplete={() => setVideoWatched(true)} />}
 
-      <div style={{ opacity: videoWatched ? 1 : 0, transition: "opacity 0.5s ease", pointerEvents: videoWatched ? "auto" : "none" }}>
-        <Navbar />
-        <Hero />
+      <div style={{ opacity: videoWatched ? 1 : 0, transition: "opacity 0.5s ease", pointerEvents: videoWatched ? "auto" : "none", background: C.bg }}>
+        <Hero bannerUrl={bannerUrl} />
         <Identidad />
         <Historia />
         <MisionValores />
