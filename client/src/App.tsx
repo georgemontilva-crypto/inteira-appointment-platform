@@ -1,5 +1,6 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Spinner } from "@/components/ui/spinner";
 import NotFound from "@/pages/NotFound";
 import { Redirect, Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -25,6 +26,17 @@ import RegistroTipo from "./pages/RegistroTipo";
 import SpecialtiesPage from "./pages/SpecialtiesPage";
 import AppointmentsPage from "./pages/AppointmentsPage";
 import ProfessionalsLanding from "./pages/ProfessionalsLanding";
+
+function PrivateRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <Spinner />
+    </div>
+  );
+  if (!user) return <Redirect to="/login" />;
+  return <>{children}</>;
+}
 
 function RootRedirect() {
   const { isAuthenticated, loading, user } = useAuth();
@@ -54,33 +66,53 @@ function Router() {
       <Route path="/especialidades/:id" component={ProfessionalsList} />
       <Route path="/profesional/:id" component={ProfessionalProfile} />
 
-      {/* Booking */}
-      <Route path="/agendar/:id" component={BookAppointment} />
+      {/* Booking — requiere auth */}
+      <Route path="/agendar/:id">
+        {(params) => <PrivateRoute><BookAppointment /></PrivateRoute>}
+      </Route>
 
-      {/* Registration */}
-      <Route path="/registro-profesional" component={RegisterProfessional} />
+      {/* Registration — requiere auth */}
+      <Route path="/registro-profesional">
+        <PrivateRoute><RegisterProfessional /></PrivateRoute>
+      </Route>
 
-      {/* Plans */}
-      <Route path="/planes" component={Plans} />
+      {/* Plans — requiere auth */}
+      <Route path="/planes">
+        <PrivateRoute><Plans /></PrivateRoute>
+      </Route>
 
-      {/* Wallet */}
-      <Route path="/wallet" component={WalletPage} />
+      {/* Wallet — requiere auth */}
+      <Route path="/wallet">
+        <PrivateRoute><WalletPage /></PrivateRoute>
+      </Route>
 
-      {/* Profile & Subscription */}
-      <Route path="/perfil" component={UserProfile} />
-      <Route path="/suscripcion" component={Subscription} />
+      {/* Profile & Subscription — requiere auth */}
+      <Route path="/perfil">
+        <PrivateRoute><UserProfile /></PrivateRoute>
+      </Route>
+      <Route path="/suscripcion">
+        <PrivateRoute><Subscription /></PrivateRoute>
+      </Route>
 
-      {/* Legal */}
+      {/* Legal — público */}
       <Route path="/terminos" component={TermsOfService} />
       <Route path="/privacidad" component={PrivacyPolicy} />
 
-      {/* Appointments */}
-      <Route path="/citas" component={AppointmentsPage} />
+      {/* Appointments — requiere auth */}
+      <Route path="/citas">
+        <PrivateRoute><AppointmentsPage /></PrivateRoute>
+      </Route>
 
       {/* Protected dashboards */}
-      <Route path="/dashboard" component={UserDashboard} />
-      <Route path="/panel-profesional" component={ProfessionalDashboard} />
-      <Route path="/admin" component={AdminDashboard} />
+      <Route path="/dashboard">
+        <PrivateRoute><UserDashboard /></PrivateRoute>
+      </Route>
+      <Route path="/panel-profesional">
+        <PrivateRoute><ProfessionalDashboard /></PrivateRoute>
+      </Route>
+      <Route path="/admin">
+        <PrivateRoute><AdminDashboard /></PrivateRoute>
+      </Route>
 
       {/* Auth */}
       <Route path="/login" component={Login} />
