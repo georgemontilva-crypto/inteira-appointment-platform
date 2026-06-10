@@ -400,7 +400,7 @@ export default function Home() {
         }}
       >
         {/* Overlay for text readability */}
-        <div className="absolute inset-0 bg-white/70" />
+        <div className="absolute inset-0 bg-white/30" />
 
 
         {/* ── Mobile Hero ── */}
@@ -503,21 +503,6 @@ export default function Home() {
                     <span>Agenda flexible</span>
                   </div>
                 </div>
-              </div>
-              <div className="relative hidden lg:block">
-                <div className="grid grid-cols-2 gap-4">
-                  {stats.map((stat, i) => (
-                    <Card key={i} className="border-border shadow-sm">
-                      <CardContent className="p-6">
-                        <div className="text-3xl font-bold text-primary mb-1" style={{ fontFamily: "Poppins, sans-serif" }}>
-                          {stat.value}
-                        </div>
-                        <div className="text-sm text-muted-foreground">{stat.label}</div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-
               </div>
             </div>
           </div>
