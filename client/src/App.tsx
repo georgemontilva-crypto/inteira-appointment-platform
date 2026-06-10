@@ -27,6 +27,17 @@ import SpecialtiesPage from "./pages/SpecialtiesPage";
 import AppointmentsPage from "./pages/AppointmentsPage";
 import ProfessionalsLanding from "./pages/ProfessionalsLanding";
 
+function EspecialidadesRoute() {
+  const { user, loading } = useAuth();
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <Spinner />
+    </div>
+  );
+  if (!user) return <ProfessionalsLanding />;
+  return <SpecialtiesPage />;
+}
+
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   if (loading) return (
@@ -62,7 +73,7 @@ function Router() {
       <Route path="/landing" component={Home} />
       {/* Landing profesionales */}
       <Route path="/profesionales" component={ProfessionalsLanding} />
-      <Route path="/especialidades" component={SpecialtiesPage} />
+      <Route path="/especialidades" component={EspecialidadesRoute} />
       <Route path="/especialidades/:id" component={ProfessionalsList} />
       <Route path="/profesional/:id" component={ProfessionalProfile} />
 
