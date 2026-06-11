@@ -2269,6 +2269,49 @@ export const appRouter = router({
         return { success: true };
       }),
 
+    update: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        name: z.string().min(1).max(100).optional(),
+        price: z.string().optional(),
+        maxAppointmentsPerMonth: z.number().int().nullable().optional(),
+        maxMinutesPerAppointment: z.number().int().nullable().optional(),
+        description: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+        const dbInst = await db.getDb();
+        if (!dbInst) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const client = (dbInst as any).$client;
+        const { id, ...fields } = input;
+        const setClauses: string[] = [];
+        const values: any[] = [];
+        if (fields.name !== undefined)                    { setClauses.push("name = ?");                    values.push(fields.name); }
+        if (fields.price !== undefined)                   { setClauses.push("price = ?");                   values.push(fields.price); }
+        if (fields.maxAppointmentsPerMonth !== undefined) { setClauses.push("maxAppointmentsPerMonth = ?"); values.push(fields.maxAppointmentsPerMonth); }
+        if (fields.maxMinutesPerAppointment !== undefined){ setClauses.push("maxMinutesPerAppointment = ?"); values.push(fields.maxMinutesPerAppointment); }
+        if (fields.description !== undefined)             { setClauses.push("description = ?");             values.push(fields.description); }
+        if (setClauses.length === 0) return { success: true };
+        values.push(id);
+        await new Promise<void>((resolve, reject) => {
+          client.execute(`UPDATE subscriptionPlans SET ${setClauses.join(", ")} WHERE id = ?`, values, (err: any) => { if (err) reject(err); else resolve(); });
+        });
+        return { success: true };
+      }),
+
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+        const dbInst = await db.getDb();
+        if (!dbInst) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const client = (dbInst as any).$client;
+        await new Promise<void>((resolve, reject) => {
+          client.execute("UPDATE subscriptionPlans SET isActive = 0 WHERE id = ?", [input.id], (err: any) => { if (err) reject(err); else resolve(); });
+        });
+        return { success: true };
+      }),
+
     // ── Recover a Stripe payment that was not credited (e.g. webhook missed) ──
     recoverStripePayment: protectedProcedure
       .input(

@@ -213,6 +213,10 @@ export default function AdminDashboard() {
     code: "", type: "percentage" as "percentage" | "fixed",
     value: "", maxUses: "", expiresAt: "",
   });
+  const [rejectingWithdrawalId, setRejectingWithdrawalId] = useState<number | null>(null);
+  const [rejectNote, setRejectNote] = useState("");
+  const [editingPlanId, setEditingPlanId] = useState<number | null>(null);
+  const [editPlanForm, setEditPlanForm] = useState({ name: "", price: "", description: "", maxAppointmentsPerMonth: "", maxMinutesPerAppointment: "" });
   const [docsModal, setDocsModal] = useState<{ professionalId: number; name: string } | null>(null);
   const [tierConfirm, setTierConfirm] = useState<{ professionalId: number; name: string; newTier: "basic" | "pro" } | null>(null);
   const [revokeConfirm, setRevokeConfirm] = useState<{ professionalId: number; name: string } | null>(null);
@@ -404,6 +408,23 @@ export default function AdminDashboard() {
       toast.success("Retiro marcado como pagado");
     },
     onError: (err) => toast.error(err.message ?? "Error al procesar el retiro"),
+  });
+  const rejectWithdrawalMutation = trpc.admin.rejectWithdrawal.useMutation({
+    onSuccess: () => {
+      refetchWithdrawals();
+      setRejectingWithdrawalId(null);
+      setRejectNote("");
+      toast.success("Retiro rechazado");
+    },
+    onError: (err) => toast.error(err.message ?? "Error al rechazar"),
+  });
+  const updatePlanMutation = trpc.subscriptionPlan.update.useMutation({
+    onSuccess: () => { refetchPlans(); setEditingPlanId(null); toast.success("Plan actualizado"); },
+    onError: () => toast.error("Error al actualizar plan"),
+  });
+  const deletePlanMutation = trpc.subscriptionPlan.delete.useMutation({
+    onSuccess: () => { refetchPlans(); toast.success("Plan desactivado"); },
+    onError: () => toast.error("Error al desactivar plan"),
   });
 
   const createPlanMutation = trpc.subscriptionPlan.create.useMutation({
@@ -2677,6 +2698,41 @@ export default function AdminDashboard() {
                             <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
                             Marcar pagado
                           </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-destructive/30 text-destructive hover:bg-destructive/5"
+                            onClick={() => {
+                              if (rejectingWithdrawalId === w.id) {
+                                setRejectingWithdrawalId(null);
+                                setRejectNote("");
+                              } else {
+                                setRejectingWithdrawalId(w.id);
+                                setRejectNote("");
+                              }
+                            }}
+                          >
+                            <XCircle className="w-3.5 h-3.5 mr-1" />
+                            Rechazar
+                          </Button>
+                          {rejectingWithdrawalId === w.id && (
+                            <div className="space-y-2">
+                              <textarea
+                                value={rejectNote}
+                                onChange={(e) => setRejectNote(e.target.value)}
+                                placeholder="Motivo (opcional)..."
+                                className="w-full rounded-lg border border-border p-2 text-xs bg-background focus:outline-none focus:ring-1 focus:ring-destructive/40 min-h-[56px] resize-none"
+                              />
+                              <Button
+                                size="sm"
+                                className="w-full bg-destructive hover:bg-destructive/90 text-white border-0"
+                                disabled={rejectWithdrawalMutation.isPending}
+                                onClick={() => rejectWithdrawalMutation.mutate({ withdrawalId: w.id, adminNote: rejectNote || undefined })}
+                              >
+                                Confirmar rechazo
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </CardContent>
@@ -2722,14 +2778,90 @@ export default function AdminDashboard() {
             {/* Current plans */}
             <div className="grid md:grid-cols-3 gap-4">
               {(plans ?? []).map((plan) => (
-                <Card key={plan.id} className="border-border">
+                <Card key={plan.id} className="border-border overflow-hidden">
                   <CardContent className="p-5">
-                    <h3 className="font-bold mb-1">{plan.name}</h3>
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <h3 className="font-bold">{plan.name}</h3>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <button
+                          title="Editar plan"
+                          onClick={() => {
+                            if (editingPlanId === plan.id) {
+                              setEditingPlanId(null);
+                            } else {
+                              setEditingPlanId(plan.id);
+                              setEditPlanForm({
+                                name: plan.name ?? "",
+                                price: String(plan.price ?? ""),
+                                description: plan.description ?? "",
+                                maxAppointmentsPerMonth: plan.maxAppointmentsPerMonth != null ? String(plan.maxAppointmentsPerMonth) : "",
+                                maxMinutesPerAppointment: plan.maxMinutesPerAppointment != null ? String(plan.maxMinutesPerAppointment) : "",
+                              });
+                            }
+                          }}
+                          className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          title="Desactivar plan"
+                          onClick={() => { if (confirm(`¿Desactivar el plan "${plan.name}"?`)) deletePlanMutation.mutate({ id: plan.id }); }}
+                          className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
                     <p className="text-2xl font-bold text-primary mb-2">${plan.price} <span className="text-sm font-normal text-muted-foreground">MXN/mes</span></p>
                     <div className="space-y-1 text-xs text-muted-foreground">
                       <p>Citas/mes: {plan.maxAppointmentsPerMonth ?? "Ilimitadas"}</p>
                       <p>Min/cita: {plan.maxMinutesPerAppointment ?? "Sin límite"}</p>
                     </div>
+                    {editingPlanId === plan.id && (
+                      <div className="mt-4 pt-4 border-t border-border space-y-2">
+                        <input
+                          type="text"
+                          value={editPlanForm.name}
+                          onChange={(e) => setEditPlanForm((f) => ({ ...f, name: e.target.value }))}
+                          placeholder="Nombre"
+                          className="w-full rounded-lg border border-border p-1.5 text-xs bg-background focus:outline-none focus:ring-1 focus:ring-primary/30"
+                        />
+                        <input
+                          type="number"
+                          value={editPlanForm.price}
+                          onChange={(e) => setEditPlanForm((f) => ({ ...f, price: e.target.value }))}
+                          placeholder="Precio MXN"
+                          className="w-full rounded-lg border border-border p-1.5 text-xs bg-background focus:outline-none focus:ring-1 focus:ring-primary/30"
+                        />
+                        <input
+                          type="number"
+                          value={editPlanForm.maxAppointmentsPerMonth}
+                          onChange={(e) => setEditPlanForm((f) => ({ ...f, maxAppointmentsPerMonth: e.target.value }))}
+                          placeholder="Citas/mes (vacío = ilimitadas)"
+                          className="w-full rounded-lg border border-border p-1.5 text-xs bg-background focus:outline-none focus:ring-1 focus:ring-primary/30"
+                        />
+                        <textarea
+                          value={editPlanForm.description}
+                          onChange={(e) => setEditPlanForm((f) => ({ ...f, description: e.target.value }))}
+                          placeholder="Descripción"
+                          className="w-full rounded-lg border border-border p-1.5 text-xs bg-background focus:outline-none focus:ring-1 focus:ring-primary/30 min-h-[48px] resize-none"
+                        />
+                        <Button
+                          size="sm"
+                          className="w-full gradient-brand text-white border-0 text-xs"
+                          disabled={updatePlanMutation.isPending}
+                          onClick={() => updatePlanMutation.mutate({
+                            id: plan.id,
+                            name: editPlanForm.name || undefined,
+                            price: editPlanForm.price || undefined,
+                            maxAppointmentsPerMonth: editPlanForm.maxAppointmentsPerMonth !== "" ? Number(editPlanForm.maxAppointmentsPerMonth) : null,
+                            description: editPlanForm.description || undefined,
+                          })}
+                        >
+                          {updatePlanMutation.isPending ? "Guardando..." : "Guardar cambios"}
+                        </Button>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               ))}
