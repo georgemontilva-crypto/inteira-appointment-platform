@@ -191,6 +191,12 @@ export default function Home() {
   const { data: plans } = trpc.subscriptionPlan.getAll.useQuery();
   const { data: bannersData } = trpc.public.getBanners.useQuery();
   const eventBanners = (bannersData && bannersData.length > 0) ? bannersData : FALLBACK_BANNERS;
+  const { data: siteConfig } = trpc.public.getSiteConfig.useQuery({ keys: ["home_hero_banner_url"] });
+  const heroImageUrl = siteConfig?.home_hero_banner_url || "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/banner_Mesa%20de%20trabajo%201.jpg";
+  const { data: homeCarouselData } = trpc.public.getHomeCarousel.useQuery();
+  const dynCarousel = (homeCarouselData && homeCarouselData.length > 0)
+    ? homeCarouselData.map((item) => ({ name: item.title, image: item.imageUrl, link: item.link }))
+    : CAROUSEL_ITEMS.map((item) => ({ name: item.name, image: item.image, link: "/especialidades" }));
   const logout = trpc.auth.logout.useMutation({
     onSuccess: () => window.location.reload(),
   });
@@ -252,7 +258,7 @@ export default function Home() {
   }, [eventBanners.length]);
 
   useEffect(() => {
-    const total = CAROUSEL_ITEMS.length;
+    const total = dynCarousel.length;
     const interval = setInterval(() => {
       setActiveDot((prev) => {
         const next = (prev + 1) % total;
@@ -265,7 +271,7 @@ export default function Home() {
       });
     }, 3000);
     return () => clearInterval(interval);
-  }, []);
+  }, [dynCarousel.length]);
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-0">
@@ -394,7 +400,7 @@ export default function Home() {
       <section
         className="relative pt-14 md:pt-24 overflow-hidden"
         style={{
-          backgroundImage: "url(https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/banner_Mesa%20de%20trabajo%201.jpg)",
+          backgroundImage: `url(${heroImageUrl})`,
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}
@@ -545,10 +551,10 @@ export default function Home() {
               className="flex gap-4 overflow-x-auto px-10"
               style={{ scrollbarWidth: "none" }}
             >
-              {CAROUSEL_ITEMS.map((item, i) => (
+              {dynCarousel.map((item, i) => (
                 <a
-                  href="/especialidades"
-                  key={item.name}
+                  href={item.link}
+                  key={item.name + i}
                   onClick={() => setActiveDot(i)}
                   style={{
                     backgroundImage: `url(${item.image})`,
@@ -574,7 +580,7 @@ export default function Home() {
 
           {/* Navigation dots */}
           <div className="flex justify-center gap-2 mt-4">
-            {CAROUSEL_ITEMS.map((_, i) => (
+            {dynCarousel.map((_, i) => (
               <button
                 key={i}
                 onClick={() => scrollToIndex(i)}

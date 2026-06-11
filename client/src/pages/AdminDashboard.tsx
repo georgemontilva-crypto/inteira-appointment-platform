@@ -194,7 +194,7 @@ const STATUS_MAP: Record<string, { label: string; cls: string }> = {
 
 export default function AdminDashboard() {
   const { user, isAuthenticated, loading } = useAuth();
-  const [activeTab, setActiveTab] = useState<"overview" | "usuarios" | "profesionales" | "activos" | "especialidades" | "planes" | "herramientas" | "codigos" | "retiros" | "banners">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "usuarios" | "profesionales" | "activos" | "planes" | "herramientas" | "codigos" | "retiros" | "contenido">("overview");
   const [bannerForm, setBannerForm] = useState({ imageUrl: "", title: "", linkUrl: "" });
   const [bannerUploading, setBannerUploading] = useState(false);
   const [rejectReason, setRejectReason] = useState<Record<number, string>>({});
@@ -239,6 +239,7 @@ export default function AdminDashboard() {
   const { data: activeProfessionals, refetch: refetchActiveProfessionals } = trpc.admin.getActiveProfessionals.useQuery(undefined, { enabled: isAuthenticated });
   const { data: allWithdrawals, refetch: refetchWithdrawals } = trpc.admin.getPendingWithdrawals.useQuery(undefined, { enabled: isAuthenticated });
   const { data: banners, refetch: refetchBanners } = trpc.admin.listBanners.useQuery(undefined, { enabled: isAuthenticated });
+  const { data: homeCarousel, refetch: refetchHomeCarousel } = trpc.admin.listHomeCarousel.useQuery(undefined, { enabled: isAuthenticated });
 
   const createBannerMutation = trpc.admin.createBanner.useMutation({
     onSuccess: () => { refetchBanners(); setBannerForm({ imageUrl: "", title: "", linkUrl: "" }); toast.success("Banner agregado"); },
@@ -251,6 +252,18 @@ export default function AdminDashboard() {
   const toggleBannerMutation = trpc.admin.toggleBanner.useMutation({
     onSuccess: () => refetchBanners(),
     onError: () => toast.error("Error al actualizar banner"),
+  });
+  const createHomeCarouselItemMutation = trpc.admin.createHomeCarouselItem.useMutation({
+    onSuccess: () => { refetchHomeCarousel(); setCarouselForm({ title: "", imageUrl: "", link: "/especialidades" }); toast.success("Item agregado al carrusel"); },
+    onError: () => toast.error("Error al agregar item"),
+  });
+  const deleteHomeCarouselItemMutation = trpc.admin.deleteHomeCarouselItem.useMutation({
+    onSuccess: () => { refetchHomeCarousel(); toast.success("Item eliminado"); },
+    onError: () => toast.error("Error al eliminar"),
+  });
+  const toggleHomeCarouselItemMutation = trpc.admin.toggleHomeCarouselItem.useMutation({
+    onSuccess: () => refetchHomeCarousel(),
+    onError: () => toast.error("Error al actualizar"),
   });
 
   const approveMutation = trpc.admin.approveProfessional.useMutation({
@@ -315,8 +328,8 @@ export default function AdminDashboard() {
 
   // ─── siteConfig state ────────────────────────────────────────────────────
   const { data: siteConfigData, refetch: refetchSiteConfig } = trpc.public.getSiteConfig.useQuery(
-    { keys: ["professionals_video_url", "professionals_banner_url"] },
-    { enabled: activeTab === "herramientas" }
+    { keys: ["professionals_video_url", "professionals_banner_url", "home_hero_banner_url"] },
+    { enabled: activeTab === "contenido" }
   );
   const [videoUrl, setVideoUrl] = useState("");
   const [bannerUrl, setBannerUrl] = useState("");
@@ -324,11 +337,17 @@ export default function AdminDashboard() {
   const [heroBannerUploading, setHeroBannerUploading] = useState(false);
   const videoFileRef = useRef<HTMLInputElement>(null);
   const heroBannerFileRef = useRef<HTMLInputElement>(null);
+  const [homeHeroBannerUrl, setHomeHeroBannerUrl] = useState("");
+  const [homeHeroBannerUploading, setHomeHeroBannerUploading] = useState(false);
+  const homeHeroBannerFileRef = useRef<HTMLInputElement>(null);
+  const [carouselForm, setCarouselForm] = useState({ title: "", imageUrl: "", link: "/especialidades" });
+  const [carouselUploading, setCarouselUploading] = useState(false);
 
   useEffect(() => {
     if (siteConfigData) {
       setVideoUrl(siteConfigData.professionals_video_url ?? "");
       setBannerUrl(siteConfigData.professionals_banner_url ?? "");
+      setHomeHeroBannerUrl(siteConfigData.home_hero_banner_url ?? "");
     }
   }, [siteConfigData]);
 
@@ -512,16 +531,15 @@ export default function AdminDashboard() {
         <div className="container">
           <div className="flex gap-1 overflow-x-auto scrollbar-none" style={{ WebkitOverflowScrolling: "touch" }}>
             {([
-              { key: "overview",        label: "Resumen",        icon: <BarChart3 className="w-4 h-4" /> },
-              { key: "usuarios",        label: "Usuarios",       icon: <User className="w-4 h-4" /> },
-              { key: "banners",         label: "Banners",        icon: <Image className="w-4 h-4" /> },
-              { key: "profesionales",   label: "Solicitudes",          icon: <Users className="w-4 h-4" /> },
-              { key: "activos",         label: "Profesionales activos", icon: <UserCheck className="w-4 h-4" /> },
-              { key: "especialidades",  label: "Especialidades", icon: <Award className="w-4 h-4" /> },
-              { key: "planes",          label: "Planes",         icon: <Settings className="w-4 h-4" /> },
-      { key: "herramientas",    label: "Herramientas",   icon: <Wrench className="w-4 h-4" /> },
-              { key: "codigos",         label: "Códigos",        icon: <Tag className="w-4 h-4" /> },
-              { key: "retiros",         label: "Retiros",        icon: <CreditCard className="w-4 h-4" /> },
+              { key: "overview",      label: "Resumen",               icon: <BarChart3 className="w-4 h-4" /> },
+              { key: "usuarios",      label: "Usuarios",              icon: <User className="w-4 h-4" /> },
+              { key: "profesionales", label: "Solicitudes",           icon: <Users className="w-4 h-4" /> },
+              { key: "activos",       label: "Profesionales activos", icon: <UserCheck className="w-4 h-4" /> },
+              { key: "contenido",     label: "Contenido",             icon: <Image className="w-4 h-4" /> },
+              { key: "planes",        label: "Planes",                icon: <Settings className="w-4 h-4" /> },
+              { key: "codigos",       label: "Códigos",               icon: <Tag className="w-4 h-4" /> },
+              { key: "retiros",       label: "Retiros",               icon: <CreditCard className="w-4 h-4" /> },
+              { key: "herramientas",  label: "Herramientas",          icon: <Wrench className="w-4 h-4" /> },
             ] as const).map((tab) => (
               <button
                 key={tab.key}
@@ -747,148 +765,612 @@ export default function AdminDashboard() {
           );
         })()}
 
-        {/* ══ TAB: BANNERS ══════════════════════════════════════════════════ */}
-        {activeTab === "banners" && (
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Image className="w-5 h-5 text-primary" />
-                  Banners de eventos
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Current banners list */}
-                {(banners ?? []).length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-6">Sin banners. Agrega uno abajo.</p>
-                ) : (
-                  <div className="space-y-3">
-                    {(banners ?? []).map((banner) => (
-                      <div key={banner.id} className="flex items-center gap-3 p-3 border rounded-xl">
-                        <img
-                          src={banner.imageUrl}
-                          alt={banner.title ?? "Banner"}
-                          className="w-20 h-12 object-cover rounded-lg flex-shrink-0"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{banner.title ?? <span className="text-muted-foreground italic">Sin título</span>}</p>
-                          {banner.linkUrl && (
-                            <p className="text-xs text-muted-foreground flex items-center gap-1 truncate">
-                              <Link2 className="w-3 h-3" /> {banner.linkUrl}
-                            </p>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          <button
-                            onClick={() => toggleBannerMutation.mutate({ id: banner.id, isActive: !banner.isActive })}
-                            title={banner.isActive ? "Desactivar" : "Activar"}
-                            className="text-muted-foreground hover:text-primary transition-colors"
-                          >
-                            {banner.isActive ? <ToggleRight className="w-6 h-6 text-primary" /> : <ToggleLeft className="w-6 h-6" />}
-                          </button>
-                          <button
-                            onClick={() => { if (confirm("¿Eliminar este banner?")) deleteBannerMutation.mutate({ id: banner.id }); }}
-                            className="text-muted-foreground hover:text-destructive transition-colors"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+        {/* ══ TAB: CONTENIDO ════════════════════════════════════════════════ */}
+        {activeTab === "contenido" && (
+          <div className="space-y-8">
+            <h2 className="text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>Contenido del sitio</h2>
 
-                {/* Add banner form */}
-                <div className="border-t pt-4 space-y-3">
-                  <p className="text-sm font-semibold">Agregar banner</p>
-                  <div className="space-y-2">
-                    <label className="text-xs font-medium text-muted-foreground">URL de imagen *</label>
-                    <div className="flex gap-2">
+            {/* ── Página de inicio ── */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-primary inline-block" />
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Página de inicio</p>
+              </div>
+
+              {/* Banner hero del home */}
+              <Card className="border-border">
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Image className="w-4 h-4 text-primary" />
+                    Banner hero del home
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-xs text-muted-foreground">Imagen de fondo del hero en la página principal. Pega una URL o sube a R2.</p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={homeHeroBannerUrl}
+                      onChange={(e) => setHomeHeroBannerUrl(e.target.value)}
+                      placeholder="https://..."
+                      className="flex-1 text-sm border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    />
+                    <Button
+                      size="sm"
+                      className="gradient-brand text-white border-0 flex-shrink-0"
+                      disabled={setSiteConfigMutation.isPending}
+                      onClick={() => setSiteConfigMutation.mutate({ key: "home_hero_banner_url", value: homeHeroBannerUrl })}
+                    >
+                      Guardar
+                    </Button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      ref={homeHeroBannerFileRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        setHomeHeroBannerUploading(true);
+                        try {
+                          const url = await uploadSiteAsset(file);
+                          setHomeHeroBannerUrl(url);
+                          setSiteConfigMutation.mutate({ key: "home_hero_banner_url", value: url });
+                        } catch (err: any) {
+                          toast.error(err?.message ?? "Error al subir la imagen");
+                        } finally {
+                          setHomeHeroBannerUploading(false);
+                          if (homeHeroBannerFileRef.current) homeHeroBannerFileRef.current.value = "";
+                        }
+                      }}
+                    />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex items-center gap-1.5"
+                      disabled={homeHeroBannerUploading}
+                      onClick={() => homeHeroBannerFileRef.current?.click()}
+                    >
+                      {homeHeroBannerUploading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                      {homeHeroBannerUploading ? "Subiendo…" : "Subir imagen a R2"}
+                    </Button>
+                    <span className="text-xs text-muted-foreground">JPEG, PNG o WebP</span>
+                  </div>
+                  {homeHeroBannerUrl && (
+                    <div className="rounded-xl overflow-hidden border border-border" style={{ maxHeight: 120 }}>
+                      <img src={homeHeroBannerUrl} alt="Hero preview" className="w-full object-cover" style={{ maxHeight: 120 }} />
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Carrusel de eventos */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Image className="w-5 h-5 text-primary" />
+                    Carrusel de eventos
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {(banners ?? []).length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-6">Sin banners. Agrega uno abajo.</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {(banners ?? []).map((banner) => (
+                        <div key={banner.id} className="flex items-center gap-3 p-3 border rounded-xl">
+                          <img src={banner.imageUrl} alt={banner.title ?? "Banner"} className="w-20 h-12 object-cover rounded-lg flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{banner.title ?? <span className="text-muted-foreground italic">Sin título</span>}</p>
+                            {banner.linkUrl && (
+                              <p className="text-xs text-muted-foreground flex items-center gap-1 truncate">
+                                <Link2 className="w-3 h-3" /> {banner.linkUrl}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <button
+                              onClick={() => toggleBannerMutation.mutate({ id: banner.id, isActive: !banner.isActive })}
+                              title={banner.isActive ? "Desactivar" : "Activar"}
+                              className="text-muted-foreground hover:text-primary transition-colors"
+                            >
+                              {banner.isActive ? <ToggleRight className="w-6 h-6 text-primary" /> : <ToggleLeft className="w-6 h-6" />}
+                            </button>
+                            <button
+                              onClick={() => { if (confirm("¿Eliminar este banner?")) deleteBannerMutation.mutate({ id: banner.id }); }}
+                              className="text-muted-foreground hover:text-destructive transition-colors"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="border-t pt-4 space-y-3">
+                    <p className="text-sm font-semibold">Agregar banner</p>
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-muted-foreground">URL de imagen *</label>
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="https://..."
+                          value={bannerForm.imageUrl}
+                          onChange={(e) => setBannerForm((f) => ({ ...f, imageUrl: e.target.value }))}
+                          className="flex-1"
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-shrink-0"
+                          onClick={() => {
+                            const inp = document.createElement("input");
+                            inp.type = "file";
+                            inp.accept = "image/*";
+                            inp.onchange = async () => {
+                              const file = inp.files?.[0];
+                              if (!file) return;
+                              setBannerUploading(true);
+                              try {
+                                const reader = new FileReader();
+                                reader.onload = async () => {
+                                  const base64 = (reader.result as string).split(",")[1];
+                                  const resp = await fetch("/api/upload/professional-photo", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    credentials: "include",
+                                    body: JSON.stringify({ base64, mimeType: file.type, fileName: file.name }),
+                                  });
+                                  const data = await resp.json();
+                                  if (data.url) setBannerForm((f) => ({ ...f, imageUrl: data.url }));
+                                  else toast.error("Error al subir imagen");
+                                };
+                                reader.readAsDataURL(file);
+                              } catch { toast.error("Error al subir imagen"); }
+                              finally { setBannerUploading(false); }
+                            };
+                            inp.click();
+                          }}
+                          disabled={bannerUploading}
+                        >
+                          <Upload className="w-4 h-4 mr-1" />
+                          {bannerUploading ? "Subiendo..." : "Subir"}
+                        </Button>
+                      </div>
+                      {bannerForm.imageUrl && (
+                        <img src={bannerForm.imageUrl} alt="Preview" className="w-full max-h-32 object-cover rounded-lg" />
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-muted-foreground">Título (opcional)</label>
+                      <Input
+                        placeholder="Ej: Webinar gratuito de mindfulness"
+                        value={bannerForm.title}
+                        onChange={(e) => setBannerForm((f) => ({ ...f, title: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-muted-foreground">Link al hacer clic (opcional)</label>
                       <Input
                         placeholder="https://..."
-                        value={bannerForm.imageUrl}
-                        onChange={(e) => setBannerForm((f) => ({ ...f, imageUrl: e.target.value }))}
-                        className="flex-1"
+                        value={bannerForm.linkUrl}
+                        onChange={(e) => setBannerForm((f) => ({ ...f, linkUrl: e.target.value }))}
                       />
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-shrink-0"
-                        onClick={() => {
-                          const input = document.createElement("input");
-                          input.type = "file";
-                          input.accept = "image/*";
-                          input.onchange = async () => {
-                            const file = input.files?.[0];
-                            if (!file) return;
-                            setBannerUploading(true);
-                            try {
-                              const reader = new FileReader();
-                              reader.onload = async () => {
-                                const base64 = (reader.result as string).split(",")[1];
-                                const resp = await fetch("/api/upload/professional-photo", {
-                                  method: "POST",
-                                  headers: { "Content-Type": "application/json" },
-                                  credentials: "include",
-                                  body: JSON.stringify({ base64, mimeType: file.type, fileName: file.name }),
-                                });
-                                const data = await resp.json();
-                                if (data.url) setBannerForm((f) => ({ ...f, imageUrl: data.url }));
-                                else toast.error("Error al subir imagen");
-                              };
-                              reader.readAsDataURL(file);
-                            } catch {
-                              toast.error("Error al subir imagen");
-                            } finally {
-                              setBannerUploading(false);
-                            }
-                          };
-                          input.click();
-                        }}
-                        disabled={bannerUploading}
-                      >
-                        <Upload className="w-4 h-4 mr-1" />
-                        {bannerUploading ? "Subiendo..." : "Subir"}
-                      </Button>
                     </div>
-                    {bannerForm.imageUrl && (
-                      <img src={bannerForm.imageUrl} alt="Preview" className="w-full max-h-32 object-cover rounded-lg" />
-                    )}
+                    <Button
+                      onClick={() => {
+                        if (!bannerForm.imageUrl) { toast.error("La URL de imagen es requerida"); return; }
+                        createBannerMutation.mutate({ imageUrl: bannerForm.imageUrl, title: bannerForm.title || undefined, linkUrl: bannerForm.linkUrl || undefined });
+                      }}
+                      disabled={createBannerMutation.isPending || !bannerForm.imageUrl}
+                      className="w-full"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      {createBannerMutation.isPending ? "Agregando..." : "Agregar banner"}
+                    </Button>
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-muted-foreground">Título (opcional)</label>
-                    <Input
-                      placeholder="Ej: Webinar gratuito de mindfulness"
-                      value={bannerForm.title}
-                      onChange={(e) => setBannerForm((f) => ({ ...f, title: e.target.value }))}
+                </CardContent>
+              </Card>
+
+              {/* Carrusel de especialidades */}
+              <Card className="border-border">
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Award className="w-4 h-4 text-primary" />
+                    Carrusel de especialidades
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {(homeCarousel ?? []).length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">Sin items. Los 6 items iniciales se cargarán automáticamente desde el servidor.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {(homeCarousel ?? []).map((item: any) => (
+                        <div key={item.id} className="flex items-center gap-3 p-2.5 border rounded-xl">
+                          <img src={item.imageUrl} alt={item.title} className="w-16 h-10 object-cover rounded-lg flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{item.title}</p>
+                            <p className="text-xs text-muted-foreground truncate">{item.link}</p>
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <button
+                              onClick={() => toggleHomeCarouselItemMutation.mutate({ id: item.id, isActive: !item.isActive })}
+                              className="text-muted-foreground hover:text-primary transition-colors"
+                            >
+                              {item.isActive ? <ToggleRight className="w-6 h-6 text-primary" /> : <ToggleLeft className="w-6 h-6" />}
+                            </button>
+                            <button
+                              onClick={() => { if (confirm(`¿Eliminar "${item.title}"?`)) deleteHomeCarouselItemMutation.mutate({ id: item.id }); }}
+                              className="text-muted-foreground hover:text-destructive transition-colors"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="border-t pt-4 space-y-3">
+                    <p className="text-sm font-semibold">Agregar item</p>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-muted-foreground">Título *</label>
+                      <Input
+                        placeholder="Ej: Psicología"
+                        value={carouselForm.title}
+                        onChange={(e) => setCarouselForm((f) => ({ ...f, title: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-muted-foreground">URL de imagen *</label>
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="https://..."
+                          value={carouselForm.imageUrl}
+                          onChange={(e) => setCarouselForm((f) => ({ ...f, imageUrl: e.target.value }))}
+                          className="flex-1"
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-shrink-0"
+                          disabled={carouselUploading}
+                          onClick={() => {
+                            const inp = document.createElement("input");
+                            inp.type = "file";
+                            inp.accept = "image/*";
+                            inp.onchange = async () => {
+                              const file = inp.files?.[0];
+                              if (!file) return;
+                              setCarouselUploading(true);
+                              try {
+                                const url = await uploadSiteAsset(file);
+                                setCarouselForm((f) => ({ ...f, imageUrl: url }));
+                              } catch (err: any) {
+                                toast.error(err?.message ?? "Error al subir imagen");
+                              } finally { setCarouselUploading(false); }
+                            };
+                            inp.click();
+                          }}
+                        >
+                          <Upload className="w-4 h-4 mr-1" />
+                          {carouselUploading ? "Subiendo..." : "Subir"}
+                        </Button>
+                      </div>
+                      {carouselForm.imageUrl && (
+                        <img src={carouselForm.imageUrl} alt="Preview" className="w-full max-h-24 object-cover rounded-lg mt-1" />
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-muted-foreground">Link</label>
+                      <Input
+                        placeholder="/especialidades"
+                        value={carouselForm.link}
+                        onChange={(e) => setCarouselForm((f) => ({ ...f, link: e.target.value }))}
+                      />
+                    </div>
+                    <Button
+                      onClick={() => {
+                        if (!carouselForm.title || !carouselForm.imageUrl) { toast.error("Título e imagen son requeridos"); return; }
+                        createHomeCarouselItemMutation.mutate(carouselForm);
+                      }}
+                      disabled={createHomeCarouselItemMutation.isPending || !carouselForm.title || !carouselForm.imageUrl}
+                      className="w-full"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      {createHomeCarouselItemMutation.isPending ? "Agregando..." : "Agregar item"}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* ── Landing de profesionales ── */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-primary inline-block" />
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Landing de profesionales</p>
+              </div>
+
+              <Card className="border-border">
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Upload className="w-4 h-4 text-primary" />
+                    Video de landing profesionales
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-xs text-muted-foreground">
+                    URL del video que se mostrará en el modal de bienvenida de <code>/profesionales</code>. Pega un embed de YouTube o sube un archivo de video a R2.
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={videoUrl}
+                      onChange={(e) => setVideoUrl(e.target.value)}
+                      placeholder="https://www.youtube.com/embed/..."
+                      className="flex-1 text-sm border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
                     />
+                    <Button
+                      size="sm"
+                      className="gradient-brand text-white border-0 flex-shrink-0"
+                      disabled={setSiteConfigMutation.isPending}
+                      onClick={() => setSiteConfigMutation.mutate({ key: "professionals_video_url", value: videoUrl })}
+                    >
+                      Guardar
+                    </Button>
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-muted-foreground">Link al hacer clic (opcional)</label>
-                    <Input
+                  <div className="flex items-center gap-2">
+                    <input
+                      ref={videoFileRef}
+                      type="file"
+                      accept="video/mp4,video/webm"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        setHeroVideoUploading(true);
+                        try {
+                          const url = await uploadSiteAsset(file);
+                          setVideoUrl(url);
+                          setSiteConfigMutation.mutate({ key: "professionals_video_url", value: url });
+                        } catch (err: any) {
+                          toast.error(err?.message ?? "Error al subir el video");
+                        } finally {
+                          setHeroVideoUploading(false);
+                          if (videoFileRef.current) videoFileRef.current.value = "";
+                        }
+                      }}
+                    />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex items-center gap-1.5"
+                      disabled={heroVideoUploading}
+                      onClick={() => videoFileRef.current?.click()}
+                    >
+                      {heroVideoUploading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                      {heroVideoUploading ? "Subiendo…" : "Subir archivo a R2"}
+                    </Button>
+                    <span className="text-xs text-muted-foreground">MP4 o WebM, máx 50 MB</span>
+                  </div>
+                  {videoUrl && (
+                    <div className="flex items-center gap-2 text-xs text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-xl p-3 truncate">
+                      <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                      <span className="truncate">{videoUrl}</span>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="border-border">
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Image className="w-4 h-4 text-primary" />
+                    Banner hero profesionales
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-xs text-muted-foreground">
+                    Imagen de fondo del hero en <code>/profesionales</code>. Pega una URL o sube una imagen a R2.
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={bannerUrl}
+                      onChange={(e) => setBannerUrl(e.target.value)}
                       placeholder="https://..."
-                      value={bannerForm.linkUrl}
-                      onChange={(e) => setBannerForm((f) => ({ ...f, linkUrl: e.target.value }))}
+                      className="flex-1 text-sm border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
                     />
+                    <Button
+                      size="sm"
+                      className="gradient-brand text-white border-0 flex-shrink-0"
+                      disabled={setSiteConfigMutation.isPending}
+                      onClick={() => setSiteConfigMutation.mutate({ key: "professionals_banner_url", value: bannerUrl })}
+                    >
+                      Guardar
+                    </Button>
                   </div>
-                  <Button
-                    onClick={() => {
-                      if (!bannerForm.imageUrl) { toast.error("La URL de imagen es requerida"); return; }
-                      createBannerMutation.mutate({
-                        imageUrl: bannerForm.imageUrl,
-                        title: bannerForm.title || undefined,
-                        linkUrl: bannerForm.linkUrl || undefined,
-                      });
-                    }}
-                    disabled={createBannerMutation.isPending || !bannerForm.imageUrl}
-                    className="w-full"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    {createBannerMutation.isPending ? "Agregando..." : "Agregar banner"}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+                  <div className="flex items-center gap-2">
+                    <input
+                      ref={heroBannerFileRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        setHeroBannerUploading(true);
+                        try {
+                          const url = await uploadSiteAsset(file);
+                          setBannerUrl(url);
+                          setSiteConfigMutation.mutate({ key: "professionals_banner_url", value: url });
+                        } catch (err: any) {
+                          toast.error(err?.message ?? "Error al subir la imagen");
+                        } finally {
+                          setHeroBannerUploading(false);
+                          if (heroBannerFileRef.current) heroBannerFileRef.current.value = "";
+                        }
+                      }}
+                    />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex items-center gap-1.5"
+                      disabled={heroBannerUploading}
+                      onClick={() => heroBannerFileRef.current?.click()}
+                    >
+                      {heroBannerUploading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                      {heroBannerUploading ? "Subiendo…" : "Subir imagen a R2"}
+                    </Button>
+                    <span className="text-xs text-muted-foreground">JPEG, PNG o WebP, máx 50 MB</span>
+                  </div>
+                  {bannerUrl && (
+                    <div className="rounded-xl overflow-hidden border border-border" style={{ maxHeight: 140 }}>
+                      <img src={bannerUrl} alt="Banner preview" className="w-full object-cover" style={{ maxHeight: 140 }} />
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* ── Especialidades ── */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-primary inline-block" />
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Especialidades</p>
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card className="border-border">
+                  <CardHeader>
+                    <CardTitle className="text-base">Especialidades actuales</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2 max-h-[520px] overflow-y-auto pr-1">
+                      {(specialties ?? []).map((s: any) => (
+                        <div key={s.id} className="rounded-xl border border-border overflow-hidden">
+                          <div className="flex items-center justify-between p-3 bg-primary/5">
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
+                                {s.icon && SPECIALTY_ICON_MAP[s.icon] ? SPECIALTY_ICON_MAP[s.icon] : <Stethoscope className="w-5 h-5" />}
+                              </div>
+                              <span className="font-medium text-sm">{s.name}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Badge className="bg-emerald-100 text-emerald-700 border-0 text-xs">Activa</Badge>
+                              <button
+                                title="Editar especialidad"
+                                onClick={() => {
+                                  const isOpening = editingIconId !== s.id;
+                                  setEditingIconId(isOpening ? s.id : null);
+                                  if (isOpening) setEditingDesc((prev) => ({ ...prev, [s.id]: s.description ?? "" }));
+                                }}
+                                className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                title="Eliminar especialidad"
+                                disabled={deleteSpecialtyMutation.isPending}
+                                onClick={() => {
+                                  if (window.confirm(`¿Eliminar la especialidad "${s.name}"? Esta acción no se puede deshacer.`)) {
+                                    deleteSpecialtyMutation.mutate({ id: s.id });
+                                  }
+                                }}
+                                className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                          {editingIconId === s.id && (
+                            <div className="p-3 border-t border-border bg-background space-y-3">
+                              <div>
+                                <p className="text-xs font-medium text-muted-foreground mb-1.5">Ícono:</p>
+                                <SpecialtyIconPicker
+                                  value={s.icon ?? ""}
+                                  onChange={(key) => updateSpecialtyIconMutation.mutate({ id: s.id, icon: key })}
+                                />
+                              </div>
+                              <div>
+                                <p className="text-xs font-medium text-muted-foreground mb-1.5">Descripción:</p>
+                                <textarea
+                                  value={editingDesc[s.id] ?? ""}
+                                  onChange={(e) => setEditingDesc((prev) => ({ ...prev, [s.id]: e.target.value }))}
+                                  placeholder="Descripción de la especialidad..."
+                                  className="w-full rounded-lg border border-border p-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-[72px] resize-none"
+                                />
+                                <Button
+                                  size="sm"
+                                  className="mt-2 gradient-brand text-white border-0"
+                                  disabled={updateSpecialtyDescMutation.isPending}
+                                  onClick={() => updateSpecialtyDescMutation.mutate({ id: s.id, description: editingDesc[s.id] ?? "" })}
+                                >
+                                  Guardar descripción
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-border">
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Plus className="w-4 h-4 text-primary" />
+                      Nueva especialidad
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div>
+                      <label className="text-xs font-medium mb-1 block">Nombre</label>
+                      <input
+                        type="text"
+                        value={newSpecialty.name}
+                        onChange={(e) => setNewSpecialty({ ...newSpecialty, name: e.target.value })}
+                        placeholder="Ej: Dermatología"
+                        className="w-full rounded-lg border border-border p-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium mb-1 block">Descripción</label>
+                      <textarea
+                        value={newSpecialty.description}
+                        onChange={(e) => setNewSpecialty({ ...newSpecialty, description: e.target.value })}
+                        placeholder="Descripción de la especialidad..."
+                        className="w-full rounded-lg border border-border p-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-[80px] resize-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium mb-1 block">Ícono</label>
+                      <SpecialtyIconPicker
+                        value={newSpecialty.icon}
+                        onChange={(key) => setNewSpecialty({ ...newSpecialty, icon: key })}
+                      />
+                      {newSpecialty.icon && (
+                        <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+                          <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                            {SPECIALTY_ICON_MAP[newSpecialty.icon]}
+                          </div>
+                          <span>Preview: {newSpecialty.icon}</span>
+                        </div>
+                      )}
+                    </div>
+                    <Button
+                      onClick={() => createSpecialtyMutation.mutate(newSpecialty)}
+                      disabled={!newSpecialty.name || createSpecialtyMutation.isPending}
+                      className="gradient-brand text-white border-0"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Crear especialidad
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
           </div>
         )}
 
@@ -1575,151 +2057,6 @@ export default function AdminDashboard() {
           );
         })()}
 
-        {/* Tab: Especialidades */}
-        {activeTab === "especialidades" && (
-          <div className="space-y-6">
-            <h2 className="text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
-              Gestionar especialidades
-            </h2>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Columna izquierda — lista actual */}
-              <Card className="border-border">
-                <CardHeader>
-                  <CardTitle className="text-base">Especialidades actuales</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2 max-h-[520px] overflow-y-auto pr-1">
-                    {(specialties ?? []).map((s: any) => (
-                      <div key={s.id} className="rounded-xl border border-border overflow-hidden">
-                        <div className="flex items-center justify-between p-3 bg-primary/5">
-                          <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
-                              {s.icon && SPECIALTY_ICON_MAP[s.icon]
-                                ? SPECIALTY_ICON_MAP[s.icon]
-                                : <Stethoscope className="w-5 h-5" />}
-                            </div>
-                            <span className="font-medium text-sm">{s.name}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Badge className="bg-emerald-100 text-emerald-700 border-0 text-xs">Activa</Badge>
-                            <button
-                              title="Editar especialidad"
-                              onClick={() => {
-                                const isOpening = editingIconId !== s.id;
-                                setEditingIconId(isOpening ? s.id : null);
-                                if (isOpening) {
-                                  setEditingDesc((prev) => ({ ...prev, [s.id]: s.description ?? "" }));
-                                }
-                              }}
-                              className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
-                            >
-                              <Pencil className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              title="Eliminar especialidad"
-                              disabled={deleteSpecialtyMutation.isPending}
-                              onClick={() => {
-                                if (window.confirm(`¿Eliminar la especialidad "${s.name}"? Esta acción no se puede deshacer.`)) {
-                                  deleteSpecialtyMutation.mutate({ id: s.id });
-                                }
-                              }}
-                              className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </div>
-                        {editingIconId === s.id && (
-                          <div className="p-3 border-t border-border bg-background space-y-3">
-                            <div>
-                              <p className="text-xs font-medium text-muted-foreground mb-1.5">Ícono:</p>
-                              <SpecialtyIconPicker
-                                value={s.icon ?? ""}
-                                onChange={(key) => updateSpecialtyIconMutation.mutate({ id: s.id, icon: key })}
-                              />
-                            </div>
-                            <div>
-                              <p className="text-xs font-medium text-muted-foreground mb-1.5">Descripción:</p>
-                              <textarea
-                                value={editingDesc[s.id] ?? ""}
-                                onChange={(e) => setEditingDesc((prev) => ({ ...prev, [s.id]: e.target.value }))}
-                                placeholder="Descripción de la especialidad..."
-                                className="w-full rounded-lg border border-border p-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-[72px] resize-none"
-                              />
-                              <Button
-                                size="sm"
-                                className="mt-2 gradient-brand text-white border-0"
-                                disabled={updateSpecialtyDescMutation.isPending}
-                                onClick={() => updateSpecialtyDescMutation.mutate({ id: s.id, description: editingDesc[s.id] ?? "" })}
-                              >
-                                Guardar descripción
-                              </Button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Columna derecha — nueva especialidad */}
-              <Card className="border-border">
-                <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Plus className="w-4 h-4 text-primary" />
-                    Nueva especialidad
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div>
-                    <label className="text-xs font-medium mb-1 block">Nombre</label>
-                    <input
-                      type="text"
-                      value={newSpecialty.name}
-                      onChange={(e) => setNewSpecialty({ ...newSpecialty, name: e.target.value })}
-                      placeholder="Ej: Dermatología"
-                      className="w-full rounded-lg border border-border p-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium mb-1 block">Descripción</label>
-                    <textarea
-                      value={newSpecialty.description}
-                      onChange={(e) => setNewSpecialty({ ...newSpecialty, description: e.target.value })}
-                      placeholder="Descripción de la especialidad..."
-                      className="w-full rounded-lg border border-border p-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-[80px] resize-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium mb-1 block">Ícono</label>
-                    <SpecialtyIconPicker
-                      value={newSpecialty.icon}
-                      onChange={(key) => setNewSpecialty({ ...newSpecialty, icon: key })}
-                    />
-                    {newSpecialty.icon && (
-                      <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
-                        <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-                          {SPECIALTY_ICON_MAP[newSpecialty.icon]}
-                        </div>
-                        <span>Preview: {newSpecialty.icon}</span>
-                      </div>
-                    )}
-                  </div>
-                  <Button
-                    onClick={() => createSpecialtyMutation.mutate(newSpecialty)}
-                    disabled={!newSpecialty.name || createSpecialtyMutation.isPending}
-                    className="gradient-brand text-white border-0"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Crear especialidad
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        )}
 
         {/* Tab: Herramientas */}
         {activeTab === "herramientas" && (
@@ -1727,8 +2064,6 @@ export default function AdminDashboard() {
             <h2 className="text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
               Herramientas del sistema
             </h2>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Herramientas del sistema */}
             <div className="space-y-6">
 
             {/* Cron Jobs */}
@@ -1824,164 +2159,7 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
 
-            </div>{/* /herramientas left col */}
-
-            {/* Right column: landing media */}
-            <div className="space-y-6">
-
-            {/* Video de landing profesionales */}
-            <Card className="border-border">
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Upload className="w-4 h-4 text-primary" />
-                  Video de landing profesionales
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-xs text-muted-foreground">
-                  URL del video que se mostrará en el modal de bienvenida de <code>/profesionales</code>. Pega un embed de YouTube o sube un archivo de video a R2.
-                </p>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={videoUrl}
-                    onChange={(e) => setVideoUrl(e.target.value)}
-                    placeholder="https://www.youtube.com/embed/..."
-                    className="flex-1 text-sm border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
-                  />
-                  <Button
-                    size="sm"
-                    className="gradient-brand text-white border-0 flex-shrink-0"
-                    disabled={setSiteConfigMutation.isPending}
-                    onClick={() => setSiteConfigMutation.mutate({ key: "professionals_video_url", value: videoUrl })}
-                  >
-                    Guardar
-                  </Button>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    ref={videoFileRef}
-                    type="file"
-                    accept="video/mp4,video/webm"
-                    className="hidden"
-                    onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-                      setHeroVideoUploading(true);
-                      try {
-                        const url = await uploadSiteAsset(file);
-                        setVideoUrl(url);
-                        setSiteConfigMutation.mutate({ key: "professionals_video_url", value: url });
-                      } catch (err: any) {
-                        toast.error(err?.message ?? "Error al subir el video");
-                      } finally {
-                        setHeroVideoUploading(false);
-                        if (videoFileRef.current) videoFileRef.current.value = "";
-                      }
-                    }}
-                  />
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="flex items-center gap-1.5"
-                    disabled={heroVideoUploading}
-                    onClick={() => videoFileRef.current?.click()}
-                  >
-                    {heroVideoUploading ? (
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <Upload className="w-3.5 h-3.5" />
-                    )}
-                    {heroVideoUploading ? "Subiendo…" : "Subir archivo a R2"}
-                  </Button>
-                  <span className="text-xs text-muted-foreground">MP4 o WebM, máx 50 MB</span>
-                </div>
-                {videoUrl && (
-                  <div className="flex items-center gap-2 text-xs text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-xl p-3 truncate">
-                    <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-                    <span className="truncate">{videoUrl}</span>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Banner hero profesionales */}
-            <Card className="border-border">
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Image className="w-4 h-4 text-primary" />
-                  Banner hero profesionales
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-xs text-muted-foreground">
-                  Imagen de fondo del hero en <code>/profesionales</code>. Se aplica con overlay oscuro sobre el gradiente. Pega una URL o sube una imagen a R2.
-                </p>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={bannerUrl}
-                    onChange={(e) => setBannerUrl(e.target.value)}
-                    placeholder="https://..."
-                    className="flex-1 text-sm border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
-                  />
-                  <Button
-                    size="sm"
-                    className="gradient-brand text-white border-0 flex-shrink-0"
-                    disabled={setSiteConfigMutation.isPending}
-                    onClick={() => setSiteConfigMutation.mutate({ key: "professionals_banner_url", value: bannerUrl })}
-                  >
-                    Guardar
-                  </Button>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    ref={heroBannerFileRef}
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    className="hidden"
-                    onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-                      setHeroBannerUploading(true);
-                      try {
-                        const url = await uploadSiteAsset(file);
-                        setBannerUrl(url);
-                        setSiteConfigMutation.mutate({ key: "professionals_banner_url", value: url });
-                      } catch (err: any) {
-                        toast.error(err?.message ?? "Error al subir la imagen");
-                      } finally {
-                        setHeroBannerUploading(false);
-                        if (heroBannerFileRef.current) heroBannerFileRef.current.value = "";
-                      }
-                    }}
-                  />
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="flex items-center gap-1.5"
-                    disabled={heroBannerUploading}
-                    onClick={() => heroBannerFileRef.current?.click()}
-                  >
-                    {heroBannerUploading ? (
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <Upload className="w-3.5 h-3.5" />
-                    )}
-                    {heroBannerUploading ? "Subiendo…" : "Subir imagen a R2"}
-                  </Button>
-                  <span className="text-xs text-muted-foreground">JPEG, PNG o WebP, máx 50 MB</span>
-                </div>
-                {bannerUrl && (
-                  <div className="rounded-xl overflow-hidden border border-border" style={{ maxHeight: 140 }}>
-                    <img src={bannerUrl} alt="Banner preview" className="w-full object-cover" style={{ maxHeight: 140 }} />
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            </div>{/* /right col */}
-            </div>{/* /grid */}
+            </div>
           </div>
         )}
 

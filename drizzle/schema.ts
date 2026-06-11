@@ -409,3 +409,20 @@ export const notifications = mysqlTable("notifications", {
 
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = typeof notifications.$inferInsert;
+
+/**
+ * Home carousel items — configurable from admin CMS
+ */
+export const homeCarouselItems = mysqlTable("homeCarouselItems", {
+  id: int("id").autoincrement().primaryKey(),
+  title: varchar("title", { length: 255 }).notNull(),
+  imageUrl: text("imageUrl").notNull(),
+  link: varchar("link", { length: 512 }).notNull().default("/especialidades"),
+  position: int("position").notNull().default(0),
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type HomeCarouselItem = typeof homeCarouselItems.$inferSelect;
+export type InsertHomeCarouselItem = typeof homeCarouselItems.$inferInsert;

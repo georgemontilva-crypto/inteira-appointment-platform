@@ -2035,6 +2035,75 @@ export const appRouter = router({
         return { success: true };
       }),
 
+    listHomeCarousel: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+      const dbInst = await db.getDb();
+      if (!dbInst) return [];
+      const client = (dbInst as any).$client;
+      return new Promise<{ id: number; title: string; imageUrl: string; link: string; position: number; isActive: number }[]>((resolve) => {
+        client.execute(
+          "SELECT id, title, imageUrl, `link`, position, isActive FROM homeCarouselItems ORDER BY position ASC",
+          [],
+          (err: any, rows: any) => {
+            if (err) { console.error("[listHomeCarousel]", err?.message); resolve([]); }
+            else resolve(Array.isArray(rows) ? rows : []);
+          }
+        );
+      });
+    }),
+
+    createHomeCarouselItem: protectedProcedure
+      .input(z.object({
+        title: z.string().min(1).max(255),
+        imageUrl: z.string().url(),
+        link: z.string().max(512).default("/especialidades"),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+        const dbInst = await db.getDb();
+        if (!dbInst) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const client = (dbInst as any).$client;
+        const maxPos = await new Promise<number>((resolve) => {
+          client.execute("SELECT COALESCE(MAX(position), -1) AS maxPos FROM homeCarouselItems", [], (err: any, rows: any) => {
+            resolve(Number(Array.isArray(rows) ? rows[0]?.maxPos ?? -1 : -1));
+          });
+        });
+        await new Promise<void>((resolve, reject) => {
+          client.execute(
+            "INSERT INTO homeCarouselItems (title, imageUrl, `link`, position, isActive) VALUES (?, ?, ?, ?, 1)",
+            [input.title, input.imageUrl, input.link, maxPos + 1],
+            (err: any) => { if (err) reject(err); else resolve(); }
+          );
+        });
+        return { success: true };
+      }),
+
+    deleteHomeCarouselItem: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+        const dbInst = await db.getDb();
+        if (!dbInst) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const client = (dbInst as any).$client;
+        await new Promise<void>((resolve, reject) => {
+          client.execute("DELETE FROM homeCarouselItems WHERE id = ?", [input.id], (err: any) => { if (err) reject(err); else resolve(); });
+        });
+        return { success: true };
+      }),
+
+    toggleHomeCarouselItem: protectedProcedure
+      .input(z.object({ id: z.number(), isActive: z.boolean() }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+        const dbInst = await db.getDb();
+        if (!dbInst) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const client = (dbInst as any).$client;
+        await new Promise<void>((resolve, reject) => {
+          client.execute("UPDATE homeCarouselItems SET isActive = ? WHERE id = ?", [input.isActive ? 1 : 0, input.id], (err: any) => { if (err) reject(err); else resolve(); });
+        });
+        return { success: true };
+      }),
+
     setSiteConfig: protectedProcedure
       .input(z.object({ key: z.string().max(100), value: z.string() }))
       .mutation(async ({ ctx, input }) => {
@@ -2229,6 +2298,68 @@ export const appRouter = router({
           }
         );
       });
+    }),
+
+    getHomeCarousel: publicProcedure.query(async () => {
+      const dbInst = await db.getDb();
+      if (!dbInst) return [];
+      const client = (dbInst as any).$client;
+      try {
+        await new Promise<void>((resolve) => {
+          client.execute(
+            `CREATE TABLE IF NOT EXISTS homeCarouselItems (
+              id INT AUTO_INCREMENT PRIMARY KEY,
+              title VARCHAR(255) NOT NULL,
+              imageUrl TEXT NOT NULL,
+              \`link\` VARCHAR(512) NOT NULL DEFAULT '/especialidades',
+              position INT NOT NULL DEFAULT 0,
+              isActive BOOLEAN NOT NULL DEFAULT true,
+              createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            )`,
+            [],
+            () => resolve()
+          );
+        });
+        const count = await new Promise<number>((resolve) => {
+          client.execute("SELECT COUNT(*) as cnt FROM homeCarouselItems", [], (err: any, results: any) => {
+            if (err) resolve(0);
+            else resolve(Number(Array.isArray(results) ? results[0]?.cnt ?? 0 : 0));
+          });
+        });
+        if (count === 0) {
+          const seeds = [
+            { title: "Emprendimiento", imageUrl: "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Emprendimiento.webp" },
+            { title: "Finanzas", imageUrl: "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Finanzas.webp" },
+            { title: "Idiomas", imageUrl: "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Idiomas.webp" },
+            { title: "Imagen Personal", imageUrl: "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Imagen-Personal.webp" },
+            { title: "Psicología", imageUrl: "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Psicologia.webp" },
+            { title: "Vocación", imageUrl: "https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/asesorias_Vocacion.webp" },
+          ];
+          for (let i = 0; i < seeds.length; i++) {
+            await new Promise<void>((resolve) => {
+              client.execute(
+                "INSERT INTO homeCarouselItems (title, imageUrl, `link`, position, isActive) VALUES (?, ?, '/especialidades', ?, 1)",
+                [seeds[i].title, seeds[i].imageUrl, i],
+                () => resolve()
+              );
+            });
+          }
+        }
+        return new Promise<{ id: number; title: string; imageUrl: string; link: string; position: number; isActive: number }[]>((resolve) => {
+          client.execute(
+            "SELECT id, title, imageUrl, `link`, position, isActive FROM homeCarouselItems WHERE isActive = 1 ORDER BY position ASC",
+            [],
+            (err: any, rows: any) => {
+              if (err) { console.error("[getHomeCarousel]", err?.message); resolve([]); }
+              else resolve(Array.isArray(rows) ? rows : []);
+            }
+          );
+        });
+      } catch (err: any) {
+        console.error("[getHomeCarousel] error:", err?.message);
+        return [];
+      }
     }),
   }),
 
