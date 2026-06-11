@@ -194,7 +194,7 @@ const STATUS_MAP: Record<string, { label: string; cls: string }> = {
 
 export default function AdminDashboard() {
   const { user, isAuthenticated, loading } = useAuth();
-  const [activeTab, setActiveTab] = useState<"overview" | "usuarios" | "profesionales" | "activos" | "planes" | "herramientas" | "codigos" | "retiros" | "contenido">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "usuarios" | "profesionales" | "activos" | "citas" | "contenido" | "planes" | "codigos" | "retiros" | "herramientas">("overview");
   const [bannerForm, setBannerForm] = useState({ imageUrl: "", title: "", linkUrl: "" });
   const [bannerUploading, setBannerUploading] = useState(false);
   const [rejectReason, setRejectReason] = useState<Record<number, string>>({});
@@ -264,6 +264,24 @@ export default function AdminDashboard() {
   const toggleHomeCarouselItemMutation = trpc.admin.toggleHomeCarouselItem.useMutation({
     onSuccess: () => refetchHomeCarousel(),
     onError: () => toast.error("Error al actualizar"),
+  });
+
+  const [citasSearch, setCitasSearch] = useState("");
+  const [citasStatus, setCitasStatus] = useState("");
+  const [citasDateFrom, setCitasDateFrom] = useState("");
+  const [citasDateTo, setCitasDateTo] = useState("");
+
+  const { data: appointmentResults, refetch: refetchAppointments, isLoading: loadingAppointments } = trpc.admin.searchAppointments.useQuery(
+    { search: citasSearch || undefined, status: citasStatus || undefined, dateFrom: citasDateFrom || undefined, dateTo: citasDateTo || undefined },
+    { enabled: activeTab === "citas" }
+  );
+  const cancelAppointmentMutation = trpc.appointment.cancelAppointment.useMutation({
+    onSuccess: () => { refetchAppointments(); toast.success("Cita cancelada"); },
+    onError: (e) => toast.error(e.message ?? "Error al cancelar"),
+  });
+  const reactivateAppointmentMutation = trpc.admin.reactivateAppointment.useMutation({
+    onSuccess: () => { refetchAppointments(); toast.success("Cita reactivada"); },
+    onError: () => toast.error("Error al reactivar"),
   });
 
   const approveMutation = trpc.admin.approveProfessional.useMutation({
@@ -535,6 +553,7 @@ export default function AdminDashboard() {
               { key: "usuarios",      label: "Usuarios",              icon: <User className="w-4 h-4" /> },
               { key: "profesionales", label: "Solicitudes",           icon: <Users className="w-4 h-4" /> },
               { key: "activos",       label: "Profesionales activos", icon: <UserCheck className="w-4 h-4" /> },
+              { key: "citas",         label: "Citas",                 icon: <Calendar className="w-4 h-4" /> },
               { key: "contenido",     label: "Contenido",             icon: <Image className="w-4 h-4" /> },
               { key: "planes",        label: "Planes",                icon: <Settings className="w-4 h-4" /> },
               { key: "codigos",       label: "Códigos",               icon: <Tag className="w-4 h-4" /> },
@@ -1371,6 +1390,169 @@ export default function AdminDashboard() {
                 </Card>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* ══ TAB: CITAS ════════════════════════════════════════════════════ */}
+        {activeTab === "citas" && (
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>Citas</h2>
+
+            {/* Filters */}
+            <div className="flex flex-wrap gap-2">
+              <div className="relative flex-1 min-w-[200px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Buscar usuario o profesional..."
+                  value={citasSearch}
+                  onChange={(e) => setCitasSearch(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 text-sm border border-border rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+              <Select value={citasStatus || "all"} onValueChange={(v) => setCitasStatus(v === "all" ? "" : v)}>
+                <SelectTrigger className="w-36 h-9 text-sm">
+                  <SelectValue placeholder="Estado" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="scheduled">Confirmadas</SelectItem>
+                  <SelectItem value="pending_review">Pendiente revisión</SelectItem>
+                  <SelectItem value="completed">Completadas</SelectItem>
+                  <SelectItem value="canceled">Canceladas</SelectItem>
+                  <SelectItem value="no-show">No asistió</SelectItem>
+                </SelectContent>
+              </Select>
+              <input
+                type="date"
+                value={citasDateFrom}
+                onChange={(e) => setCitasDateFrom(e.target.value)}
+                className="h-9 px-3 text-sm border border-border rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-primary"
+                placeholder="Desde"
+              />
+              <input
+                type="date"
+                value={citasDateTo}
+                onChange={(e) => setCitasDateTo(e.target.value)}
+                className="h-9 px-3 text-sm border border-border rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-primary"
+                placeholder="Hasta"
+              />
+              <Button size="sm" variant="outline" onClick={() => refetchAppointments()} className="h-9">
+                <RefreshCw className="w-3.5 h-3.5 mr-1" />
+                Buscar
+              </Button>
+            </div>
+
+            {/* Results table */}
+            <Card>
+              <CardContent className="p-0">
+                {loadingAppointments ? (
+                  <div className="py-12 text-center text-sm text-muted-foreground">Cargando citas…</div>
+                ) : (appointmentResults ?? []).length === 0 ? (
+                  <div className="py-12 text-center text-sm text-muted-foreground">Sin resultados.</div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-muted/40 text-xs text-muted-foreground">
+                        <tr>
+                          <th className="text-left px-4 py-3 font-medium">Usuario</th>
+                          <th className="text-left px-4 py-3 font-medium">Profesional</th>
+                          <th className="text-left px-4 py-3 font-medium">Especialidad</th>
+                          <th className="text-left px-4 py-3 font-medium">Fecha</th>
+                          <th className="text-left px-4 py-3 font-medium">Estado</th>
+                          <th className="text-left px-4 py-3 font-medium">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {(appointmentResults ?? []).map((apt: any) => {
+                          const dateStr = apt.appointmentDate
+                            ? format(new Date(apt.appointmentDate), "dd MMM yyyy HH:mm", { locale: es })
+                            : "—";
+                          const statusColors: Record<string, string> = {
+                            scheduled: "bg-emerald-100 text-emerald-700",
+                            pending_review: "bg-yellow-100 text-yellow-700",
+                            completed: "bg-blue-100 text-blue-700",
+                            canceled: "bg-red-100 text-red-700",
+                            "no-show": "bg-gray-100 text-gray-600",
+                          };
+                          const statusLabels: Record<string, string> = {
+                            scheduled: "Confirmada",
+                            pending_review: "Pend. revisión",
+                            completed: "Completada",
+                            canceled: "Cancelada",
+                            "no-show": "No asistió",
+                          };
+                          const canCancel = !["canceled", "completed", "no-show"].includes(apt.status);
+                          const canReactivate = apt.status === "canceled";
+                          return (
+                            <tr key={apt.id} className="hover:bg-muted/20 transition-colors">
+                              <td className="px-4 py-3">
+                                <div className="font-medium truncate max-w-[140px]">{apt.userName}</div>
+                                <div className="text-xs text-muted-foreground truncate max-w-[140px]">{apt.userEmail}</div>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className="truncate max-w-[120px] block">{apt.professionalName}</span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className="text-xs text-muted-foreground">{apt.specialtyName ?? "—"}</span>
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap text-xs">{dateStr}</td>
+                              <td className="px-4 py-3">
+                                <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${statusColors[apt.status] ?? "bg-gray-100 text-gray-600"}`}>
+                                  {statusLabels[apt.status] ?? apt.status}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-1.5">
+                                  {apt.videoCallLink && (
+                                    <a
+                                      href={apt.videoCallLink}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                                      title="Enlace de videollamada"
+                                    >
+                                      <ExternalLink className="w-3.5 h-3.5" />
+                                      Video
+                                    </a>
+                                  )}
+                                  {canCancel && (
+                                    <button
+                                      onClick={() => {
+                                        if (confirm(`¿Cancelar la cita #${apt.id}?`)) {
+                                          cancelAppointmentMutation.mutate({ appointmentId: apt.id, reason: "Cancelada por admin" });
+                                        }
+                                      }}
+                                      disabled={cancelAppointmentMutation.isPending}
+                                      className="text-xs text-red-500 hover:text-red-700 transition-colors"
+                                    >
+                                      Cancelar
+                                    </button>
+                                  )}
+                                  {canReactivate && (
+                                    <button
+                                      onClick={() => {
+                                        if (confirm(`¿Reactivar la cita #${apt.id}?`)) {
+                                          reactivateAppointmentMutation.mutate({ appointmentId: apt.id });
+                                        }
+                                      }}
+                                      disabled={reactivateAppointmentMutation.isPending}
+                                      className="text-xs text-emerald-600 hover:text-emerald-800 transition-colors"
+                                    >
+                                      Reactivar
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
         )}
 

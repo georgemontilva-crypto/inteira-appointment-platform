@@ -1298,6 +1298,55 @@ export const appRouter = router({
         return rows;
       }),
 
+    searchAppointments: protectedProcedure
+      .input(z.object({
+        search: z.string().optional(),
+        status: z.string().optional(),
+        dateFrom: z.string().optional(),
+        dateTo: z.string().optional(),
+        limit: z.number().int().min(1).max(200).default(80),
+      }))
+      .query(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+        const dbInst = await db.getDb();
+        if (!dbInst) return [];
+        const client = (dbInst as any).$client;
+        const like = input.search ? `%${input.search}%` : null;
+        return new Promise<any[]>((resolve) => {
+          client.execute(
+            `SELECT
+               a.id, a.userId, a.professionalId, a.appointmentDate, a.durationMinutes,
+               a.status, a.videoCallLink, a.videoCallType, a.cancellationReason, a.createdAt,
+               COALESCE(NULLIF(TRIM(u.name),''), SUBSTRING_INDEX(u.email,'@',1), CONCAT('User#',a.userId)) AS userName,
+               u.email AS userEmail,
+               COALESCE(NULLIF(TRIM(pu.name),''), SUBSTRING_INDEX(pu.email,'@',1), CONCAT('Pro#',a.professionalId)) AS professionalName,
+               s.name AS specialtyName
+             FROM appointments a
+             LEFT JOIN users u     ON a.userId = u.id
+             LEFT JOIN professionals prof ON a.professionalId = prof.id
+             LEFT JOIN users pu    ON prof.userId = pu.id
+             LEFT JOIN specialties s ON a.specialtyId = s.id
+             WHERE (? IS NULL OR u.name LIKE ? OR u.email LIKE ? OR pu.name LIKE ? OR pu.email LIKE ?)
+               AND (? IS NULL OR a.status = ?)
+               AND (? IS NULL OR a.appointmentDate >= ?)
+               AND (? IS NULL OR a.appointmentDate <= ?)
+             ORDER BY a.appointmentDate DESC
+             LIMIT ?`,
+            [
+              like, like, like, like, like,
+              input.status || null, input.status || null,
+              input.dateFrom || null, input.dateFrom || null,
+              input.dateTo || null, input.dateTo || null,
+              input.limit,
+            ],
+            (err: any, rows: any) => {
+              if (err) { console.error("[searchAppointments]", err?.message); resolve([]); }
+              else resolve(Array.isArray(rows) ? rows : []);
+            }
+          );
+        });
+      }),
+
     reactivateAppointment: protectedProcedure
       .input(z.object({ appointmentId: z.number() }))
       .mutation(async ({ ctx, input }) => {
