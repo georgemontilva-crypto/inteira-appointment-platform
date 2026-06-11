@@ -2373,6 +2373,7 @@ export const appRouter = router({
         const result: Record<string, string | null> = {};
         for (const k of input.keys) result[k] = null;
         for (const row of rows) result[row.key] = row.value;
+        console.log("[getSiteConfig] keys:", input.keys, "→ result:", result);
         return result;
       }),
 
