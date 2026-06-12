@@ -42,7 +42,7 @@ import {
   AlertCircle,
   User,
 } from "lucide-react";
-import { format, isToday, isTomorrow, formatDistanceToNow } from "date-fns";
+import { format, isToday, isTomorrow, formatDistanceToNow, endOfWeek } from "date-fns";
 import { es } from "date-fns/locale";
 import { parseLocalDate } from "@/lib/utils";
 import { getLoginUrl } from "@/const";
@@ -51,27 +51,27 @@ import { Link } from "wouter";
 
 // ── Specialty icons & colors ───────────────────────────────────────────────
 const specialtyIcon: Record<string, React.ReactNode> = {
-  "Psicología": <Brain className="w-5 h-5 text-white" />,
-  "Legal": <Scale className="w-5 h-5 text-white" />,
-  "Emprendimiento": <TrendingUp className="w-5 h-5 text-white" />,
-  "Finanzas": <DollarSign className="w-5 h-5 text-white" />,
-  "Idiomas": <Mic2 className="w-5 h-5 text-white" />,
-  "Imagen Personal": <Sparkles className="w-5 h-5 text-white" />,
-  "Vocación": <Compass className="w-5 h-5 text-white" />,
-  "Coaching de vida": <Sun className="w-5 h-5 text-white" />,
-  "Mindfulness y meditación": <Leaf className="w-5 h-5 text-white" />,
-  "Nutrición": <Apple className="w-5 h-5 text-white" />,
-  "Orientación vocacional": <GraduationCap className="w-5 h-5 text-white" />,
-  "Terapia de pareja": <HeartHandshake className="w-5 h-5 text-white" />,
-  "Trabajo social": <HandHeart className="w-5 h-5 text-white" />,
-  "Salud mental": <Brain className="w-5 h-5 text-white" />,
-  "Desarrollo personal": <Smile className="w-5 h-5 text-white" />,
-  "Educación": <BookOpen className="w-5 h-5 text-white" />,
-  "Negocios": <Briefcase className="w-5 h-5 text-white" />,
-  "Idiomas y cultura": <Globe className="w-5 h-5 text-white" />,
-  "Bienestar": <Activity className="w-5 h-5 text-white" />,
-  "Familia": <Heart className="w-5 h-5 text-white" />,
-  "Recursos Humanos": <Users className="w-5 h-5 text-white" />,
+  "Psicología": <Brain className="w-4 h-4 text-white" />,
+  "Legal": <Scale className="w-4 h-4 text-white" />,
+  "Emprendimiento": <TrendingUp className="w-4 h-4 text-white" />,
+  "Finanzas": <DollarSign className="w-4 h-4 text-white" />,
+  "Idiomas": <Mic2 className="w-4 h-4 text-white" />,
+  "Imagen Personal": <Sparkles className="w-4 h-4 text-white" />,
+  "Vocación": <Compass className="w-4 h-4 text-white" />,
+  "Coaching de vida": <Sun className="w-4 h-4 text-white" />,
+  "Mindfulness y meditación": <Leaf className="w-4 h-4 text-white" />,
+  "Nutrición": <Apple className="w-4 h-4 text-white" />,
+  "Orientación vocacional": <GraduationCap className="w-4 h-4 text-white" />,
+  "Terapia de pareja": <HeartHandshake className="w-4 h-4 text-white" />,
+  "Trabajo social": <HandHeart className="w-4 h-4 text-white" />,
+  "Salud mental": <Brain className="w-4 h-4 text-white" />,
+  "Desarrollo personal": <Smile className="w-4 h-4 text-white" />,
+  "Educación": <BookOpen className="w-4 h-4 text-white" />,
+  "Negocios": <Briefcase className="w-4 h-4 text-white" />,
+  "Idiomas y cultura": <Globe className="w-4 h-4 text-white" />,
+  "Bienestar": <Activity className="w-4 h-4 text-white" />,
+  "Familia": <Heart className="w-4 h-4 text-white" />,
+  "Recursos Humanos": <Users className="w-4 h-4 text-white" />,
 };
 
 const specialtyBg: Record<string, string> = {
@@ -117,6 +117,14 @@ function getDateLabel(date: Date): string {
   if (isToday(date)) return "Hoy";
   if (isTomorrow(date)) return "Mañana";
   return format(date, "EEEE d MMM", { locale: es });
+}
+
+// ── Timing badge helper ────────────────────────────────────────────────────
+function getTimingBadge(date: Date): { label: string; cls: string } {
+  if (isToday(date)) return { label: "Hoy", cls: "bg-emerald-100 text-emerald-700" };
+  const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 });
+  if (date <= weekEnd) return { label: "Esta semana", cls: "bg-blue-100 text-blue-700" };
+  return { label: "Pendiente", cls: "bg-gray-100 text-gray-500" };
 }
 
 // ── Star rating component ──────────────────────────────────────────────────
@@ -225,26 +233,26 @@ export default function UserDashboard() {
   // ── Loading / Auth guards ──────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="animate-spin w-8 h-8 border-4 border-[#5B6A57] border-t-transparent rounded-full" />
       </div>
     );
   }
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Card className="max-w-sm w-full mx-4">
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <Card className="max-w-sm w-full mx-4 shadow-sm border border-gray-100">
           <CardContent className="p-8 text-center space-y-4">
-            <div className="w-16 h-16 rounded-full gradient-brand flex items-center justify-center mx-auto">
+            <div className="w-16 h-16 rounded-full bg-[#5B6A57] flex items-center justify-center mx-auto">
               <User className="w-8 h-8 text-white" />
             </div>
-            <h2 className="text-xl font-bold">Inicia sesión para continuar</h2>
-            <p className="text-sm text-muted-foreground">
+            <h2 className="text-xl font-bold text-gray-900">Inicia sesión para continuar</h2>
+            <p className="text-sm text-gray-500">
               Accede a tu dashboard, citas y más.
             </p>
             <a href={getLoginUrl()}>
-              <Button className="w-full gradient-brand text-white border-0">
+              <Button className="w-full bg-[#5B6A57] text-white border-0 hover:bg-[#5B6A57]/90">
                 Iniciar sesión
               </Button>
             </a>
@@ -294,151 +302,342 @@ export default function UserDashboard() {
     });
   };
 
+  // ── Additional derived data for new layout ─────────────────────────────
+  const nowMs = Date.now();
+  const hour = new Date().getHours();
+  const greeting =
+    hour < 12 ? "Buenos días" : hour < 18 ? "Buenas tardes" : "Buenas noches";
+  const firstName =
+    (user as any)?.name?.split(" ")[0] ??
+    (user as any)?.email?.split("@")[0] ??
+    "Usuario";
+  const todayFormatted = format(new Date(), "EEEE d 'de' MMMM", { locale: es });
+
+  const activeSessionApt = upcomingAppointments.reduce<
+    (Apt & { minutesUntil: number }) | null
+  >((found, a) => {
+    if (found) return found;
+    const aptMs = parseLocalDate(a.appointmentDate).getTime();
+    const diffMin = (aptMs - nowMs) / 60_000;
+    const dur = a.durationMinutes ?? 60;
+    if (diffMin <= 30 && diffMin > -dur)
+      return { ...a, minutesUntil: Math.max(0, Math.ceil(diffMin)) };
+    return null;
+  }, null);
+
+  const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 });
+  const upcomingThisWeek = upcomingAppointments.filter(
+    (a) => parseLocalDate(a.appointmentDate) <= weekEnd
+  );
+
   // ── Render ─────────────────────────────────────────────────────────────
   return (
     <DashboardLayout>
-      <div className="p-4 md:p-6 space-y-5 w-full max-w-2xl mx-auto">
+      <div className="bg-white min-h-screen pb-24 md:pb-8">
+        <div className="max-w-5xl mx-auto px-4 pt-5 pb-4 space-y-4">
 
-        {/* Alerta de créditos por vencer */}
-        {creditsExpiringSoon && nextExpiry && (
-          <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl p-3.5">
-            <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-amber-800">Créditos por vencer</p>
-              <p className="text-xs text-amber-600 mt-0.5">
-                Tienes {creditBalance.toLocaleString("es-MX")} créditos que vencen{" "}
-                {formatDistanceToNow(nextExpiry, { addSuffix: true, locale: es })}.
+          {/* TOP BAR */}
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-base font-semibold text-gray-900 truncate">
+                {greeting}, {firstName}
               </p>
+              <p className="text-xs text-gray-400 capitalize mt-0.5">{todayFormatted}</p>
             </div>
-            <Button size="sm" variant="outline" className="h-7 text-xs border-amber-300 text-amber-700 hover:bg-amber-100 flex-shrink-0"
-              onClick={() => navigate("/especialidades")}>Usar ahora</Button>
-          </div>
-        )}
-
-        {/* BLOQUE A — Próxima cita o CTA primera sesión */}
-        {loadingAppointments ? (
-          <Card className="border-border animate-pulse"><CardContent className="p-6 h-32" /></Card>
-        ) : nextAppointment ? (
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-base font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>Tu próxima sesión</h2>
-              <Button variant="ghost" size="sm" className="text-primary text-xs h-7" onClick={() => navigate("/citas")}>
-                Ver todas <ChevronRight className="w-3.5 h-3.5 ml-0.5" />
-              </Button>
-            </div>
-            <Card className="border-primary/20 bg-primary/5">
-              <CardContent className="p-5">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-14 h-14 rounded-2xl gradient-brand flex items-center justify-center text-white font-bold text-xl flex-shrink-0">
-                    {((nextAppointment as any).professionalName ?? "P").charAt(0).toUpperCase()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold truncate">
-                      {(nextAppointment as any).professionalName ?? `Especialista #${nextAppointment.professionalId}`}
-                    </p>
-                    <div className="flex items-center gap-3 mt-1 flex-wrap">
-                      <span className="flex items-center gap-1 text-sm text-primary font-semibold capitalize">
-                        <Calendar className="w-3.5 h-3.5" />
-                        {getDateLabel(parseLocalDate(nextAppointment.appointmentDate))}
-                      </span>
-                      <span className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <Clock className="w-3.5 h-3.5" />
-                        {format(parseLocalDate(nextAppointment.appointmentDate), "HH:mm", { locale: es })}
-                        {nextAppointment.durationMinutes ? ` · ${nextAppointment.durationMinutes} min` : ""}
-                      </span>
-                    </div>
-                  </div>
-                  <Badge className="bg-blue-100 text-blue-700 border-0 flex-shrink-0">Confirmada</Badge>
-                </div>
-                <div className="flex gap-2">
-                  {nextAppointment.videoCallLink ? (
-                    <a href={nextAppointment.videoCallLink} target="_blank" rel="noopener noreferrer" className="flex-1">
-                      <Button size="sm" className="w-full gradient-brand text-white border-0 h-10 text-sm font-semibold">
-                        <Video className="w-4 h-4 mr-2" /> Unirse a la sesión
-                      </Button>
-                    </a>
-                  ) : (
-                    <div className="flex-1 flex items-center gap-2 bg-muted/50 rounded-lg px-3 py-2.5">
-                      <Video className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">El enlace estará disponible próximamente</span>
-                    </div>
-                  )}
-                  <Button size="sm" variant="outline" className="h-10 text-xs border-red-200 text-red-500 hover:bg-red-50 flex-shrink-0 px-3"
-                    disabled={cancelingId === nextAppointment.id} onClick={() => handleCancel(nextAppointment.id)}>
-                    {cancelingId === nextAppointment.id
-                      ? <span className="animate-spin w-3 h-3 border-2 border-red-400 border-t-transparent rounded-full" />
-                      : <><X className="w-3 h-3 mr-1" />Cancelar</>}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        ) : (
-          <Card className="border-border border-dashed">
-            <CardContent className="p-8 text-center">
-              <div className="w-14 h-14 rounded-2xl gradient-brand flex items-center justify-center mx-auto mb-4">
-                <Calendar className="w-7 h-7 text-white" />
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="flex items-center gap-1.5 bg-[#5B6A57]/10 text-[#5B6A57] rounded-full px-3 py-1.5">
+                <Wallet className="w-3.5 h-3.5" />
+                <span className="text-sm font-bold">{creditBalance.toLocaleString("es-MX")}</span>
+                <span className="text-xs font-normal text-[#5B6A57]/70">créditos</span>
               </div>
-              <h2 className="font-bold text-lg mb-1" style={{ fontFamily: "Poppins, sans-serif" }}>
-                ¡Agenda tu primera sesión!
-              </h2>
-              <p className="text-sm text-muted-foreground mb-4">
-                Conecta con un especialista y da el primer paso hacia tu bienestar.
-              </p>
-              <Button className="gradient-brand text-white border-0" onClick={() => navigate("/especialidades")}>
-                <Plus className="w-4 h-4 mr-2" /> Explorar especialistas
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* BLOQUE B — 3 accesos rápidos */}
-        <div className="grid grid-cols-3 gap-3">
-          {[
-            { label: "Explorar", sub: "Especialistas", icon: <Star className="w-5 h-5 text-primary" />, bg: "bg-primary/10", action: () => navigate("/especialidades") },
-            { label: "Mis citas", sub: `${upcomingAppointments.length} próximas`, icon: <Calendar className="w-5 h-5 text-blue-600" />, bg: "bg-blue-100", action: () => navigate("/citas") },
-            { label: "Wallet", sub: `${creditBalance.toLocaleString("es-MX")} cred.`, icon: <Wallet className="w-5 h-5 text-emerald-600" />, bg: "bg-emerald-100", action: () => navigate("/wallet") },
-          ].map((item) => (
-            <button key={item.label} onClick={item.action}
-              className="flex flex-col items-center gap-2 bg-white rounded-2xl py-4 px-2 border border-border/60 shadow-sm hover:shadow-md hover:border-primary/30 active:scale-[0.98] transition-all text-center">
-              <div className={`w-10 h-10 rounded-xl ${item.bg} flex items-center justify-center`}>
-                {item.icon}
-              </div>
-              <div>
-                <p className="text-xs font-semibold">{item.label}</p>
-                <p className="text-[10px] text-muted-foreground truncate">{item.sub}</p>
-              </div>
-            </button>
-          ))}
-        </div>
-
-        {/* BLOQUE C — Especialidades destacadas */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-base font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>Especialidades</h2>
-            <Button variant="ghost" size="sm" className="text-primary text-xs h-7" onClick={() => navigate("/especialidades")}>
-              Ver todas <ChevronRight className="w-3.5 h-3.5 ml-0.5" />
-            </Button>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-            {(specialties ?? [
-              { id: 1, name: "Psicología" }, { id: 2, name: "Emprendimiento" },
-              { id: 3, name: "Finanzas" }, { id: 4, name: "Legal" },
-              { id: 5, name: "Coaching de vida" }, { id: 6, name: "Nutrición" },
-            ]).slice(0, 6).map((s) => (
-              <button key={s.id} onClick={() => navigate(`/especialidades/${s.id}`)}
-                className="flex items-center gap-2.5 bg-white rounded-xl px-3 py-3 border border-border/60 shadow-sm hover:shadow-md hover:border-primary/30 active:scale-[0.98] transition-all text-left">
-                <div className={`w-8 h-8 rounded-xl ${specialtyBg[s.name] ?? "bg-[#607562]"} flex items-center justify-center flex-shrink-0`}>
-                  {specialtyIcon[s.name] ?? <Compass className="w-4 h-4 text-white" />}
-                </div>
-                <p className="text-xs font-semibold text-foreground truncate">{s.name}</p>
+              <button
+                onClick={() => {
+                  if (unreadNotifications.length > 0) markAllReadMutation.mutate();
+                }}
+                className="relative w-9 h-9 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+              >
+                <Bell className="w-4 h-4 text-gray-600" />
+                {unreadNotifications.length > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                    {unreadNotifications.length > 9 ? "9+" : unreadNotifications.length}
+                  </span>
+                )}
               </button>
+            </div>
+          </div>
+
+          {/* ACTIVE SESSION BANNER */}
+          {activeSessionApt && (
+            <div className="flex items-center justify-between gap-3 bg-[#5B6A57] rounded-2xl px-4 py-3.5">
+              <div className="flex items-center gap-3 min-w-0">
+                <Video className="w-5 h-5 text-white flex-shrink-0" />
+                <p className="text-white text-sm font-medium truncate">
+                  {activeSessionApt.minutesUntil === 0
+                    ? `Tu sesión con ${(activeSessionApt as any).professionalName ?? "tu especialista"} está en curso`
+                    : `Tu sesión con ${(activeSessionApt as any).professionalName ?? "tu especialista"} comienza en ${activeSessionApt.minutesUntil} min`}
+                </p>
+              </div>
+              {activeSessionApt.videoCallLink ? (
+                <a
+                  href={activeSessionApt.videoCallLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-shrink-0"
+                >
+                  <span className="inline-block bg-white text-[#5B6A57] text-xs font-bold px-3.5 py-2 rounded-xl hover:bg-gray-50 transition-colors whitespace-nowrap cursor-pointer">
+                    Unirse ahora
+                  </span>
+                </a>
+              ) : (
+                <span className="inline-block bg-white/30 text-white text-xs font-semibold px-3.5 py-2 rounded-xl whitespace-nowrap">
+                  Sin enlace
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* CREDITS EXPIRY ALERT */}
+          {creditsExpiringSoon && nextExpiry && (
+            <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-3.5 py-2.5">
+              <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0" />
+              <p className="text-sm text-amber-800 flex-1 min-w-0">
+                {creditBalance.toLocaleString("es-MX")} créditos vencen{" "}
+                {formatDistanceToNow(nextExpiry, { addSuffix: true, locale: es })}
+              </p>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs border-amber-300 text-amber-700 hover:bg-amber-100 flex-shrink-0"
+                onClick={() => navigate("/especialidades")}
+              >
+                Usar ahora
+              </Button>
+            </div>
+          )}
+
+          {/* METRICS ROW */}
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              {
+                label: "Esta semana",
+                value: upcomingThisWeek.length,
+                icon: <Calendar className="w-4 h-4 text-[#5B6A57]" />,
+                iconBg: "bg-[#5B6A57]/10",
+              },
+              {
+                label: "Completadas",
+                value: completedCount,
+                icon: <CheckCircle2 className="w-4 h-4 text-emerald-600" />,
+                iconBg: "bg-emerald-100",
+              },
+              {
+                label: "Créditos",
+                value: creditBalance.toLocaleString("es-MX"),
+                icon: <Wallet className="w-4 h-4 text-[#A7774E]" />,
+                iconBg: "bg-[#A7774E]/10",
+              },
+            ].map((m) => (
+              <div
+                key={m.label}
+                className="bg-white border border-gray-100 rounded-2xl p-3 shadow-sm flex flex-col gap-1.5"
+              >
+                <div className={`w-7 h-7 rounded-lg ${m.iconBg} flex items-center justify-center`}>
+                  {m.icon}
+                </div>
+                <p className="text-lg font-bold text-gray-900 leading-none">{m.value}</p>
+                <p className="text-[11px] text-gray-400 leading-tight">{m.label}</p>
+              </div>
             ))}
           </div>
-        </div>
 
-        <div className="h-6 md:h-0" />
+          {/* MAIN GRID */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+            {/* LEFT — Próximas citas */}
+            <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-sm font-bold text-gray-900">Próximas citas</h2>
+                <button
+                  onClick={() => navigate("/citas")}
+                  className="flex items-center gap-0.5 text-xs text-[#5B6A57] font-medium hover:underline"
+                >
+                  Ver todas <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {loadingAppointments ? (
+                <div className="space-y-2.5">
+                  {[1, 2].map((i) => (
+                    <div key={i} className="h-14 bg-gray-100 rounded-xl animate-pulse" />
+                  ))}
+                </div>
+              ) : upcomingAppointments.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-7 gap-2">
+                  <div className="w-10 h-10 rounded-2xl bg-[#5B6A57]/10 flex items-center justify-center">
+                    <Calendar className="w-5 h-5 text-[#5B6A57]" />
+                  </div>
+                  <p className="text-sm text-gray-500">No tienes citas próximas</p>
+                  <button
+                    onClick={() => navigate("/especialidades")}
+                    className="text-xs text-[#5B6A57] font-semibold hover:underline"
+                  >
+                    + Agendar ahora
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {upcomingAppointments.slice(0, 3).map((a) => {
+                    const aptDate = parseLocalDate(a.appointmentDate);
+                    const { label, cls } = getTimingBadge(aptDate);
+                    const rawName: string =
+                      (a as any).professionalName ?? `Especialista #${a.professionalId}`;
+                    const initials = rawName
+                      .split(" ")
+                      .slice(0, 2)
+                      .map((w: string) => w[0] ?? "")
+                      .join("")
+                      .toUpperCase();
+                    return (
+                      <div
+                        key={a.id}
+                        className="flex items-center gap-3 p-2.5 bg-gray-50 rounded-xl"
+                      >
+                        <div className="w-9 h-9 rounded-xl bg-[#5B6A57] flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                          {initials}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 truncate">{rawName}</p>
+                          <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
+                            <Clock className="w-3 h-3" />
+                            {format(aptDate, "d MMM · HH:mm", { locale: es })}
+                          </p>
+                        </div>
+                        <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${cls}`}>
+                          {label}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* RIGHT — Explorar especialidades */}
+            <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-sm font-bold text-gray-900">Explorar especialidades</h2>
+                <button
+                  onClick={() => navigate("/especialidades")}
+                  className="flex items-center gap-0.5 text-xs text-[#5B6A57] font-medium hover:underline"
+                >
+                  Ver todas <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-2.5">
+                {(
+                  specialties ?? [
+                    { id: 1, name: "Psicología" },
+                    { id: 2, name: "Emprendimiento" },
+                    { id: 3, name: "Finanzas" },
+                    { id: 4, name: "Coaching de vida" },
+                  ]
+                )
+                  .slice(0, 4)
+                  .map((s) => (
+                    <button
+                      key={s.id}
+                      onClick={() => navigate(`/especialidades/${s.id}`)}
+                      className="flex flex-col gap-2.5 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors text-left"
+                    >
+                      <div
+                        className={`w-8 h-8 rounded-lg ${specialtyBg[s.name] ?? "bg-[#607562]"} flex items-center justify-center`}
+                      >
+                        {specialtyIcon[s.name] ?? <Compass className="w-4 h-4 text-white" />}
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-gray-900 leading-tight">{s.name}</p>
+                        {(s as any).professionalCount != null && (
+                          <p className="text-[10px] text-gray-400 mt-0.5">
+                            {(s as any).professionalCount} profesionales
+                          </p>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+              </div>
+            </div>
+          </div>
+
+          {/* CTA */}
+          <div
+            className="flex items-center justify-between gap-4 rounded-2xl p-5"
+            style={{ backgroundColor: "#f5f0eb" }}
+          >
+            <div>
+              <p className="text-sm font-bold text-gray-900">¿Listo para tu próxima sesión?</p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Encuentra el especialista ideal para ti.
+              </p>
+            </div>
+            <Button
+              onClick={() => navigate("/especialidades")}
+              className="text-white flex-shrink-0 border-0 hover:opacity-90"
+              style={{ backgroundColor: "#A7774E" }}
+            >
+              Explorar profesionales
+              <ArrowRight className="w-4 h-4 ml-1.5" />
+            </Button>
+          </div>
+
+        </div>
       </div>
+
+      {/* REVIEW MODAL */}
+      {ratingId !== null && (() => {
+        const apt = pastAppointments.find((a) => a.id === ratingId);
+        if (!apt) return null;
+        return (
+          <div
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+            onClick={() => setRatingId(null)}
+          >
+            <div
+              className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-bold text-lg text-gray-900">Calificar sesión</h3>
+                <button
+                  onClick={() => setRatingId(null)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <p className="text-sm text-gray-600 mb-4">
+                ¿Cómo fue tu sesión con{" "}
+                {(apt as any).professionalName ?? "el especialista"}?
+              </p>
+              <StarRating value={rating} onChange={setRating} />
+              <textarea
+                className="w-full mt-4 p-3 border border-gray-200 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#5B6A57]/30"
+                rows={3}
+                placeholder="Comparte tu experiencia (opcional)"
+                value={ratingComment}
+                onChange={(e) => setRatingComment(e.target.value)}
+              />
+              <Button
+                className="w-full mt-4 text-white border-0 hover:opacity-90"
+                style={{ backgroundColor: "#5B6A57" }}
+                onClick={() => handleSubmitReview(apt)}
+                disabled={reviewMutation.isPending}
+              >
+                {reviewMutation.isPending ? "Enviando..." : "Enviar reseña"}
+              </Button>
+            </div>
+          </div>
+        );
+      })()}
     </DashboardLayout>
   );
 }
