@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { ReactElement } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "../_core/hooks/useAuth";
@@ -9,15 +9,12 @@ import ChangelogModal from "./ChangelogModal";
 import ActiveSessionBanner from "./ActiveSessionBanner";
 import { APP_VERSION } from "../data/changelog";
 
-const NAV_ITEMS = [
-  { label: "Inicio",          icon: "home",     href: "/" },
-  { label: "Dashboard",       icon: "grid",     href: "/dashboard" },
-  { label: "Mis citas",       icon: "calendar", href: "/citas" },
-  { label: "Explorar",        icon: "search",   href: "/especialidades" },
-  { label: "Wallet",          icon: "wallet",   href: "/wallet" },
-  { label: "Planes",          icon: "star",     href: "/planes" },
-  { label: "Notificaciones",  icon: "bell",     href: "#notifications", badge: true },
-  { label: "Perfil",          icon: "user",     href: "/perfil" },
+const SIDEBAR_BASE_ITEMS = [
+  { label: "Inicio",    icon: "home",     href: "/" },
+  { label: "Explorar",  icon: "search",   href: "/especialidades" },
+  { label: "Mis citas", icon: "calendar", href: "/citas" },
+  { label: "Wallet",    icon: "wallet",   href: "/wallet" },
+  { label: "Perfil",    icon: "user",     href: "/perfil" },
 ];
 
 const PRO_NAV_SECTIONS = [
@@ -67,8 +64,6 @@ function Icon({ name, className = "w-4 h-4" }: { name: string; className?: strin
   );
 }
 
-type PanelTab = "notifications" | "wallet" | "profile";
-
 interface DashboardLayoutProps {
   children: React.ReactNode;
   title?: string;
@@ -81,9 +76,11 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
   const [location, navigate] = useLocation();
   const isProMode = location.startsWith("/panel-profesional");
   const isProfessional = user?.role === "professional";
-  const [panelOpen, setPanelOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<PanelTab>("notifications");
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [profileDropOpen, setProfileDropOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const notifRef = useRef<HTMLDivElement>(null);
+  const profileRef = useRef<HTMLDivElement>(null);
   const [changelogOpen, setChangelogOpen] = useState(false);
   const [hasUnseenVersion, setHasUnseenVersion] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -104,10 +101,15 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
     return () => window.removeEventListener("hashchange", handleHash);
   }, []);
 
-  const openPanel = (tab: PanelTab) => {
-    setActiveTab(tab);
-    setPanelOpen(true);
-  };
+  // Close dropdowns on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifOpen(false);
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) setProfileDropOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   // Onboarding: name collection
   const [firstName, setFirstName] = useState("");
@@ -182,13 +184,13 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
     );
   };
 
-  // Build nav items including role-specific items
-  const navItems = [...NAV_ITEMS];
-  if (user?.role === "admin") {
-    navItems.push({ label: "Admin", icon: "shield", href: "/admin" });
-  }
+  // Sidebar items — simplified vertical list
+  const sidebarItems = [...SIDEBAR_BASE_ITEMS];
   if (user?.role === "professional") {
-    navItems.push({ label: "Mi panel", icon: "shield", href: "/panel-profesional" });
+    sidebarItems.push({ label: "Mi panel", icon: "shield", href: "/panel-profesional" });
+  }
+  if (user?.role === "admin") {
+    sidebarItems.push({ label: "Admin", icon: "shield", href: "/admin" });
   }
 
   // Drawer grid sections — filtered by active mode
@@ -293,32 +295,19 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               </button>
             )}
-            <button onClick={() => openPanel("profile")} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex" }}>
+            <a href="/perfil" style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", textDecoration: "none" }}>
               {avatarUrl ? (
                 <img src={avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover border-2 border-[rgba(96,117,98,0.3)]" referrerPolicy="no-referrer" />
               ) : (
                 <UserAvatar size="sm" />
               )}
-            </button>
+            </a>
           </div>
         </div>
 
         {/* DESKTOP TOPBAR */}
         <div className="hidden md:flex items-center gap-2 px-4 h-[58px]">
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <a href="/"><img src={logo} alt="Inteira" style={{ height: "28px", width: "auto", objectFit: "contain" }} /></a>
-          </div>
-          <nav className="flex items-center">
-            {[
-              { label: "Especialidades", href: "/especialidades" },
-              { label: "Planes", href: "/planes" },
-              { label: "Profesionales", href: "/profesionales" },
-            ].map((item) => (
-              <Link key={item.label} href={item.href}>
-                <a className="px-3 h-[58px] flex items-center text-[13px] font-medium text-[#93A295] hover:text-[#3d4e3f] cursor-pointer border-b-2 border-transparent hover:border-[#607562] transition-colors whitespace-nowrap">{item.label}</a>
-              </Link>
-            ))}
-          </nav>
+          <a href="/"><img src={logo} alt="Inteira" style={{ height: "28px", width: "auto", objectFit: "contain" }} /></a>
           <div className="flex-1" />
           <div className="flex items-center gap-2">
             {/* Wallet chip — desktop */}
@@ -337,14 +326,81 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
                 {isProfessional ? "MXN" : "créditos"}
               </span>
             </a>
-            <button onClick={() => openPanel("notifications")} className="relative w-9 h-9 rounded-full flex items-center justify-center hover:bg-[#f0f4f0] transition-colors text-[#607562]">
-              <Icon name="bell" className="w-[18px] h-[18px]" />
-              {count > 0 && <span className="absolute top-0.5 right-0.5 min-w-[15px] h-[15px] bg-red-600 text-white text-[8px] font-bold rounded-full flex items-center justify-center px-0.5">{count > 9 ? "9+" : count}</span>}
-            </button>
-            <button onClick={() => openPanel("profile")} className="ml-1 relative flex-shrink-0">
-              <UserAvatar size="sm" />
-              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-green-400 border-2 border-white" />
-            </button>
+
+            {/* Notification bell + dropdown */}
+            <div className="relative" ref={notifRef}>
+              <button
+                onClick={() => { setNotifOpen((o) => !o); setProfileDropOpen(false); }}
+                className="relative w-9 h-9 rounded-full flex items-center justify-center hover:bg-[#f0f4f0] transition-colors text-[#607562]"
+              >
+                <Icon name="bell" className="w-[18px] h-[18px]" />
+                {count > 0 && <span className="absolute top-0.5 right-0.5 min-w-[15px] h-[15px] bg-red-600 text-white text-[8px] font-bold rounded-full flex items-center justify-center px-0.5">{count > 9 ? "9+" : count}</span>}
+              </button>
+              {notifOpen && (
+                <div className="absolute right-0 top-[calc(100%+8px)] w-[340px] bg-white rounded-[14px] shadow-[0_8px_32px_rgba(0,0,0,0.14)] border border-[rgba(96,117,98,0.12)] overflow-hidden z-50">
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-[rgba(96,117,98,0.08)]">
+                    <p className="text-[13px] font-semibold text-[#333]">Notificaciones</p>
+                    {count > 0 && (
+                      <button onClick={() => markAllRead.mutate()} className="text-[11px] text-[#607562] hover:underline">Marcar todas leídas</button>
+                    )}
+                  </div>
+                  <div className="max-h-[360px] overflow-y-auto" style={{ scrollbarWidth: "thin" }}>
+                    {!notifications || notifications.length === 0 ? (
+                      <div className="py-10 text-center">
+                        <Icon name="bell" className="w-8 h-8 text-[#93A295] mx-auto mb-2" />
+                        <p className="text-[12px] text-[#93A295]">Sin notificaciones</p>
+                      </div>
+                    ) : (
+                      notifications.slice(0, 10).map((n: any) => (
+                        <div
+                          key={n.id}
+                          onClick={() => { if (!n.isRead) markOneRead.mutate({ id: n.id }); if (n.link) { window.location.href = n.link; } setNotifOpen(false); }}
+                          className={`flex gap-3 px-4 py-3 border-b border-[rgba(96,117,98,0.07)] cursor-pointer transition-colors ${!n.isRead ? "bg-[#f5f8f5] hover:bg-[#eef3ee]" : "hover:bg-[#F7FAFC]"}`}
+                        >
+                          <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 text-[#607562]" style={{ background: "rgba(96,117,98,0.1)" }}>
+                            <Icon name="bell" className="w-3.5 h-3.5" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[12px] font-semibold text-[#333] leading-snug">{n.title}</p>
+                            <p className="text-[11px] text-[#666] mt-0.5 leading-snug line-clamp-2">{n.message}</p>
+                          </div>
+                          {!n.isRead && <div className="w-2 h-2 rounded-full bg-[#607562] flex-shrink-0 mt-2" />}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Avatar + profile dropdown */}
+            <div className="relative ml-1" ref={profileRef}>
+              <button
+                onClick={() => { setProfileDropOpen((o) => !o); setNotifOpen(false); }}
+                className="relative flex-shrink-0"
+              >
+                <UserAvatar size="sm" />
+                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-green-400 border-2 border-white" />
+              </button>
+              {profileDropOpen && (
+                <div className="absolute right-0 top-[calc(100%+8px)] w-[200px] bg-white rounded-[12px] shadow-[0_8px_32px_rgba(0,0,0,0.14)] border border-[rgba(96,117,98,0.12)] overflow-hidden z-50 py-1">
+                  <div className="px-4 py-2.5 border-b border-[rgba(96,117,98,0.08)]">
+                    <p className="text-[12px] font-semibold text-[#333] truncate">{user?.name ?? "Usuario"}</p>
+                    <p className="text-[10px] text-[#93A295] truncate">{user?.email}</p>
+                  </div>
+                  <Link href="/perfil">
+                    <a className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-[#f0f4f0] transition-colors cursor-pointer" onClick={() => setProfileDropOpen(false)}>
+                      <Icon name="user" className="w-4 h-4 text-[#607562]" />
+                      <span className="text-[13px] text-[#333]">Mi perfil</span>
+                    </a>
+                  </Link>
+                  <button onClick={() => { logout(); setProfileDropOpen(false); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 hover:bg-[#fff5f5] transition-colors text-left border-t border-[rgba(96,117,98,0.08)]">
+                    <Icon name="logout" className="w-4 h-4 text-red-500" />
+                    <span className="text-[13px] text-red-500">Cerrar sesión</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -374,37 +430,27 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
           )}
           <nav className="flex-1 overflow-y-auto p-2.5">
             {isProfessional && isProMode ? (
-              /* ── Sidebar profesional — grid 2 col con secciones ── */
-              <div className="flex flex-col gap-3">
+              /* ── Sidebar profesional — lista vertical con secciones ── */
+              <div className="flex flex-col gap-4">
                 {PRO_NAV_SECTIONS.map((section) => (
                   <div key={section.section}>
-                    <p className="text-[9px] font-semibold text-[#93A295] uppercase tracking-widest px-1 mb-1.5">{section.section}</p>
-                    <div className="grid grid-cols-2 gap-1.5" style={{ gridAutoRows: "minmax(68px, auto)" }}>
+                    <p className="text-[9px] font-semibold text-[#93A295] uppercase tracking-widest px-3 mb-1">{section.section}</p>
+                    <div className="flex flex-col gap-0.5">
                       {section.items.map((item) => {
                         const isActive = item.hash ? currentHash === item.hash : location === item.href;
-                        const cellClass = `flex flex-col items-start justify-end p-2.5 rounded-[9px] border min-h-[68px] transition-all cursor-pointer relative ${
-                          isActive
-                            ? "bg-[rgba(96,117,98,0.12)] border-[rgba(96,117,98,0.35)]"
-                            : "bg-[#F7FAFC] border-[rgba(96,117,98,0.15)] hover:bg-[#f0f4f0] hover:border-[rgba(96,117,98,0.3)]"
-                        }`;
                         return (
                           <a
                             key={item.label}
-                            className={cellClass}
+                            className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg transition-all cursor-pointer ${
+                              isActive ? "bg-[rgba(96,117,98,0.12)] text-[#3d4e3f]" : "text-[#607562] hover:bg-[#f0f4f0]"
+                            }`}
                             onClick={() => {
-                              if (item.hash) {
-                                window.location.hash = item.hash;
-                              } else {
-                                window.location.href = item.href;
-                              }
+                              if (item.hash) window.location.hash = item.hash;
+                              else window.location.href = item.href;
                             }}
                           >
-                            <span className={`w-[18px] h-[18px] mb-1.5 ${isActive ? "text-[#3d4e3f]" : "text-[#93A295]"}`}>
-                              {ICONS[item.icon]}
-                            </span>
-                            <span className={`text-[11px] font-medium leading-tight ${isActive ? "text-[#3d4e3f]" : "text-[#607562]"}`}>
-                              {item.label}
-                            </span>
+                            <span className="w-[16px] h-[16px] flex-shrink-0">{ICONS[item.icon]}</span>
+                            <span className="text-[13px] font-medium">{item.label}</span>
                           </a>
                         );
                       })}
@@ -413,50 +459,32 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
                 ))}
               </div>
             ) : (
-              /* ── Sidebar usuario/admin ── */
-              <div className="grid grid-cols-2 gap-1.5" style={{ gridAutoRows: "minmax(68px, auto)" }}>
-                {navItems.map((item) => {
-                  const isNotifications = item.href === "#notifications";
-                  const isActive = !isNotifications && (location === item.href || location.startsWith(item.href + "/"));
+              /* ── Sidebar usuario/admin — lista vertical simple ── */
+              <div className="flex flex-col gap-0.5">
+                {sidebarItems.map((item) => {
+                  const isActive = item.href === "/"
+                    ? location === "/"
+                    : location === item.href || location.startsWith(item.href + "/");
                   const isAdmin = item.icon === "shield" && user?.role === "admin";
-                  const cellClass = `flex flex-col items-start justify-end p-2.5 rounded-[9px] border min-h-[68px] transition-all cursor-pointer relative ${
+                  const rowClass = `flex items-center gap-2.5 px-3 py-2.5 rounded-lg transition-all cursor-pointer ${
                     isActive
-                      ? "bg-[rgba(96,117,98,0.12)] border-[rgba(96,117,98,0.35)]"
+                      ? "bg-[rgba(96,117,98,0.12)] text-[#3d4e3f]"
                       : isAdmin
-                      ? "bg-[#fff8f7] border-[rgba(180,60,60,0.2)]"
-                      : "bg-[#F7FAFC] border-[rgba(96,117,98,0.15)] hover:bg-[#f0f4f0] hover:border-[rgba(96,117,98,0.3)]"
+                      ? "text-[#B43C3C] hover:bg-[#fff8f7]"
+                      : "text-[#607562] hover:bg-[#f0f4f0]"
                   }`;
                   const inner = (
                     <>
-                      {(item as any).badge && count > 0 && (
-                        <span className="absolute top-1.5 right-1.5 min-w-[14px] h-[14px] bg-red-600 text-white text-[8px] font-bold rounded-full flex items-center justify-center px-0.5">{count > 9 ? "9+" : count}</span>
-                      )}
-                      <span className={`w-[18px] h-[18px] mb-1.5 ${isActive ? "text-[#3d4e3f]" : isAdmin ? "text-[#B43C3C]" : "text-[#93A295]"}`}>
-                        {ICONS[item.icon]}
-                      </span>
-                      <span className={`text-[11px] font-medium leading-tight ${isActive ? "text-[#3d4e3f]" : isAdmin ? "text-[#B43C3C]" : "text-[#607562]"}`}>
-                        {item.label}
-                      </span>
+                      <span className="w-[16px] h-[16px] flex-shrink-0">{ICONS[item.icon]}</span>
+                      <span className="text-[13px] font-medium">{item.label}</span>
                     </>
                   );
-                  if (isNotifications) {
-                    return (
-                      <button key="notifications" className={cellClass} onClick={() => openPanel("notifications")}>
-                        {inner}
-                      </button>
-                    );
-                  }
-                  // href="/" — native <a> so the browser navigates without wouter intercepting
                   if (item.href === "/") {
-                    return (
-                      <a key="inicio-home" href="/" className={cellClass}>
-                        {inner}
-                      </a>
-                    );
+                    return <a key="inicio" href="/" className={rowClass}>{inner}</a>;
                   }
                   return (
                     <Link key={item.href} href={item.href}>
-                      <a className={cellClass}>{inner}</a>
+                      <a className={rowClass}>{inner}</a>
                     </Link>
                   );
                 })}
@@ -630,9 +658,9 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
         </div>
       )}
 
-      {/* RIGHT PANEL */}
-      {panelOpen && (
-        <div className="fixed inset-0 z-50" onClick={() => setPanelOpen(false)}>
+      {/* RIGHT PANEL — removed in FASE 2, replaced by inline dropdowns */}
+      {false && (
+        <div className="fixed inset-0 z-50" onClick={() => {}}>
           <div className="absolute inset-0 bg-black/25" style={{ backdropFilter: "blur(2px)" }} />
           <div
             className="absolute bottom-0 left-0 right-0 h-[85vh] md:inset-auto md:top-2 md:right-2 md:bottom-2 md:w-[380px] md:h-auto bg-white flex flex-col overflow-hidden rounded-t-[20px] md:rounded-[16px]"

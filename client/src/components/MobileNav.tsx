@@ -1,7 +1,7 @@
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
-import { Home, Search, Calendar, Wallet, LayoutDashboard, User } from "lucide-react";
+import { Home, Search, Calendar, User } from "lucide-react";
 
 const leftItems = [
   { label: "Inicio", href: "/", icon: Home, authRequired: false },
@@ -15,16 +15,10 @@ const rightItems = [
 
 export default function MobileNav() {
   const [location, navigate] = useLocation();
-  const { user, isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
 
   // No mostrar el menú si no hay sesión activa
   if (loading || !isAuthenticated) return null;
-
-  // Dashboard href según el rol del usuario
-  const dashboardHref =
-    user?.role === "professional" ? "/panel-profesional" :
-    user?.role === "admin" ? "/admin" :
-    "/dashboard";
 
   const isActive = (href: string) => {
     if (href === "/") return location === "/";
@@ -65,20 +59,20 @@ export default function MobileNav() {
           );
         })}
 
-        {/* Center CTA button */}
+        {/* Center CTA button — siempre va a Explorar */}
         <div className="flex-1 flex items-center justify-center relative">
           <button
             onClick={() => {
               if (isAuthenticated) {
-                navigate(dashboardHref);
+                navigate("/especialidades");
               } else {
                 window.location.href = getLoginUrl();
               }
             }}
             className="w-14 h-14 -mt-5 rounded-full gradient-brand flex items-center justify-center shadow-lg shadow-primary/40 active:scale-95 transition-transform"
-            aria-label="Dashboard"
+            aria-label="Explorar"
           >
-            <LayoutDashboard className="w-6 h-6 text-white" strokeWidth={2} />
+            <Search className="w-6 h-6 text-white" strokeWidth={2} />
           </button>
         </div>
 
