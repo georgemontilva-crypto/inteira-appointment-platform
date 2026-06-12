@@ -9,7 +9,7 @@ const leftItems = [
 ];
 
 const rightItems = [
-  { label: "Citas", href: "/dashboard", icon: Calendar, authRequired: false },
+  { label: "Citas", href: "/citas", icon: Calendar, authRequired: false },
   { label: "Perfil", href: "/perfil", icon: User, authRequired: false },
 ];
 

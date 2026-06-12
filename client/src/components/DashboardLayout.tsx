@@ -6,6 +6,7 @@ import { trpc } from "../lib/trpc";
 import { toast } from "sonner";
 import logo from "../assets/logo.webp";
 import ChangelogModal from "./ChangelogModal";
+import ActiveSessionBanner from "./ActiveSessionBanner";
 import { APP_VERSION } from "../data/changelog";
 
 const NAV_ITEMS = [
@@ -143,9 +144,11 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
   const markAllRead = trpc.notifications.markAllRead.useMutation({ onSuccess: () => {} });
   const markOneRead = trpc.notifications.markRead.useMutation({ onSuccess: () => {} });
 
-  // Wallet (for panel tab)
+  // Wallet — always fetched to show chip in top bar
   const { data: walletData } = trpc.user.getWallet.useQuery(undefined, {
-    enabled: !!user && panelOpen && !isProMode,
+    enabled: !!user && !isProMode,
+    staleTime: 60_000,
+    refetchInterval: 60_000,
   });
 
   // Professional data (for pro mode)
@@ -154,8 +157,9 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
     staleTime: 5 * 60 * 1000,
   });
   const { data: proWalletData } = trpc.professional.getWallet.useQuery(undefined, {
-    enabled: isProfessional && isProMode,
+    enabled: isProfessional,
     staleTime: 60_000,
+    refetchInterval: 60_000,
   });
 
   const count = unreadCount?.count ?? 0;
@@ -238,6 +242,8 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
 
   return (
     <div className="flex flex-col min-h-screen bg-[#F7FAFC]">
+      {/* Active session global banner */}
+      <ActiveSessionBanner />
       {/* TOP BAR */}
       <header className="bg-white border-b border-[rgba(96,117,98,0.15)] flex-shrink-0 sticky top-0 z-30">
         {/* MOBILE TOPBAR */}
@@ -260,7 +266,19 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
           ) : (
             <a href="/"><img src={logo} alt="Inteira" style={{ height: "24px", width: "auto", objectFit: "contain" }} /></a>
           )}
-          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            {/* Wallet chip — mobile */}
+            <a
+              href="/wallet"
+              style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(96,117,98,0.1)", borderRadius: 20, padding: "3px 10px 3px 6px", textDecoration: "none", color: "#3d4e3f" }}
+            >
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" stroke="none"><circle cx="12" cy="12" r="10"/><text x="12" y="16" textAnchor="middle" fontSize="10" fontWeight="bold" fill="white">$</text></svg>
+              <span style={{ fontSize: 12, fontWeight: 600, color: "#3d4e3f", lineHeight: 1 }}>
+                {isProfessional
+                  ? `$${(parseFloat((proWalletData as any)?.wallet?.balance ?? "0") || 0).toLocaleString("es-MX")}`
+                  : (walletData?.balance ?? 0).toLocaleString("es-MX")}
+              </span>
+            </a>
             <button onClick={() => openPanel("notifications")} style={{ position: "relative", background: "none", border: "none", cursor: "pointer", color: "#607562", padding: 0, display: "flex" }}>
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
               {count > 0 && <span style={{ position: "absolute", top: -4, right: -4, width: 8, height: 8, borderRadius: "50%", background: "#ef4444" }} />}
@@ -302,16 +320,26 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
             ))}
           </nav>
           <div className="flex-1" />
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
+            {/* Wallet chip — desktop */}
+            <a
+              href="/wallet"
+              className="flex items-center gap-1.5 rounded-full hover:bg-[#eef3ee] transition-colors"
+              style={{ padding: "5px 12px 5px 8px", background: "rgba(96,117,98,0.09)", textDecoration: "none" }}
+            >
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="#607562" stroke="none"><circle cx="12" cy="12" r="10"/><text x="12" y="16.5" textAnchor="middle" fontSize="11" fontWeight="bold" fill="white">$</text></svg>
+              <span style={{ fontSize: 13, fontWeight: 600, color: "#3d4e3f", lineHeight: 1 }}>
+                {isProfessional
+                  ? `$${(parseFloat((proWalletData as any)?.wallet?.balance ?? "0") || 0).toLocaleString("es-MX")}`
+                  : (walletData?.balance ?? 0).toLocaleString("es-MX")}
+              </span>
+              <span style={{ fontSize: 10, color: "#93A295", fontWeight: 500 }}>
+                {isProfessional ? "MXN" : "créditos"}
+              </span>
+            </a>
             <button onClick={() => openPanel("notifications")} className="relative w-9 h-9 rounded-full flex items-center justify-center hover:bg-[#f0f4f0] transition-colors text-[#607562]">
               <Icon name="bell" className="w-[18px] h-[18px]" />
               {count > 0 && <span className="absolute top-0.5 right-0.5 min-w-[15px] h-[15px] bg-red-600 text-white text-[8px] font-bold rounded-full flex items-center justify-center px-0.5">{count > 9 ? "9+" : count}</span>}
-            </button>
-            <button onClick={() => openPanel("wallet")} className="relative w-9 h-9 rounded-full flex items-center justify-center hover:bg-[#f0f4f0] transition-colors text-[#607562]">
-              <Icon name="wallet" className="w-[18px] h-[18px]" />
-            </button>
-            <button onClick={() => openPanel("notifications")} className="relative w-9 h-9 rounded-full flex items-center justify-center hover:bg-[#f0f4f0] transition-colors text-[#607562]">
-              <Icon name="grid" className="w-[18px] h-[18px]" />
             </button>
             <button onClick={() => openPanel("profile")} className="ml-1 relative flex-shrink-0">
               <UserAvatar size="sm" />
