@@ -57,6 +57,7 @@ export default function ProfessionalDashboard() {
   // Which day card has the inline add-form open (0-6 = day index, null = closed)
   const [addingSlotForDay, setAddingSlotForDay] = useState<number | null>(null);
   const [inlineSlot, setInlineSlot] = useState({ startTime: "09:00", endTime: "17:00" });
+  const [applyToDays, setApplyToDays] = useState<number[]>([]);
   // Blocked-days calendar state
   const [blockedCalMonth, setBlockedCalMonth] = useState(() => {
     const d = new Date(); d.setDate(1); return d;
@@ -1025,6 +1026,24 @@ export default function ProfessionalDashboard() {
                     Toca <span className="font-medium text-foreground">+</span> en cualquier día para agregar un horario. Los pacientes solo podrán agendar en los bloques activos.
                   </p>
 
+                  {/* One-click template */}
+                  <button
+                    onClick={async () => {
+                      for (const d of [1, 2, 3, 4, 5]) {
+                        await addAvailabilityMutation.mutateAsync({
+                          dayOfWeek: d,
+                          startTime: "09:00",
+                          endTime: "17:00",
+                        });
+                      }
+                    }}
+                    disabled={addAvailabilityMutation.isPending}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl border border-primary/30 bg-primary/5 text-primary text-xs font-semibold hover:bg-primary/10 transition-colors disabled:opacity-50"
+                  >
+                    <span className="text-base leading-none">📋</span>
+                    Plantilla Lun-Vie 9:00–17:00
+                  </button>
+
                   {/* Scrollable week grid */}
                   <div className="overflow-x-auto pb-2 -mx-1 px-1">
                     <div className="flex gap-2.5" style={{ minWidth: "560px" }}>
@@ -1063,6 +1082,7 @@ export default function ProfessionalDashboard() {
                                   } else {
                                     setAddingSlotForDay(dayIdx);
                                     setInlineSlot({ startTime: "09:00", endTime: "17:00" });
+                                    setApplyToDays([dayIdx]);
                                   }
                                 }}
                                 className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors text-xs font-bold ${
@@ -1119,12 +1139,47 @@ export default function ProfessionalDashboard() {
                                       className="w-full rounded-lg border border-border p-1.5 text-xs bg-background focus:outline-none focus:ring-1 focus:ring-primary/40"
                                     />
                                   </div>
+
+                                  {/* Multi-day checkboxes */}
+                                  <div>
+                                    <p className="text-[9px] text-muted-foreground mb-1 font-medium uppercase tracking-wide">Aplicar a:</p>
+                                    <div className="flex gap-1 flex-wrap">
+                                      {[1, 2, 3, 4, 5, 6, 0].map((d) => {
+                                        const label = ["D","L","M","X","J","V","S"][d];
+                                        const checked = applyToDays.includes(d);
+                                        return (
+                                          <button
+                                            key={d}
+                                            type="button"
+                                            onClick={() =>
+                                              setApplyToDays((prev) =>
+                                                prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]
+                                              )
+                                            }
+                                            className={`w-6 h-6 rounded-full text-[10px] font-bold transition-colors ${
+                                              checked
+                                                ? "gradient-brand text-white"
+                                                : "bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary"
+                                            }`}
+                                          >
+                                            {label}
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+
                                   <button
-                                    onClick={() => {
-                                      addAvailabilityMutation.mutate(
-                                        { dayOfWeek: dayIdx, startTime: inlineSlot.startTime, endTime: inlineSlot.endTime },
-                                        { onSuccess: () => setAddingSlotForDay(null) }
-                                      );
+                                    onClick={async () => {
+                                      const days = applyToDays.length > 0 ? applyToDays : [dayIdx];
+                                      for (const d of days) {
+                                        await addAvailabilityMutation.mutateAsync({
+                                          dayOfWeek: d,
+                                          startTime: inlineSlot.startTime,
+                                          endTime: inlineSlot.endTime,
+                                        });
+                                      }
+                                      setAddingSlotForDay(null);
                                     }}
                                     disabled={addAvailabilityMutation.isPending}
                                     className="w-full py-1.5 rounded-lg text-[11px] font-semibold text-white gradient-brand disabled:opacity-50 transition-opacity"
