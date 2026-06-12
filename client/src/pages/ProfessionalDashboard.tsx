@@ -638,117 +638,104 @@ export default function ProfessionalDashboard() {
 
         {/* Tab: Resumen */}
         {activeTab === "resumen" && (
-          <div className="space-y-6">
-            {/* Próximas citas — carrusel */}
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>Próximas citas</h2>
-                {upcomingAppointments.length > 0 && (
-                  <div className="flex items-center gap-1">
-                    <button onClick={() => scrollCarousel("left")} className="w-7 h-7 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors">
-                      <ChevronLeft className="w-4 h-4" />
-                    </button>
-                    <button onClick={() => scrollCarousel("right")} className="w-7 h-7 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors">
-                      <ChevronRight className="w-4 h-4" />
+          <div className="space-y-5">
+            {/* Próxima sesión — card única */}
+            {upcomingAppointments.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-primary/30 bg-primary/5 p-6 text-center space-y-3">
+                <Calendar className="w-10 h-10 text-primary/40 mx-auto" />
+                <p className="font-medium text-foreground">¡Comparte tu perfil y consigue más pacientes!</p>
+                <p className="text-sm text-muted-foreground">Aún no tienes citas próximas.</p>
+                <button
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors"
+                  onClick={() => {
+                    const url = `${window.location.origin}/profesional/${profile.id}`;
+                    navigator.clipboard.writeText(url).then(() => toast.success("Enlace copiado al portapapeles"));
+                  }}
+                >
+                  Copiar enlace de perfil
+                </button>
+              </div>
+            ) : (() => {
+              const next = upcomingAppointments[0];
+              return (
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className="text-base font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>Próxima sesión</h2>
+                    <button
+                      onClick={() => { setActiveTab("agenda"); window.location.hash = "agenda"; }}
+                      className="text-xs text-primary font-medium hover:underline"
+                    >
+                      Ver agenda →
                     </button>
                   </div>
-                )}
-              </div>
-              {upcomingAppointments.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-primary/30 bg-primary/5 p-6 text-center space-y-3">
-                  <Calendar className="w-10 h-10 text-primary/40 mx-auto" />
-                  <p className="font-medium text-foreground">¡Comparte tu perfil y consigue más pacientes!</p>
-                  <p className="text-sm text-muted-foreground">Aún no tienes citas próximas. Comparte tu enlace de perfil para que los pacientes puedan agendarte.</p>
-                  <button
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors"
-                    onClick={() => {
-                      const url = `${window.location.origin}/profesional/${profile.id}`;
-                      navigator.clipboard.writeText(url).then(() => toast.success("Enlace copiado al portapapeles"));
-                    }}
-                  >
-                    Copiar enlace de perfil
-                  </button>
-                </div>
-              ) : (
-                <div ref={carouselRef} className="flex gap-3 overflow-x-auto scroll-smooth pb-1" style={{ scrollbarWidth: "none" }}>
-                  {upcomingAppointments.map((apt) => (
-                    <div key={apt.id} className="flex-shrink-0 rounded-xl border border-border bg-card hover:shadow-md transition-shadow" style={cardMinWidth}>
-                      <div className="p-4">
-                        <div className="flex items-center gap-2">
-                          {(apt as any).userProfileImage ? (
-                            <img src={(apt as any).userProfileImage} alt={(apt as any).userName ?? ""} className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
-                          ) : (
-                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm flex-shrink-0">
-                              {(apt as any).userName?.charAt(0)?.toUpperCase() ?? "U"}
-                            </div>
-                          )}
-                          <p className="font-semibold text-sm truncate flex-1">{(apt as any).userName ?? `Usuario #${apt.userId}`}</p>
-                          <span className={`text-[10px] font-medium rounded-full px-2 py-0.5 flex-shrink-0 whitespace-nowrap ${
-                            apt.status === "in_progress"
-                              ? "bg-green-100 text-green-700"
-                              : "text-primary bg-primary/10"
-                          }`}>
-                            {apt.status === "in_progress" ? "En curso" : canJoin(apt) ? "¡Ahora!" : `En ${joinCountdown(apt)}`}
+                  <div className="bg-white rounded-2xl border border-[rgba(96,117,98,0.12)] p-4">
+                    <div className="flex items-center gap-3 mb-3">
+                      {(next as any).userProfileImage ? (
+                        <img src={(next as any).userProfileImage} alt="" className="w-12 h-12 rounded-xl object-cover flex-shrink-0" />
+                      ) : (
+                        <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold text-lg flex-shrink-0">
+                          {(next as any).userName?.charAt(0)?.toUpperCase() ?? "U"}
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold truncate">{(next as any).userName ?? `Usuario #${next.userId}`}</p>
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                          <span className="flex items-center gap-1 text-sm text-primary font-semibold">
+                            <Calendar className="w-3.5 h-3.5" />
+                            {format(parseLocalDate(next.appointmentDate), "d MMM", { locale: es })}
+                          </span>
+                          <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                            <Clock className="w-3.5 h-3.5" />
+                            {format(parseLocalDate(next.appointmentDate), "HH:mm", { locale: es })} · {next.durationMinutes}m
                           </span>
                         </div>
-                        <div className="flex items-center gap-1.5 mt-1.5 ml-10">
-                          <Clock className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-                          <span className="text-xs text-muted-foreground truncate">{format(parseLocalDate(apt.appointmentDate), "d MMM · HH:mm", { locale: es })}</span>
-                          <span className="text-xs text-muted-foreground flex-shrink-0">· {apt.durationMinutes}m</span>
-                        </div>
                       </div>
+                      <span className={`text-[10px] font-semibold rounded-full px-2.5 py-1 flex-shrink-0 ${
+                        next.status === "in_progress" ? "bg-green-100 text-green-700" : canJoin(next) ? "bg-green-100 text-green-700" : "bg-primary/10 text-primary"
+                      }`}>
+                        {next.status === "in_progress" ? "En curso" : canJoin(next) ? "¡Ahora!" : `En ${joinCountdown(next)}`}
+                      </span>
                     </div>
-                  ))}
+                    {(next as any).videoCallLink && (
+                      <Button
+                        size="sm"
+                        className="w-full gradient-brand text-white border-0 h-10 text-sm font-semibold"
+                        disabled={!canJoin(next)}
+                        onClick={() => canJoin(next) && setActiveCall({
+                          url: (next as any).videoCallLink,
+                          appointmentId: next.id,
+                          professionalName: (next as any).userName ?? `Usuario #${next.userId}`,
+                          startTime: parseLocalDate(next.appointmentDate),
+                          endTime: new Date(parseLocalDate(next.appointmentDate).getTime() + (next.durationMinutes ?? 55) * 60 * 1000),
+                        })}
+                      >
+                        <Video className="w-4 h-4 mr-2" />
+                        {canJoin(next) ? "Iniciar sesión" : `Disponible en ${joinCountdown(next)}`}
+                      </Button>
+                    )}
+                  </div>
                 </div>
-              )}
-            </div>
+              );
+            })()}
 
-            {/* Últimas 3 reseñas */}
-            {myReviews && myReviews.length > 0 && (
-              <div>
-                <h3 className="text-base font-bold mb-3" style={{ fontFamily: "Poppins, sans-serif" }}>Últimas reseñas</h3>
-                <div className="space-y-2">
-                  {myReviews.slice(0, 3).map((review) => (
-                    <div key={review.id} className="bg-white rounded-xl border border-[rgba(96,117,98,0.12)] p-3 flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-full bg-[#eef2ee] flex items-center justify-center text-xs font-semibold text-primary flex-shrink-0 overflow-hidden">
-                        {(review as any).userImage
-                          ? <img src={(review as any).userImage} className="w-full h-full object-cover" />
-                          : ((review as any).userName?.[0] ?? "U").toUpperCase()}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="text-xs font-semibold truncate">{(review as any).userName ?? "Usuario"}</p>
-                          <span className="text-amber-400 text-xs flex-shrink-0">{"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}</span>
-                        </div>
-                        {review.comment && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{review.comment}</p>}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Acceso rápido */}
-            <div>
-              <h3 className="text-base font-bold mb-3" style={{ fontFamily: "Poppins, sans-serif" }}>Acceso rápido</h3>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  onClick={() => { setActiveTab("disponibilidad"); window.location.hash = "disponibilidad"; }}
-                  className="flex flex-col items-start gap-2 p-4 bg-white rounded-2xl border border-[rgba(96,117,98,0.12)] hover:bg-[#f0f4f0] transition-colors text-left"
-                >
-                  <Clock className="w-5 h-5 text-primary" />
-                  <span className="text-sm font-semibold text-foreground">Configurar disponibilidad</span>
-                  <span className="text-xs text-muted-foreground">Gestiona tus horarios</span>
-                </button>
-                <button
-                  onClick={() => { setActiveTab("ganancias"); window.location.hash = "ganancias"; }}
-                  className="flex flex-col items-start gap-2 p-4 bg-white rounded-2xl border border-[rgba(96,117,98,0.12)] hover:bg-[#f0f4f0] transition-colors text-left"
-                >
-                  <DollarSign className="w-5 h-5 text-emerald-600" />
-                  <span className="text-sm font-semibold text-foreground">Ver ganancias</span>
-                  <span className="text-xs text-muted-foreground">Balance y retiros</span>
-                </button>
-              </div>
+            {/* 2 accesos rápidos */}
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => { setActiveTab("disponibilidad"); window.location.hash = "disponibilidad"; }}
+                className="flex flex-col items-start gap-2 p-4 bg-white rounded-2xl border border-[rgba(96,117,98,0.12)] hover:bg-[#f0f4f0] transition-colors text-left"
+              >
+                <Clock className="w-5 h-5 text-primary" />
+                <span className="text-sm font-semibold text-foreground">Configurar disponibilidad</span>
+                <span className="text-xs text-muted-foreground">Gestiona tus horarios</span>
+              </button>
+              <button
+                onClick={() => { setActiveTab("ganancias"); window.location.hash = "ganancias"; }}
+                className="flex flex-col items-start gap-2 p-4 bg-white rounded-2xl border border-[rgba(96,117,98,0.12)] hover:bg-[#f0f4f0] transition-colors text-left"
+              >
+                <DollarSign className="w-5 h-5 text-emerald-600" />
+                <span className="text-sm font-semibold text-foreground">Ver ganancias</span>
+                <span className="text-xs text-muted-foreground">Balance y retiros</span>
+              </button>
             </div>
           </div>
         )}
