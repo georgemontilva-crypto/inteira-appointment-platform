@@ -1,19 +1,51 @@
 import { useState, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { PRICING } from "@/lib/pricing";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Link, useRoute } from "wouter";
-import { Star, Clock, Award, Calendar, Search, SlidersHorizontal, X } from "lucide-react";
+import { Star, Award, Calendar, Search, SlidersHorizontal, X } from "lucide-react";
 import DashboardLayout from "../components/DashboardLayout";
 
 type SortOption = "rating" | "experience" | "price_asc" | "price_desc";
 
+const AVATAR_COLORS = [
+  "bg-purple-100 text-purple-700",
+  "bg-blue-100 text-blue-700",
+  "bg-emerald-100 text-emerald-700",
+  "bg-amber-100 text-amber-700",
+  "bg-rose-100 text-rose-700",
+  "bg-indigo-100 text-indigo-700",
+  "bg-teal-100 text-teal-700",
+];
+
+function getAvatarColor(id: number): string {
+  return AVATAR_COLORS[id % AVATAR_COLORS.length];
+}
+
+function getInitials(name: string): string {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0].toUpperCase())
+    .join("");
+}
+
+const _now = new Date(0);
+const STATIC_SPECIALTIES = [
+  { id: 1, name: "Psicología",      description: "Bienestar mental y emocional con psicólogos certificados.", imageUrl: null, icon: null, color: null, isActive: true, createdAt: _now, updatedAt: _now },
+  { id: 2, name: "Emprendimiento",  description: "Asesoría para emprendedores y startups en crecimiento.",    imageUrl: null, icon: null, color: null, isActive: true, createdAt: _now, updatedAt: _now },
+  { id: 3, name: "Finanzas",        description: "Consultoría financiera personal y empresarial.",             imageUrl: null, icon: null, color: null, isActive: true, createdAt: _now, updatedAt: _now },
+  { id: 4, name: "Idiomas",         description: "Clases con profesores nativos y certificados.",              imageUrl: null, icon: null, color: null, isActive: true, createdAt: _now, updatedAt: _now },
+  { id: 5, name: "Imagen Personal", description: "Consultoría de imagen, estilo y presencia personal.",        imageUrl: null, icon: null, color: null, isActive: true, createdAt: _now, updatedAt: _now },
+  { id: 6, name: "Legal",           description: "Asesoría legal en diversas áreas del derecho.",              imageUrl: null, icon: null, color: null, isActive: true, createdAt: _now, updatedAt: _now },
+  { id: 7, name: "Vocación",        description: "Orientación vocacional y desarrollo profesional.",           imageUrl: null, icon: null, color: null, isActive: true, createdAt: _now, updatedAt: _now },
+];
+
 export default function ProfessionalsList() {
   const [, params] = useRoute("/especialidades/:id");
   const specialtyId = parseInt(params?.id ?? "0");
+  const { isAuthenticated } = useAuth();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [onlyAvailable, setOnlyAvailable] = useState(false);
@@ -25,18 +57,6 @@ export default function ProfessionalsList() {
     { enabled: specialtyId > 0 }
   );
 
-  // Static specialties — shown instantly without waiting for DB
-  const _now = new Date(0);
-  const STATIC_SPECIALTIES = [
-    { id: 1, name: "Psicología", description: "Bienestar mental y emocional con psicólogos certificados.", imageUrl: null, icon: null, color: null, isActive: true, createdAt: _now, updatedAt: _now },
-    { id: 2, name: "Emprendimiento", description: "Asesoría para emprendedores y startups en crecimiento.", imageUrl: null, icon: null, color: null, isActive: true, createdAt: _now, updatedAt: _now },
-    { id: 3, name: "Finanzas", description: "Consultoría financiera personal y empresarial.", imageUrl: null, icon: null, color: null, isActive: true, createdAt: _now, updatedAt: _now },
-    { id: 4, name: "Idiomas", description: "Clases con profesores nativos y certificados.", imageUrl: null, icon: null, color: null, isActive: true, createdAt: _now, updatedAt: _now },
-    { id: 5, name: "Imagen Personal", description: "Consultoría de imagen, estilo y presencia personal.", imageUrl: null, icon: null, color: null, isActive: true, createdAt: _now, updatedAt: _now },
-    { id: 6, name: "Legal", description: "Asesoría legal en diversas áreas del derecho.", imageUrl: null, icon: null, color: null, isActive: true, createdAt: _now, updatedAt: _now },
-    { id: 7, name: "Vocación", description: "Orientación vocacional y desarrollo profesional.", imageUrl: null, icon: null, color: null, isActive: true, createdAt: _now, updatedAt: _now },
-  ];
-
   const { data: specialties } = trpc.specialty.getAll.useQuery(undefined, {
     initialData: STATIC_SPECIALTIES,
     staleTime: 5 * 60 * 1000,
@@ -45,32 +65,23 @@ export default function ProfessionalsList() {
 
   const filtered = useMemo(() => {
     let list = professionals ?? [];
-
-    // Text search
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       list = list.filter(
         (p) =>
           p.bio?.toLowerCase().includes(q) ||
-          (p as typeof p & { professionalName?: string | null }).professionalName?.toLowerCase().includes(q) ||
+          (p as any).professionalName?.toLowerCase().includes(q) ||
           String(p.id).includes(q)
       );
     }
-
-    // Availability filter
-    if (onlyAvailable) {
-      list = list.filter((p) => p.isAvailable);
-    }
-
-    // Sort
+    if (onlyAvailable) list = list.filter((p) => p.isAvailable);
     list = [...list].sort((a, b) => {
-      if (sortBy === "rating") return (Number(b.averageRating) || 5) - (Number(a.averageRating) || 5);
+      if (sortBy === "rating")     return (Number(b.averageRating) || 5) - (Number(a.averageRating) || 5);
       if (sortBy === "experience") return (b.yearsOfExperience ?? 0) - (a.yearsOfExperience ?? 0);
-      if (sortBy === "price_asc") return (Number(a.hourlyRate) || 0) - (Number(b.hourlyRate) || 0);
+      if (sortBy === "price_asc")  return (Number(a.hourlyRate) || 0) - (Number(b.hourlyRate) || 0);
       if (sortBy === "price_desc") return (Number(b.hourlyRate) || 0) - (Number(a.hourlyRate) || 0);
       return 0;
     });
-
     return list;
   }, [professionals, searchQuery, onlyAvailable, sortBy]);
 
@@ -78,73 +89,77 @@ export default function ProfessionalsList() {
 
   return (
     <DashboardLayout>
-      <div className="container py-8">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
+      <div className="bg-white min-h-full p-4 md:p-6 space-y-5">
+        {/* Header */}
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900" style={{ fontFamily: "Poppins, sans-serif" }}>
             {specialty?.name ?? "Especialidad"}
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {filtered.length} de {professionals?.length ?? 0} profesionales
+          <p className="text-sm text-gray-500 mt-1">
+            {filtered.length}{" "}
+            {filtered.length === 1 ? "profesional" : "profesionales"}
+            {professionals && professionals.length !== filtered.length
+              ? ` de ${professionals.length}`
+              : ""}
           </p>
         </div>
-        {/* Search & Filter bar */}
-        <div className="mb-6 space-y-3">
+
+        {/* Barra búsqueda + filtros en misma fila */}
+        <div className="space-y-3">
           <div className="flex gap-2">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por nombre, especialidad o descripción..."
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              <input
+                type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 h-11 border-border focus:border-primary"
+                placeholder="Buscar profesional..."
+                className="w-full pl-10 pr-9 h-10 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:border-[#5B6A57] focus:ring-1 focus:ring-[#5B6A57]/20 transition-all"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >
                   <X className="w-4 h-4" />
                 </button>
               )}
             </div>
-            <Button
-              variant="outline"
-              className={`h-11 px-4 border-border gap-2 ${hasActiveFilters ? "border-primary text-primary bg-primary/5" : ""}`}
+            <button
               onClick={() => setShowFilters(!showFilters)}
+              className={`flex items-center gap-1.5 px-3 h-10 rounded-xl border text-sm font-medium transition-all flex-shrink-0 ${
+                hasActiveFilters
+                  ? "border-[#5B6A57] text-[#5B6A57] bg-[#5B6A57]/5"
+                  : "border-gray-200 text-gray-600 hover:border-gray-300"
+              }`}
             >
               <SlidersHorizontal className="w-4 h-4" />
               <span className="hidden sm:inline">Filtros</span>
-              {hasActiveFilters && (
-                <span className="w-2 h-2 rounded-full bg-primary" />
-              )}
-            </Button>
+              {hasActiveFilters && <span className="w-1.5 h-1.5 rounded-full bg-[#5B6A57]" />}
+            </button>
           </div>
 
-          {/* Expanded filters */}
           {showFilters && (
-            <div className="bg-muted/40 border border-border rounded-xl p-4 space-y-4">
-              <div className="flex flex-wrap gap-3 items-center">
-                {/* Availability toggle */}
+            <div className="bg-gray-50 border border-gray-100 rounded-xl p-4 space-y-3">
+              <div className="flex flex-wrap gap-2 items-center">
                 <button
                   onClick={() => setOnlyAvailable(!onlyAvailable)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium border transition-all ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
                     onlyAvailable
-                      ? "bg-emerald-100 border-emerald-300 text-emerald-700"
-                      : "border-border bg-background hover:border-primary/40 text-foreground"
+                      ? "bg-emerald-50 border-emerald-300 text-emerald-700"
+                      : "border-gray-300 text-gray-600 hover:border-gray-400"
                   }`}
                 >
-                  <span className={`w-2 h-2 rounded-full ${onlyAvailable ? "bg-emerald-500" : "bg-muted-foreground"}`} />
+                  <span className={`w-1.5 h-1.5 rounded-full ${onlyAvailable ? "bg-emerald-500" : "bg-gray-400"}`} />
                   Solo disponibles
                 </button>
-
-                {/* Sort options */}
-                <div className="flex items-center gap-2 ml-auto">
-                  <span className="text-xs text-muted-foreground font-medium">Ordenar por:</span>
+                <div className="flex flex-wrap items-center gap-2 ml-auto">
+                  <span className="text-xs text-gray-400">Ordenar:</span>
                   {(
                     [
-                      { value: "rating", label: "Mejor calificación" },
-                      { value: "experience", label: "Más experiencia" },
-                      { value: "price_asc", label: "Menor precio" },
+                      { value: "rating",     label: "Calificación" },
+                      { value: "experience", label: "Experiencia" },
+                      { value: "price_asc",  label: "Menor precio" },
                       { value: "price_desc", label: "Mayor precio" },
                     ] as { value: SortOption; label: string }[]
                   ).map((opt) => (
@@ -153,8 +168,8 @@ export default function ProfessionalsList() {
                       onClick={() => setSortBy(opt.value)}
                       className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
                         sortBy === opt.value
-                          ? "gradient-brand text-white border-transparent"
-                          : "border-border bg-background hover:border-primary/40"
+                          ? "bg-[#5B6A57] text-white border-[#5B6A57]"
+                          : "border-gray-300 text-gray-600 hover:border-[#5B6A57]"
                       }`}
                     >
                       {opt.label}
@@ -162,11 +177,10 @@ export default function ProfessionalsList() {
                   ))}
                 </div>
               </div>
-
               {hasActiveFilters && (
                 <button
                   onClick={() => { setOnlyAvailable(false); setSortBy("rating"); }}
-                  className="text-xs text-muted-foreground hover:text-foreground underline"
+                  className="text-xs text-gray-400 hover:text-gray-600 underline"
                 >
                   Limpiar filtros
                 </button>
@@ -175,118 +189,142 @@ export default function ProfessionalsList() {
           )}
         </div>
 
-        {/* Results */}
+        {/* Resultados */}
         {isLoading ? (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {[1, 2, 3].map((i) => (
-              <Card key={i} className="animate-pulse border-border">
-                <CardContent className="p-6 h-48" />
-              </Card>
+              <div key={i} className="animate-pulse bg-gray-50 rounded-2xl border border-gray-100 h-52" />
             ))}
           </div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-20">
-            <Search className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold mb-2">
+            <Search className="w-12 h-12 text-gray-200 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-1">
               {searchQuery || hasActiveFilters ? "Sin resultados" : "No hay profesionales disponibles"}
             </h3>
-            <p className="text-muted-foreground">
+            <p className="text-sm text-gray-500">
               {searchQuery || hasActiveFilters
                 ? "Intenta con otros términos o ajusta los filtros."
                 : "Pronto agregaremos más especialistas en esta área."}
             </p>
             {(searchQuery || hasActiveFilters) && (
-              <Button
-                variant="outline"
-                className="mt-4 border-primary/30 text-primary"
+              <button
+                className="mt-4 text-sm text-[#5B6A57] border border-[#5B6A57]/30 px-4 py-2 rounded-xl hover:bg-[#5B6A57]/5 transition-colors"
                 onClick={() => { setSearchQuery(""); setOnlyAvailable(false); setSortBy("rating"); }}
               >
                 Limpiar búsqueda
-              </Button>
+              </button>
             )}
           </div>
         ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filtered.map((pro) => (
-              <Card key={pro.id} className="group border-border hover:border-primary/30 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-                <CardContent className="p-6">
-                  {/* Avatar & Name */}
-                  <div className="flex items-start gap-4 mb-4">
-                    <div className="w-16 h-16 rounded-2xl overflow-hidden flex-shrink-0">
-                      {((pro as any).profilePhoto || (pro as any).userProfileImage) ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {filtered.map((pro) => {
+              const proName = (pro as any).professionalName ?? `Especialista #${pro.id}`;
+              const photo = (pro as any).profilePhoto ?? (pro as any).userProfileImage;
+              const rating = Number(pro.averageRating) || 0;
+              const hasReviews = (pro.totalReviews ?? 0) > 0;
+              const avatarColor = getAvatarColor(pro.id);
+
+              return (
+                <div
+                  key={pro.id}
+                  className="bg-white border border-gray-200 rounded-2xl p-4 hover:border-[#5B6A57] transition-all"
+                >
+                  {/* Fila superior: avatar + datos + badge */}
+                  <div className="flex items-start gap-3 mb-3">
+                    <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 ring-2 ring-gray-100">
+                      {photo ? (
                         <img
-                          src={(pro as any).profilePhoto ?? (pro as any).userProfileImage}
-                          alt={(pro as any).professionalName ?? "Especialista"}
+                          src={photo}
+                          alt={proName}
                           className="w-full h-full object-cover"
-                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                         />
                       ) : (
-                        <div className="w-full h-full gradient-brand flex items-center justify-center text-white text-2xl font-bold">
-                          {((pro as any).professionalName ?? pro.bio ?? "P").charAt(0).toUpperCase()}
+                        <div className={`w-full h-full flex items-center justify-center text-sm font-bold ${avatarColor}`}>
+                          {getInitials(proName)}
                         </div>
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-base mb-1 truncate">
-                        {(pro as typeof pro & { professionalName?: string | null }).professionalName ?? `Especialista #${pro.id}`}
-                      </h3>
-                      <div className="flex items-center gap-1">
-                        {(pro.totalReviews ?? 0) > 0 ? (
+                      <p className="font-semibold text-sm text-gray-900 truncate">{proName}</p>
+                      <p className="text-xs text-gray-500 truncate">{specialty?.name ?? ""}</p>
+                      <div className="flex items-center gap-0.5 mt-1">
+                        {hasReviews ? (
                           <>
-                            {[1,2,3,4,5].map((s) => (
-                              <Star key={s} className="w-3.5 h-3.5" style={s <= Math.round(Number(pro.averageRating)) ? { color: '#f59e0b', fill: '#f59e0b' } : { color: 'rgba(0,0,0,0.15)' }} />
+                            {[1, 2, 3, 4, 5].map((s) => (
+                              <Star
+                                key={s}
+                                className="w-3 h-3"
+                                style={
+                                  s <= Math.round(rating)
+                                    ? { color: "#f59e0b", fill: "#f59e0b" }
+                                    : { color: "rgba(0,0,0,0.12)" }
+                                }
+                              />
                             ))}
-                            <span className="text-sm font-medium ml-0.5">{Number(pro.averageRating).toFixed(1)}</span>
-                            <span className="text-xs text-muted-foreground">({pro.totalReviews} reseñas)</span>
+                            <span className="text-xs font-medium text-gray-700 ml-1">{rating.toFixed(1)}</span>
+                            <span className="text-xs text-gray-400 ml-0.5">({pro.totalReviews})</span>
                           </>
                         ) : (
-                          <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">Nuevo</span>
+                          <span className="text-xs text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full">Nuevo</span>
                         )}
                       </div>
                     </div>
-                    <Badge className={`border-0 text-xs flex-shrink-0 ${pro.isAvailable ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-600"}`}>
+                    <span
+                      className={`text-[10px] font-semibold px-2 py-1 rounded-full flex-shrink-0 ${
+                        pro.isAvailable
+                          ? "bg-emerald-50 text-emerald-700"
+                          : "bg-gray-100 text-gray-500"
+                      }`}
+                    >
                       {pro.isAvailable ? "Disponible" : "No disponible"}
-                    </Badge>
+                    </span>
                   </div>
 
                   {/* Bio */}
                   {pro.bio && (
-                    <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
+                    <p className="text-xs text-gray-500 line-clamp-2 mb-3 leading-relaxed">
                       {pro.bio}
                     </p>
                   )}
 
-                  {/* Details */}
-                  <div className="space-y-2 mb-4">
-                    {pro.yearsOfExperience && (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Award className="w-4 h-4 text-primary" />
-                        <span>{pro.yearsOfExperience} años de experiencia</span>
-                      </div>
-                    )}
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Clock className="w-4 h-4 text-primary" />
-                      <span>${PRICING.SESSION_BASIC_MXN} MXN / sesión</span>
-                    </div>
+                  {/* Detalles */}
+                  <div className="flex items-center gap-4 text-xs text-gray-500 mb-3">
+                    {pro.yearsOfExperience ? (
+                      <span className="flex items-center gap-1">
+                        <Award className="w-3.5 h-3.5 text-[#5B6A57]" />
+                        {pro.yearsOfExperience} años exp.
+                      </span>
+                    ) : null}
+                    <span className="flex items-center gap-1">
+                      <span className="text-[#5B6A57] font-medium">$</span>
+                      desde ${PRICING.SESSION_BASIC_MXN} MXN
+                    </span>
                   </div>
 
-                  {/* Actions */}
+                  {/* Acciones */}
                   <div className="flex gap-2">
                     <Link href={`/profesional/${pro.id}`} className="flex-1">
-                      <Button variant="outline" size="sm" className="w-full border-primary/30 text-primary hover:bg-primary/5">
+                      <button className="w-full h-9 rounded-xl border border-[#5B6A57]/40 text-[#5B6A57] text-sm font-medium hover:bg-[#5B6A57]/5 transition-colors">
                         Ver perfil
-                      </Button>
+                      </button>
                     </Link>
-                    <Link href={`/agendar/${pro.id}`} className="flex-1">
-                      <Button size="sm" className="w-full gradient-brand text-white border-0">
-                        <Calendar className="w-4 h-4 mr-1" />
-                        Agendar
-                      </Button>
-                    </Link>
+                    <button
+                      className="flex-1 h-9 rounded-xl bg-[#5B6A57] text-white text-sm font-medium hover:bg-[#4a5846] transition-colors flex items-center justify-center gap-1.5"
+                      onClick={() => {
+                        window.location.href = isAuthenticated
+                          ? `/agendar/${pro.id}`
+                          : `/login?returnTo=${encodeURIComponent(`/agendar/${pro.id}`)}`;
+                      }}
+                    >
+                      <Calendar className="w-3.5 h-3.5" />
+                      Agendar
+                    </button>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
