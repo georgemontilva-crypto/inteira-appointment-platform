@@ -2,6 +2,7 @@ import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import DashboardLayout from "../components/DashboardLayout";
 import { useState, useMemo } from "react";
+import { motion } from "framer-motion";
 import {
   Brain, Apple, Leaf, Heart, Users, Compass, Stethoscope,
   Scale, TrendingUp, DollarSign, Mic2, Sparkles, Sun, GraduationCap,
@@ -21,34 +22,14 @@ import type React from "react";
 type CategoryKey = "salud_mental" | "salud_fisica" | "negocios" | "educacion" | "legal" | "creatividad" | "otros";
 
 const CATEGORIES: { key: CategoryKey; label: string; Icon: React.ElementType }[] = [
-  { key: "salud_mental",  label: "Salud Mental y Bienestar",  Icon: Brain },
-  { key: "salud_fisica",  label: "Salud Física",              Icon: HeartPulse },
-  { key: "negocios",      label: "Negocios y Finanzas",       Icon: TrendingUp },
-  { key: "educacion",     label: "Educación e Idiomas",       Icon: GraduationCap },
-  { key: "legal",         label: "Legal y Profesional",       Icon: Scale },
-  { key: "creatividad",   label: "Creatividad y Estilo",      Icon: Palette },
-  { key: "otros",         label: "Otros",                     Icon: Sparkles },
+  { key: "salud_mental",  label: "Salud Mental",    Icon: Brain },
+  { key: "salud_fisica",  label: "Salud Física",    Icon: HeartPulse },
+  { key: "negocios",      label: "Negocios",        Icon: TrendingUp },
+  { key: "educacion",     label: "Educación",       Icon: GraduationCap },
+  { key: "legal",         label: "Legal",           Icon: Scale },
+  { key: "creatividad",   label: "Creatividad",     Icon: Palette },
+  { key: "otros",         label: "Otros",           Icon: Sparkles },
 ];
-
-const CATEGORY_COLORS: Record<CategoryKey, { bg: string; icon: string }> = {
-  salud_mental: { bg: "bg-purple-50",  icon: "text-purple-600" },
-  salud_fisica: { bg: "bg-rose-50",    icon: "text-rose-500" },
-  negocios:     { bg: "bg-blue-50",    icon: "text-blue-600" },
-  educacion:    { bg: "bg-amber-50",   icon: "text-amber-600" },
-  legal:        { bg: "bg-indigo-50",  icon: "text-indigo-600" },
-  creatividad:  { bg: "bg-pink-50",    icon: "text-pink-600" },
-  otros:        { bg: "bg-gray-50",    icon: "text-gray-500" },
-};
-
-const CATEGORY_LABELS: Record<CategoryKey, string> = {
-  salud_mental: "SALUD MENTAL",
-  salud_fisica: "SALUD FÍSICA",
-  negocios:     "NEGOCIOS",
-  educacion:    "EDUCACIÓN",
-  legal:        "LEGAL",
-  creatividad:  "CREATIVIDAD",
-  otros:        "OTROS",
-};
 
 const ICON_COMPONENTS: Record<string, React.ElementType> = {
   Brain, BrainCircuit, HeartPulse, Heart, HeartHandshake, HeartCrack,
@@ -64,27 +45,27 @@ const ICON_COMPONENTS: Record<string, React.ElementType> = {
 };
 
 const NAME_ICON_COMPONENTS: Record<string, React.ElementType> = {
-  "Psicología":             Brain,
-  "Salud mental":           Brain,
-  "Legal":                  Scale,
-  "Emprendimiento":         TrendingUp,
-  "Negocios":               Briefcase,
-  "Finanzas":               DollarSign,
-  "Idiomas":                Mic2,
-  "Idiomas y cultura":      Globe,
-  "Imagen Personal":        Sparkles,
-  "Vocación":               Compass,
-  "Orientación vocacional": GraduationCap,
-  "Coaching de vida":       Sun,
+  "Psicología":               Brain,
+  "Salud mental":             Brain,
+  "Legal":                    Scale,
+  "Emprendimiento":           TrendingUp,
+  "Negocios":                 Briefcase,
+  "Finanzas":                 DollarSign,
+  "Idiomas":                  Mic2,
+  "Idiomas y cultura":        Globe,
+  "Imagen Personal":          Sparkles,
+  "Vocación":                 Compass,
+  "Orientación vocacional":   GraduationCap,
+  "Coaching de vida":         Sun,
   "Mindfulness y meditación": Leaf,
-  "Nutrición":              Apple,
-  "Terapia de pareja":      HeartHandshake,
-  "Familia":                Heart,
-  "Trabajo social":         HandHeart,
-  "Recursos Humanos":       Users,
-  "Desarrollo personal":    Smile,
-  "Educación":              BookOpen,
-  "Bienestar":              Activity,
+  "Nutrición":                Apple,
+  "Terapia de pareja":        HeartHandshake,
+  "Familia":                  Heart,
+  "Trabajo social":           HandHeart,
+  "Recursos Humanos":         Users,
+  "Desarrollo personal":      Smile,
+  "Educación":                BookOpen,
+  "Bienestar":                Activity,
 };
 
 function resolveIconComponent(iconKey: string | null | undefined, name: string): React.ElementType {
@@ -146,6 +127,16 @@ const STATIC_SPECIALTIES = [
   { id: 7, name: "Vocación",        description: "Orientación vocacional y desarrollo profesional.",           icon: null },
 ];
 
+const gridVariants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.04 } },
+};
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 8 },
+  show:   { opacity: 1, y: 0, transition: { duration: 0.2 } },
+};
+
 export default function SpecialtiesPage() {
   const [, navigate] = useLocation();
   const [search, setSearch] = useState("");
@@ -172,43 +163,26 @@ export default function SpecialtiesPage() {
     });
   }, [withCategory, search, activeCategory]);
 
-  const grouped = useMemo(() => {
-    const map = new Map<CategoryKey, any[]>();
-    for (const cat of CATEGORIES) map.set(cat.key, []);
-    for (const s of filtered) {
-      map.get(s.category as CategoryKey)!.push(s);
-    }
-    return CATEGORIES.map((cat) => ({ ...cat, items: map.get(cat.key)! })).filter((g) => g.items.length > 0);
-  }, [filtered]);
-
   const activeCategories = useMemo(() => {
     const present = new Set(withCategory.map((s) => s.category));
     return CATEGORIES.filter((c) => present.has(c.key));
   }, [withCategory]);
 
-  const totalFiltered = filtered.length;
-
   return (
     <DashboardLayout>
-      <div className="bg-white min-h-full p-4 md:p-6 space-y-5">
-        {/* Header + search integrados */}
-        <div className="space-y-3">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900" style={{ fontFamily: "Poppins, sans-serif" }}>
-              Especialidades
-            </h1>
-            <p className="text-sm text-gray-500 mt-1">
-              Elige el área en la que necesitas orientación
-            </p>
-          </div>
-          <div className="relative max-w-md">
+      <div className="bg-white min-h-full">
+        {/* Hero strip */}
+        <div className="bg-[#5B6A57] px-6 py-8">
+          <h1 className="text-2xl font-semibold text-white">Encuentra tu especialista</h1>
+          <p className="text-[#c5d0c2] text-sm mt-1">Asesorías online con profesionales certificados</p>
+          <div className="mt-4 relative max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar especialidad..."
-              className="w-full pl-10 pr-9 h-10 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:border-[#5B6A57] focus:ring-1 focus:ring-[#5B6A57]/20 transition-all"
+              className="w-full pl-9 pr-9 py-2.5 rounded-xl text-sm bg-white outline-none focus:ring-2 focus:ring-white/30 transition-all"
             />
             {search && (
               <button
@@ -221,14 +195,17 @@ export default function SpecialtiesPage() {
           </div>
         </div>
 
-        {/* Chips de categoría */}
-        <div className="flex flex-wrap gap-2">
+        {/* Category chips — horizontal scroll */}
+        <div
+          className="px-6 py-3 border-b border-gray-100 flex gap-2 overflow-x-auto"
+          style={{ scrollbarWidth: "none" }}
+        >
           <button
             onClick={() => setActiveCategory("all")}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+            className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
               activeCategory === "all"
                 ? "bg-[#5B6A57] text-white"
-                : "border border-gray-300 text-gray-600 hover:border-[#5B6A57] hover:text-[#5B6A57]"
+                : "border border-gray-200 text-gray-600 hover:border-[#5B6A57] hover:text-[#5B6A57]"
             }`}
           >
             Todas
@@ -237,10 +214,10 @@ export default function SpecialtiesPage() {
             <button
               key={cat.key}
               onClick={() => setActiveCategory(activeCategory === cat.key ? "all" : cat.key)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+              className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                 activeCategory === cat.key
                   ? "bg-[#5B6A57] text-white"
-                  : "border border-gray-300 text-gray-600 hover:border-[#5B6A57] hover:text-[#5B6A57]"
+                  : "border border-gray-200 text-gray-600 hover:border-[#5B6A57] hover:text-[#5B6A57]"
               }`}
             >
               <cat.Icon className="w-3.5 h-3.5" />
@@ -249,57 +226,57 @@ export default function SpecialtiesPage() {
           ))}
         </div>
 
-        {/* Resultados */}
-        {totalFiltered === 0 ? (
-          <div className="text-center py-16 text-gray-400">
-            <Search className="w-10 h-10 mx-auto mb-3 opacity-30" />
-            <p className="text-sm">No se encontraron especialidades para "{search}"</p>
-            <button
-              onClick={() => { setSearch(""); setActiveCategory("all"); }}
-              className="text-xs text-[#5B6A57] mt-2 hover:underline"
-            >
-              Limpiar filtros
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-8">
-            {grouped.map((group) => (
-              <section key={group.key}>
-                {activeCategory === "all" && !search && (
-                  <p className="text-[10px] font-semibold tracking-widest uppercase text-gray-400 mb-3">
-                    {CATEGORY_LABELS[group.key as CategoryKey]}
-                  </p>
-                )}
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {group.items.map((s: any) => {
-                    const IconComp = resolveIconComponent(s.icon, s.name);
-                    const colors = CATEGORY_COLORS[s.category as CategoryKey] ?? CATEGORY_COLORS.otros;
-                    return (
-                      <button
-                        key={s.id}
-                        onClick={() => navigate(`/especialidades/${s.id}`)}
-                        className="group flex flex-col items-start gap-3 bg-white rounded-2xl p-4 border border-gray-200 hover:border-[#5B6A57] active:scale-[0.98] transition-all text-left"
-                      >
-                        <div className={`w-10 h-10 rounded-xl ${colors.bg} flex items-center justify-center flex-shrink-0`}>
-                          <IconComp className={`w-5 h-5 ${colors.icon}`} />
-                        </div>
-                        <div className="flex-1 min-w-0 w-full">
-                          <p className="text-sm font-semibold text-gray-900">{s.name}</p>
-                          <p className="text-xs text-gray-500 mt-0.5 leading-relaxed line-clamp-2">
-                            {s.description ?? "Consultas con profesionales certificados."}
-                          </p>
-                        </div>
-                        <span className="text-xs text-[#5B6A57] font-medium mt-auto group-hover:underline">
-                          Ver →
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </section>
-            ))}
-          </div>
-        )}
+        {/* Main grid */}
+        <div className="px-6 py-5">
+          {filtered.length === 0 ? (
+            <div className="text-center py-16 text-gray-400">
+              <Search className="w-10 h-10 mx-auto mb-3 opacity-30" />
+              <p className="text-sm">No se encontraron especialidades para "{search}"</p>
+              <button
+                onClick={() => { setSearch(""); setActiveCategory("all"); }}
+                className="text-xs text-[#5B6A57] mt-2 hover:underline"
+              >
+                Limpiar filtros
+              </button>
+            </div>
+          ) : (
+            <>
+              <p className="text-xs text-gray-400 mb-4">
+                {filtered.length}{" "}
+                {filtered.length === 1 ? "especialidad" : "especialidades"}
+                {search || activeCategory !== "all" ? " encontradas" : " disponibles"}
+              </p>
+              <motion.div
+                key={`${search}-${activeCategory}`}
+                className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3"
+                variants={gridVariants}
+                initial="hidden"
+                animate="show"
+              >
+                {filtered.map((s: any) => {
+                  const IconComp = resolveIconComponent(s.icon, s.name);
+                  return (
+                    <motion.button
+                      key={s.id}
+                      variants={cardVariants}
+                      whileHover={{ y: -2 }}
+                      onClick={() => navigate(`/especialidades/${s.id}`)}
+                      className="flex flex-col items-start p-3 bg-white rounded-xl border border-gray-100 hover:border-[#5B6A57] hover:shadow-md transition-shadow w-full text-left"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-[#f0f3ef] flex items-center justify-center mb-2 flex-shrink-0">
+                        <IconComp className="w-4 h-4 text-[#5B6A57]" />
+                      </div>
+                      <p className="text-sm font-medium text-gray-900 leading-tight">{s.name}</p>
+                      <p className="text-xs text-gray-400 mt-0.5 line-clamp-1 leading-snug">
+                        {s.description ?? "Ver especialistas"}
+                      </p>
+                    </motion.button>
+                  );
+                })}
+              </motion.div>
+            </>
+          )}
+        </div>
       </div>
     </DashboardLayout>
   );

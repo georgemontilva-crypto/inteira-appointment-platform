@@ -3,8 +3,9 @@ import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { PRICING } from "@/lib/pricing";
 import { Link, useRoute } from "wouter";
-import { Star, Award, Calendar, Search, SlidersHorizontal, X } from "lucide-react";
+import { Star, Award, Calendar, Search, SlidersHorizontal, X, Coins } from "lucide-react";
 import DashboardLayout from "../components/DashboardLayout";
+import { motion } from "framer-motion";
 
 type SortOption = "rating" | "experience" | "price_asc" | "price_desc";
 
@@ -41,6 +42,16 @@ const STATIC_SPECIALTIES = [
   { id: 6, name: "Legal",           description: "Asesoría legal en diversas áreas del derecho.",              imageUrl: null, icon: null, color: null, isActive: true, createdAt: _now, updatedAt: _now },
   { id: 7, name: "Vocación",        description: "Orientación vocacional y desarrollo profesional.",           imageUrl: null, icon: null, color: null, isActive: true, createdAt: _now, updatedAt: _now },
 ];
+
+const containerVariants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.06 } },
+};
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 10 },
+  show:   { opacity: 1, y: 0, transition: { duration: 0.25 } },
+};
 
 export default function ProfessionalsList() {
   const [, params] = useRoute("/especialidades/:id");
@@ -89,24 +100,16 @@ export default function ProfessionalsList() {
 
   return (
     <DashboardLayout>
-      <div className="bg-white min-h-full p-4 md:p-6 space-y-5">
-        {/* Header */}
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900" style={{ fontFamily: "Poppins, sans-serif" }}>
-            {specialty?.name ?? "Especialidad"}
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            {filtered.length}{" "}
-            {filtered.length === 1 ? "profesional" : "profesionales"}
-            {professionals && professionals.length !== filtered.length
-              ? ` de ${professionals.length}`
-              : ""}
+      <div className="bg-white min-h-full">
+        {/* Hero strip */}
+        <div className="bg-[#5B6A57] px-6 py-8">
+          <h1 className="text-2xl font-semibold text-white">{specialty?.name ?? "Especialidad"}</h1>
+          <p className="text-[#c5d0c2] text-sm mt-1">
+            {isLoading
+              ? "Cargando..."
+              : `${filtered.length} ${filtered.length === 1 ? "profesional disponible" : "profesionales disponibles"}`}
           </p>
-        </div>
-
-        {/* Barra búsqueda + filtros en misma fila */}
-        <div className="space-y-3">
-          <div className="flex gap-2">
+          <div className="mt-4 flex gap-2 max-w-lg">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
               <input
@@ -114,7 +117,7 @@ export default function ProfessionalsList() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Buscar profesional..."
-                className="w-full pl-10 pr-9 h-10 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:border-[#5B6A57] focus:ring-1 focus:ring-[#5B6A57]/20 transition-all"
+                className="w-full pl-9 pr-9 py-2.5 rounded-xl text-sm bg-white outline-none focus:ring-2 focus:ring-white/30 transition-all"
               />
               {searchQuery && (
                 <button
@@ -127,10 +130,10 @@ export default function ProfessionalsList() {
             </div>
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className={`flex items-center gap-1.5 px-3 h-10 rounded-xl border text-sm font-medium transition-all flex-shrink-0 ${
+              className={`flex items-center gap-1.5 px-3 rounded-xl text-sm font-medium transition-all flex-shrink-0 ${
                 hasActiveFilters
-                  ? "border-[#5B6A57] text-[#5B6A57] bg-[#5B6A57]/5"
-                  : "border-gray-200 text-gray-600 hover:border-gray-300"
+                  ? "bg-white text-[#5B6A57]"
+                  : "bg-white/20 text-white hover:bg-white/30"
               }`}
             >
               <SlidersHorizontal className="w-4 h-4" />
@@ -138,195 +141,204 @@ export default function ProfessionalsList() {
               {hasActiveFilters && <span className="w-1.5 h-1.5 rounded-full bg-[#5B6A57]" />}
             </button>
           </div>
+        </div>
 
-          {showFilters && (
-            <div className="bg-gray-50 border border-gray-100 rounded-xl p-4 space-y-3">
-              <div className="flex flex-wrap gap-2 items-center">
-                <button
-                  onClick={() => setOnlyAvailable(!onlyAvailable)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
-                    onlyAvailable
-                      ? "bg-emerald-50 border-emerald-300 text-emerald-700"
-                      : "border-gray-300 text-gray-600 hover:border-gray-400"
-                  }`}
-                >
-                  <span className={`w-1.5 h-1.5 rounded-full ${onlyAvailable ? "bg-emerald-500" : "bg-gray-400"}`} />
-                  Solo disponibles
-                </button>
-                <div className="flex flex-wrap items-center gap-2 ml-auto">
-                  <span className="text-xs text-gray-400">Ordenar:</span>
-                  {(
-                    [
-                      { value: "rating",     label: "Calificación" },
-                      { value: "experience", label: "Experiencia" },
-                      { value: "price_asc",  label: "Menor precio" },
-                      { value: "price_desc", label: "Mayor precio" },
-                    ] as { value: SortOption; label: string }[]
-                  ).map((opt) => (
-                    <button
-                      key={opt.value}
-                      onClick={() => setSortBy(opt.value)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
-                        sortBy === opt.value
-                          ? "bg-[#5B6A57] text-white border-[#5B6A57]"
-                          : "border-gray-300 text-gray-600 hover:border-[#5B6A57]"
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
+        {/* Filter panel */}
+        {showFilters && (
+          <div className="px-6 py-3 border-b border-gray-100 bg-gray-50">
+            <div className="flex flex-wrap gap-2 items-center">
+              <button
+                onClick={() => setOnlyAvailable(!onlyAvailable)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                  onlyAvailable
+                    ? "bg-emerald-50 border-emerald-300 text-emerald-700"
+                    : "border-gray-300 text-gray-600 hover:border-gray-400 bg-white"
+                }`}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${onlyAvailable ? "bg-emerald-500" : "bg-gray-400"}`} />
+                Solo disponibles
+              </button>
+              <div className="flex flex-wrap items-center gap-2 ml-auto">
+                <span className="text-xs text-gray-400">Ordenar:</span>
+                {(
+                  [
+                    { value: "rating",     label: "Calificación" },
+                    { value: "experience", label: "Experiencia" },
+                    { value: "price_asc",  label: "Menor precio" },
+                    { value: "price_desc", label: "Mayor precio" },
+                  ] as { value: SortOption; label: string }[]
+                ).map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setSortBy(opt.value)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                      sortBy === opt.value
+                        ? "bg-[#5B6A57] text-white border-[#5B6A57]"
+                        : "border-gray-300 text-gray-600 hover:border-[#5B6A57] bg-white"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
               </div>
               {hasActiveFilters && (
                 <button
                   onClick={() => { setOnlyAvailable(false); setSortBy("rating"); }}
-                  className="text-xs text-gray-400 hover:text-gray-600 underline"
+                  className="text-xs text-gray-400 hover:text-gray-600 underline ml-2"
                 >
-                  Limpiar filtros
+                  Limpiar
                 </button>
               )}
             </div>
-          )}
-        </div>
-
-        {/* Resultados */}
-        {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="animate-pulse bg-gray-50 rounded-2xl border border-gray-100 h-52" />
-            ))}
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="text-center py-20">
-            <Search className="w-12 h-12 text-gray-200 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-1">
-              {searchQuery || hasActiveFilters ? "Sin resultados" : "No hay profesionales disponibles"}
-            </h3>
-            <p className="text-sm text-gray-500">
-              {searchQuery || hasActiveFilters
-                ? "Intenta con otros términos o ajusta los filtros."
-                : "Pronto agregaremos más especialistas en esta área."}
-            </p>
-            {(searchQuery || hasActiveFilters) && (
-              <button
-                className="mt-4 text-sm text-[#5B6A57] border border-[#5B6A57]/30 px-4 py-2 rounded-xl hover:bg-[#5B6A57]/5 transition-colors"
-                onClick={() => { setSearchQuery(""); setOnlyAvailable(false); setSortBy("rating"); }}
-              >
-                Limpiar búsqueda
-              </button>
-            )}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {filtered.map((pro) => {
-              const proName = (pro as any).professionalName ?? `Especialista #${pro.id}`;
-              const photo = (pro as any).profilePhoto ?? (pro as any).userProfileImage;
-              const rating = Number(pro.averageRating) || 0;
-              const hasReviews = (pro.totalReviews ?? 0) > 0;
-              const avatarColor = getAvatarColor(pro.id);
-
-              return (
-                <div
-                  key={pro.id}
-                  className="bg-white border border-gray-200 rounded-2xl p-4 hover:border-[#5B6A57] transition-all"
-                >
-                  {/* Fila superior: avatar + datos + badge */}
-                  <div className="flex items-start gap-3 mb-3">
-                    <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 ring-2 ring-gray-100">
-                      {photo ? (
-                        <img
-                          src={photo}
-                          alt={proName}
-                          className="w-full h-full object-cover"
-                          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                        />
-                      ) : (
-                        <div className={`w-full h-full flex items-center justify-center text-sm font-bold ${avatarColor}`}>
-                          {getInitials(proName)}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm text-gray-900 truncate">{proName}</p>
-                      <p className="text-xs text-gray-500 truncate">{specialty?.name ?? ""}</p>
-                      <div className="flex items-center gap-0.5 mt-1">
-                        {hasReviews ? (
-                          <>
-                            {[1, 2, 3, 4, 5].map((s) => (
-                              <Star
-                                key={s}
-                                className="w-3 h-3"
-                                style={
-                                  s <= Math.round(rating)
-                                    ? { color: "#f59e0b", fill: "#f59e0b" }
-                                    : { color: "rgba(0,0,0,0.12)" }
-                                }
-                              />
-                            ))}
-                            <span className="text-xs font-medium text-gray-700 ml-1">{rating.toFixed(1)}</span>
-                            <span className="text-xs text-gray-400 ml-0.5">({pro.totalReviews})</span>
-                          </>
-                        ) : (
-                          <span className="text-xs text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full">Nuevo</span>
-                        )}
-                      </div>
-                    </div>
-                    <span
-                      className={`text-[10px] font-semibold px-2 py-1 rounded-full flex-shrink-0 ${
-                        pro.isAvailable
-                          ? "bg-emerald-50 text-emerald-700"
-                          : "bg-gray-100 text-gray-500"
-                      }`}
-                    >
-                      {pro.isAvailable ? "Disponible" : "No disponible"}
-                    </span>
-                  </div>
-
-                  {/* Bio */}
-                  {pro.bio && (
-                    <p className="text-xs text-gray-500 line-clamp-2 mb-3 leading-relaxed">
-                      {pro.bio}
-                    </p>
-                  )}
-
-                  {/* Detalles */}
-                  <div className="flex items-center gap-4 text-xs text-gray-500 mb-3">
-                    {pro.yearsOfExperience ? (
-                      <span className="flex items-center gap-1">
-                        <Award className="w-3.5 h-3.5 text-[#5B6A57]" />
-                        {pro.yearsOfExperience} años exp.
-                      </span>
-                    ) : null}
-                    <span className="flex items-center gap-1">
-                      <span className="text-[#5B6A57] font-medium">$</span>
-                      desde ${PRICING.SESSION_BASIC_MXN} MXN
-                    </span>
-                  </div>
-
-                  {/* Acciones */}
-                  <div className="flex gap-2">
-                    <Link href={`/profesional/${pro.id}`} className="flex-1">
-                      <button className="w-full h-9 rounded-xl border border-[#5B6A57]/40 text-[#5B6A57] text-sm font-medium hover:bg-[#5B6A57]/5 transition-colors">
-                        Ver perfil
-                      </button>
-                    </Link>
-                    <button
-                      className="flex-1 h-9 rounded-xl bg-[#5B6A57] text-white text-sm font-medium hover:bg-[#4a5846] transition-colors flex items-center justify-center gap-1.5"
-                      onClick={() => {
-                        window.location.href = isAuthenticated
-                          ? `/agendar/${pro.id}`
-                          : `/login?returnTo=${encodeURIComponent(`/agendar/${pro.id}`)}`;
-                      }}
-                    >
-                      <Calendar className="w-3.5 h-3.5" />
-                      Agendar
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
           </div>
         )}
+
+        {/* Professionals grid */}
+        <div className="px-6 py-5">
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="animate-pulse bg-gray-50 rounded-xl border border-gray-100 h-52" />
+              ))}
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="text-center py-20">
+              <Search className="w-12 h-12 text-gray-200 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                {searchQuery || hasActiveFilters ? "Sin resultados" : "No hay profesionales disponibles"}
+              </h3>
+              <p className="text-sm text-gray-500">
+                {searchQuery || hasActiveFilters
+                  ? "Intenta con otros términos o ajusta los filtros."
+                  : "Pronto agregaremos más especialistas en esta área."}
+              </p>
+              {(searchQuery || hasActiveFilters) && (
+                <button
+                  className="mt-4 text-sm text-[#5B6A57] border border-[#5B6A57]/30 px-4 py-2 rounded-xl hover:bg-[#5B6A57]/5 transition-colors"
+                  onClick={() => { setSearchQuery(""); setOnlyAvailable(false); setSortBy("rating"); }}
+                >
+                  Limpiar búsqueda
+                </button>
+              )}
+            </div>
+          ) : (
+            <motion.div
+              key={`${searchQuery}-${onlyAvailable}-${sortBy}`}
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"
+              variants={containerVariants}
+              initial="hidden"
+              animate="show"
+            >
+              {filtered.map((pro) => {
+                const proName = (pro as any).professionalName ?? `Especialista #${pro.id}`;
+                const photo = (pro as any).profilePhoto ?? (pro as any).userProfileImage;
+                const rating = Number(pro.averageRating) || 0;
+                const hasReviews = (pro.totalReviews ?? 0) > 0;
+                const avatarColor = getAvatarColor(pro.id);
+
+                return (
+                  <motion.div
+                    key={pro.id}
+                    variants={cardVariants}
+                    whileHover={{ y: -2 }}
+                    className="bg-white rounded-xl border border-gray-100 p-4 hover:shadow-md transition-shadow"
+                  >
+                    {/* Top row: avatar + info + badge */}
+                    <div className="flex gap-3 mb-3">
+                      <div className="w-14 h-14 rounded-full overflow-hidden flex-shrink-0 ring-2 ring-gray-100">
+                        {photo ? (
+                          <img
+                            src={photo}
+                            alt={proName}
+                            className="w-full h-full object-cover"
+                            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                          />
+                        ) : (
+                          <div className={`w-full h-full flex items-center justify-center text-lg font-semibold ${avatarColor}`}>
+                            {getInitials(proName)}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="font-medium text-gray-900 text-sm truncate">{proName}</p>
+                            <p className="text-xs text-gray-500 truncate">{specialty?.name ?? ""}</p>
+                          </div>
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${
+                            pro.isAvailable ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-500"
+                          }`}>
+                            {pro.isAvailable ? "Disponible" : "No disponible"}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 mt-1">
+                          {hasReviews ? (
+                            <>
+                              {[1, 2, 3, 4, 5].map((s) => (
+                                <Star
+                                  key={s}
+                                  className="w-3 h-3"
+                                  style={
+                                    s <= Math.round(rating)
+                                      ? { color: "#f59e0b", fill: "#f59e0b" }
+                                      : { color: "rgba(0,0,0,0.12)" }
+                                  }
+                                />
+                              ))}
+                              <span className="text-xs font-medium text-gray-700 ml-1">{rating.toFixed(1)}</span>
+                              <span className="text-xs text-gray-400">({pro.totalReviews})</span>
+                            </>
+                          ) : (
+                            <span className="text-xs text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full">Nuevo</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Bio */}
+                    {pro.bio && (
+                      <p className="text-xs text-gray-500 line-clamp-2 mb-3 leading-relaxed">{pro.bio}</p>
+                    )}
+
+                    {/* Meta row */}
+                    <div className="flex items-center gap-3 text-xs text-gray-500 mb-3">
+                      {pro.yearsOfExperience ? (
+                        <span className="flex items-center gap-1">
+                          <Award className="w-3 h-3 text-[#5B6A57]" />
+                          {pro.yearsOfExperience} años
+                        </span>
+                      ) : null}
+                      <span className="flex items-center gap-1">
+                        <Coins className="w-3 h-3 text-[#5B6A57]" />
+                        Desde ${PRICING.SESSION_BASIC_MXN}
+                      </span>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex gap-2">
+                      <Link href={`/profesional/${pro.id}`} className="flex-1">
+                        <button className="w-full h-9 rounded-xl border border-[#5B6A57]/40 text-[#5B6A57] text-xs font-medium hover:bg-[#5B6A57]/5 transition-colors">
+                          Ver perfil
+                        </button>
+                      </Link>
+                      <button
+                        className="flex-1 h-9 rounded-xl bg-[#5B6A57] text-white text-xs font-medium hover:bg-[#3d4e3f] transition-colors flex items-center justify-center gap-1.5"
+                        onClick={() => {
+                          window.location.href = isAuthenticated
+                            ? `/agendar/${pro.id}`
+                            : `/login?returnTo=${encodeURIComponent(`/agendar/${pro.id}`)}`;
+                        }}
+                      >
+                        <Calendar className="w-3.5 h-3.5" />
+                        Agendar
+                      </button>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </motion.div>
+          )}
+        </div>
       </div>
     </DashboardLayout>
   );
