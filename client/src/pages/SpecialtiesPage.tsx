@@ -17,6 +17,7 @@ import {
   Feather, Flower, Flower2, TestTube, Award, Star, Search,
   Target,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import type React from "react";
 
 type CategoryKey = "salud_mental" | "salud_fisica" | "negocios" | "educacion" | "legal" | "creatividad" | "otros";
@@ -276,6 +277,66 @@ export default function SpecialtiesPage() {
               </motion.div>
             </>
           )}
+        </div>
+
+        {/* Stats strip */}
+        <div className="bg-gray-50 border-y border-gray-100 py-6 px-6 mt-6">
+          <div className="grid grid-cols-3 gap-4 max-w-lg">
+            <div className="text-center">
+              <p className="text-2xl font-semibold text-[#5B6A57]">50+</p>
+              <p className="text-xs text-gray-500 mt-0.5">Especialistas</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-semibold text-[#5B6A57]">8</p>
+              <p className="text-xs text-gray-500 mt-0.5">Áreas de conocimiento</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-semibold text-[#5B6A57]">50 min</p>
+              <p className="text-xs text-gray-500 mt-0.5">Por sesión</p>
+            </div>
+          </div>
+        </div>
+
+        {/* ¿Cómo funciona? */}
+        <div className="px-6 py-6">
+          <h2 className="text-base font-semibold text-gray-900 mb-4">¿Cómo funciona?</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="flex gap-3 items-start">
+              <div className="w-8 h-8 rounded-full bg-[#5B6A57] text-white text-sm font-semibold flex items-center justify-center flex-shrink-0">1</div>
+              <div>
+                <p className="text-sm font-medium text-gray-900">Elige tu especialidad</p>
+                <p className="text-xs text-gray-500 mt-0.5">Explora las áreas disponibles y encuentra lo que necesitas</p>
+              </div>
+            </div>
+            <div className="flex gap-3 items-start">
+              <div className="w-8 h-8 rounded-full bg-[#5B6A57] text-white text-sm font-semibold flex items-center justify-center flex-shrink-0">2</div>
+              <div>
+                <p className="text-sm font-medium text-gray-900">Selecciona un profesional</p>
+                <p className="text-xs text-gray-500 mt-0.5">Revisa perfiles, calificaciones y disponibilidad</p>
+              </div>
+            </div>
+            <div className="flex gap-3 items-start">
+              <div className="w-8 h-8 rounded-full bg-[#5B6A57] text-white text-sm font-semibold flex items-center justify-center flex-shrink-0">3</div>
+              <div>
+                <p className="text-sm font-medium text-gray-900">Agenda tu sesión</p>
+                <p className="text-xs text-gray-500 mt-0.5">Elige fecha y hora. Recibirás el link de videollamada al instante</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* CTA banner */}
+        <div className="mx-6 mb-6 rounded-2xl bg-[#5B6A57] p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div>
+            <p className="text-white font-semibold text-base">¿No sabes por dónde empezar?</p>
+            <p className="text-[#c5d0c2] text-sm mt-0.5">Cuéntanos qué necesitas y te ayudamos a encontrar el especialista ideal</p>
+          </div>
+          <Button
+            className="bg-white text-[#3d4e3f] hover:bg-gray-100 font-medium flex-shrink-0"
+            onClick={() => { setSearch(""); setActiveCategory("all"); }}
+          >
+            Ver todos los especialistas
+          </Button>
         </div>
       </div>
     </DashboardLayout>
