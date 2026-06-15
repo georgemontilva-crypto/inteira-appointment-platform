@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import RegisterProfessional from "./RegisterProfessional";
 
@@ -16,39 +16,35 @@ const C = {
 
 /* ─── Video Modal ─── */
 function VideoModal({ videoUrl, onComplete }: { videoUrl: string; onComplete: () => void }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
   const [progress, setProgress] = useState(0);
-  const [canClose, setCanClose] = useState(false);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const TOTAL = 225; // 3:45
+  const [remaining, setRemaining] = useState<number | null>(null);
+  const [videoCompleted, setVideoCompleted] = useState(false);
 
-  useEffect(() => {
-    intervalRef.current = setInterval(() => {
-      setProgress((p) => {
-        const next = p + 1;
-        if (next >= TOTAL) {
-          clearInterval(intervalRef.current!);
-          setCanClose(true);
-          return TOTAL;
-        }
-        return next;
-      });
-    }, 1000);
-    return () => clearInterval(intervalRef.current!);
-  }, []);
+  const handleTimeUpdate = () => {
+    if (!videoRef.current) return;
+    const { currentTime, duration } = videoRef.current;
+    if (duration > 0) {
+      setProgress((currentTime / duration) * 100);
+      setRemaining(Math.max(0, duration - currentTime));
+    }
+  };
 
-  const pct = Math.round((progress / TOTAL) * 100);
-  const remaining = TOTAL - progress;
-  const mins = Math.floor(remaining / 60);
-  const secs = remaining % 60;
+  const handleEnded = () => {
+    setVideoCompleted(true);
+    setProgress(100);
+    setRemaining(0);
+  };
 
-  const embedUrl = videoUrl || "https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1&rel=0&modestbranding=1";
+  const mins = remaining !== null ? Math.floor(remaining / 60) : null;
+  const secs = remaining !== null ? Math.floor(remaining % 60) : null;
 
   return (
     <div
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(0,0,0,0.92)",
+        background: "rgba(242,240,237,0.97)",
         zIndex: 9999,
         display: "flex",
         flexDirection: "column",
@@ -58,52 +54,65 @@ function VideoModal({ videoUrl, onComplete }: { videoUrl: string; onComplete: ()
         fontFamily: "'Poppins', sans-serif",
       }}
     >
-      <div style={{ width: "100%", maxWidth: 760 }}>
-        <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 12, marginBottom: 12, textAlign: "center", letterSpacing: "0.1em", textTransform: "uppercase" }}>
+      <div
+        style={{
+          width: "100%",
+          maxWidth: 760,
+          background: "#fff",
+          borderRadius: 20,
+          boxShadow: "0 8px 40px rgba(91,106,87,0.15)",
+          padding: "32px",
+        }}
+      >
+        <p style={{ color: "#3d2e22", fontSize: 15, fontWeight: 700, marginBottom: 4, textAlign: "center" }}>
+          Bienvenida/o a Inteira
+        </p>
+        <p style={{ color: C.brand, fontSize: 12, marginBottom: 20, textAlign: "center" }}>
           Por favor ve el video completo antes de continuar
         </p>
-        <div style={{ position: "relative", paddingBottom: "56.25%", height: 0, borderRadius: 12, overflow: "hidden", background: "#0a0a0a" }}>
-          <iframe
-            src={embedUrl}
-            style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: "none" }}
-            allow="autoplay; encrypted-media"
-            allowFullScreen
-            title="Video de bienvenida Inteira"
-          />
-        </div>
+
+        <video
+          ref={videoRef}
+          onTimeUpdate={handleTimeUpdate}
+          onEnded={handleEnded}
+          controls
+          style={{ width: "100%", borderRadius: 12 }}
+        >
+          <source src={videoUrl} />
+        </video>
 
         <div style={{ marginTop: 20 }}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
             <span style={{ color: C.warm, fontSize: 13, fontWeight: 600 }}>
-              {canClose ? "¡Video completado!" : `Progreso: ${pct}%`}
+              {videoCompleted ? "¡Video completado!" : `Progreso: ${Math.round(progress)}%`}
             </span>
-            {!canClose && (
-              <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 12 }}>
+            {!videoCompleted && mins !== null && secs !== null && (
+              <span style={{ color: C.textMuted, fontSize: 12 }}>
                 Tiempo restante: {mins}:{secs.toString().padStart(2, "0")}
               </span>
             )}
           </div>
-          <div style={{ height: 6, background: "rgba(255,255,255,0.1)", borderRadius: 6, overflow: "hidden" }}>
+          <div style={{ height: 6, background: "#e0dbd5", borderRadius: 6, overflow: "hidden" }}>
             <div
               style={{
                 height: "100%",
-                width: `${pct}%`,
-                background: `linear-gradient(90deg, ${C.brand}, ${C.warm})`,
+                width: `${progress}%`,
+                background: C.warm,
                 borderRadius: 6,
-                transition: "width 0.9s linear",
+                transition: "width 0.5s linear",
               }}
             />
           </div>
         </div>
 
-        {canClose ? (
+        {videoCompleted ? (
           <button
             onClick={onComplete}
             style={{
               marginTop: 24,
               width: "100%",
               padding: "14px",
-              background: `linear-gradient(135deg, ${C.brand}, ${C.warm})`,
+              background: C.warm,
               color: "#fff",
               border: "none",
               borderRadius: 10,
@@ -116,7 +125,7 @@ function VideoModal({ videoUrl, onComplete }: { videoUrl: string; onComplete: ()
             Acceder al contenido →
           </button>
         ) : (
-          <p style={{ textAlign: "center", color: "rgba(255,255,255,0.25)", fontSize: 12, marginTop: 20 }}>
+          <p style={{ textAlign: "center", color: C.textMuted, fontSize: 12, marginTop: 20, opacity: 0.7 }}>
             El botón de acceso se habilitará al terminar el video.
           </p>
         )}
