@@ -15,7 +15,7 @@ const C = {
 };
 
 /* ─── Video Modal ─── */
-function VideoModal({ videoUrl, onComplete }: { videoUrl: string; onComplete: () => void }) {
+function VideoModal({ videoUrl, bgImageUrl, onComplete }: { videoUrl: string; bgImageUrl: string | null; onComplete: () => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [progress, setProgress] = useState(0);
   const [remaining, setRemaining] = useState<number | null>(null);
@@ -44,7 +44,6 @@ function VideoModal({ videoUrl, onComplete }: { videoUrl: string; onComplete: ()
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(242,240,237,0.97)",
         zIndex: 9999,
         display: "flex",
         flexDirection: "column",
@@ -52,10 +51,19 @@ function VideoModal({ videoUrl, onComplete }: { videoUrl: string; onComplete: ()
         justifyContent: "center",
         padding: "20px",
         fontFamily: "'Poppins', sans-serif",
+        backgroundImage: bgImageUrl ? `url(${bgImageUrl})` : undefined,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundColor: bgImageUrl ? undefined : "#F2F0ED",
       }}
     >
+      {bgImageUrl && (
+        <div style={{ position: "absolute", inset: 0, background: "rgba(242,240,237,0.82)" }} />
+      )}
       <div
         style={{
+          position: "relative",
+          zIndex: 1,
           width: "100%",
           maxWidth: 760,
           background: "#fff",
@@ -76,6 +84,8 @@ function VideoModal({ videoUrl, onComplete }: { videoUrl: string; onComplete: ()
           onTimeUpdate={handleTimeUpdate}
           onEnded={handleEnded}
           controls
+          autoPlay
+          muted
           style={{ width: "100%", borderRadius: 12 }}
         >
           <source src={videoUrl} />
@@ -663,12 +673,13 @@ export default function ProfessionalsLanding() {
   const [videoWatched, setVideoWatched] = useState(false);
 
   const { data: siteConfig } = trpc.public.getSiteConfig.useQuery(
-    { keys: ["professionals_video_url", "professionals_banner_url"] },
+    { keys: ["professionals_video_url", "professionals_banner_url", "professionals_video_bg_url"] },
     { staleTime: 5 * 60 * 1000 }
   );
 
   const videoUrl = siteConfig?.professionals_video_url ?? "";
   const bannerUrl = siteConfig?.professionals_banner_url ?? null;
+  const videoBgUrl = siteConfig?.professionals_video_bg_url ?? null;
 
   return (
     <>
@@ -676,7 +687,7 @@ export default function ProfessionalsLanding() {
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
 
-      {!videoWatched && <VideoModal videoUrl={videoUrl} onComplete={() => setVideoWatched(true)} />}
+      {!videoWatched && <VideoModal videoUrl={videoUrl} bgImageUrl={videoBgUrl} onComplete={() => setVideoWatched(true)} />}
 
       <div style={{ opacity: videoWatched ? 1 : 0, transition: "opacity 0.5s ease", pointerEvents: videoWatched ? "auto" : "none", background: C.bg }}>
         <Hero bannerUrl={bannerUrl} />

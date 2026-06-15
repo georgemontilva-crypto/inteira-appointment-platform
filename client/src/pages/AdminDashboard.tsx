@@ -350,15 +350,18 @@ export default function AdminDashboard() {
 
   // ─── siteConfig state ────────────────────────────────────────────────────
   const { data: siteConfigData, refetch: refetchSiteConfig } = trpc.public.getSiteConfig.useQuery(
-    { keys: ["professionals_video_url", "professionals_banner_url", "home_hero_banner_url"] },
+    { keys: ["professionals_video_url", "professionals_banner_url", "home_hero_banner_url", "professionals_video_bg_url"] },
     { enabled: activeTab === "contenido" }
   );
   const [videoUrl, setVideoUrl] = useState("");
   const [bannerUrl, setBannerUrl] = useState("");
+  const [videoBgUrl, setVideoBgUrl] = useState("");
   const [heroVideoUploading, setHeroVideoUploading] = useState(false);
   const [heroBannerUploading, setHeroBannerUploading] = useState(false);
+  const [videoBgUploading, setVideoBgUploading] = useState(false);
   const videoFileRef = useRef<HTMLInputElement>(null);
   const heroBannerFileRef = useRef<HTMLInputElement>(null);
+  const videoBgFileRef = useRef<HTMLInputElement>(null);
   const [homeHeroBannerUrl, setHomeHeroBannerUrl] = useState("");
   const [homeHeroBannerUploading, setHomeHeroBannerUploading] = useState(false);
   const homeHeroBannerFileRef = useRef<HTMLInputElement>(null);
@@ -370,6 +373,7 @@ export default function AdminDashboard() {
       setVideoUrl(siteConfigData.professionals_video_url ?? "");
       setBannerUrl(siteConfigData.professionals_banner_url ?? "");
       setHomeHeroBannerUrl(siteConfigData.home_hero_banner_url ?? "");
+      setVideoBgUrl(siteConfigData.professionals_video_bg_url ?? "");
     }
   }, [siteConfigData]);
 
@@ -1269,6 +1273,84 @@ export default function AdminDashboard() {
                     <div className="rounded-xl overflow-hidden border border-border" style={{ maxHeight: 140 }}>
                       <img src={bannerUrl} alt="Banner preview" className="w-full object-cover" style={{ maxHeight: 140 }} />
                     </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="border-border">
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Image className="w-4 h-4 text-primary" />
+                    Imagen de fondo del video
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-xs text-muted-foreground">
+                    Imagen de fondo del overlay del modal de bienvenida en <code>/profesionales</code>. Si no hay imagen, el fondo será crema (#F2F0ED).
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={videoBgUrl}
+                      onChange={(e) => setVideoBgUrl(e.target.value)}
+                      placeholder="https://..."
+                      className="flex-1 text-sm border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    />
+                    <Button
+                      size="sm"
+                      className="gradient-brand text-white border-0 flex-shrink-0"
+                      disabled={setSiteConfigMutation.isPending}
+                      onClick={() => setSiteConfigMutation.mutate({ key: "professionals_video_bg_url", value: videoBgUrl })}
+                    >
+                      Guardar
+                    </Button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      ref={videoBgFileRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        setVideoBgUploading(true);
+                        try {
+                          const url = await uploadSiteAsset(file);
+                          setVideoBgUrl(url);
+                          setSiteConfigMutation.mutate({ key: "professionals_video_bg_url", value: url });
+                        } catch (err: any) {
+                          toast.error(err?.message ?? "Error al subir la imagen");
+                        } finally {
+                          setVideoBgUploading(false);
+                          if (videoBgFileRef.current) videoBgFileRef.current.value = "";
+                        }
+                      }}
+                    />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex items-center gap-1.5"
+                      disabled={videoBgUploading}
+                      onClick={() => videoBgFileRef.current?.click()}
+                    >
+                      {videoBgUploading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                      {videoBgUploading ? "Subiendo…" : "Subir imagen a R2"}
+                    </Button>
+                    <span className="text-xs text-muted-foreground">JPEG, PNG o WebP</span>
+                  </div>
+                  {videoBgUrl && (
+                    <div className="rounded-xl overflow-hidden border border-border" style={{ maxHeight: 140 }}>
+                      <img src={videoBgUrl} alt="Fondo video preview" className="w-full object-cover" style={{ maxHeight: 140 }} />
+                    </div>
+                  )}
+                  {videoBgUrl && (
+                    <button
+                      className="text-xs text-red-500 hover:text-red-700 underline"
+                      onClick={() => { setVideoBgUrl(""); setSiteConfigMutation.mutate({ key: "professionals_video_bg_url", value: "" }); }}
+                    >
+                      Quitar imagen (volver a fondo crema)
+                    </button>
                   )}
                 </CardContent>
               </Card>
