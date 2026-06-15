@@ -80,12 +80,14 @@ function VideoModal({ videoUrl, bgImageUrl, onComplete }: { videoUrl: string; bg
         </p>
 
         <video
+          key={videoUrl}
           ref={videoRef}
           onTimeUpdate={handleTimeUpdate}
           onEnded={handleEnded}
           controls
           autoPlay
           muted
+          playsInline
           style={{ width: "100%", borderRadius: 12 }}
         >
           <source src={videoUrl} />
@@ -672,7 +674,7 @@ function Footer() {
 export default function ProfessionalsLanding() {
   const [videoWatched, setVideoWatched] = useState(false);
 
-  const { data: siteConfig } = trpc.public.getSiteConfig.useQuery(
+  const { data: siteConfig, isLoading: configLoading } = trpc.public.getSiteConfig.useQuery(
     { keys: ["professionals_video_url", "professionals_banner_url", "professionals_video_bg_url"] },
     { staleTime: 5 * 60 * 1000 }
   );
@@ -687,7 +689,7 @@ export default function ProfessionalsLanding() {
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
 
-      {!videoWatched && <VideoModal videoUrl={videoUrl} bgImageUrl={videoBgUrl} onComplete={() => setVideoWatched(true)} />}
+      {!videoWatched && !configLoading && <VideoModal videoUrl={videoUrl} bgImageUrl={videoBgUrl} onComplete={() => setVideoWatched(true)} />}
 
       <div style={{ opacity: videoWatched ? 1 : 0, transition: "opacity 0.5s ease", pointerEvents: videoWatched ? "auto" : "none", background: C.bg }}>
         <Hero bannerUrl={bannerUrl} />
