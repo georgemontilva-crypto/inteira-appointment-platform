@@ -9,6 +9,7 @@ import {
   HeartHandshake, Image as ImageIcon,
   Sparkles,
 } from "lucide-react";
+import { Link } from "wouter";
 import RegisterProfessional from "./RegisterProfessional";
 
 // ─── Palette ─────────────────────────────────────────────────────────────────
@@ -797,45 +798,95 @@ function SeccionRegistro() {
 // ─── Footer ───────────────────────────────────────────────────────────────────
 function Footer() {
   return (
-    <footer className="py-12 px-6" style={{ background: C.brand, fontFamily: "Poppins, sans-serif" }}>
-      <div className="max-w-6xl mx-auto">
-        <div className="flex flex-wrap gap-10 justify-between mb-10">
-          <div className="flex-1 min-w-[220px] max-w-[280px]">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-full flex items-center justify-center"
-                style={{ background: `linear-gradient(135deg, ${C.warm}, #c49060)` }}>
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round">
-                  <path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" />
-                </svg>
-              </div>
-              <span className="font-bold text-lg text-white">Inteira</span>
+    <footer className="py-8 md:py-12" style={{ backgroundColor: "#607562" }}>
+      <div className="container">
+        {/* Desktop footer grid */}
+        <div className="hidden md:grid md:grid-cols-4 gap-8 mb-8">
+          <div>
+            <div className="mb-4">
+              <img
+                src="https://d2xsxph8kpxj0f.cloudfront.net/310519663083109800/hvpTFzVHTUDdmneoDhwUNk/logo-blanco_886f1d65.webp"
+                alt="Inteira"
+                className="h-8 w-auto object-contain"
+              />
             </div>
-            <p className="text-sm leading-relaxed" style={{ color: C.nude }}>
-              La plataforma de bienestar integral que conecta profesionales comprometidos con quienes los necesitan.
+            <p className="text-sm text-white/75">
+              Plataforma de consultas con especialistas en línea. Conectamos personas con profesionales de confianza.
             </p>
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: C.olive }}>
-              Profesionales
-            </p>
-            {["Nuestra Identidad", "Modelo de Trabajo", "Comunidad", "Únete"].map((l) => (
-              <a key={l} href="#"
-                className="block text-sm mb-2 transition-colors hover:text-white"
-                style={{ color: C.nude }}>{l}</a>
-            ))}
+            <h4 className="font-semibold mb-3 text-sm text-white">Especialidades</h4>
+            <ul className="space-y-2 text-sm text-white/75">
+              <li><a href="#" className="hover:text-white transition-colors">Psicología</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">Legal</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">Finanzas</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">Emprendimiento</a></li>
+            </ul>
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: C.olive }}>Legal</p>
-            {[{ l: "Términos de servicio", h: "/terminos" }, { l: "Privacidad", h: "/privacidad" }].map(({ l, h }) => (
-              <a key={l} href={h}
-                className="block text-sm mb-2 transition-colors hover:text-white"
-                style={{ color: C.nude }}>{l}</a>
-            ))}
+            <h4 className="font-semibold mb-3 text-sm text-white">Plataforma</h4>
+            <ul className="space-y-2 text-sm text-white/75">
+              <li><a href="#como-funciona" className="hover:text-white transition-colors">Cómo funciona</a></li>
+              <li><a href="#planes" className="hover:text-white transition-colors">Planes</a></li>
+              <li><Link href="/registro-profesional"><span className="hover:text-white transition-colors cursor-pointer">Soy profesional</span></Link></li>
+            </ul>
+          </div>
+          <div>
+            <h4 className="font-semibold mb-3 text-sm text-white">Legal</h4>
+            <ul className="space-y-2 text-sm text-white/75">
+              <li><Link href="/terminos"><span className="hover:text-white transition-colors cursor-pointer">Términos de uso</span></Link></li>
+              <li><Link href="/privacidad"><span className="hover:text-white transition-colors cursor-pointer">Privacidad</span></Link></li>
+              <li><a href="mailto:soporte@inteira.mx" className="hover:text-white transition-colors">Contacto</a></li>
+            </ul>
           </div>
         </div>
-        <div className="border-t pt-6 text-center" style={{ borderColor: "rgba(255,255,255,0.1)" }}>
-          <p className="text-xs" style={{ color: "rgba(203,173,166,0.5)" }}>
+
+        {/* Mobile footer: compact logo + links */}
+        <div className="md:hidden">
+          <div className="flex items-center justify-between mb-5">
+            <img
+              src="https://d2xsxph8kpxj0f.cloudfront.net/310519663083109800/hvpTFzVHTUDdmneoDhwUNk/logo-blanco_886f1d65.webp"
+              alt="Inteira"
+              className="h-7 w-auto object-contain"
+            />
+            <a href="https://inteira.app" className="text-xs text-white/70 hover:text-white transition-colors">
+              inteira.app
+            </a>
+          </div>
+          <div className="grid grid-cols-3 gap-4 mb-5">
+            <div>
+              <p className="text-[10px] font-semibold text-white/50 uppercase tracking-widest mb-2">Áreas</p>
+              <ul className="space-y-1.5 text-xs text-white/75">
+                <li><a href="#" className="hover:text-white">Psicología</a></li>
+                <li><a href="#" className="hover:text-white">Legal</a></li>
+                <li><a href="#" className="hover:text-white">Finanzas</a></li>
+              </ul>
+            </div>
+            <div>
+              <p className="text-[10px] font-semibold text-white/50 uppercase tracking-widest mb-2">App</p>
+              <ul className="space-y-1.5 text-xs text-white/75">
+                <li><a href="#como-funciona" className="hover:text-white">Cómo funciona</a></li>
+                <li><Link href="/planes"><span className="hover:text-white cursor-pointer">Planes</span></Link></li>
+                <li><Link href="/registro-profesional"><span className="hover:text-white cursor-pointer">Profesionales</span></Link></li>
+              </ul>
+            </div>
+            <div>
+              <p className="text-[10px] font-semibold text-white/50 uppercase tracking-widest mb-2">Legal</p>
+              <ul className="space-y-1.5 text-xs text-white/75">
+                <li><Link href="/terminos"><span className="hover:text-white cursor-pointer">Términos</span></Link></li>
+                <li><Link href="/privacidad"><span className="hover:text-white cursor-pointer">Privacidad</span></Link></li>
+                <li><a href="mailto:soporte@inteira.mx" className="hover:text-white">Contacto</a></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div className="border-t border-white/20 pt-5 flex flex-col md:flex-row items-center justify-between gap-3">
+          <p className="text-xs md:text-sm text-white/70">
             © {new Date().getFullYear()} Inteira. Todos los derechos reservados.
+          </p>
+          <p className="hidden md:block text-sm text-white/70">
+            <a href="https://inteira.app" className="hover:text-white transition-colors">inteira.app</a>
           </p>
         </div>
       </div>
