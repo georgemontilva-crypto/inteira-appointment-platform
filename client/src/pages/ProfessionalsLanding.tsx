@@ -51,13 +51,16 @@ function ImgPlaceholder({ label, className = "" }: { label: string; className?: 
   );
 }
 
+const LS_KEY = "inteira_video_completed";
+
 // ─── Video Modal ──────────────────────────────────────────────────────────────
 function VideoModal({
-  videoUrl, bgImageUrl, onComplete,
+  videoUrl, bgImageUrl, onComplete, canSkip,
 }: {
   videoUrl: string;
   bgImageUrl: string | null;
   onComplete: () => void;
+  canSkip: boolean;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [progress, setProgress] = useState(0);
@@ -179,9 +182,31 @@ function VideoModal({
             Acceder al contenido →
           </button>
         ) : (
-          <p style={{ textAlign: "center", color: C.textMuted, fontSize: 12, marginTop: 20, opacity: 0.7 }}>
-            El botón de acceso se habilitará al terminar el video.
-          </p>
+          <>
+            <p style={{ textAlign: "center", color: C.textMuted, fontSize: 12, marginTop: 20, opacity: 0.7 }}>
+              El botón de acceso se habilitará al terminar el video.
+            </p>
+            {canSkip && (
+              <button
+                onClick={onComplete}
+                style={{
+                  marginTop: 12,
+                  width: "100%",
+                  padding: "12px",
+                  background: "transparent",
+                  color: C.textMuted,
+                  border: `1px solid #d4cdc7`,
+                  borderRadius: 10,
+                  fontSize: 13,
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  fontFamily: "'Poppins', sans-serif",
+                }}
+              >
+                Ya vi este video — omitir →
+              </button>
+            )}
+          </>
         )}
       </div>
     </div>
@@ -1024,6 +1049,12 @@ function Footer() {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function ProfessionalsLanding() {
   const [videoWatched, setVideoWatched] = useState(false);
+  const hasWatchedBefore = typeof window !== "undefined" && !!localStorage.getItem(LS_KEY);
+
+  const handleVideoComplete = () => {
+    localStorage.setItem(LS_KEY, "1");
+    setVideoWatched(true);
+  };
 
   const { data: siteConfig, isLoading: configLoading } = trpc.public.getSiteConfig.useQuery(
     { keys: ["professionals_video_url", "professionals_banner_url", "professionals_video_bg_url"] },
@@ -1044,7 +1075,8 @@ export default function ProfessionalsLanding() {
         <VideoModal
           videoUrl={videoUrl}
           bgImageUrl={videoBgUrl}
-          onComplete={() => setVideoWatched(true)}
+          onComplete={handleVideoComplete}
+          canSkip={hasWatchedBefore}
         />
       )}
 
