@@ -112,7 +112,7 @@ function FileUploadField({ label, description, accept, file, onChange, required,
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
-export default function RegisterProfessional() {
+export default function RegisterProfessional({ embedded = false }: { embedded?: boolean } = {}) {
   const { isAuthenticated, loading } = useAuth();
   const [, navigate] = useLocation();
   const [submitted, setSubmitted] = useState(false);
@@ -222,6 +222,11 @@ export default function RegisterProfessional() {
   };
 
   if (loading) {
+    if (embedded) return (
+      <div className="flex justify-center py-10">
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
@@ -230,6 +235,19 @@ export default function RegisterProfessional() {
   }
 
   if (submitted) {
+    if (embedded) return (
+      <div className="py-12 text-center">
+        <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+          <CheckCircle2 className="w-8 h-8 text-primary" />
+        </div>
+        <h3 className="text-xl font-bold text-foreground mb-2" style={{ fontFamily: "Poppins, sans-serif" }}>
+          ¡Solicitud enviada!
+        </h3>
+        <p className="text-muted-foreground text-sm">
+          Recibirás un correo cuando tu cuenta sea aprobada.
+        </p>
+      </div>
+    );
     return (
       <div className="min-h-screen flex items-center justify-center bg-background px-4">
         <Card className="max-w-lg w-full border-border">
@@ -257,6 +275,200 @@ export default function RegisterProfessional() {
 
   const isSubmitting = uploading || registerMutation.isPending || registerNewMutation.isPending;
 
+  // ── Embedded layout (used inside landing page) ────────────────────────────
+  if (embedded) return (
+    <>
+      <form onSubmit={handleSubmit} className="space-y-4">
+
+        {/* Fila 1: Nombre | Apellido */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="e-firstName">Nombre <span className="text-red-500">*</span></Label>
+            <Input id="e-firstName" placeholder="Nombre de pila" value={form.firstName}
+              onChange={(e) => handleChange("firstName", e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="e-lastName">Apellido <span className="text-red-500">*</span></Label>
+            <Input id="e-lastName" placeholder="Apellido" value={form.lastName}
+              onChange={(e) => handleChange("lastName", e.target.value)} />
+          </div>
+        </div>
+
+        {/* Fila 2: Email | Username */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="e-email">Correo electrónico <span className="text-red-500">*</span></Label>
+            <Input id="e-email" type="email" placeholder="tu@email.com" value={form.email}
+              onChange={(e) => handleChange("email", e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="e-username">Nombre de usuario</Label>
+            <Input id="e-username" placeholder="@usuario" value={form.username}
+              onChange={(e) => handleChange("username", e.target.value)} />
+          </div>
+        </div>
+
+        {/* Fila 3: Especialidad | Años de experiencia */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Especialidad en Inteira <span className="text-red-500">*</span></Label>
+            <Select value={form.specialtyId} onValueChange={(v) => handleChange("specialtyId", v)} disabled={!specialties}>
+              <SelectTrigger>
+                <SelectValue placeholder={!specialties ? "Cargando..." : "Selecciona tu especialidad"} />
+              </SelectTrigger>
+              <SelectContent>
+                {(specialties ?? []).map((s: any) => (
+                  <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="e-years">Años de experiencia</Label>
+            <Input id="e-years" type="number" min="0" max="60" placeholder="Ej: 5"
+              value={form.yearsOfExperience} onChange={(e) => handleChange("yearsOfExperience", e.target.value)} />
+          </div>
+        </div>
+
+        {/* Fila 4: Género | Licencia profesional (archivo) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Género</Label>
+            <div className="flex flex-wrap gap-4 pt-1">
+              {["Masculino", "Femenino", "Prefiero no decir"].map((g) => (
+                <label key={g} className="flex items-center gap-1.5 cursor-pointer">
+                  <input type="radio" name="e-gender" value={g} checked={form.gender === g}
+                    onChange={() => handleChange("gender", g)} className="accent-primary" />
+                  <span className="text-sm text-foreground">{g}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Cédula profesional (archivo)</Label>
+            <FileUploadField label="" description="PDF, JPG o PNG — máx 10 MB (opcional)"
+              accept="application/pdf,image/jpeg,image/png,image/webp"
+              file={professionalLicense}
+              onChange={(file) => {
+                if (file) { setPendingLicenseFile(file); setShowLicenseConfirm(true); }
+                else { setProfessionalLicense(null); }
+              }} />
+          </div>
+        </div>
+
+        {/* Fila 5: Educación (full width) */}
+        <div className="space-y-2">
+          <Label htmlFor="e-education">Formación académica</Label>
+          <Textarea id="e-education" placeholder="Ej: Licenciatura en Psicología, UNAM. Maestría en Psicoterapia..." rows={3}
+            value={form.education} onChange={(e) => handleChange("education", e.target.value)} />
+        </div>
+
+        {/* Fila 6: Bio (full width) */}
+        <div className="space-y-2">
+          <Label htmlFor="e-bio">Descripción profesional <span className="text-red-500">*</span></Label>
+          <Textarea id="e-bio" placeholder="Describe tu experiencia, enfoque y cómo puedes ayudar a tus clientes..." rows={4}
+            value={form.bio} onChange={(e) => handleChange("bio", e.target.value)} />
+        </div>
+
+        {/* Fila 7: Foto de perfil | Documento de identidad */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Foto de perfil <span className="text-red-500">*</span></Label>
+            <div className="flex items-center gap-3">
+              <div className="w-14 h-14 rounded-full overflow-hidden bg-primary/10 border-2 border-dashed border-primary/30 flex items-center justify-center flex-shrink-0">
+                {photoPreview ? (
+                  <img src={photoPreview} alt="Vista previa" className="w-full h-full object-cover" />
+                ) : (
+                  <Camera className="w-5 h-5 text-primary/50" />
+                )}
+              </div>
+              <div className="flex-1">
+                <FileUploadField label="" description="JPG, PNG o WEBP — máx 5 MB"
+                  accept="image/jpeg,image/png,image/webp" file={profilePhoto} onChange={handlePhotoChange} />
+              </div>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Identificación oficial <span className="text-red-500">*</span></Label>
+            <FileUploadField label="" description="INE, pasaporte o cédula — PDF, JPG o PNG — máx 10 MB"
+              accept="application/pdf,image/jpeg,image/png,image/webp"
+              file={identityDoc} onChange={setIdentityDoc} required />
+          </div>
+        </div>
+
+        {/* Fila 8: Número de cédula | Nacionalidad */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="e-licenseNumber">Número de cédula profesional</Label>
+            <Input id="e-licenseNumber" placeholder="Ej: 12345678 — Cédula SEP (no CURP)"
+              value={form.licenseNumber} onChange={(e) => handleChange("licenseNumber", e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>País del documento de identidad <span className="text-red-500">*</span></Label>
+            <select value={form.documentNationality} onChange={(e) => handleChange("documentNationality", e.target.value)}
+              className="w-full border border-border rounded-xl px-3 py-2.5 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
+              <option value="">Selecciona el país</option>
+              {["México","Colombia","Argentina","Chile","Perú","Venezuela","Ecuador","Bolivia","Paraguay","Uruguay","Costa Rica","Guatemala","Honduras","El Salvador","Nicaragua","Panamá","Cuba","República Dominicana","España","Otro"].map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Fila 9: Certificaciones (full width) */}
+        <FileUploadField
+          label="Certificaciones y títulos"
+          description="PDF, JPG o PNG — máximo 10 MB (opcional)"
+          accept="application/pdf,image/jpeg,image/png,image/webp"
+          file={certifications} onChange={setCertifications} />
+
+        {/* CTA */}
+        <div className="flex justify-center pt-4">
+          <Button type="submit" disabled={isSubmitting}
+            className="w-full h-12 text-base font-semibold rounded-xl text-white border-0 hover:opacity-90 transition-opacity"
+            style={{ background: "#A7774E" }}>
+            {isSubmitting ? (
+              <span className="flex items-center gap-2">
+                <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+                {uploading ? "Subiendo archivos..." : "Enviando solicitud..."}
+              </span>
+            ) : "Enviar solicitud →"}
+          </Button>
+        </div>
+        <p className="text-center text-xs text-muted-foreground">
+          Al enviar, aceptas los{" "}
+          <a href="#" className="text-primary hover:underline">términos y condiciones</a>{" "}
+          de inteira para asesores.
+        </p>
+      </form>
+
+      {/* Modal confirmación cédula profesional */}
+      {showLicenseConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-background rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
+            <h3 className="font-bold text-base" style={{ fontFamily: "Poppins, sans-serif" }}>
+              Confirma tu documento
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Este campo es exclusivamente para tu <strong>CÉDULA PROFESIONAL</strong> que acredita tu título universitario. No es para tu documento de identidad ciudadana (INE, pasaporte, cédula de ciudadanía).
+            </p>
+            <div className="flex gap-2 justify-end pt-2">
+              <Button type="button" variant="ghost" size="sm"
+                onClick={() => { setPendingLicenseFile(null); setShowLicenseConfirm(false); }}>
+                Cambiar documento
+              </Button>
+              <Button type="button" size="sm" className="bg-primary hover:bg-primary/90 text-white border-0"
+                onClick={() => { setProfessionalLicense(pendingLicenseFile); setPendingLicenseFile(null); setShowLicenseConfirm(false); }}>
+                Sí, es mi cédula profesional
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+
+  // ── Standalone layout ─────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}

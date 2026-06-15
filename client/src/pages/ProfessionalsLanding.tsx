@@ -1,23 +1,15 @@
 import { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { trpc } from "@/lib/trpc";
-import { toast } from "sonner";
 import {
   DollarSign, Clock, Calendar, X, Check,
   Brain, Heart, Leaf, Sun, Users, BookOpen,
   Scale, Sprout, Star, Shield,
   Target, Compass, MessageCircle,
   HeartHandshake, Image as ImageIcon,
-  CheckCircle2, ArrowRight, Sparkles,
+  Sparkles,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select, SelectContent, SelectItem,
-  SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
+import RegisterProfessional from "./RegisterProfessional";
 
 // ─── Palette ─────────────────────────────────────────────────────────────────
 const C = {
@@ -780,217 +772,22 @@ function Comunidad() {
 
 // ─── Sección Registro ─────────────────────────────────────────────────────────
 function SeccionRegistro() {
-  const { data: specialties } = trpc.specialty.getAll.useQuery();
-  const [submitted, setSubmitted] = useState(false);
-  const [form, setForm] = useState({
-    fullName: "",
-    email: "",
-    phone: "",
-    profession: "",
-    specialtyId: "",
-    yearsOfExperience: "",
-    bibliaKnowledge: "",
-    motivation: "",
-    whyJoin: "",
-  });
-
-  const set = (f: string, v: string) => setForm((p) => ({ ...p, [f]: v }));
-
-  const registerMutation = trpc.professional.registerNew.useMutation({
-    onSuccess: () => setSubmitted(true),
-    onError: (err) => toast.error(err.message ?? "Error al enviar la solicitud"),
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.fullName.trim()) return toast.error("El nombre es obligatorio");
-    if (!form.email.trim())    return toast.error("El email es obligatorio");
-    if (!form.specialtyId)     return toast.error("Selecciona tu especialidad");
-    if (!form.whyJoin.trim())  return toast.error("Cuéntanos por qué quieres unirte");
-
-    const bio = [
-      form.whyJoin,
-      form.profession    && `Profesión: ${form.profession}`,
-      form.phone         && `Teléfono: ${form.phone}`,
-      form.motivation    && `Motivación: ${form.motivation}`,
-      form.bibliaKnowledge && `Conocimiento de la Biblia Inteira: ${form.bibliaKnowledge}`,
-    ].filter(Boolean).join("\n\n");
-
-    registerMutation.mutate({
-      fullName:          form.fullName,
-      email:             form.email,
-      specialtyId:       parseInt(form.specialtyId),
-      bio,
-      yearsOfExperience: form.yearsOfExperience ? parseInt(form.yearsOfExperience) : undefined,
-      profilePhoto:      "",
-      identityDocUrl:    "",
-    } as any);
-  };
-
-  if (submitted) {
-    return (
-      <section id="registro" className="py-24 bg-white" style={{ fontFamily: "Poppins, sans-serif" }}>
-        <div className="max-w-xl mx-auto px-6 text-center">
-          <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6"
-            style={{ background: `${C.brand}15` }}>
-            <CheckCircle2 className="w-10 h-10" style={{ color: C.brand }} />
-          </div>
-          <h2 className="text-2xl font-extrabold mb-3" style={{ color: C.brand }}>¡Solicitud recibida!</h2>
-          <p className="mb-2" style={{ color: C.textMuted }}>
-            Gracias por tu interés en unirte a Inteira. El equipo revisará tu solicitud y se pondrá en
-            contacto contigo pronto.
-          </p>
-          <p className="text-sm" style={{ color: C.textMuted }}>
-            Recibirás un correo cuando tu cuenta sea aprobada.
-          </p>
-        </div>
-      </section>
-    );
-  }
-
   return (
-    <section id="registro" className="py-24 bg-white" style={{ fontFamily: "Poppins, sans-serif" }}>
-      <div className="max-w-3xl mx-auto px-6">
-
-        <motion.div {...fadeUp} className="text-center mb-12">
-          <span className="inline-block text-xs font-semibold tracking-widest uppercase px-4 py-2 rounded-full mb-4"
-            style={{ background: `${C.brand}12`, color: C.brand }}>
+    <section id="unete" className="py-16 px-6 bg-white" style={{ fontFamily: "Poppins, sans-serif" }}>
+      <div className="max-w-4xl mx-auto">
+        <motion.div {...fadeUp} className="text-center mb-10">
+          <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: C.warm }}>
             Únete a Inteira
           </span>
-          <h2 className="text-3xl sm:text-4xl font-extrabold mb-4" style={{ color: C.brand }}>
-            Empieza tu camino con nosotros
+          <h2 className="text-3xl font-semibold mt-2" style={{ color: "#3d2e22" }}>
+            Regístrate como profesional
           </h2>
-          <p className="text-base" style={{ color: C.textMuted }}>
-            Completa el formulario y nuestro equipo revisará tu solicitud en menos de 48 horas.
+          <p className="mt-2" style={{ color: C.textMuted }}>
+            Completa el formulario y nos pondremos en contacto contigo muy pronto.
           </p>
         </motion.div>
-
-        <motion.div {...fadeUp}>
-          <form onSubmit={handleSubmit} className="space-y-5">
-
-            {/* Fila 1: Nombre completo | Correo electrónico */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="fullName">Nombre completo <span className="text-red-500">*</span></Label>
-                <Input id="fullName" placeholder="Tu nombre completo"
-                  value={form.fullName} onChange={(e) => set("fullName", e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Correo electrónico <span className="text-red-500">*</span></Label>
-                <Input id="email" type="email" placeholder="tu@email.com"
-                  value={form.email} onChange={(e) => set("email", e.target.value)} />
-              </div>
-            </div>
-
-            {/* Fila 2: Teléfono | Profesión */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="phone">Teléfono</Label>
-                <Input id="phone" placeholder="+52 55 0000 0000"
-                  value={form.phone} onChange={(e) => set("phone", e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="profession">Profesión</Label>
-                <Input id="profession" placeholder="Ej: Psicóloga clínica"
-                  value={form.profession} onChange={(e) => set("profession", e.target.value)} />
-              </div>
-            </div>
-
-            {/* Fila 3: Especialidad | Años de experiencia */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Especialidad en Inteira <span className="text-red-500">*</span></Label>
-                <Select value={form.specialtyId} onValueChange={(v) => set("specialtyId", v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={specialties ? "Selecciona tu especialidad..." : "Cargando..."} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(specialties ?? []).map((s: any) => (
-                      <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Años de experiencia</Label>
-                <Select value={form.yearsOfExperience} onValueChange={(v) => set("yearsOfExperience", v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecciona..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[
-                      { label: "Menos de 1 año", value: "0" },
-                      { label: "1 – 2 años",     value: "1" },
-                      { label: "3 – 5 años",     value: "3" },
-                      { label: "6 – 10 años",    value: "6" },
-                      { label: "11 – 15 años",   value: "11" },
-                      { label: "Más de 15 años", value: "15" },
-                    ].map((o) => (
-                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Fila 4: Conocimiento de la Biblia | Motivación */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Conocimiento de la Biblia Inteira</Label>
-                <Select value={form.bibliaKnowledge} onValueChange={(v) => set("bibliaKnowledge", v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecciona..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="si_completa">Sí, la he leído completa</SelectItem>
-                    <SelectItem value="parcial">La conozco parcialmente</SelectItem>
-                    <SelectItem value="no_lei">No la he leído aún</SelectItem>
-                    <SelectItem value="que_es">¿Qué es la Biblia Inteira?</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="motivation">Motivación personal (breve)</Label>
-                <Input id="motivation" placeholder="Lo que te mueve a ayudar..."
-                  value={form.motivation} onChange={(e) => set("motivation", e.target.value)} />
-              </div>
-            </div>
-
-            {/* Fila 5: ¿Por qué quieres unirte? */}
-            <div className="space-y-2">
-              <Label htmlFor="whyJoin">
-                ¿Por qué quieres unirte a Inteira? <span className="text-red-500">*</span>
-              </Label>
-              <Textarea
-                id="whyJoin"
-                placeholder="Cuéntanos tu historia, tus objetivos y cómo Inteira encaja en tu práctica profesional..."
-                rows={5}
-                value={form.whyJoin}
-                onChange={(e) => set("whyJoin", e.target.value)}
-              />
-            </div>
-
-            <div className="flex justify-center pt-4">
-              <Button
-                type="submit"
-                disabled={registerMutation.isPending}
-                className="px-10 py-4 h-auto text-base font-bold text-white rounded-xl border-0 hover:opacity-90 transition-opacity"
-                style={{ background: C.warm }}
-              >
-                {registerMutation.isPending ? (
-                  <span className="flex items-center gap-2">
-                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Enviando solicitud...
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-2">
-                    Enviar solicitud
-                    <ArrowRight className="w-4 h-4" />
-                  </span>
-                )}
-              </Button>
-            </div>
-          </form>
+        <motion.div {...fadeUp} transition={{ delay: 0.1, duration: 0.5 }}>
+          <RegisterProfessional embedded />
         </motion.div>
       </div>
     </section>
