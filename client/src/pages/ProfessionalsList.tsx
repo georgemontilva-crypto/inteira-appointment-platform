@@ -2,8 +2,8 @@ import { useState, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { PRICING } from "@/lib/pricing";
-import { Link, useRoute } from "wouter";
-import { Star, Award, Calendar, Search, SlidersHorizontal, X, Coins } from "lucide-react";
+import { Link, useRoute, useLocation } from "wouter";
+import { Star, Award, Calendar, Search, SlidersHorizontal, X, Coins, ArrowLeft } from "lucide-react";
 import DashboardLayout from "../components/DashboardLayout";
 import { motion } from "framer-motion";
 
@@ -57,6 +57,7 @@ export default function ProfessionalsList() {
   const [, params] = useRoute("/especialidades/:slug");
   const slug = params?.slug ?? "";
   const { isAuthenticated } = useAuth();
+  const [, navigate] = useLocation();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [onlyAvailable, setOnlyAvailable] = useState(false);
@@ -101,6 +102,17 @@ export default function ProfessionalsList() {
   return (
     <DashboardLayout>
       <div className="bg-white min-h-full">
+        {/* Back button */}
+        <div className="px-6 pt-4">
+          <button
+            onClick={() => navigate("/especialidades")}
+            className="flex items-center gap-2 text-sm text-gray-600 hover:text-[#5B6A57] transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Especialidades
+          </button>
+        </div>
+
         {/* Hero strip */}
         <div className="bg-[#5B6A57] px-6 py-8">
           <h1 className="text-2xl font-semibold text-white">{specialty?.name ?? "Especialidad"}</h1>

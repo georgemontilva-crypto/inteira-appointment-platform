@@ -10,7 +10,7 @@ import { Link, useRoute } from "wouter";
 import DashboardLayout from "../components/DashboardLayout";
 import {
   Star, Award, Clock, CheckCircle2, Calendar,
-  Shield, GraduationCap, MessageSquare, User, FileText, Info,
+  Shield, GraduationCap, MessageSquare, User, FileText, Info, ArrowLeft,
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -120,6 +120,17 @@ export default function ProfessionalProfile() {
   return (
     <DashboardLayout>
       <div className="container py-8">
+        {/* Back button */}
+        <div className="mb-4">
+          <button
+            onClick={() => window.history.back()}
+            className="flex items-center gap-2 text-sm text-gray-600 hover:text-[#5B6A57] transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Volver
+          </button>
+        </div>
+
         {/* Profile header card */}
         <div className="rounded-2xl border border-border bg-card p-6 mb-8">
           <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
@@ -176,12 +187,17 @@ export default function ProfessionalProfile() {
                 </div>
               </div>
             </div>
-            <Link href={`/agendar/${professional.id}`}>
-              <Button className="gradient-brand text-white border-0 shadow-md font-semibold">
-                <Calendar className="w-4 h-4 mr-2" />
-                Agendar cita
-              </Button>
-            </Link>
+            <Button
+              className="gradient-brand text-white border-0 shadow-md font-semibold"
+              onClick={() => {
+                window.location.href = isAuthenticated
+                  ? `/agendar/${professional.id}`
+                  : `/login?returnTo=${encodeURIComponent(`/agendar/${professional.id}`)}`;
+              }}
+            >
+              <Calendar className="w-4 h-4 mr-2" />
+              Agendar cita
+            </Button>
           </div>
         </div>
 
@@ -463,12 +479,17 @@ export default function ProfessionalProfile() {
                   </div>
                 </div>
 
-                <Link href={`/agendar/${professional.id}`}>
-                  <Button className="w-full bg-primary hover:bg-primary/90 text-white shadow-md">
-                    <Calendar className="w-4 h-4 mr-2" />
-                    Agendar cita
-                  </Button>
-                </Link>
+                <Button
+                  className="w-full bg-primary hover:bg-primary/90 text-white shadow-md"
+                  onClick={() => {
+                    window.location.href = isAuthenticated
+                      ? `/agendar/${professional.id}`
+                      : `/login?returnTo=${encodeURIComponent(`/agendar/${professional.id}`)}`;
+                  }}
+                >
+                  <Calendar className="w-4 h-4 mr-2" />
+                  Agendar cita
+                </Button>
               </CardContent>
             </Card>
 
