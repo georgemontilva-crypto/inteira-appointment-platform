@@ -413,20 +413,24 @@ export async function getSpecialtyById(id: number) {
   }
 }
 
-export async function getSpecialtyBySlug(slug: string) {
-  const db = await getDb();
-  if (!db) return undefined;
-  try {
-    const [rows] = await db.execute(
+export async function getSpecialtyBySlug(slug: string): Promise<any | null> {
+  const dbConn = await getDb();
+  if (!dbConn) return null;
+  const client = (dbConn as any).$client;
+  return new Promise((resolve) => {
+    client.execute(
       "SELECT * FROM `specialties` WHERE `slug` = ? LIMIT 1",
-      [slug]
-    ) as any;
-    const arr = Array.isArray(rows) ? rows : [];
-    return arr.length > 0 ? arr[0] : undefined;
-  } catch (error) {
-    console.error("[Database] getSpecialtyBySlug error:", error);
-    return undefined;
-  }
+      [slug],
+      (err: any, results: any) => {
+        if (err) {
+          console.error("[Database] getSpecialtyBySlug error:", err?.message);
+          return resolve(null);
+        }
+        const arr = Array.isArray(results) ? results : [];
+        resolve(arr.length > 0 ? arr[0] : null);
+      }
+    );
+  });
 }
 
 export function slugifyName(text: string): string {
