@@ -350,7 +350,7 @@ export default function AdminDashboard() {
 
   // ─── siteConfig state ────────────────────────────────────────────────────
   const { data: siteConfigData, refetch: refetchSiteConfig } = trpc.public.getSiteConfig.useQuery(
-    { keys: ["professionals_video_url", "professionals_banner_url", "home_hero_banner_url", "professionals_video_bg_url"] },
+    { keys: ["professionals_video_url", "professionals_banner_url", "home_hero_banner_url", "professionals_video_bg_url", "dashboard_ad_banner_url", "dashboard_ad_banner_link"] },
     { enabled: activeTab === "contenido" }
   );
   const [videoUrl, setVideoUrl] = useState("");
@@ -367,6 +367,10 @@ export default function AdminDashboard() {
   const homeHeroBannerFileRef = useRef<HTMLInputElement>(null);
   const [carouselForm, setCarouselForm] = useState({ title: "", imageUrl: "", link: "/especialidades" });
   const [carouselUploading, setCarouselUploading] = useState(false);
+  const [dashboardAdBannerUrl, setDashboardAdBannerUrl] = useState("");
+  const [dashboardAdBannerLink, setDashboardAdBannerLink] = useState("");
+  const [dashboardAdBannerUploading, setDashboardAdBannerUploading] = useState(false);
+  const dashboardAdBannerFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (siteConfigData) {
@@ -374,6 +378,8 @@ export default function AdminDashboard() {
       setBannerUrl(siteConfigData.professionals_banner_url ?? "");
       setHomeHeroBannerUrl(siteConfigData.home_hero_banner_url ?? "");
       setVideoBgUrl(siteConfigData.professionals_video_bg_url ?? "");
+      setDashboardAdBannerUrl(siteConfigData.dashboard_ad_banner_url ?? "");
+      setDashboardAdBannerLink(siteConfigData.dashboard_ad_banner_link ?? "");
     }
   }, [siteConfigData]);
 
@@ -1493,6 +1499,124 @@ export default function AdminDashboard() {
                 </Card>
               </div>
             </div>
+
+            {/* ── Banner publicitario del Dashboard ── */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-primary inline-block" />
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Dashboard de usuarios</p>
+              </div>
+
+              <Card className="border-border">
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Image className="w-4 h-4 text-primary" />
+                    Banner publicitario del Dashboard
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-xs text-muted-foreground">
+                    Imagen que se muestra debajo de "¿Listo para tu próxima sesión?" en el dashboard de usuarios. Deja vacío para ocultar el banner.
+                  </p>
+
+                  {/* URL de imagen */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">URL de imagen</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={dashboardAdBannerUrl}
+                        onChange={(e) => setDashboardAdBannerUrl(e.target.value)}
+                        placeholder="https://..."
+                        className="flex-1 text-sm border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+                      />
+                      <Button
+                        size="sm"
+                        className="gradient-brand text-white border-0 flex-shrink-0"
+                        disabled={setSiteConfigMutation.isPending}
+                        onClick={() => setSiteConfigMutation.mutate({ key: "dashboard_ad_banner_url", value: dashboardAdBannerUrl })}
+                      >
+                        Guardar
+                      </Button>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <input
+                        ref={dashboardAdBannerFileRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          setDashboardAdBannerUploading(true);
+                          try {
+                            const url = await uploadSiteAsset(file);
+                            setDashboardAdBannerUrl(url);
+                            setSiteConfigMutation.mutate({ key: "dashboard_ad_banner_url", value: url });
+                          } catch (err: any) {
+                            toast.error(err?.message ?? "Error al subir la imagen");
+                          } finally {
+                            setDashboardAdBannerUploading(false);
+                            if (dashboardAdBannerFileRef.current) dashboardAdBannerFileRef.current.value = "";
+                          }
+                        }}
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex items-center gap-1.5"
+                        disabled={dashboardAdBannerUploading}
+                        onClick={() => dashboardAdBannerFileRef.current?.click()}
+                      >
+                        {dashboardAdBannerUploading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                        {dashboardAdBannerUploading ? "Subiendo…" : "Subir imagen a R2"}
+                      </Button>
+                      <span className="text-xs text-muted-foreground">JPEG, PNG o WebP</span>
+                    </div>
+                    {dashboardAdBannerUrl && (
+                      <div className="rounded-xl overflow-hidden border border-border mt-2" style={{ maxHeight: 120 }}>
+                        <img src={dashboardAdBannerUrl} alt="Ad banner preview" className="w-full object-cover" style={{ maxHeight: 120 }} />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* URL de link */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">URL de destino al hacer clic (opcional)</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={dashboardAdBannerLink}
+                        onChange={(e) => setDashboardAdBannerLink(e.target.value)}
+                        placeholder="https://... (dejar vacío si no hay link)"
+                        className="flex-1 text-sm border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+                      />
+                      <Button
+                        size="sm"
+                        className="gradient-brand text-white border-0 flex-shrink-0"
+                        disabled={setSiteConfigMutation.isPending}
+                        onClick={() => setSiteConfigMutation.mutate({ key: "dashboard_ad_banner_link", value: dashboardAdBannerLink })}
+                      >
+                        Guardar
+                      </Button>
+                    </div>
+                  </div>
+
+                  {dashboardAdBannerUrl && (
+                    <button
+                      className="text-xs text-red-500 hover:text-red-700 underline"
+                      onClick={() => {
+                        setDashboardAdBannerUrl("");
+                        setSiteConfigMutation.mutate({ key: "dashboard_ad_banner_url", value: "" });
+                      }}
+                    >
+                      Quitar banner (ocultar en dashboard)
+                    </button>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
           </div>
         )}
 

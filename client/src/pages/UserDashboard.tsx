@@ -187,6 +187,13 @@ export default function UserDashboard() {
     { staleTime: 300_000 }
   );
 
+  const { data: adConfig } = trpc.public.getSiteConfig.useQuery(
+    { keys: ["dashboard_ad_banner_url", "dashboard_ad_banner_link"] },
+    { staleTime: 300_000 }
+  );
+  const adBannerUrl = adConfig?.dashboard_ad_banner_url ?? "";
+  const adBannerLink = adConfig?.dashboard_ad_banner_link ?? "";
+
   const { data: notifications } = trpc.notifications.getAll.useQuery(undefined, {
     enabled: isAuthenticated,
     refetchInterval: 60_000,
@@ -334,7 +341,7 @@ export default function UserDashboard() {
   return (
     <DashboardLayout>
       <div className="bg-white min-h-screen pb-24 md:pb-8">
-        <div className="max-w-5xl mx-auto px-4 pt-5 pb-4 space-y-4">
+        <div className="max-w-7xl mx-auto w-full px-4 pt-5 pb-4 space-y-4">
 
           {/* TOP BAR */}
           <div className="flex items-center justify-between gap-3">
@@ -588,6 +595,15 @@ export default function UserDashboard() {
               <ArrowRight className="w-4 h-4 ml-1.5" />
             </Button>
           </div>
+
+          {/* AD BANNER */}
+          {adBannerUrl && (
+            <div className="my-4 rounded-xl overflow-hidden border border-gray-100">
+              <a href={adBannerLink || '#'} target={adBannerLink ? '_blank' : undefined} rel="noopener noreferrer">
+                <img src={adBannerUrl} alt="Publicidad" className="w-full h-auto object-cover" />
+              </a>
+            </div>
+          )}
 
         </div>
       </div>
