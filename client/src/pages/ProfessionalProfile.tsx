@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { PRICING } from "@/lib/pricing";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Link, useRoute } from "wouter";
+import { Link, useRoute, useLocation } from "wouter";
 import DashboardLayout from "../components/DashboardLayout";
 import {
   Star, Award, Clock, CheckCircle2, Calendar,
@@ -57,18 +57,35 @@ function StarRating({
 }
 
 export default function ProfessionalProfile() {
-  const [, params] = useRoute("/profesional/:id");
-  const professionalId = parseInt(params?.id ?? "0");
+  const [, params] = useRoute("/profesional/:slug");
+  const rawParam = params?.slug ?? "";
+  const isNumeric = /^\d+$/.test(rawParam);
+  const [, navigate] = useLocation();
   const { user, isAuthenticated } = useAuth();
 
   const [reviewRating, setReviewRating] = useState(0);
   const [reviewComment, setReviewComment] = useState("");
   const [showReviewForm, setShowReviewForm] = useState(false);
 
-  const { data: professional, isLoading, refetch } = trpc.professional.getById.useQuery(
-    { id: professionalId },
-    { enabled: professionalId > 0 }
+  // Numeric fallback: old /profesional/:id links redirect to /profesional/:slug
+  const { data: proById } = trpc.professional.getById.useQuery(
+    { id: parseInt(rawParam, 10) || 0 },
+    { enabled: isNumeric && rawParam.length > 0 }
   );
+  useEffect(() => {
+    if (isNumeric && (proById as any)?.slug) {
+      navigate(`/profesional/${(proById as any).slug}`, { replace: true } as any);
+    }
+  }, [isNumeric, (proById as any)?.slug]);
+
+  // Primary slug-based fetch
+  const { data: proBySlug, isLoading, refetch } = trpc.professional.getBySlug.useQuery(
+    { slug: rawParam },
+    { enabled: !isNumeric && rawParam.length > 0 }
+  );
+
+  const professional = isNumeric ? proById : proBySlug;
+  const professionalId = professional?.id ?? 0;
 
   const { data: reviews, refetch: refetchReviews } = trpc.review.getByProfessional.useQuery(
     { professionalId },
@@ -120,17 +137,6 @@ export default function ProfessionalProfile() {
   return (
     <DashboardLayout>
       <div className="container py-8">
-        {/* Back button */}
-        <div className="mb-4">
-          <button
-            onClick={() => window.history.back()}
-            className="flex items-center gap-2 text-sm text-gray-600 hover:text-[#5B6A57] transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Volver
-          </button>
-        </div>
-
         {/* Profile header card */}
         <div className="rounded-2xl border border-border bg-card p-6 mb-8">
           <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
@@ -148,16 +154,24 @@ export default function ProfessionalProfile() {
               )}
             </div>
             <div className="flex-1">
-              <div className="flex flex-wrap items-center gap-3 mb-2">
-                <h1 className="text-2xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
-                  {professional.user?.name ?? `Especialista #${professional.id}`}
-                </h1>
-                {professional.status === "approved" && (
-                  <Badge className="bg-primary/10 text-primary border-primary/20 text-xs">
-                    <CheckCircle2 className="w-3 h-3 mr-1" />
-                    Verificado
-                  </Badge>
-                )}
+              <div className="flex items-center gap-3 mb-2">
+                <button
+                  onClick={() => window.history.back()}
+                  className="text-gray-600 hover:text-[#5B6A57] flex-shrink-0 transition-colors"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+                <div className="flex flex-wrap items-center gap-2 min-w-0">
+                  <h1 className="text-2xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
+                    {professional.user?.name ?? `Especialista #${professional.id}`}
+                  </h1>
+                  {professional.status === "approved" && (
+                    <Badge className="bg-primary/10 text-primary border-primary/20 text-xs">
+                      <CheckCircle2 className="w-3 h-3 mr-1" />
+                      Verificado
+                    </Badge>
+                  )}
+                </div>
               </div>
               <div className="flex flex-wrap items-center gap-4 text-muted-foreground text-sm">
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>

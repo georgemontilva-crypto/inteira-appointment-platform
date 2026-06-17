@@ -649,7 +649,7 @@ export default function ProfessionalDashboard() {
                 <button
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors"
                   onClick={() => {
-                    const url = `${window.location.origin}/profesional/${profile.id}`;
+                    const url = `${window.location.origin}/profesional/${(profile as any).slug || profile.id}`;
                     navigator.clipboard.writeText(url).then(() => toast.success("Enlace copiado al portapapeles"));
                   }}
                 >

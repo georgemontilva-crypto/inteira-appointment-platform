@@ -284,13 +284,33 @@ export async function getProfessionalById(id: number) {
   });
 }
 
+export async function getProfessionalBySlug(slug: string): Promise<any | null> {
+  const dbConn = await getDb();
+  if (!dbConn) return null;
+  const client = (dbConn as any).$client;
+  return new Promise((resolve) => {
+    client.execute(
+      "SELECT * FROM `professionals` WHERE `slug` = ? LIMIT 1",
+      [slug],
+      (err: any, results: any) => {
+        if (err) {
+          console.error("[Database] getProfessionalBySlug error:", err?.message);
+          return resolve(null);
+        }
+        const arr = Array.isArray(results) ? results : [];
+        resolve(arr.length > 0 ? arr[0] : null);
+      }
+    );
+  });
+}
+
 export async function getProfessionalsBySpecialty(specialtyId: number) {
   const db = await getDb();
   if (!db) return [];
   const client = (db as any).$client;
   return new Promise<any[]>((resolve, reject) => {
     client.execute(
-      `SELECT p.id, p.userId, p.specialtyId, p.status, p.tier, p.bio, p.profilePhoto,
+      `SELECT p.id, p.slug, p.userId, p.specialtyId, p.status, p.tier, p.bio, p.profilePhoto,
               p.averageRating, p.totalReviews, p.isAvailable, p.yearsOfExperience, p.hourlyRate,
               u.name as professionalName, u.email as userEmail, u.profileImage as userProfileImage
        FROM professionals p
@@ -345,15 +365,15 @@ export async function approveProfessional(
 ) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
+  const client = (db as any).$client;
 
-  // Get userId before updating
+  // Get userId + user name before updating
   const [profRows] = await db.execute(
-    `SELECT userId FROM \`professionals\` WHERE id = ${Number(professionalId)} LIMIT 1`
+    `SELECT p.userId, u.name FROM \`professionals\` p LEFT JOIN \`users\` u ON u.id = p.userId WHERE p.id = ${Number(professionalId)} LIMIT 1`
   ) as any;
   const profArr = Array.isArray(profRows) ? profRows : [];
   const userId = profArr[0]?.userId;
-
-  const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+  const userName: string | null = profArr[0]?.name ?? null;
 
   // Update professionals table using Drizzle ORM
   await db
@@ -366,6 +386,53 @@ export async function approveProfessional(
     await db.execute(
       `UPDATE \`users\` SET \`role\` = 'professional' WHERE \`id\` = ${Number(userId)}`
     );
+  }
+
+  // Generate slug from user name if not already set
+  if (userName) {
+    try {
+      const existingSlug = await new Promise<string | null>((resolve) => {
+        client.execute(
+          "SELECT `slug` FROM `professionals` WHERE `id` = ? LIMIT 1",
+          [professionalId],
+          (err: any, results: any) => {
+            const rows = Array.isArray(results) ? results : [];
+            resolve(rows[0]?.slug ?? null);
+          }
+        );
+      });
+      if (!existingSlug) {
+        const baseSlug = slugifyName(userName);
+        let slug = baseSlug;
+        let suffix = 1;
+        while (true) {
+          const conflict = await new Promise<boolean>((resolve) => {
+            client.execute(
+              "SELECT `id` FROM `professionals` WHERE `slug` = ? AND `id` != ? LIMIT 1",
+              [slug, professionalId],
+              (err: any, results: any) => {
+                resolve(Array.isArray(results) ? results.length > 0 : false);
+              }
+            );
+          });
+          if (!conflict) break;
+          slug = `${baseSlug}-${++suffix}`;
+        }
+        await new Promise<void>((resolve) => {
+          client.execute(
+            "UPDATE `professionals` SET `slug` = ? WHERE `id` = ?",
+            [slug, professionalId],
+            (err: any) => {
+              if (err) console.error("[approveProfessional] slug update:", err?.message);
+              else console.log(`[approveProfessional] slug="${slug}" assigned to professionalId=${professionalId}`);
+              resolve();
+            }
+          );
+        });
+      }
+    } catch (e: any) {
+      console.error("[approveProfessional] slug generation error:", e?.message);
+    }
   }
 }
 
@@ -948,6 +1015,7 @@ export async function getFeaturedProfessionals(limit = 6) {
     const rows = await db
       .select({
         id: professionals.id,
+        slug: professionals.slug,
         userId: professionals.userId,
         specialtyId: professionals.specialtyId,
         bio: professionals.bio,

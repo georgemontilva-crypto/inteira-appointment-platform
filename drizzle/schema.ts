@@ -58,6 +58,7 @@ export type InsertSpecialty = typeof specialties.$inferInsert;
  */
 export const professionals = mysqlTable("professionals", {
   id: int("id").autoincrement().primaryKey(),
+  slug: varchar("slug", { length: 255 }).unique(),
   userId: int("userId").notNull().unique(),
   specialtyId: int("specialtyId").notNull(),
   licenseNumber: varchar("licenseNumber", { length: 255 }).notNull().unique(),

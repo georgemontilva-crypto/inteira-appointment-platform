@@ -102,21 +102,22 @@ export default function ProfessionalsList() {
   return (
     <DashboardLayout>
       <div className="bg-white min-h-full">
-        {/* Back button */}
-        <div className="px-6 pt-4">
-          <button
-            onClick={() => navigate("/especialidades")}
-            className="flex items-center gap-2 text-sm text-gray-600 hover:text-[#5B6A57] transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Especialidades
-          </button>
+        {/* Title + back arrow */}
+        <div className="px-6 py-4">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate("/especialidades")}
+              className="text-gray-600 hover:text-[#5B6A57] flex-shrink-0 transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <h1 className="text-xl font-semibold text-gray-900">{specialty?.name ?? "Especialidad"}</h1>
+          </div>
         </div>
 
         {/* Hero strip */}
-        <div className="bg-[#5B6A57] px-6 py-8">
-          <h1 className="text-2xl font-semibold text-white">{specialty?.name ?? "Especialidad"}</h1>
-          <p className="text-[#c5d0c2] text-sm mt-1">
+        <div className="bg-[#5B6A57] px-6 py-6">
+          <p className="text-[#c5d0c2] text-sm">
             {isLoading
               ? "Cargando..."
               : `${filtered.length} ${filtered.length === 1 ? "profesional disponible" : "profesionales disponibles"}`}
@@ -328,7 +329,7 @@ export default function ProfessionalsList() {
 
                     {/* Actions */}
                     <div className="flex gap-2">
-                      <Link href={`/profesional/${pro.id}`} className="flex-1">
+                      <Link href={`/profesional/${(pro as any).slug || pro.id}`} className="flex-1">
                         <button className="w-full h-9 rounded-xl border border-[#5B6A57]/40 text-[#5B6A57] text-xs font-medium hover:bg-[#5B6A57]/5 transition-colors">
                           Ver perfil
                         </button>

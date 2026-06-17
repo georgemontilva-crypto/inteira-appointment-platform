@@ -22,16 +22,29 @@ export default function Login() {
     return () => clearTimeout(t);
   }, [resendTimer]);
 
-  // Redirect if already authenticated
+  // Redirect if already authenticated — respeta returnTo en query params
   useEffect(() => {
     if (!loading && isAuthenticated && user) {
-      if (user.role === "professional") navigate("/panel-profesional");
-      else if (user.role === "admin") navigate("/admin");
-      else navigate("/dashboard");
+      const params = new URLSearchParams(window.location.search);
+      const returnTo = params.get("returnTo") || sessionStorage.getItem("loginReturnTo") || "";
+      sessionStorage.removeItem("loginReturnTo");
+      if (returnTo) {
+        window.location.href = returnTo;
+      } else if (user.role === "professional") {
+        navigate("/panel-profesional");
+      } else if (user.role === "admin") {
+        navigate("/admin");
+      } else {
+        navigate("/dashboard");
+      }
     }
   }, [isAuthenticated, loading, user, navigate]);
 
   const handleGoogleLogin = () => {
+    // Persiste returnTo para recuperarlo después del OAuth redirect
+    const params = new URLSearchParams(window.location.search);
+    const returnTo = params.get("returnTo");
+    if (returnTo) sessionStorage.setItem("loginReturnTo", returnTo);
     window.location.href = "/api/auth/google";
   };
 
@@ -71,7 +84,10 @@ export default function Login() {
       });
       const data = await res.json();
       if (!res.ok) { setAuthError(data.error ?? "Código inválido"); return; }
-      window.location.href = data.redirectTo ?? "/dashboard";
+      const qp = new URLSearchParams(window.location.search);
+      const returnTo = qp.get("returnTo") || sessionStorage.getItem("loginReturnTo") || "";
+      sessionStorage.removeItem("loginReturnTo");
+      window.location.href = returnTo || data.redirectTo || "/dashboard";
     } catch {
       setAuthError("Error de conexión. Intenta de nuevo.");
     } finally {

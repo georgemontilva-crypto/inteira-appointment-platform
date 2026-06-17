@@ -462,6 +462,67 @@ async function runStartupMigrations() {
       console.warn("[Migration] Could not add specialties.icon column:", e?.message);
     }
 
+    // Ensure professionals.slug column exists and backfill existing rows
+    try {
+      const [pSlugCols] = await db.execute(
+        "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'professionals' AND COLUMN_NAME = 'slug'"
+      ) as any;
+      const pSlugExists = Array.isArray(pSlugCols) ? pSlugCols.length > 0 : false;
+      if (!pSlugExists) {
+        await db.execute("ALTER TABLE `professionals` ADD COLUMN `slug` VARCHAR(255) NULL UNIQUE");
+        console.log("[Migration] professionals.slug column added");
+      }
+      const { slugifyName } = await import("../db");
+      const noSlugRows = await new Promise<any[]>((resolve) => {
+        client.execute(
+          `SELECT p.id, u.name
+           FROM professionals p
+           LEFT JOIN users u ON p.userId = u.id
+           WHERE p.slug IS NULL OR p.slug = ''`,
+          [],
+          (err: any, results: any) => {
+            if (err) { console.error("[Migration] professionals slug select:", err?.message); resolve([]); }
+            else resolve(Array.isArray(results) ? results : []);
+          }
+        );
+      });
+      if (noSlugRows.length > 0) {
+        const usedSlugs = await new Promise<Set<string>>((resolve) => {
+          client.execute(
+            "SELECT slug FROM professionals WHERE slug IS NOT NULL AND slug != ''",
+            [],
+            (err: any, results: any) => {
+              const rows = Array.isArray(results) ? results : [];
+              resolve(new Set(rows.map((r: any) => r.slug as string).filter(Boolean)));
+            }
+          );
+        });
+        for (const row of noSlugRows) {
+          const name = (row.name as string) || `profesional-${row.id}`;
+          const base = slugifyName(name);
+          let slug = base;
+          let suffix = 1;
+          while (usedSlugs.has(slug)) slug = `${base}-${++suffix}`;
+          usedSlugs.add(slug);
+          await new Promise<void>((resolve) => {
+            client.execute(
+              "UPDATE `professionals` SET `slug` = ? WHERE `id` = ?",
+              [slug, row.id],
+              (err: any) => {
+                if (err) console.warn(`[Migration] professionals slug id=${row.id}:`, err?.message);
+                else console.log(`[Migration] professionals.slug="${slug}" id=${row.id}`);
+                resolve();
+              }
+            );
+          });
+        }
+      } else {
+        console.log("[Migration] professionals.slug: all rows already have slugs");
+      }
+    } catch (e: any) {
+      console.warn("[Migration] Could not add/backfill professionals.slug:", e?.message);
+    }
+
     // Ensure specialties.slug column exists and backfill existing rows
     try {
       const [sSlugCols] = await db.execute(

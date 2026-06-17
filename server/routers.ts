@@ -639,6 +639,26 @@ export const appRouter = router({
         return await db.getProfessionalsBySpecialty(specialty.id as number);
       }),
 
+    getBySlug: publicProcedure
+      .input(z.object({ slug: z.string() }))
+      .query(async ({ input }) => {
+        const professional = await db.getProfessionalBySlug(input.slug);
+        if (!professional) throw new TRPCError({ code: "NOT_FOUND", message: "Profesional no encontrado" });
+        if (professional.status !== "approved") throw new TRPCError({ code: "NOT_FOUND", message: "Profesional no disponible" });
+        const user = await db.getUserById(professional.userId);
+        const reviews = await db.getProfessionalReviews(professional.id);
+        return {
+          ...professional,
+          user: {
+            name: user?.name,
+            email: user?.email,
+            profileImage: user?.profileImage,
+            phone: user?.phone,
+          },
+          reviews,
+        };
+      }),
+
     getAppointments: protectedProcedure.query(async ({ ctx }) => {
       if (ctx.user.role !== "professional") {
         throw new TRPCError({
