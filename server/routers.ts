@@ -631,6 +631,14 @@ export const appRouter = router({
         return await db.getProfessionalsBySpecialty(input.specialtyId);
       }),
 
+    getBySpecialtySlug: publicProcedure
+      .input(z.object({ slug: z.string() }))
+      .query(async ({ input }) => {
+        const specialty = await db.getSpecialtyBySlug(input.slug);
+        if (!specialty) return [];
+        return await db.getProfessionalsBySpecialty(specialty.id as number);
+      }),
+
     getAppointments: protectedProcedure.query(async ({ ctx }) => {
       if (ctx.user.role !== "professional") {
         throw new TRPCError({
@@ -2199,6 +2207,12 @@ export const appRouter = router({
           });
         }
         return { success: true };
+      }),
+
+    getBySlug: publicProcedure
+      .input(z.object({ slug: z.string() }))
+      .query(async ({ input }) => {
+        return await db.getSpecialtyBySlug(input.slug);
       }),
 
     delete: protectedProcedure

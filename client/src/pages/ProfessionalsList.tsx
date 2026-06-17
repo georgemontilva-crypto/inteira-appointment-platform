@@ -34,13 +34,13 @@ function getInitials(name: string): string {
 
 const _now = new Date(0);
 const STATIC_SPECIALTIES = [
-  { id: 1, name: "Psicología",      description: "Bienestar mental y emocional con psicólogos certificados.", imageUrl: null, icon: null, color: null, isActive: true, createdAt: _now, updatedAt: _now },
-  { id: 2, name: "Emprendimiento",  description: "Asesoría para emprendedores y startups en crecimiento.",    imageUrl: null, icon: null, color: null, isActive: true, createdAt: _now, updatedAt: _now },
-  { id: 3, name: "Finanzas",        description: "Consultoría financiera personal y empresarial.",             imageUrl: null, icon: null, color: null, isActive: true, createdAt: _now, updatedAt: _now },
-  { id: 4, name: "Idiomas",         description: "Clases con profesores nativos y certificados.",              imageUrl: null, icon: null, color: null, isActive: true, createdAt: _now, updatedAt: _now },
-  { id: 5, name: "Imagen Personal", description: "Consultoría de imagen, estilo y presencia personal.",        imageUrl: null, icon: null, color: null, isActive: true, createdAt: _now, updatedAt: _now },
-  { id: 6, name: "Legal",           description: "Asesoría legal en diversas áreas del derecho.",              imageUrl: null, icon: null, color: null, isActive: true, createdAt: _now, updatedAt: _now },
-  { id: 7, name: "Vocación",        description: "Orientación vocacional y desarrollo profesional.",           imageUrl: null, icon: null, color: null, isActive: true, createdAt: _now, updatedAt: _now },
+  { id: 1, slug: "psicologia",      name: "Psicología",      description: "Bienestar mental y emocional con psicólogos certificados.", imageUrl: null, icon: null, color: null, isActive: true, createdAt: _now, updatedAt: _now },
+  { id: 2, slug: "emprendimiento",  name: "Emprendimiento",  description: "Asesoría para emprendedores y startups en crecimiento.",    imageUrl: null, icon: null, color: null, isActive: true, createdAt: _now, updatedAt: _now },
+  { id: 3, slug: "finanzas",        name: "Finanzas",        description: "Consultoría financiera personal y empresarial.",             imageUrl: null, icon: null, color: null, isActive: true, createdAt: _now, updatedAt: _now },
+  { id: 4, slug: "idiomas",         name: "Idiomas",         description: "Clases con profesores nativos y certificados.",              imageUrl: null, icon: null, color: null, isActive: true, createdAt: _now, updatedAt: _now },
+  { id: 5, slug: "imagen-personal", name: "Imagen Personal", description: "Consultoría de imagen, estilo y presencia personal.",        imageUrl: null, icon: null, color: null, isActive: true, createdAt: _now, updatedAt: _now },
+  { id: 6, slug: "legal",           name: "Legal",           description: "Asesoría legal en diversas áreas del derecho.",              imageUrl: null, icon: null, color: null, isActive: true, createdAt: _now, updatedAt: _now },
+  { id: 7, slug: "vocacion",        name: "Vocación",        description: "Orientación vocacional y desarrollo profesional.",           imageUrl: null, icon: null, color: null, isActive: true, createdAt: _now, updatedAt: _now },
 ];
 
 const containerVariants = {
@@ -54,8 +54,8 @@ const cardVariants = {
 };
 
 export default function ProfessionalsList() {
-  const [, params] = useRoute("/especialidades/:id");
-  const specialtyId = parseInt(params?.id ?? "0");
+  const [, params] = useRoute("/especialidades/:slug");
+  const slug = params?.slug ?? "";
   const { isAuthenticated } = useAuth();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -63,16 +63,16 @@ export default function ProfessionalsList() {
   const [sortBy, setSortBy] = useState<SortOption>("rating");
   const [showFilters, setShowFilters] = useState(false);
 
-  const { data: professionals, isLoading } = trpc.professional.getBySpecialty.useQuery(
-    { specialtyId },
-    { enabled: specialtyId > 0 }
+  const { data: professionals, isLoading } = trpc.professional.getBySpecialtySlug.useQuery(
+    { slug },
+    { enabled: slug.length > 0 }
   );
 
   const { data: specialties } = trpc.specialty.getAll.useQuery(undefined, {
     initialData: STATIC_SPECIALTIES,
     staleTime: 5 * 60 * 1000,
   });
-  const specialty = specialties?.find((s) => s.id === specialtyId);
+  const specialty = specialties?.find((s: any) => s.slug === slug);
 
   const filtered = useMemo(() => {
     let list = professionals ?? [];

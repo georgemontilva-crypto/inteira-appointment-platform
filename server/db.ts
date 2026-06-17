@@ -413,16 +413,42 @@ export async function getSpecialtyById(id: number) {
   }
 }
 
+export async function getSpecialtyBySlug(slug: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  try {
+    const [rows] = await db.execute(
+      "SELECT * FROM `specialties` WHERE `slug` = ? LIMIT 1",
+      [slug]
+    ) as any;
+    const arr = Array.isArray(rows) ? rows : [];
+    return arr.length > 0 ? arr[0] : undefined;
+  } catch (error) {
+    console.error("[Database] getSpecialtyBySlug error:", error);
+    return undefined;
+  }
+}
+
+export function slugifyName(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
 export async function createSpecialty(data: { name: string; description?: string; icon?: string; color?: string }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const client = (db as any).$client;
+  const slug = slugifyName(data.name);
   // Use raw SQL — avoids Drizzle inserting columns that don't exist in the
   // production DB when schema and migrations are out of sync.
   return new Promise<void>((resolve, reject) => {
     client.execute(
-      "INSERT INTO `specialties` (`name`, `description`, `icon`) VALUES (?, ?, ?)",
-      [data.name, data.description ?? null, data.icon || null],
+      "INSERT INTO `specialties` (`name`, `slug`, `description`, `icon`) VALUES (?, ?, ?, ?)",
+      [data.name, slug, data.description ?? null, data.icon || null],
       (err: any) => { if (err) reject(err); else resolve(); }
     );
   });

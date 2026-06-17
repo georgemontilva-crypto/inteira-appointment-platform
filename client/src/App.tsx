@@ -74,7 +74,7 @@ function Router() {
       {/* Landing profesionales */}
       <Route path="/profesionales" component={ProfessionalsLanding} />
       <Route path="/especialidades" component={EspecialidadesRoute} />
-      <Route path="/especialidades/:id" component={ProfessionalsList} />
+      <Route path="/especialidades/:slug" component={ProfessionalsList} />
       <Route path="/profesional/:id" component={ProfessionalProfile} />
 
       {/* Booking — requiere auth */}

@@ -462,6 +462,41 @@ async function runStartupMigrations() {
       console.warn("[Migration] Could not add specialties.icon column:", e?.message);
     }
 
+    // Ensure specialties.slug column exists and backfill existing rows
+    try {
+      const [sSlugCols] = await db.execute(
+        "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'specialties' AND COLUMN_NAME = 'slug'"
+      ) as any;
+      const sSlugExists = Array.isArray(sSlugCols) ? sSlugCols.length > 0 : false;
+      if (!sSlugExists) {
+        await db.execute("ALTER TABLE `specialties` ADD COLUMN `slug` VARCHAR(255) NULL UNIQUE");
+        console.log("[Migration] specialties.slug column added");
+      }
+      // Backfill slugs for rows where slug IS NULL
+      const { slugifyName } = await import("../db");
+      const [noSlugRows] = await db.execute(
+        "SELECT id, name FROM `specialties` WHERE `slug` IS NULL OR `slug` = ''"
+      ) as any;
+      const rows = Array.isArray(noSlugRows) ? noSlugRows : [];
+      for (const row of rows) {
+        const slug = slugifyName(row.name as string);
+        await new Promise<void>((resolve) => {
+          client.execute(
+            "UPDATE `specialties` SET `slug` = ? WHERE `id` = ?",
+            [slug, row.id],
+            (err: any) => {
+              if (err) console.warn(`[Migration] Could not set slug for specialty ${row.id}:`, err?.message);
+              else console.log(`[Migration] specialties.slug set: "${slug}" for id=${row.id}`);
+              resolve();
+            }
+          );
+        });
+      }
+      if (rows.length === 0) console.log("[Migration] specialties.slug all rows already have slugs");
+    } catch (e: any) {
+      console.warn("[Migration] Could not add/backfill specialties.slug column:", e?.message);
+    }
+
     // ── Seed: créditos de prueba a marketingdedsm — solo si NUNCA ha tenido un batch admin_grant ──
     try {
       const client = (db as any).$client;

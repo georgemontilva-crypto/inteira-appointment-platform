@@ -40,6 +40,7 @@ export type InsertUser = typeof users.$inferInsert;
 export const specialties = mysqlTable("specialties", {
   id: int("id").autoincrement().primaryKey(),
   name: varchar("name", { length: 255 }).notNull().unique(),
+  slug: varchar("slug", { length: 255 }).unique(),
   description: longtext("description"),
   icon: text("icon"),
   imageUrl: text("imageUrl"),

@@ -119,13 +119,13 @@ function classifySpecialty(name: string): CategoryKey {
 }
 
 const STATIC_SPECIALTIES = [
-  { id: 1, name: "Psicología",      description: "Bienestar mental y emocional con psicólogos certificados.", icon: null },
-  { id: 2, name: "Emprendimiento",  description: "Asesoría para emprendedores y startups en crecimiento.",    icon: null },
-  { id: 3, name: "Finanzas",        description: "Consultoría financiera personal y empresarial.",             icon: null },
-  { id: 4, name: "Idiomas",         description: "Clases con profesores nativos y certificados.",              icon: null },
-  { id: 5, name: "Imagen Personal", description: "Consultoría de imagen, estilo y presencia personal.",        icon: null },
-  { id: 6, name: "Legal",           description: "Asesoría legal en diversas áreas del derecho.",              icon: null },
-  { id: 7, name: "Vocación",        description: "Orientación vocacional y desarrollo profesional.",           icon: null },
+  { id: 1, slug: "psicologia",      name: "Psicología",      description: "Bienestar mental y emocional con psicólogos certificados.", icon: null },
+  { id: 2, slug: "emprendimiento",  name: "Emprendimiento",  description: "Asesoría para emprendedores y startups en crecimiento.",    icon: null },
+  { id: 3, slug: "finanzas",        name: "Finanzas",        description: "Consultoría financiera personal y empresarial.",             icon: null },
+  { id: 4, slug: "idiomas",         name: "Idiomas",         description: "Clases con profesores nativos y certificados.",              icon: null },
+  { id: 5, slug: "imagen-personal", name: "Imagen Personal", description: "Consultoría de imagen, estilo y presencia personal.",        icon: null },
+  { id: 6, slug: "legal",           name: "Legal",           description: "Asesoría legal en diversas áreas del derecho.",              icon: null },
+  { id: 7, slug: "vocacion",        name: "Vocación",        description: "Orientación vocacional y desarrollo profesional.",           icon: null },
 ];
 
 const gridVariants = {
@@ -261,7 +261,7 @@ export default function SpecialtiesPage() {
                       key={s.id}
                       variants={cardVariants}
                       whileHover={{ y: -2 }}
-                      onClick={() => navigate(`/especialidades/${s.id}`)}
+                      onClick={() => navigate(`/especialidades/${(s as any).slug || s.id}`)}
                       className="flex flex-col items-start p-3 bg-white rounded-xl border border-gray-100 hover:border-[#5B6A57] hover:shadow-md transition-shadow w-full text-left"
                     >
                       <div className="w-8 h-8 rounded-lg bg-[#f0f3ef] flex items-center justify-center mb-2 flex-shrink-0">
