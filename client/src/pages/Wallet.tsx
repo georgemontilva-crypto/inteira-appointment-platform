@@ -231,351 +231,268 @@ export default function WalletPage() {
     (b) => b.remaining > 0 && !b.expiredEarly && new Date(b.expiresAt) > new Date()
   );
 
+  const sessionsCompleted = transactions.filter((tx) => tx.reason === "consume").length;
+  const totalCreditsUsed = Math.abs(
+    transactions.filter((tx) => tx.delta < 0).reduce((sum, tx) => sum + tx.delta, 0)
+  );
+  const activePlanBatch = activeBatches.find((b) => (b.source as string)?.startsWith("plan_"));
+
   return (
     <DashboardLayout>
-      <div className="container py-5 md:py-8 space-y-5 md:space-y-8">
-        <div>
-          <h1 className="text-2xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>Mi Wallet</h1>
-          <p className="text-sm text-muted-foreground mt-1">Créditos Inteira · 1 crédito = $1 MXN</p>
-        </div>
+      <div className="bg-white min-h-full">
+        <div className="container py-6 max-w-4xl space-y-5">
 
-        {/* ── Balance card ── */}
-        <div className="grid md:grid-cols-3 gap-4">
-          <Card className="md:col-span-2 border-2 border-primary/20 shadow-lg shadow-primary/10">
-            <CardContent className="p-5 md:p-7">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">
-                    {checkingPayment ? "Verificando pago..." : "Saldo disponible"}
-                  </p>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-4xl md:text-5xl font-bold text-primary" style={{ fontFamily: "Poppins, sans-serif" }}>
-                      {balance.toLocaleString("es-MX")}
-                    </span>
-                    <span className="text-lg text-muted-foreground font-medium">créditos</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Equivale a <strong className="text-foreground">${balance.toLocaleString("es-MX")} MXN</strong>
-                  </p>
-                  {(wallet?.reservedCredits ?? 0) > 0 && (
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "8px", fontSize: "13px", color: "#b07800" }}>
-                      <span>⏳</span>
-                      <span>{wallet!.reservedCredits.toLocaleString("es-MX")} créditos retenidos en citas pendientes</span>
-                    </div>
-                  )}
-                </div>
-                <div className="w-14 h-14 rounded-2xl gradient-brand flex items-center justify-center shadow-md">
-                  <Wallet className="w-7 h-7 text-white" />
-                </div>
+          {/* ── 1. Balance card ── */}
+          <div className="rounded-2xl bg-[#5B6A57] p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
+            <div>
+              <p className="text-[#c5d0c2] text-xs uppercase tracking-widest mb-1">
+                {checkingPayment ? "Verificando pago..." : "Saldo disponible"}
+              </p>
+              <div className="flex items-baseline gap-2">
+                <span className="text-5xl font-bold text-white" style={{ fontFamily: "Poppins, sans-serif" }}>
+                  {balance.toLocaleString("es-MX")}
+                </span>
+                <span className="text-lg text-[#c5d0c2]">créditos</span>
               </div>
-
+              <p className="text-[#c5d0c2] text-sm mt-1">
+                = <strong className="text-white">${balance.toLocaleString("es-MX")} MXN</strong>
+              </p>
+              {(wallet?.reservedCredits ?? 0) > 0 && (
+                <p className="text-amber-300 text-xs mt-1.5 flex items-center gap-1">
+                  ⏳ {wallet!.reservedCredits.toLocaleString("es-MX")} retenidos en citas pendientes
+                </p>
+              )}
               {nextExpiry && (() => {
                 const daysLeft = differenceInDays(nextExpiry, new Date());
-                const isUrgent = daysLeft <= 10 && balance > 0;
+                if (daysLeft > 10 || balance === 0) return null;
                 return (
-                  <div className={`mt-4 flex items-center gap-2 text-xs rounded-xl px-3 py-2.5 ${
-                    isUrgent
-                      ? "bg-amber-50 border border-amber-200 text-amber-700"
-                      : "bg-muted text-muted-foreground"
-                  }`}>
-                    {isUrgent
-                      ? <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 text-amber-500" />
-                      : <Clock className="w-3.5 h-3.5 flex-shrink-0" />
-                    }
-                    <span className="flex-1">
-                      {isUrgent ? (
-                        <><strong>¡Atención!</strong> Créditos que vencen el{" "}
-                        <strong>{format(nextExpiry, "d 'de' MMMM", { locale: es })}</strong>
-                        {" "}({daysLeft <= 0 ? "hoy" : `${daysLeft} día${daysLeft === 1 ? "" : "s"}`}). Úsalos antes de que expiren.</>
-                      ) : (
-                        <>Próximo vencimiento: <strong>{format(nextExpiry, "d 'de' MMMM yyyy", { locale: es })}</strong>{" "}({daysLeft} días restantes)</>
-                      )}
-                    </span>
-                    {isUrgent && (
-                      <Link href="/especialidades">
-                        <Button size="sm" className="bg-amber-500 hover:bg-amber-600 text-white border-0 text-xs h-7 px-2.5 flex-shrink-0">
-                          Agendar
-                        </Button>
-                      </Link>
-                    )}
-                  </div>
+                  <p className="text-amber-300 text-xs mt-1.5 flex items-center gap-1.5">
+                    <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                    Créditos vencen el {format(nextExpiry, "d 'de' MMMM", { locale: es })}
+                    {" "}({daysLeft <= 0 ? "hoy" : `${daysLeft}d`})
+                  </p>
                 );
               })()}
-
-
-            </CardContent>
-          </Card>
-
-          {/* Quick buy */}
-          <Card className="border-border">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <ShoppingCart className="w-4 h-4 text-primary" />
-                Compra rápida
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {/* ── Discount code input ── */}
-              <div className="flex gap-1.5">
-                <div className="relative flex-1">
-                  <Tag className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    value={discountCode}
-                    onChange={(e) => {
-                      setDiscountCode(e.target.value.toUpperCase());
-                      setDiscountResult(null);
-                    }}
-                    placeholder="Código descuento"
-                    className="pl-8 h-8 text-xs"
-                    maxLength={50}
-                  />
-                </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-8 px-3 text-xs"
-                  disabled={!discountCode.trim() || validateDiscountMutation.isPending}
-                  onClick={() => handleApplyDiscount("individual_basic")}
-                >
-                  {validateDiscountMutation.isPending ? "..." : "Aplicar"}
-                </Button>
-              </div>
-
-              {/* ── Discount result feedback ── */}
-              {discountResult !== null && (
-                <div className={`flex items-center gap-1.5 text-xs rounded-lg px-2.5 py-1.5 ${
-                  discountResult.valid
-                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                    : "bg-red-50 text-red-600 border border-red-200"
-                }`}>
-                  {discountResult.valid
-                    ? <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" />
-                    : <XCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                  }
-                  <span>
-                    {discountResult.valid
-                      ? `Descuento: -$${discountResult.discountAmount} MXN`
-                      : discountResult.reason
-                    }
-                  </span>
-                  {discountResult.valid && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-4 w-4 p-0 ml-auto text-muted-foreground hover:text-foreground"
-                      onClick={() => { setDiscountCode(""); setDiscountResult(null); }}
-                    >×</Button>
-                  )}
-                </div>
-              )}
-
-              {/* ── Buy buttons ── */}
+            </div>
+            <div className="flex gap-2 flex-shrink-0">
               <Button
+                className="bg-white text-[#5B6A57] hover:bg-gray-100 font-semibold text-sm h-10 px-5 border-0"
                 onClick={() => handleBuySession("individual_basic")}
                 disabled={buyingSession !== null}
-                variant="outline"
-                className="w-full justify-between border-emerald-200 text-emerald-700 hover:bg-emerald-50 text-xs active:scale-95 transition-transform"
-                size="sm"
               >
-                <span>{buyingSession === "individual_basic" ? "Redirigiendo..." : "Sesión Básica"}</span>
-                <span className="font-bold flex items-center gap-1">
-                  {discountResult?.valid && (
-                    <span className="line-through text-muted-foreground font-normal">${PRICING.SESSION_BASIC_MXN}</span>
-                  )}
-                  ${discountResult?.valid
-                    ? Math.max(PRICING.SESSION_BASIC_MXN - discountResult.discountAmount, 0)
-                    : PRICING.SESSION_BASIC_MXN
-                  } MXN
-                </span>
+                {buyingSession === "individual_basic" ? "..." : "Recargar"}
               </Button>
               <Button
-                onClick={() => handleBuySession("individual_premium")}
-                disabled={buyingSession !== null}
-                variant="outline"
-                className="w-full justify-between border-primary/30 text-primary hover:bg-primary/5 text-xs active:scale-95 transition-transform"
-                size="sm"
+                className="bg-transparent border border-white text-white hover:bg-white/10 font-semibold text-sm h-10 px-5"
+                onClick={() => {
+                  document.getElementById("prepaid-input")?.scrollIntoView({ behavior: "smooth", block: "center" });
+                  setTimeout(() => document.getElementById("prepaid-input")?.focus(), 350);
+                }}
               >
-                <span>{buyingSession === "individual_premium" ? "Redirigiendo..." : "Sesión Premium"}</span>
-                <span className="font-bold flex items-center gap-1">
-                  {discountResult?.valid && (
-                    <span className="line-through text-muted-foreground font-normal">$1,500</span>
-                  )}
-                  ${discountResult?.valid
-                    ? Math.max(1500 - discountResult.discountAmount, 0).toLocaleString("es-MX")
-                    : "1,500"
-                  } MXN
-                </span>
+                Canjear
               </Button>
-              <Link href="/planes">
-                <Button className="w-full gradient-brand text-white border-0 text-xs active:scale-95 transition-transform" size="sm">
-                  Ver planes mensuales
-                </Button>
-              </Link>
-              <p className="text-[10px] text-muted-foreground text-center pt-1 flex items-center justify-center gap-1">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm-1-7v2h2v-2h-2zm0-8v6h2V7h-2z" fill="currentColor"/></svg>
-                Pago seguro con Stripe
+            </div>
+          </div>
+
+          {/* ── 2. Métricas ── */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="rounded-xl border border-gray-100 p-4">
+              <p className="text-xs text-gray-400 mb-1">Sesiones completadas</p>
+              <p className="text-2xl font-bold text-gray-900" style={{ fontFamily: "Poppins, sans-serif" }}>
+                {sessionsCompleted}
               </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* ── Redeem prepaid card ── */}
-        <Card className="border-border">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Gift className="w-4 h-4 text-primary" />
-              Canjear tarjeta prepago
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex gap-2">
-              <Input
-                value={prepaidCode}
-                onChange={(e) => handlePrepaidInput(e.target.value)}
-                placeholder="XXXX-XXXX-XXXX-XXXX"
-                className="font-mono tracking-widest text-sm h-10 flex-1"
-                maxLength={19}
-                onKeyDown={(e) => { if (e.key === "Enter" && prepaidCode.replace(/-/g, "").length === 16) redeemMutation.mutate({ code: prepaidCode }); }}
-              />
-              <Button
-                className="gradient-brand text-white border-0 h-10 px-5"
-                disabled={prepaidCode.replace(/-/g, "").length < 16 || redeemMutation.isPending}
-                onClick={() => redeemMutation.mutate({ code: prepaidCode })}
-              >
-                {redeemMutation.isPending ? "Canjeando..." : "Canjear"}
-              </Button>
             </div>
-            <p className="text-[11px] text-muted-foreground mt-2">
-              Ingresa el código de tu tarjeta prepago para acreditar créditos a tu wallet.
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* ── Policy info ── */}
-        <div className="flex items-start gap-3 bg-blue-50 border border-blue-100 rounded-xl p-4 text-xs text-blue-700">
-          <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
-          <div className="space-y-1">
-            <p><strong>Política de créditos Inteira (60 días):</strong></p>
-            <p>Cada compra crea un lote de créditos con vigencia de 60 días. El sistema consume primero los créditos más antiguos (FIFO). Si cancelas tu suscripción, los créditos del plan expiran de inmediato. Los créditos de sesiones individuales no están sujetos a la suscripción.</p>
-          </div>
-        </div>
-
-        {/* ── Active batches ── */}
-        <div>
-          <h2 className="text-base md:text-lg font-bold mb-3" style={{ fontFamily: "Poppins, sans-serif" }}>
-            Lotes activos ({activeBatches.length})
-          </h2>
-          {activeBatches.length === 0 ? (
-            <Card className="border-dashed border-border">
-              <CardContent className="p-6 text-center">
-                <AlertCircle className="w-10 h-10 text-muted-foreground/40 mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">No tienes créditos activos.</p>
-                <p className="text-xs text-muted-foreground mt-1">Compra un plan o una sesión individual para comenzar.</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-2">
-              {activeBatches.map((batch) => {
-                const pct = Math.round((batch.remaining / batch.amount) * 100);
-                return (
-                  <Card key={batch.id} className="border-border active:scale-[0.99] transition-transform">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between gap-3 mb-2">
-                        <div className="flex items-center gap-2">
-                          <Badge className={`${SOURCE_COLORS[batch.source] ?? "bg-muted text-muted-foreground"} border-0 text-[10px]`}>
-                            {SOURCE_LABELS[batch.source] ?? batch.source}
-                          </Badge>
-                          <BatchStatusBadge batch={batch} />
-                        </div>
-                        <span className="text-xs text-muted-foreground">
-                          Vence {format(new Date(batch.expiresAt), "d MMM yyyy", { locale: es })}
-                        </span>
-                      </div>
-                      {/* Progress bar */}
-                      <div className="flex items-center gap-3">
-                        <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                          <div
-                            className="h-full gradient-brand rounded-full transition-all"
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                        <span className="text-xs font-semibold text-primary whitespace-nowrap">
-                          {batch.remaining.toLocaleString("es-MX")} / {batch.amount.toLocaleString("es-MX")}
-                        </span>
-                      </div>
-                      <p className="text-[10px] text-muted-foreground mt-1">
-                        Comprado el {format(new Date(batch.createdAt), "d 'de' MMMM yyyy", { locale: es })}
-                      </p>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+            <div className="rounded-xl border border-gray-100 p-4">
+              <p className="text-xs text-gray-400 mb-1">Créditos usados</p>
+              <p className="text-2xl font-bold text-gray-900" style={{ fontFamily: "Poppins, sans-serif" }}>
+                {totalCreditsUsed.toLocaleString("es-MX")}
+              </p>
             </div>
-          )}
-        </div>
-
-        {/* ── All batches history ── */}
-        {batches.length > activeBatches.length && (
-          <div>
-            <h2 className="text-base md:text-lg font-bold mb-3" style={{ fontFamily: "Poppins, sans-serif" }}>
-              Historial de lotes
-            </h2>
-            <div className="space-y-2">
-              {batches
-                .filter((b) => b.remaining === 0 || b.expiredEarly || new Date(b.expiresAt) <= new Date())
-                .map((batch) => (
-                  <Card key={batch.id} className="border-border opacity-70">
-                    <CardContent className="p-3.5">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-2">
-                          <Badge className={`${SOURCE_COLORS[batch.source] ?? "bg-muted text-muted-foreground"} border-0 text-[10px] opacity-70`}>
-                            {SOURCE_LABELS[batch.source] ?? batch.source}
-                          </Badge>
-                          <BatchStatusBadge batch={batch} />
-                        </div>
-                        <div className="text-right">
-                          <p className="text-xs font-medium">{batch.amount.toLocaleString("es-MX")} créditos</p>
-                          <p className="text-[10px] text-muted-foreground">
-                            {format(new Date(batch.createdAt), "d MMM yyyy", { locale: es })}
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-            </div>
-          </div>
-        )}
-
-        {/* ── Transactions ── */}
-        {transactions.length > 0 && (
-          <div>
-            <h2 className="text-base md:text-lg font-bold mb-3" style={{ fontFamily: "Poppins, sans-serif" }}>
-              Movimientos recientes
-            </h2>
-            <div className="space-y-1.5">
-              {transactions.slice(0, 20).map((tx) => (
-                <div key={tx.id} className="flex items-center gap-3 py-2 px-3 rounded-xl hover:bg-muted/50 transition-colors">
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${tx.delta > 0 ? "bg-emerald-100" : "bg-red-100"}`}>
-                    {tx.delta > 0
-                      ? <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
-                      : <TrendingDown className="w-3.5 h-3.5 text-red-500" />
-                    }
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium truncate">{tx.description ?? REASON_LABELS[tx.reason]}</p>
-                    <p className="text-[10px] text-muted-foreground">
-                      {format(new Date(tx.createdAt), "d MMM yyyy HH:mm", { locale: es })}
-                    </p>
-                  </div>
-                  <span className={`text-sm font-bold flex-shrink-0 ${tx.delta > 0 ? "text-emerald-600" : "text-red-500"}`}>
-                    {tx.delta > 0 ? "+" : ""}{tx.delta.toLocaleString("es-MX")}
+            <div className="rounded-xl border border-gray-100 p-4">
+              <p className="text-xs text-gray-400 mb-1">Plan activo</p>
+              {activePlanBatch ? (
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-sm font-semibold text-gray-900">
+                    {activePlanBatch.source === "plan_pro" ? "Pro" : "Básico"}
+                  </span>
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-semibold">
+                    Activo
                   </span>
                 </div>
-              ))}
+              ) : (
+                <p className="text-sm text-gray-400 mt-0.5">Sin plan</p>
+              )}
             </div>
           </div>
-        )}
+
+          {/* ── 3. Grid 2 columnas ── */}
+          <div className="grid md:grid-cols-2 gap-4">
+
+            {/* Izquierda: Planes disponibles */}
+            <div className="rounded-xl border border-gray-100 p-5">
+              <h2 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <ShoppingCart className="w-4 h-4 text-[#5B6A57]" />
+                Planes disponibles
+              </h2>
+              <div className="divide-y divide-gray-50">
+                {[
+                  { type: "individual_basic",   label: "Sesión Básica",    sub: `$${PRICING.SESSION_BASIC_MXN} MXN · créditos para 1 sesión` },
+                  { type: "individual_premium",  label: "Sesión Premium",   sub: "$1,500 MXN · créditos para 1 sesión" },
+                  { type: "plan_basic",          label: "Plan Básico",      sub: "Suscripción mensual" },
+                  { type: "plan_pro",            label: "Plan Pro",         sub: "Suscripción mensual · acceso completo" },
+                ].map(({ type, label, sub }) => (
+                  <div key={type} className="flex items-center justify-between py-3">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{label}</p>
+                      <p className="text-xs text-gray-400">{sub}</p>
+                    </div>
+                    <Button
+                      size="sm"
+                      className="bg-[#5B6A57] hover:bg-[#4a5847] text-white border-0 text-xs h-8 px-3 flex-shrink-0"
+                      onClick={() => handleBuySession(type)}
+                      disabled={buyingSession !== null}
+                    >
+                      {buyingSession === type ? "..." : "Comprar"}
+                    </Button>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[10px] text-gray-400 mt-3 flex items-center gap-1">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm-1-7v2h2v-2h-2zm0-8v6h2V7h-2z" fill="currentColor"/></svg>
+                Pago seguro con Stripe
+              </p>
+            </div>
+
+            {/* Derecha: Movimientos recientes */}
+            <div className="rounded-xl border border-gray-100 p-5">
+              <h2 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <Clock className="w-4 h-4 text-[#5B6A57]" />
+                Movimientos recientes
+              </h2>
+              {transactions.length === 0 ? (
+                <div className="text-center py-8 text-gray-400">
+                  <Clock className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                  <p className="text-xs">Sin movimientos aún</p>
+                </div>
+              ) : (
+                <div className="space-y-0.5">
+                  {transactions.slice(0, 8).map((tx) => (
+                    <div key={tx.id} className="flex items-center gap-3 py-2 px-1 rounded-lg hover:bg-gray-50 transition-colors">
+                      <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${
+                        tx.delta > 0 ? "bg-emerald-100" : "bg-[#f5ede6]"
+                      }`}>
+                        {tx.delta > 0
+                          ? <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
+                          : <TrendingDown className="w-3.5 h-3.5 text-[#A7774E]" />
+                        }
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-gray-800 truncate">
+                          {tx.description ?? REASON_LABELS[tx.reason]}
+                        </p>
+                        <p className="text-[10px] text-gray-400">
+                          {format(new Date(tx.createdAt), "d MMM yyyy · HH:mm", { locale: es })}
+                        </p>
+                      </div>
+                      <span className={`text-sm font-bold flex-shrink-0 ${
+                        tx.delta > 0 ? "text-emerald-600" : "text-[#A7774E]"
+                      }`}>
+                        {tx.delta > 0 ? "+" : ""}{tx.delta.toLocaleString("es-MX")}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ── 4. Códigos ── */}
+          <div className="rounded-2xl bg-[#f5f0eb] p-6">
+            <div className="grid md:grid-cols-2 gap-6">
+
+              {/* Código de descuento */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-800 mb-1 flex items-center gap-2">
+                  <Tag className="w-4 h-4 text-[#A7774E]" />
+                  Código de descuento
+                </h3>
+                <p className="text-xs text-gray-500 mb-3">Aplica un descuento en tu próxima compra</p>
+                <div className="flex gap-2">
+                  <Input
+                    value={discountCode}
+                    onChange={(e) => { setDiscountCode(e.target.value.toUpperCase()); setDiscountResult(null); }}
+                    placeholder="Ej. BIENVENIDO10"
+                    className="bg-white border-[#e0d5cc] text-sm h-10"
+                    maxLength={50}
+                  />
+                  <Button
+                    className="bg-[#A7774E] hover:bg-[#8d6340] text-white border-0 h-10 px-4 text-sm flex-shrink-0"
+                    disabled={!discountCode.trim() || validateDiscountMutation.isPending}
+                    onClick={() => handleApplyDiscount("individual_basic")}
+                  >
+                    {validateDiscountMutation.isPending ? "..." : "Aplicar"}
+                  </Button>
+                </div>
+                {discountResult !== null && (
+                  <div className={`flex items-center gap-1.5 text-xs rounded-lg px-2.5 py-1.5 mt-2 ${
+                    discountResult.valid
+                      ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                      : "bg-red-50 text-red-600 border border-red-200"
+                  }`}>
+                    {discountResult.valid
+                      ? <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" />
+                      : <XCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                    }
+                    <span>
+                      {discountResult.valid
+                        ? `Descuento: -$${discountResult.discountAmount} MXN`
+                        : discountResult.reason
+                      }
+                    </span>
+                    {discountResult.valid && (
+                      <button
+                        className="ml-auto text-muted-foreground hover:text-foreground text-base leading-none"
+                        onClick={() => { setDiscountCode(""); setDiscountResult(null); }}
+                      >×</button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Tarjeta prepago */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-800 mb-1 flex items-center gap-2">
+                  <Gift className="w-4 h-4 text-[#A7774E]" />
+                  Tarjeta prepago
+                </h3>
+                <p className="text-xs text-gray-500 mb-3">Canjea tu código para acreditar créditos</p>
+                <div className="flex gap-2">
+                  <Input
+                    id="prepaid-input"
+                    value={prepaidCode}
+                    onChange={(e) => handlePrepaidInput(e.target.value)}
+                    placeholder="XXXX-XXXX-XXXX-XXXX"
+                    className="bg-white border-[#e0d5cc] font-mono tracking-widest text-sm h-10"
+                    maxLength={19}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && prepaidCode.replace(/-/g, "").length === 16)
+                        redeemMutation.mutate({ code: prepaidCode });
+                    }}
+                  />
+                  <Button
+                    className="bg-[#A7774E] hover:bg-[#8d6340] text-white border-0 h-10 px-4 text-sm flex-shrink-0"
+                    disabled={prepaidCode.replace(/-/g, "").length < 16 || redeemMutation.isPending}
+                    onClick={() => redeemMutation.mutate({ code: prepaidCode })}
+                  >
+                    {redeemMutation.isPending ? "..." : "Canjear"}
+                  </Button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
       </div>
     </DashboardLayout>
   );
