@@ -151,7 +151,9 @@ export default function SpecialtiesPage() {
   const allSpecialties: any[] = specialties ?? STATIC_SPECIALTIES;
 
   const withCategory = useMemo(
-    () => allSpecialties.map((s) => ({ ...s, category: classifySpecialty(s.name) })),
+    () => allSpecialties
+      .filter((s) => (s.professionalCount ?? 0) > 0)
+      .map((s) => ({ ...s, category: classifySpecialty(s.name) })),
     [allSpecialties]
   );
 
