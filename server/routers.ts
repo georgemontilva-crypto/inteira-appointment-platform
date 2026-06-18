@@ -2201,7 +2201,7 @@ export const appRouter = router({
   // Specialty routes
   specialty: router({
     getAll: publicProcedure.query(async () => {
-      return await db.getAllSpecialties();
+      return await db.getAllSpecialtiesWithCount();
     }),
 
     getById: publicProcedure

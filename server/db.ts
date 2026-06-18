@@ -467,6 +467,30 @@ export async function getAllSpecialties() {
   }
 }
 
+export async function getAllSpecialtiesWithCount(): Promise<any[]> {
+  const dbConn = await getDb();
+  if (!dbConn) return [];
+  const client = (dbConn as any).$client;
+  return new Promise((resolve) => {
+    client.execute(
+      `SELECT s.*, COUNT(p.id) as professionalCount
+       FROM specialties s
+       LEFT JOIN professionals p ON p.specialtyId = s.id AND p.status = 'approved'
+       GROUP BY s.id
+       ORDER BY s.name ASC`,
+      [],
+      (err: any, results: any) => {
+        if (err) {
+          console.error("[Database] getAllSpecialtiesWithCount error:", err?.message);
+          return resolve([]);
+        }
+        const rows = Array.isArray(results) ? results : [];
+        resolve(rows.map((r: any) => ({ ...r, professionalCount: Number(r.professionalCount ?? 0) })));
+      }
+    );
+  });
+}
+
 export async function getSpecialtyById(id: number) {
   const db = await getDb();
   if (!db) return undefined;

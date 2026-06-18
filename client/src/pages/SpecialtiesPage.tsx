@@ -264,8 +264,15 @@ export default function SpecialtiesPage() {
                       onClick={() => navigate(`/especialidades/${(s as any).slug || s.id}`)}
                       className="flex flex-col items-start p-3 bg-white rounded-xl border border-gray-100 hover:border-[#5B6A57] hover:shadow-md transition-shadow w-full text-left"
                     >
-                      <div className="w-8 h-8 rounded-lg bg-[#f0f3ef] flex items-center justify-center mb-2 flex-shrink-0">
-                        <IconComp className="w-4 h-4 text-[#5B6A57]" />
+                      <div className="relative flex-shrink-0">
+                        <div className="w-9 h-9 rounded-lg bg-[#f0f3ef] flex items-center justify-center mb-2">
+                          <IconComp className="w-4 h-4 text-[#5B6A57]" />
+                        </div>
+                        {(s.professionalCount ?? 0) > 0 && (
+                          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#A7774E] text-white text-[10px] font-semibold flex items-center justify-center">
+                            {s.professionalCount}
+                          </span>
+                        )}
                       </div>
                       <p className="text-sm font-medium text-gray-900 leading-tight">{s.name}</p>
                       <p className="text-xs text-gray-400 mt-0.5 line-clamp-1 leading-snug">
