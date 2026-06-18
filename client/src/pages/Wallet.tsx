@@ -240,7 +240,7 @@ export default function WalletPage() {
   return (
     <DashboardLayout>
       <div className="bg-white min-h-full">
-        <div className="container py-6 max-w-4xl space-y-5">
+        <div className="max-w-7xl mx-auto w-full px-4 py-6 space-y-5">
 
           {/* ── 1. Balance card ── */}
           <div className="rounded-2xl bg-[#5B6A57] p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
