@@ -143,18 +143,19 @@ export default function SpecialtiesPage() {
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState<CategoryKey | "all">("all");
 
-  const { data: specialties } = trpc.specialty.getAll.useQuery(undefined, {
-    initialData: STATIC_SPECIALTIES,
+  const { data: specialties, isPlaceholderData } = trpc.specialty.getAll.useQuery(undefined, {
+    placeholderData: STATIC_SPECIALTIES,
     staleTime: 5 * 60 * 1000,
   });
 
-  const allSpecialties: any[] = specialties ?? STATIC_SPECIALTIES;
+  const allSpecialties: any[] = specialties ?? [];
+  const visibleSpecialties = isPlaceholderData
+    ? allSpecialties
+    : allSpecialties.filter((s) => (s.professionalCount ?? 0) > 0);
 
   const withCategory = useMemo(
-    () => allSpecialties
-      .filter((s) => (s.professionalCount ?? 0) > 0)
-      .map((s) => ({ ...s, category: classifySpecialty(s.name) })),
-    [allSpecialties]
+    () => visibleSpecialties.map((s) => ({ ...s, category: classifySpecialty(s.name) })),
+    [visibleSpecialties]
   );
 
   const filtered = useMemo(() => {
