@@ -485,12 +485,7 @@ export async function getAllSpecialtiesWithCount(): Promise<any[]> {
           return resolve([]);
         }
         const rows = Array.isArray(results) ? results : [];
-        if (rows.length > 0) {
-          console.log("[DEBUG getAllSpecialtiesWithCount] keys of first row:", Object.keys(rows[0]));
-          console.log("[DEBUG getAllSpecialtiesWithCount] first row raw:", JSON.stringify(rows[0]));
-        }
         const mapped = rows.map((r: any) => ({ ...r, professionalCount: Number(r.professionalCount ?? r.professionalcount ?? 0) }));
-        console.log("[DEBUG getAllSpecialtiesWithCount] mapped sample:", mapped.slice(0, 3).map((r: any) => ({ name: r.name, professionalCount: r.professionalCount })));
         resolve(mapped);
       }
     );
