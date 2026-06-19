@@ -312,8 +312,8 @@ export default function Home() {
             </div>
             <div className="relative z-10 p-8 md:p-12">
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-7 text-white border border-white/20">
-                <h4 className="text-xl font-semibold mb-3">¿Emergencia? ¿Necesitas venir ASAP?</h4>
-                <p className="text-base opacity-90">Haz clic aquí para atención inmediata</p>
+                <h4 className="text-xl font-semibold mb-3">Especialistas certificados, listos para ti</h4>
+                <p className="text-base opacity-90">Psicología, finanzas, coaching, educación y más. Encuentra a tu experto ideal y agenda en minutos.</p>
               </div>
             </div>
           </section>
