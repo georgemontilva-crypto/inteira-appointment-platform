@@ -290,15 +290,14 @@ export default function Home() {
         {/* HERO — exactly two layers, no extra wrapper */}
         <div className="pt-[72px] md:pt-[80px] mb-8 md:mb-10">
           <div
-            className="rounded-2xl flex items-center px-6 md:px-10 relative overflow-hidden w-full min-h-[320px] md:min-h-[500px]"
+            className="rounded-2xl flex items-center px-6 md:px-10 relative overflow-hidden w-full min-h-[360px] md:min-h-[420px] max-h-[500px]"
             style={{
               backgroundImage: `url(${heroImageUrl})`,
               backgroundSize: "cover",
               backgroundPosition: "center",
-              aspectRatio: "1289 / 715",
             }}
           >
-            <div className="bg-white rounded-2xl p-7 md:p-9 max-w-[380px] z-10 relative shadow-2xl">
+            <div className="bg-white rounded-2xl p-7 md:p-8 max-w-[400px] z-10 relative shadow-lg">
               <p className="text-[10px] tracking-[0.15em] text-[#A7774E] font-semibold uppercase mb-3">AGENDA TU CONSULTA HOY</p>
               <h1 className="text-3xl md:text-4xl font-medium text-gray-900 leading-tight mb-3">
                 Conecta con el especialista correcto
