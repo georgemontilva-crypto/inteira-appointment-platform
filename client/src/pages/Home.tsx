@@ -1,5 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
-import { useRef, useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { PRICING, PRICING_DISPLAY } from "@/lib/pricing";
 import { trpc } from "@/lib/trpc";
@@ -9,10 +9,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "wouter";
 import {
   Star, CheckCircle2, Video, Calendar, Shield, ArrowRight, Users, Clock,
-  Award, ChevronRight, ChevronLeft, Brain, Scale, TrendingUp, DollarSign,
+  Award, ChevronRight, Brain, Scale, TrendingUp, DollarSign,
   Mic2, Sparkles, Compass, LayoutDashboard, Wallet, LogOut, ChevronDown,
   Heart, Leaf, Apple, GraduationCap, HeartHandshake, HandHeart, Sun, Smile,
-  BookOpen, Briefcase, Globe, Activity, Search, CalendarCheck, CreditCard,
+  BookOpen, Briefcase, Globe, Activity, CalendarCheck, CreditCard,
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
@@ -147,21 +147,6 @@ export default function Home() {
     }
   };
 
-  const specialtiesScrollRef = useRef<HTMLDivElement>(null);
-  const [activeDot, setActiveDot] = useState(0);
-
-  const scrollSpecialties = (dir: "left" | "right") => {
-    specialtiesScrollRef.current?.scrollBy({ left: dir === "left" ? -300 : 300, behavior: "smooth" });
-  };
-
-  const scrollToIndex = (index: number) => {
-    const container = specialtiesScrollRef.current;
-    if (!container) return;
-    const card = container.children[index] as HTMLElement;
-    if (card) container.scrollTo({ left: card.offsetLeft - container.offsetLeft, behavior: "smooth" });
-    setActiveDot(index);
-  };
-
   const [activeEventIndex, setActiveEventIndex] = useState(0);
   useEffect(() => {
     const interval = setInterval(() => {
@@ -169,22 +154,6 @@ export default function Home() {
     }, 4000);
     return () => clearInterval(interval);
   }, [eventBanners.length]);
-
-  useEffect(() => {
-    const total = dynCarousel.length;
-    const interval = setInterval(() => {
-      setActiveDot((prev) => {
-        const next = (prev + 1) % total;
-        const container = specialtiesScrollRef.current;
-        if (container) {
-          const card = container.children[next] as HTMLElement;
-          if (card) container.scrollTo({ left: card.offsetLeft - container.offsetLeft, behavior: "smooth" });
-        }
-        return next;
-      });
-    }, 3000);
-    return () => clearInterval(interval);
-  }, [dynCarousel.length]);
 
   return (
     <div className="min-h-screen bg-[#f5f2ed] pb-20 md:pb-0">
@@ -287,198 +256,101 @@ export default function Home() {
       {/* PAGE CONTENT */}
       <div className="w-[95%] mx-auto">
 
-        {/* HERO — grid 2 columnas, imagen de fondo + overlay gradiente */}
-        <div className="pt-[72px] md:pt-[80px] mb-8 md:mb-10">
+        {/* HERO */}
+        <div className="pt-[72px] md:pt-[80px] mb-10">
           <section
-            className="rounded-2xl overflow-hidden grid grid-cols-1 md:grid-cols-2 gap-0 items-center relative md:h-[600px]"
-            style={{
-              backgroundImage: `url(${heroImageUrl})`,
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-            }}
+            className="rounded-2xl overflow-hidden relative h-[320px] md:h-[420px] flex items-center px-8 md:px-14"
+            style={{ backgroundImage: `url(${heroImageUrl})`, backgroundSize: "cover", backgroundPosition: "center" }}
           >
-            <div
-              className="absolute inset-0"
-              style={{ background: "linear-gradient(135deg, rgba(91,106,87,0.92) 0%, rgba(61,74,58,0.92) 100%)" }}
-            />
-            <div className="relative z-10 p-8 md:p-12 text-white">
-              <h1 className="text-3xl md:text-5xl font-bold mb-5">Conecta con el especialista correcto</h1>
-              <p className="text-lg md:text-xl mb-7 opacity-95">Psicología, Legal, Finanzas, Emprendimiento y más.</p>
+            <div className="absolute inset-0" style={{ background: "linear-gradient(120deg, rgba(15,30,18,0.85) 0%, rgba(15,30,18,0.45) 55%, transparent 100%)" }} />
+            <div className="relative z-10 max-w-md">
+              <span className="inline-block bg-white/15 text-white text-xs font-medium px-3 py-1.5 rounded-full mb-4">
+                Plataforma de asesorías online
+              </span>
+              <h1 className="text-3xl md:text-5xl font-medium text-white mb-3 leading-tight">Conecta con el especialista correcto</h1>
+              <p className="text-sm md:text-base text-white/90 mb-5">Psicología, Legal, Finanzas, Emprendimiento y más.</p>
               <a href={isAuthenticated ? "/especialidades" : "/registro"}>
-                <button className="bg-white text-[#5B6A57] rounded px-7 py-3 font-semibold hover:-translate-y-0.5 hover:shadow-lg transition-all">
+                <button className="bg-white text-[#1f3a23] rounded-lg px-6 py-3 text-sm font-medium hover:-translate-y-0.5 hover:shadow-lg transition-all">
                   Agendar cita
                 </button>
               </a>
-            </div>
-            <div className="relative z-10 p-8 md:p-12">
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-7 text-white border border-white/20">
-                <h4 className="text-xl font-semibold mb-3">Especialistas certificados, listos para ti</h4>
-                <p className="text-base opacity-90">Psicología, finanzas, coaching, educación y más. Encuentra a tu experto ideal y agenda en minutos.</p>
-              </div>
             </div>
           </section>
         </div>
 
         {/* ESPECIALIDADES */}
         <section id="especialidades" className="py-8 md:py-10">
-          <div className="mb-6 text-center">
-            <p className="text-xs font-semibold text-[#A7774E] uppercase tracking-widest mb-2">Especialidades</p>
-            <h2 className="text-2xl md:text-3xl font-semibold text-gray-900">Encuentra al experto que necesitas</h2>
-            <p className="text-sm text-gray-500 mt-2 max-w-xl mx-auto">
-              Profesionales certificados en múltiples áreas para atender todas tus necesidades.
-            </p>
-          </div>
-
-          <div className="relative">
-            <button
-              onClick={() => scrollSpecialties("left")}
-              className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white rounded-full shadow p-2 hidden md:block"
-              aria-label="Anterior"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-            <div
-              ref={specialtiesScrollRef}
-              className="flex gap-4 overflow-x-auto md:px-10"
-              style={{ scrollbarWidth: "none" }}
-            >
-              {dynCarousel.map((item, i) => (
-                <a
-                  href={item.link}
-                  key={item.name + i}
-                  onClick={() => setActiveDot(i)}
-                  style={{ backgroundImage: `url(${item.image})`, backgroundSize: "cover", backgroundPosition: "center" }}
-                  className="relative flex-shrink-0 w-[80vw] md:w-[calc(50%-8px)] lg:w-[calc(25%-12px)] h-[260px] rounded-2xl overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform group"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/10 to-black/25" />
-                  <div className="absolute top-4 left-4">
-                    <span className="text-[9px] tracking-[0.14em] text-white/75 font-semibold uppercase">ESPECIALIDAD</span>
-                  </div>
-                  <div className="absolute bottom-4 left-4 right-4">
-                    <p className="text-white font-semibold text-base leading-snug mb-1.5 drop-shadow">{item.name}</p>
-                    <span className="text-xs text-white/70 font-medium group-hover:text-white transition-colors">Ver más →</span>
-                  </div>
-                </a>
-              ))}
+          <div className="flex items-baseline justify-between mb-5">
+            <div>
+              <p className="text-xs font-semibold text-[#A7774E] uppercase tracking-widest mb-1">Especialidades</p>
+              <h2 className="text-xl md:text-2xl font-medium text-gray-900">Encuentra al experto que necesitas</h2>
             </div>
-            <button
-              onClick={() => scrollSpecialties("right")}
-              className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white rounded-full shadow p-2 hidden md:block"
-              aria-label="Siguiente"
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
+            <Link href="/especialidades"><span className="text-xs font-medium text-[#5B6A57] cursor-pointer whitespace-nowrap">Ver todas →</span></Link>
           </div>
-
-          <div className="flex justify-center gap-2 mt-4">
-            {dynCarousel.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => scrollToIndex(i)}
-                className={`rounded-full transition-all ${i === activeDot ? "bg-[#5B6A57] w-5 h-2" : "bg-gray-300 w-2 h-2"}`}
-                aria-label={`Ir a especialidad ${i + 1}`}
-              />
+          <div className="flex gap-3.5 overflow-x-auto pb-2" style={{ scrollbarWidth: "none" }}>
+            {dynCarousel.map((item, i) => (
+              <a key={item.name + i} href="/especialidades" className="flex-shrink-0 w-[170px] h-[220px] rounded-2xl relative overflow-hidden"
+                style={{ backgroundImage: `url(${item.image})`, backgroundSize: "cover", backgroundPosition: "center" }}>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+                <div className="absolute top-2.5 right-2.5 w-6 h-6 rounded-full bg-white/25 flex items-center justify-center">
+                  <ArrowRight className="w-3.5 h-3.5 text-white -rotate-45" />
+                </div>
+                <div className="absolute bottom-3 left-3 right-3">
+                  <p className="text-[9px] text-white/70 uppercase tracking-wider mb-0.5">Especialidad</p>
+                  <p className="text-sm font-medium text-white">{item.name}</p>
+                </div>
+              </a>
             ))}
-          </div>
-
-          <div className="text-center mt-5">
-            <Link href="/especialidades">
-              <Button variant="outline" className="border-[#5B6A57]/40 text-[#5B6A57] hover:bg-[#5B6A57]/5">
-                Ver todos los especialistas <ChevronRight className="ml-1 w-4 h-4" />
-              </Button>
-            </Link>
           </div>
         </section>
 
-        {/* POR QUÉ INTEIRA — alternating rows */}
+        {/* POR QUÉ INTEIRA — bento */}
         <section id="por-que" className="py-8 md:py-12">
-          <div className="text-center mb-8 md:mb-10">
-            <p className="text-xs font-semibold text-[#A7774E] uppercase tracking-widest mb-2">Por qué Inteira</p>
-            <h2 className="text-2xl md:text-3xl font-semibold text-gray-900">La forma más simple de conectar con expertos</h2>
-          </div>
-
-          {/* Row 1: image left, text right (dark green block) */}
-          <div className="grid md:grid-cols-2 gap-0 items-stretch mb-6 rounded-2xl overflow-hidden shadow-sm">
-            <div className="h-72 md:h-auto bg-[#e8e4dd]">
-              <img
-                src="https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/full-shot-young-woman-undergoing-therapy.jpg"
-                alt="Asesoría profesional"
-                className="w-full h-full object-cover object-top"
-              />
+          <p className="text-xs font-semibold text-[#A7774E] uppercase tracking-widest mb-1">Por qué Inteira</p>
+          <h2 className="text-xl md:text-2xl font-medium text-gray-900 mb-6">La forma más simple de conectar con expertos</h2>
+          <div className="grid grid-cols-1 md:grid-cols-[1.3fr_1fr] gap-3">
+            <div className="rounded-2xl relative overflow-hidden min-h-[280px]"
+              style={{ backgroundImage: `url(https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/full-shot-young-woman-undergoing-therapy.jpg)`, backgroundSize: "cover", backgroundPosition: "top" }}>
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0c1a0e]/90 to-transparent" />
+              <div className="absolute bottom-5 left-5 right-5">
+                <h3 className="text-white font-medium text-base mb-1">Busca y elige con confianza</h3>
+                <p className="text-white/80 text-xs">Accede a perfiles verificados con reseñas reales. Filtra por especialidad, precio y disponibilidad.</p>
+              </div>
             </div>
-            <div className="bg-[#0c3d24] p-8 md:p-10 flex flex-col justify-center space-y-4">
-              <h3 className="text-xl font-semibold text-white">Busca y elige con confianza</h3>
-              <p className="text-sm text-white/65 leading-relaxed">
-                Accede a perfiles verificados con reseñas reales. Filtra por especialidad, precio y disponibilidad para encontrar al experto ideal.
-              </p>
-              {[
-                { icon: <Search className="w-4 h-4 text-white" />, title: "Búsqueda simple", desc: "Filtros inteligentes por área y disponibilidad." },
-                { icon: <CalendarCheck className="w-4 h-4 text-white" />, title: "Agenda en segundos", desc: "Perfiles verificados y confirmación inmediata." },
-              ].map((item, i) => (
-                <div key={i} className="flex items-start gap-3 bg-white/10 rounded-xl p-3.5">
-                  <div className="w-7 h-7 rounded-lg bg-white/15 flex items-center justify-center flex-shrink-0">{item.icon}</div>
-                  <div>
-                    <p className="text-sm font-medium text-white">{item.title}</p>
-                    <p className="text-xs text-white/55 mt-0.5">{item.desc}</p>
-                  </div>
+            <div className="flex flex-col gap-3">
+              <div className="flex-1 bg-white border border-[#e8e4dd] rounded-2xl p-5 flex flex-col">
+                <div className="w-9 h-9 rounded-lg bg-[#5B6A57]/10 flex items-center justify-center mb-3">
+                  <CalendarCheck className="w-4 h-4 text-[#5B6A57]" />
                 </div>
-              ))}
-              <a href="/especialidades" className="inline-flex items-center gap-1.5 text-sm text-white/60 hover:text-white transition-colors pt-1">
-                Conoce más <ArrowRight className="w-3.5 h-3.5" />
-              </a>
-            </div>
-          </div>
-
-          {/* Row 2: text left (dark green), image right */}
-          <div className="grid md:grid-cols-2 gap-0 items-stretch rounded-2xl overflow-hidden shadow-sm">
-            <div className="order-2 md:order-1 bg-[#0c3d24] p-8 md:p-10 flex flex-col justify-center space-y-4">
-              <h3 className="text-xl font-semibold text-white">Paga y conéctate sin complicaciones</h3>
-              <p className="text-sm text-white/65 leading-relaxed">
-                Realiza tu pago de forma segura y únete a tu sesión con un solo clic. Videollamada integrada, sin instalar nada.
-              </p>
-              {[
-                { icon: <CreditCard className="w-4 h-4 text-white" />, title: "Pagos seguros", desc: "Tarjeta o saldo de wallet. Sin sorpresas." },
-                { icon: <Video className="w-4 h-4 text-white" />, title: "Videollamada integrada", desc: "Desde cualquier dispositivo, sin instalar nada." },
-              ].map((item, i) => (
-                <div key={i} className="flex items-start gap-3 bg-white/10 rounded-xl p-3.5">
-                  <div className="w-7 h-7 rounded-lg bg-white/15 flex items-center justify-center flex-shrink-0">{item.icon}</div>
-                  <div>
-                    <p className="text-sm font-medium text-white">{item.title}</p>
-                    <p className="text-xs text-white/55 mt-0.5">{item.desc}</p>
-                  </div>
+                <p className="text-sm font-medium text-gray-900 mb-1">Agenda en segundos</p>
+                <p className="text-xs text-gray-500">Perfiles verificados y confirmación inmediata.</p>
+              </div>
+              <div className="flex-1 bg-white border border-[#e8e4dd] rounded-2xl p-5 flex flex-col">
+                <div className="w-9 h-9 rounded-lg bg-[#5B6A57]/10 flex items-center justify-center mb-3">
+                  <Video className="w-4 h-4 text-[#5B6A57]" />
                 </div>
-              ))}
-              <a href="/especialidades" className="inline-flex items-center gap-1.5 text-sm text-white/60 hover:text-white transition-colors pt-1">
-                Conoce más <ArrowRight className="w-3.5 h-3.5" />
-              </a>
-            </div>
-            <div className="order-1 md:order-2 h-72 md:h-auto bg-[#e8e4dd]">
-              <img
-                src="https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/Interfaz-Inteira.webp"
-                alt="Videollamada en Inteira"
-                className="w-full h-full object-cover"
-              />
+                <p className="text-sm font-medium text-gray-900 mb-1">Videollamada integrada</p>
+                <p className="text-xs text-gray-500">Sin instalar nada, desde cualquier dispositivo.</p>
+              </div>
             </div>
           </div>
         </section>
 
         {/* VENTAJAS */}
         <section className="py-8 md:py-10">
-          <div className="text-center mb-6">
-            <p className="text-xs font-semibold text-[#A7774E] uppercase tracking-widest mb-2">Ventajas</p>
-            <h2 className="text-2xl md:text-3xl font-semibold text-gray-900">Todo lo que necesitas en un solo lugar</h2>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <p className="text-xs font-semibold text-[#A7774E] uppercase tracking-widest mb-1">Ventajas</p>
+          <h2 className="text-xl md:text-2xl font-medium text-gray-900 mb-6">Todo lo que necesitas en un solo lugar</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
-              { icon: <Shield className="w-5 h-5 text-[#5B6A57]" />, title: "Especialistas verificados", desc: "Credenciales y reseñas reales." },
-              { icon: <Clock className="w-5 h-5 text-[#5B6A57]" />, title: "Agenda flexible", desc: "Citas disponibles 7 días a la semana." },
-              { icon: <Video className="w-5 h-5 text-[#5B6A57]" />, title: "Videollamada integrada", desc: "Sin apps adicionales." },
-              { icon: <CreditCard className="w-5 h-5 text-[#5B6A57]" />, title: "Pagos seguros", desc: "Transacciones encriptadas." },
+              { icon: <Shield className="w-[18px] h-[18px] text-[#5B6A57]" />, title: "Verificados", desc: "Credenciales reales" },
+              { icon: <Clock className="w-[18px] h-[18px] text-[#5B6A57]" />, title: "Agenda flexible", desc: "7 días a la semana" },
+              { icon: <Video className="w-[18px] h-[18px] text-[#5B6A57]" />, title: "100% en línea", desc: "Sin apps externas" },
+              { icon: <CreditCard className="w-[18px] h-[18px] text-[#5B6A57]" />, title: "Pagos seguros", desc: "Todo encriptado" },
             ].map((v, i) => (
-              <div key={i} className="bg-white rounded-2xl p-5 shadow-sm">
-                <div className="w-10 h-10 rounded-xl bg-[#5B6A57]/10 flex items-center justify-center mb-3">{v.icon}</div>
-                <p className="font-medium text-gray-900 text-sm">{v.title}</p>
-                <p className="text-xs text-gray-500 mt-1">{v.desc}</p>
+              <div key={i} className="bg-white border border-[#e8e4dd] rounded-2xl p-4">
+                <div className="w-9 h-9 rounded-full bg-[#5B6A57]/10 flex items-center justify-center mb-3">{v.icon}</div>
+                <p className="text-sm font-medium text-gray-900 mb-0.5">{v.title}</p>
+                <p className="text-xs text-gray-500">{v.desc}</p>
               </div>
             ))}
           </div>
@@ -670,38 +542,14 @@ export default function Home() {
         </section>
 
         {/* STATS */}
-        <section className="pb-8 md:pb-12">
-          <div className="relative rounded-2xl overflow-hidden h-[300px] md:h-[400px]">
-            <img
-              src="https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/full-shot-young-woman-undergoing-therapy.jpg"
-              alt="Plataforma Inteira"
-              className="w-full h-full object-cover object-top"
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-black/10" />
-
-            {/* Text left */}
-            <div className="absolute bottom-6 left-6 md:left-10 md:bottom-10">
-              <p className="text-white/60 text-[10px] uppercase tracking-widest mb-1">Plataforma líder</p>
-              <h3 className="text-white text-xl md:text-2xl font-semibold max-w-[220px] leading-snug">
-                Miles de personas ya confían en Inteira
-              </h3>
-            </div>
-
-            {/* Stat cards — stacked top-right */}
-            <div className="absolute top-5 right-5 md:top-8 md:right-10 flex flex-col gap-3">
-              <div className="bg-[#0c1a0e]/85 backdrop-blur-sm rounded-xl px-5 py-3.5 text-white min-w-[140px]">
-                <div className="text-2xl md:text-3xl font-bold">{stats[0].value}</div>
-                <div className="text-[11px] text-white/55 mt-0.5">{stats[0].label}</div>
+        <section className="py-8 md:py-10">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {stats.map((s, i) => (
+              <div key={i} className="bg-white border border-[#e8e4dd] rounded-2xl p-5 text-center">
+                <p className="text-2xl font-medium text-gray-900">{s.value}</p>
+                <p className="text-xs text-gray-500 mt-1">{s.label}</p>
               </div>
-              <div className="bg-[#5B6A57]/90 backdrop-blur-sm rounded-xl px-5 py-3.5 text-white min-w-[140px]">
-                <div className="text-2xl md:text-3xl font-bold">{stats[1].value}</div>
-                <div className="text-[11px] text-white/55 mt-0.5">{stats[1].label}</div>
-              </div>
-              <div className="bg-[#0c1a0e]/85 backdrop-blur-sm rounded-xl px-5 py-3.5 text-white min-w-[140px]">
-                <div className="text-2xl md:text-3xl font-bold">{stats[2].value} ★</div>
-                <div className="text-[11px] text-white/55 mt-0.5">{stats[2].label}</div>
-              </div>
-            </div>
+            ))}
           </div>
         </section>
 
