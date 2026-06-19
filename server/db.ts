@@ -573,10 +573,22 @@ export async function updateSpecialtyDescription(id: number, description: string
   await db.update(specialties).set({ description } as any).where(eq(specialties.id, id));
 }
 
-export async function updateSpecialtyImageUrl(id: number, imageUrl: string) {
+export async function updateSpecialtyImageUrl(id: number, imageUrl: string): Promise<void> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await (db as any).execute(`UPDATE \`specialties\` SET \`imageUrl\` = ? WHERE \`id\` = ?`, [imageUrl, id]);
+  return new Promise<void>((resolve, reject) => {
+    (db as any).$client.execute(
+      "UPDATE specialties SET imageUrl = ? WHERE id = ?",
+      [imageUrl, id],
+      (err: any) => {
+        if (err) {
+          console.error("[Database] updateSpecialtyImageUrl error:", err);
+          return reject(err);
+        }
+        resolve();
+      }
+    );
+  });
 }
 
 // Subscription Plan functions
