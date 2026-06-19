@@ -83,10 +83,17 @@ const CAROUSEL_ITEMS = [
 ];
 
 const stats = [
-  { value: "500+", label: "Especialistas" },
-  { value: "10k+", label: "Consultas" },
-  { value: "4.9", label: "Calificación" },
-  { value: "7", label: "Áreas" },
+  { value: "500+", label: "Especialistas activos" },
+  { value: "10k+", label: "Consultas realizadas" },
+  { value: "4.9", label: "Calificación promedio" },
+  { value: "7", label: "Áreas de especialidad" },
+];
+
+const steps = [
+  { icon: <Users className="w-6 h-6" />, title: "Regístrate gratis", description: "Crea tu cuenta en minutos, sin costo." },
+  { icon: <Award className="w-6 h-6" />, title: "Elige tu especialista", description: "Perfiles verificados con reseñas reales." },
+  { icon: <Calendar className="w-6 h-6" />, title: "Agenda tu cita", description: "Confirmación inmediata por email." },
+  { icon: <Video className="w-6 h-6" />, title: "Conéctate en línea", description: "Videollamada integrada desde cualquier dispositivo." },
 ];
 
 const testimonials = [
@@ -291,20 +298,24 @@ export default function Home() {
               aspectRatio: "1289 / 715",
             }}
           >
-            <div className="bg-white rounded-2xl p-6 max-w-[360px] z-10 relative shadow-sm">
-              <p className="text-xs tracking-wide text-[#A7774E] font-medium mb-2">AGENDA TU CONSULTA HOY</p>
-              <h1 className="text-2xl font-medium text-gray-900 mb-2">Conecta con el especialista correcto</h1>
-              <p className="text-sm text-gray-600 mb-4">Psicología, Legal, Finanzas, Emprendimiento y más.</p>
+            <div className="bg-white rounded-2xl p-7 md:p-9 max-w-[380px] z-10 relative shadow-2xl">
+              <p className="text-[10px] tracking-[0.15em] text-[#A7774E] font-semibold uppercase mb-3">AGENDA TU CONSULTA HOY</p>
+              <h1 className="text-3xl md:text-4xl font-medium text-gray-900 leading-tight mb-3">
+                Conecta con el especialista correcto
+              </h1>
+              <p className="text-sm text-gray-500 leading-relaxed mb-6">
+                Psicología, Legal, Finanzas, Emprendimiento y más.
+              </p>
               <div className="flex items-center gap-4">
                 <a href={isAuthenticated ? "/especialidades" : "/registro"}>
-                  <button className="bg-[#5B6A57] text-white rounded-lg px-5 py-2.5 text-sm hover:bg-[#3d4a3a] transition-colors">
+                  <button className="bg-[#5B6A57] text-white rounded-lg px-5 py-2.5 text-sm font-medium hover:bg-[#3d4a3a] transition-colors">
                     Agendar ahora
                   </button>
                 </a>
-                <span className="text-xs text-gray-500">
+                <a href="/especialidades" className="text-xs text-gray-500 hover:text-gray-800 transition-colors">
                   ¿Necesitas ayuda urgente?<br />
-                  <span className="font-medium text-gray-900">Click aquí →</span>
-                </span>
+                  <span className="font-semibold text-gray-900">Click aquí →</span>
+                </a>
               </div>
             </div>
           </div>
@@ -339,11 +350,15 @@ export default function Home() {
                   key={item.name + i}
                   onClick={() => setActiveDot(i)}
                   style={{ backgroundImage: `url(${item.image})`, backgroundSize: "cover", backgroundPosition: "center" }}
-                  className="relative flex-shrink-0 w-[80vw] md:w-[calc(50%-8px)] lg:w-[calc(25%-12px)] h-[220px] rounded-2xl overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform"
+                  className="relative flex-shrink-0 w-[80vw] md:w-[calc(50%-8px)] lg:w-[calc(25%-12px)] h-[260px] rounded-2xl overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform group"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
-                  <div className="absolute bottom-3 left-3">
-                    <span className="text-white text-sm font-medium drop-shadow">{item.name}</span>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/10 to-black/25" />
+                  <div className="absolute top-4 left-4">
+                    <span className="text-[9px] tracking-[0.14em] text-white/75 font-semibold uppercase">ESPECIALIDAD</span>
+                  </div>
+                  <div className="absolute bottom-4 left-4 right-4">
+                    <p className="text-white font-semibold text-base leading-snug mb-1.5 drop-shadow">{item.name}</p>
+                    <span className="text-xs text-white/70 font-medium group-hover:text-white transition-colors">Ver más →</span>
                   </div>
                 </a>
               ))}
@@ -384,56 +399,62 @@ export default function Home() {
             <h2 className="text-2xl md:text-3xl font-semibold text-gray-900">La forma más simple de conectar con expertos</h2>
           </div>
 
-          {/* Row 1: image left, text right */}
-          <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center mb-10 md:mb-14">
-            <div className="rounded-2xl overflow-hidden h-72 md:h-[380px] bg-[#e8e4dd]">
+          {/* Row 1: image left, text right (dark green block) */}
+          <div className="grid md:grid-cols-2 gap-0 items-stretch mb-6 rounded-2xl overflow-hidden shadow-sm">
+            <div className="h-72 md:h-auto bg-[#e8e4dd]">
               <img
                 src="https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/full-shot-young-woman-undergoing-therapy.jpg"
                 alt="Asesoría profesional"
                 className="w-full h-full object-cover object-top"
               />
             </div>
-            <div className="space-y-4">
-              <h3 className="text-xl font-semibold text-gray-900">Busca y elige con confianza</h3>
-              <p className="text-sm text-gray-500 leading-relaxed">
-                Accede a perfiles verificados con reseñas reales. Filtra por especialidad, precio y disponibilidad para encontrar al experto ideal para ti.
+            <div className="bg-[#0c3d24] p-8 md:p-10 flex flex-col justify-center space-y-4">
+              <h3 className="text-xl font-semibold text-white">Busca y elige con confianza</h3>
+              <p className="text-sm text-white/65 leading-relaxed">
+                Accede a perfiles verificados con reseñas reales. Filtra por especialidad, precio y disponibilidad para encontrar al experto ideal.
               </p>
               {[
-                { icon: <Search className="w-4 h-4 text-[#5B6A57]" />, title: "Búsqueda simple", desc: "Filtros inteligentes por área y disponibilidad." },
-                { icon: <CalendarCheck className="w-4 h-4 text-[#5B6A57]" />, title: "Agenda en segundos", desc: "Perfiles verificados y confirmación inmediata." },
+                { icon: <Search className="w-4 h-4 text-white" />, title: "Búsqueda simple", desc: "Filtros inteligentes por área y disponibilidad." },
+                { icon: <CalendarCheck className="w-4 h-4 text-white" />, title: "Agenda en segundos", desc: "Perfiles verificados y confirmación inmediata." },
               ].map((item, i) => (
-                <div key={i} className="flex items-start gap-3 bg-white rounded-xl p-4 shadow-sm">
-                  <div className="w-8 h-8 rounded-lg bg-[#5B6A57]/10 flex items-center justify-center flex-shrink-0">{item.icon}</div>
+                <div key={i} className="flex items-start gap-3 bg-white/10 rounded-xl p-3.5">
+                  <div className="w-7 h-7 rounded-lg bg-white/15 flex items-center justify-center flex-shrink-0">{item.icon}</div>
                   <div>
-                    <p className="text-sm font-medium text-gray-900">{item.title}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">{item.desc}</p>
+                    <p className="text-sm font-medium text-white">{item.title}</p>
+                    <p className="text-xs text-white/55 mt-0.5">{item.desc}</p>
                   </div>
                 </div>
               ))}
+              <a href="/especialidades" className="inline-flex items-center gap-1.5 text-sm text-white/60 hover:text-white transition-colors pt-1">
+                Conoce más <ArrowRight className="w-3.5 h-3.5" />
+              </a>
             </div>
           </div>
 
-          {/* Row 2: text left, image right (alternating) */}
-          <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
-            <div className="order-2 md:order-1 space-y-4">
-              <h3 className="text-xl font-semibold text-gray-900">Paga y conéctate sin complicaciones</h3>
-              <p className="text-sm text-gray-500 leading-relaxed">
-                Realiza tu pago de forma segura y únete a tu sesión con un solo clic. Videollamada integrada desde cualquier dispositivo, sin instalar nada.
+          {/* Row 2: text left (dark green), image right */}
+          <div className="grid md:grid-cols-2 gap-0 items-stretch rounded-2xl overflow-hidden shadow-sm">
+            <div className="order-2 md:order-1 bg-[#0c3d24] p-8 md:p-10 flex flex-col justify-center space-y-4">
+              <h3 className="text-xl font-semibold text-white">Paga y conéctate sin complicaciones</h3>
+              <p className="text-sm text-white/65 leading-relaxed">
+                Realiza tu pago de forma segura y únete a tu sesión con un solo clic. Videollamada integrada, sin instalar nada.
               </p>
               {[
-                { icon: <CreditCard className="w-4 h-4 text-[#5B6A57]" />, title: "Pagos seguros", desc: "Tarjeta o saldo de wallet. Sin sorpresas." },
-                { icon: <Video className="w-4 h-4 text-[#5B6A57]" />, title: "Videollamada integrada", desc: "Desde cualquier dispositivo, sin instalar nada." },
+                { icon: <CreditCard className="w-4 h-4 text-white" />, title: "Pagos seguros", desc: "Tarjeta o saldo de wallet. Sin sorpresas." },
+                { icon: <Video className="w-4 h-4 text-white" />, title: "Videollamada integrada", desc: "Desde cualquier dispositivo, sin instalar nada." },
               ].map((item, i) => (
-                <div key={i} className="flex items-start gap-3 bg-white rounded-xl p-4 shadow-sm">
-                  <div className="w-8 h-8 rounded-lg bg-[#5B6A57]/10 flex items-center justify-center flex-shrink-0">{item.icon}</div>
+                <div key={i} className="flex items-start gap-3 bg-white/10 rounded-xl p-3.5">
+                  <div className="w-7 h-7 rounded-lg bg-white/15 flex items-center justify-center flex-shrink-0">{item.icon}</div>
                   <div>
-                    <p className="text-sm font-medium text-gray-900">{item.title}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">{item.desc}</p>
+                    <p className="text-sm font-medium text-white">{item.title}</p>
+                    <p className="text-xs text-white/55 mt-0.5">{item.desc}</p>
                   </div>
                 </div>
               ))}
+              <a href="/especialidades" className="inline-flex items-center gap-1.5 text-sm text-white/60 hover:text-white transition-colors pt-1">
+                Conoce más <ArrowRight className="w-3.5 h-3.5" />
+              </a>
             </div>
-            <div className="order-1 md:order-2 rounded-2xl overflow-hidden h-72 md:h-[380px] bg-[#e8e4dd]">
+            <div className="order-1 md:order-2 h-72 md:h-auto bg-[#e8e4dd]">
               <img
                 src="https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/Interfaz-Inteira.webp"
                 alt="Videollamada en Inteira"
@@ -460,6 +481,29 @@ export default function Home() {
                 <div className="w-10 h-10 rounded-xl bg-[#5B6A57]/10 flex items-center justify-center mb-3">{v.icon}</div>
                 <p className="font-medium text-gray-900 text-sm">{v.title}</p>
                 <p className="text-xs text-gray-500 mt-1">{v.desc}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* CÓMO FUNCIONA */}
+        <section id="como-funciona" className="py-8 md:py-12">
+          <div className="text-center mb-8">
+            <p className="text-xs font-semibold text-[#A7774E] uppercase tracking-widest mb-2">Proceso</p>
+            <h2 className="text-2xl md:text-3xl font-semibold text-gray-900">¿Cómo funciona Inteira?</h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {steps.map((step, i) => (
+              <div key={i} className="bg-white rounded-2xl p-6 shadow-sm border border-[#e8e4dd] flex flex-col">
+                <div className="w-12 h-12 rounded-xl bg-[#5B6A57]/10 flex items-center justify-center mb-4 text-[#5B6A57]">
+                  {step.icon}
+                </div>
+                <span className="text-[10px] font-bold text-[#A7774E] uppercase tracking-widest mb-1">Paso {i + 1}</span>
+                <h3 className="text-base font-semibold text-gray-900 mb-2">{step.title}</h3>
+                <p className="text-sm text-gray-500 leading-relaxed flex-1">{step.description}</p>
+                <a href="/registro" className="inline-flex items-center gap-1 text-xs text-[#5B6A57] hover:text-[#3d4a3a] font-medium mt-4 transition-colors">
+                  Ver más <ArrowRight className="w-3 h-3" />
+                </a>
               </div>
             ))}
           </div>
@@ -511,13 +555,16 @@ export default function Home() {
 
             {/* Plan Básico */}
             <div className="order-2 md:order-1">
-              <Card className="border border-[#e8e4dd] bg-white hover:shadow-lg transition-shadow h-full flex flex-col">
-                <CardContent className="p-6 md:p-8 flex flex-col flex-1">
-                  <h3 className="text-lg font-semibold text-gray-900">Plan Básico</h3>
-                  <div className="flex items-baseline gap-1 mt-2 mb-6">
-                    <span className="text-4xl font-bold text-[#5B6A57]">${PRICING.PLAN_BASIC_MXN}</span>
+              <Card className="border border-[#e8e4dd] bg-white hover:shadow-lg transition-shadow h-full flex flex-col overflow-hidden">
+                <div className="bg-gray-50 border-b border-[#e8e4dd] px-6 py-5">
+                  <p className="text-[10px] text-gray-400 uppercase tracking-widest font-semibold mb-1">Esencial</p>
+                  <h3 className="text-xl font-bold text-gray-900">Plan Básico</h3>
+                  <div className="flex items-baseline gap-1 mt-2">
+                    <span className="text-3xl font-bold text-gray-900">${PRICING.PLAN_BASIC_MXN}</span>
                     <span className="text-gray-400 text-sm">/mes</span>
                   </div>
+                </div>
+                <CardContent className="p-6 flex flex-col flex-1">
                   <ul className="space-y-3 mb-6">
                     {["980 créditos mensuales", "4 sesiones básicas", "Vigencia 60 días", "Todas las especialidades"].map((f, j) => (
                       <li key={j} className="flex items-center gap-2 text-sm text-gray-700">
@@ -531,7 +578,7 @@ export default function Home() {
                     disabled={loadingPlan === "Plan Básico"}
                     onClick={() => handlePlanClick("plan_basic", "Plan Básico")}
                   >
-                    {loadingPlan === "Plan Básico" ? "Procesando..." : "Elegir Plan Básico"}
+                    {loadingPlan === "Plan Básico" ? "Procesando..." : "Suscribirse"}
                   </Button>
                 </CardContent>
               </Card>
@@ -539,81 +586,77 @@ export default function Home() {
 
             {/* Plan Pro */}
             <div className="order-1 md:order-2 md:-mt-4 md:-mb-4">
-              <Card
-                className="relative border-0 shadow-2xl overflow-hidden h-full flex flex-col"
-                style={{ background: "linear-gradient(135deg, #3d4a3a 0%, #5B6A57 100%)" }}
-              >
-                <div className="absolute top-0 left-0 right-0 flex justify-center pt-4">
-                  <Badge className="bg-white/20 text-white border-white/30 text-xs font-semibold px-3 py-1 backdrop-blur-sm">
+              <Card className="relative border-0 shadow-2xl overflow-hidden h-full flex flex-col">
+                <div className="bg-[#5B6A57] px-6 py-5">
+                  <Badge className="bg-white/20 text-white border-white/30 text-xs font-semibold px-2.5 py-0.5 mb-2">
                     ⭐ Más popular
                   </Badge>
-                </div>
-                <CardContent className="p-6 md:p-8 pt-14 flex flex-col flex-1">
-                  <h3 className="text-lg font-semibold text-white">Plan Pro</h3>
-                  <div className="flex items-baseline gap-1 mt-2 mb-6">
-                    <span className="text-5xl font-bold text-white">{PRICING_DISPLAY.PLAN_PRO}</span>
+                  <h3 className="text-xl font-bold text-white">Plan Pro</h3>
+                  <div className="flex items-baseline gap-1 mt-2">
+                    <span className="text-3xl font-bold text-white">{PRICING_DISPLAY.PLAN_PRO}</span>
                     <span className="text-white/70 text-sm">/mes</span>
                   </div>
+                </div>
+                <CardContent className="p-6 flex flex-col flex-1 bg-white">
                   <ul className="space-y-3 mb-6">
                     {["2,500 créditos mensuales", "2 sesiones premium", "Vigencia 60 días", "Acceso prioritario", "Soporte 24/7", "Precio especial en sesiones"].map((f, j) => (
-                      <li key={j} className="flex items-center gap-2 text-sm text-white/90">
-                        <CheckCircle2 className="w-4 h-4 text-white flex-shrink-0" />{f}
+                      <li key={j} className="flex items-center gap-2 text-sm text-gray-700">
+                        <CheckCircle2 className="w-4 h-4 text-[#5B6A57] flex-shrink-0" />{f}
                       </li>
                     ))}
                   </ul>
                   <Button
-                    className="w-full bg-white text-[#3d4a3a] hover:bg-white/90 font-semibold shadow-lg mt-auto"
+                    className="w-full bg-[#5B6A57] hover:bg-[#3d4a3a] text-white font-semibold shadow-md mt-auto"
                     disabled={loadingPlan === "Plan Pro"}
                     onClick={() => handlePlanClick("plan_pro", "Plan Pro")}
                   >
-                    {loadingPlan === "Plan Pro" ? "Procesando..." : "Elegir Plan Pro"}
+                    {loadingPlan === "Plan Pro" ? "Procesando..." : "Suscribirse"}
                   </Button>
                 </CardContent>
               </Card>
             </div>
 
             {/* Sesiones individuales */}
-            <div className="order-3 md:order-3">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">O paga por sesión</p>
-              <div className="flex flex-col gap-3">
-                <Card className="border border-[#e8e4dd] bg-white hover:shadow-md transition-shadow">
-                  <CardContent className="p-5">
-                    <h4 className="font-semibold text-gray-900">Sesión Básica</h4>
-                    <p className="text-xs text-gray-400 mt-0.5">60 min · Videollamada integrada</p>
-                    <div className="flex items-baseline gap-1 mt-3">
-                      <span className="text-2xl font-bold text-[#5B6A57]">${PRICING.SESSION_BASIC_MXN}</span>
-                      <span className="text-xs text-gray-400">MXN</span>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full mt-3 border-[#5B6A57]/30 text-[#5B6A57] hover:bg-[#5B6A57]/5 text-xs"
-                      disabled={loadingPlan === "Sesión Básica"}
-                      onClick={() => handlePlanClick("individual_basic", "Sesión Básica")}
-                    >
-                      {loadingPlan === "Sesión Básica" ? "Procesando..." : "Comprar sesión"}
-                    </Button>
-                  </CardContent>
-                </Card>
-                <Card className="border border-[#e8e4dd] bg-white hover:shadow-md transition-shadow">
-                  <CardContent className="p-5">
-                    <h4 className="font-semibold text-gray-900">Sesión Premium</h4>
-                    <p className="text-xs text-gray-400 mt-0.5">60 min · Experto top</p>
-                    <div className="flex items-baseline gap-1 mt-3">
-                      <span className="text-2xl font-bold text-[#5B6A57]">{PRICING_DISPLAY.SESSION_PREMIUM}</span>
-                      <span className="text-xs text-gray-400">MXN</span>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full mt-3 border-[#5B6A57]/30 text-[#5B6A57] hover:bg-[#5B6A57]/5 text-xs"
-                      disabled={loadingPlan === "Sesión Premium"}
-                      onClick={() => handlePlanClick("individual_premium", "Sesión Premium")}
-                    >
-                      {loadingPlan === "Sesión Premium" ? "Procesando..." : "Comprar sesión"}
-                    </Button>
-                  </CardContent>
-                </Card>
+            <div className="order-3 md:order-3 flex flex-col">
+              <div className="bg-gray-50 border border-b-0 border-[#e8e4dd] rounded-t-2xl px-5 py-4">
+                <p className="text-[10px] text-gray-400 uppercase tracking-widest font-semibold mb-1">Pago único</p>
+                <h3 className="text-xl font-bold text-gray-900">Por sesión</h3>
+              </div>
+              <div className="flex flex-col gap-0 border border-[#e8e4dd] rounded-b-2xl overflow-hidden">
+                <div className="bg-white p-5 border-b border-[#e8e4dd]">
+                  <h4 className="font-semibold text-gray-900">Sesión Básica</h4>
+                  <p className="text-xs text-gray-400 mt-0.5">60 min · Videollamada integrada</p>
+                  <div className="flex items-baseline gap-1 mt-3">
+                    <span className="text-2xl font-bold text-[#5B6A57]">${PRICING.SESSION_BASIC_MXN}</span>
+                    <span className="text-xs text-gray-400">MXN</span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full mt-3 border-[#5B6A57]/30 text-[#5B6A57] hover:bg-[#5B6A57]/5 text-xs"
+                    disabled={loadingPlan === "Sesión Básica"}
+                    onClick={() => handlePlanClick("individual_basic", "Sesión Básica")}
+                  >
+                    {loadingPlan === "Sesión Básica" ? "Procesando..." : "Comprar sesión"}
+                  </Button>
+                </div>
+                <div className="bg-white p-5">
+                  <h4 className="font-semibold text-gray-900">Sesión Premium</h4>
+                  <p className="text-xs text-gray-400 mt-0.5">60 min · Experto top</p>
+                  <div className="flex items-baseline gap-1 mt-3">
+                    <span className="text-2xl font-bold text-[#5B6A57]">{PRICING_DISPLAY.SESSION_PREMIUM}</span>
+                    <span className="text-xs text-gray-400">MXN</span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full mt-3 border-[#5B6A57]/30 text-[#5B6A57] hover:bg-[#5B6A57]/5 text-xs"
+                    disabled={loadingPlan === "Sesión Premium"}
+                    onClick={() => handlePlanClick("individual_premium", "Sesión Premium")}
+                  >
+                    {loadingPlan === "Sesión Premium" ? "Procesando..." : "Comprar sesión"}
+                  </Button>
+                </div>
               </div>
             </div>
 
@@ -630,13 +673,37 @@ export default function Home() {
 
         {/* STATS */}
         <section className="pb-8 md:pb-12">
-          <div className="bg-[#5B6A57] rounded-2xl p-6 md:p-10 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-            {stats.map((s, i) => (
-              <div key={i}>
-                <div className="text-3xl md:text-4xl font-bold text-white">{s.value}</div>
-                <div className="text-sm text-white/70 mt-1">{s.label}</div>
+          <div className="relative rounded-2xl overflow-hidden h-[300px] md:h-[400px]">
+            <img
+              src="https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/full-shot-young-woman-undergoing-therapy.jpg"
+              alt="Plataforma Inteira"
+              className="w-full h-full object-cover object-top"
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-black/10" />
+
+            {/* Text left */}
+            <div className="absolute bottom-6 left-6 md:left-10 md:bottom-10">
+              <p className="text-white/60 text-[10px] uppercase tracking-widest mb-1">Plataforma líder</p>
+              <h3 className="text-white text-xl md:text-2xl font-semibold max-w-[220px] leading-snug">
+                Miles de personas ya confían en Inteira
+              </h3>
+            </div>
+
+            {/* Stat cards — stacked top-right */}
+            <div className="absolute top-5 right-5 md:top-8 md:right-10 flex flex-col gap-3">
+              <div className="bg-[#0c1a0e]/85 backdrop-blur-sm rounded-xl px-5 py-3.5 text-white min-w-[140px]">
+                <div className="text-2xl md:text-3xl font-bold">{stats[0].value}</div>
+                <div className="text-[11px] text-white/55 mt-0.5">{stats[0].label}</div>
               </div>
-            ))}
+              <div className="bg-[#5B6A57]/90 backdrop-blur-sm rounded-xl px-5 py-3.5 text-white min-w-[140px]">
+                <div className="text-2xl md:text-3xl font-bold">{stats[1].value}</div>
+                <div className="text-[11px] text-white/55 mt-0.5">{stats[1].label}</div>
+              </div>
+              <div className="bg-[#0c1a0e]/85 backdrop-blur-sm rounded-xl px-5 py-3.5 text-white min-w-[140px]">
+                <div className="text-2xl md:text-3xl font-bold">{stats[2].value} ★</div>
+                <div className="text-[11px] text-white/55 mt-0.5">{stats[2].label}</div>
+              </div>
+            </div>
           </div>
         </section>
 
