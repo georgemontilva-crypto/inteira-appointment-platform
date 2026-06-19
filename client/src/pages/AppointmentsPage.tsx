@@ -19,6 +19,8 @@ import {
   CalendarX,
   History,
   ArrowRight,
+  Lock,
+  CreditCard,
 } from "lucide-react";
 import DashboardLayout from "../components/DashboardLayout";
 import { VideoCallPanel } from "../components/VideoCallPanel";
@@ -48,9 +50,9 @@ function getDateLabel(date: Date): string {
 
 function getUrgencyColor(date: Date): string {
   const h = differenceInHours(date, new Date());
-  if (h <= 2) return "text-red-600";
+  if (h <= 2) return "text-[#A32D2D] font-bold";
   if (h <= 24) return "text-orange-500";
-  return "text-[#3d4e3f]";
+  return "text-gray-600";
 }
 
 /* ─── StarRating ─── */
@@ -151,7 +153,7 @@ export default function AppointmentsPage() {
 
   const markPendingReviewMutation = trpc.appointment.markAppointmentPendingReview.useMutation({
     onSuccess: () => utils.user.getAppointments.invalidate(),
-    onError: () => utils.user.getAppointments.invalidate(), // invalidate anyway to sync state
+    onError: () => utils.user.getAppointments.invalidate(),
   });
 
   const submitReviewMutation = trpc.appointment.submitReview.useMutation({
@@ -204,10 +206,9 @@ export default function AppointmentsPage() {
     });
   };
 
-  /* ─── Appointment Card ─── */
+  /* ─── Upcoming Card ─── */
   const UpcomingCard = ({ apt }: { apt: Apt }) => {
     const date = parseLocalDate(apt.appointmentDate);
-    const sc = statusColors["scheduled"];
     const [nowMs, setNowMs] = useState(Date.now());
     useEffect(() => {
       const id = setInterval(() => setNowMs(Date.now()), 1000);
@@ -226,14 +227,12 @@ export default function AppointmentsPage() {
       if (hours > 0) return `${hours}h ${minutes}m`;
       return `${minutes}m`;
     })();
+
     return (
-      <div className="bg-white rounded-2xl border border-[rgba(96,117,98,0.15)] p-4 hover:border-[rgba(96,117,98,0.3)] hover:shadow-sm transition-all">
+      <div className="bg-white rounded-xl border border-gray-100 p-4 hover:border-gray-200 transition-colors">
         <div className="flex items-start gap-3">
-          {/* Avatar */}
-          <div
-            className="w-11 h-11 rounded-xl flex items-center justify-center text-white font-bold text-base flex-shrink-0"
-            style={{ background: "linear-gradient(135deg,#3d4e3f,#607562)" }}
-          >
+          {/* Avatar circular */}
+          <div className="w-12 h-12 rounded-full bg-[#5B6A57] flex items-center justify-center text-white font-semibold text-base flex-shrink-0">
             {((apt as any).professionalName ?? "P").charAt(0).toUpperCase()}
           </div>
 
@@ -241,15 +240,15 @@ export default function AppointmentsPage() {
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <p className="font-semibold text-[#1a1a1a] text-sm truncate">
+                <p className="font-semibold text-gray-900 text-sm truncate">
                   {(apt as any).professionalName ?? `Especialista #${apt.professionalId}`}
                 </p>
                 <div className="flex items-center gap-2 mt-1 flex-wrap">
-                  <span className={`flex items-center gap-1 text-xs font-medium capitalize ${getUrgencyColor(date)}`}>
+                  <span className={`flex items-center gap-1 text-xs capitalize ${getUrgencyColor(date)}`}>
                     <Calendar className="w-3 h-3" />
                     {getDateLabel(date)}
                   </span>
-                  <span className="flex items-center gap-1 text-xs text-[#607562]">
+                  <span className="flex items-center gap-1 text-xs text-gray-400">
                     <Clock className="w-3 h-3" />
                     {format(date, "HH:mm")}
                     {apt.durationMinutes ? ` · ${apt.durationMinutes} min` : ""}
@@ -257,9 +256,9 @@ export default function AppointmentsPage() {
                 </div>
               </div>
               {/* Status badge */}
-              <span className={`flex-shrink-0 flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${sc.bg} ${sc.text}`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${sc.dot}`} />
-                {statusLabels["scheduled"]}
+              <span className="flex-shrink-0 flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                Confirmada
               </span>
             </div>
 
@@ -279,21 +278,21 @@ export default function AppointmentsPage() {
                       endTime: new Date(parseLocalDate(apt.appointmentDate).getTime() + ((apt as any).durationMinutes ?? 55) * 60 * 1000),
                     });
                   }}
-                  className="flex-1 w-full flex items-center justify-center gap-1.5 text-xs font-semibold text-white rounded-xl h-8 px-3 transition-opacity"
-                  style={{
-                    background: canJoin
-                      ? "linear-gradient(135deg,#3d4e3f,#607562)"
-                      : "#93A295",
-                    opacity: canJoin ? 1 : 0.75,
-                    cursor: canJoin ? "pointer" : "not-allowed",
-                  }}
+                  className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold rounded-lg h-8 px-3 transition-colors ${
+                    canJoin
+                      ? "bg-[#5B6A57] hover:bg-[#4a5847] text-white"
+                      : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                  }`}
                 >
-                  <Video className="w-3.5 h-3.5" />
+                  {canJoin
+                    ? <Video className="w-3.5 h-3.5" />
+                    : <Lock className="w-3.5 h-3.5" />
+                  }
                   {canJoin ? "Unirse a la sesión" : `Disponible en ${countdownStr}`}
                 </button>
               )}
               <button
-                className="flex items-center gap-1 text-xs font-medium text-red-500 hover:text-red-700 hover:bg-red-50 rounded-xl h-8 px-3 border border-red-100 transition-colors disabled:opacity-50"
+                className="flex items-center gap-1 text-xs font-medium text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg h-8 px-3 border border-red-100 transition-colors disabled:opacity-50"
                 disabled={cancelingId === apt.id}
                 onClick={() => setConfirmCancelId(apt.id)}
               >
@@ -311,28 +310,26 @@ export default function AppointmentsPage() {
     );
   };
 
+  /* ─── History Card ─── */
   const HistoryCard = ({ apt }: { apt: Apt }) => {
     const date = parseLocalDate(apt.appointmentDate);
     const sc = statusColors[apt.status] ?? statusColors["completed"];
     const isRating = ratingId === apt.id;
 
     return (
-      <div className="bg-white rounded-2xl border border-[rgba(96,117,98,0.12)] p-4 transition-all hover:border-[rgba(96,117,98,0.25)]">
+      <div className="bg-white rounded-xl border border-gray-100 p-4 hover:border-gray-200 transition-colors">
         {isRating ? (
           /* Review form */
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <div
-                className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
-                style={{ background: "linear-gradient(135deg,#3d4e3f,#607562)" }}
-              >
+              <div className="w-9 h-9 rounded-full bg-[#5B6A57] flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
                 {((apt as any).professionalName ?? "P").charAt(0).toUpperCase()}
               </div>
               <div>
-                <p className="text-sm font-semibold text-[#1a1a1a]">
+                <p className="text-sm font-semibold text-gray-900">
                   Califica tu sesión con {(apt as any).professionalName ?? "el especialista"}
                 </p>
-                <p className="text-xs text-[#93A295]">
+                <p className="text-xs text-gray-400">
                   {format(date, "d 'de' MMMM yyyy", { locale: es })}
                 </p>
               </div>
@@ -343,12 +340,11 @@ export default function AppointmentsPage() {
               onChange={(e) => setRatingComment(e.target.value)}
               placeholder="Comparte tu experiencia (opcional)..."
               rows={2}
-              className="w-full text-sm border border-[rgba(96,117,98,0.2)] rounded-xl px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-[rgba(96,117,98,0.3)] bg-[#F7FAFC] text-[#333]"
+              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-[#5B6A57]/20 bg-gray-50 text-gray-800"
             />
             <div className="flex gap-2">
               <button
-                className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold text-white rounded-xl h-9 px-4 transition-opacity hover:opacity-90 disabled:opacity-50"
-                style={{ background: "linear-gradient(135deg,#3d4e3f,#607562)" }}
+                className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold text-white bg-[#5B6A57] hover:bg-[#4a5847] rounded-lg h-9 px-4 transition-colors disabled:opacity-50"
                 disabled={reviewMutation.isPending}
                 onClick={() => handleSubmitReview(apt)}
               >
@@ -360,7 +356,7 @@ export default function AppointmentsPage() {
                 Enviar reseña
               </button>
               <button
-                className="text-xs font-medium text-[#607562] hover:bg-[#f0f4f0] rounded-xl h-9 px-4 border border-[rgba(96,117,98,0.2)] transition-colors"
+                className="text-xs font-medium text-gray-500 hover:bg-gray-100 rounded-lg h-9 px-4 border border-gray-200 transition-colors"
                 onClick={() => { setRatingId(null); setRating(5); setRatingComment(""); }}
               >
                 Cancelar
@@ -368,31 +364,31 @@ export default function AppointmentsPage() {
             </div>
           </div>
         ) : (
-          /* Normal row */
+          /* Compact row */
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#F0F4F0] flex items-center justify-center text-[#607562] font-bold text-sm flex-shrink-0">
+            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-semibold text-sm flex-shrink-0">
               {((apt as any).professionalName ?? "P").charAt(0).toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm text-[#1a1a1a] truncate">
+              <p className="font-medium text-sm text-gray-900 truncate">
                 {(apt as any).professionalName || (apt as any).specialtyName || `Especialista #${apt.professionalId}`}
               </p>
-              <p className="text-xs text-[#93A295] mt-0.5">
+              <p className="text-xs text-gray-400 mt-0.5">
                 {format(date, "d MMM yyyy · HH:mm", { locale: es })}
                 {apt.durationMinutes ? ` · ${apt.durationMinutes} min` : ""}
               </p>
-              <p className="text-xs text-[#93A295] mt-0.5">
-                {sessionCostByDuration(apt.durationMinutes)} créditos · Videollamada integrada
-              </p>
             </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex flex-col items-end gap-1 flex-shrink-0">
               <span className={`flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${sc.bg} ${sc.text}`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${sc.dot}`} />
                 {statusLabels[apt.status]}
               </span>
+              <span className="text-[10px] text-gray-400">
+                {sessionCostByDuration(apt.durationMinutes)} créditos
+              </span>
               {apt.status === "completed" && !(apt as any).hasReview && (
                 <button
-                  className="flex items-center gap-1 text-[10px] font-semibold text-yellow-600 hover:bg-yellow-50 rounded-full h-6 px-2.5 border border-yellow-200 transition-colors"
+                  className="flex items-center gap-1 text-[10px] font-semibold text-yellow-600 hover:bg-yellow-50 rounded-full h-5 px-2 border border-yellow-200 transition-colors"
                   onClick={() => setRatingId(apt.id)}
                 >
                   <Star className="w-3 h-3" />
@@ -400,7 +396,7 @@ export default function AppointmentsPage() {
                 </button>
               )}
               {apt.status === "completed" && (apt as any).hasReview && (
-                <span className="flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 rounded-full h-6 px-2.5 border border-emerald-100">
+                <span className="flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 rounded-full h-5 px-2 border border-emerald-100">
                   <CheckCircle2 className="w-3 h-3" />
                   Calificada
                 </span>
@@ -416,313 +412,309 @@ export default function AppointmentsPage() {
   return (
     <DashboardLayout>
       <div className={activeCall ? "flex gap-4 p-4 md:p-6 items-start" : ""}>
-      <div style={activeCall ? { flex: 1, minWidth: 0 } : {}} className={activeCall ? "p-0" : "p-4 md:p-6"}>
-        {/* ── Page Header ── */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-xl font-bold text-[#1a1a1a]">Mis citas</h1>
-            <p className="text-xs text-[#93A295] mt-0.5">Gestiona tus sesiones agendadas</p>
-          </div>
-          <button
-            onClick={() => navigate("/especialidades")}
-            className="flex items-center gap-1.5 text-xs font-semibold text-white rounded-xl h-9 px-4 transition-opacity hover:opacity-90"
-            style={{ background: "linear-gradient(135deg,#3d4e3f,#607562)" }}
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Nueva cita
-          </button>
-        </div>
+        <div className="bg-white min-h-full" style={activeCall ? { flex: 1, minWidth: 0 } : {}}>
+          <div className="max-w-7xl mx-auto w-full px-4 md:px-6 py-6 space-y-5">
 
-        {/* ── 2-column layout on desktop ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
-
-          {/* ── COLUMNA PRINCIPAL (2/3) ── */}
-          <div className="lg:col-span-2 space-y-4">
-            {/* Tabs */}
-            <div className="flex gap-1 bg-[#F0F4F0] rounded-2xl p-1">
-              {(["upcoming", "history"] as const).map((t) => (
-                <button
-                  key={t}
-                  onClick={() => setTab(t)}
-                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold transition-all ${
-                    tab === t
-                      ? "bg-white text-[#3d4e3f] shadow-sm"
-                      : "text-[#93A295] hover:text-[#607562]"
-                  }`}
-                >
-                  {t === "upcoming" ? (
-                    <>
-                      <CalendarCheck className="w-3.5 h-3.5" />
-                      Próximas
-                      {upcomingAppointments.length > 0 && (
-                        <span className="ml-0.5 min-w-[18px] h-[18px] bg-[#607562] text-white text-[9px] font-bold rounded-full flex items-center justify-center px-1">
-                          {upcomingAppointments.length}
-                        </span>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <History className="w-3.5 h-3.5" />
-                      Historial
-                      {pastAppointments.length > 0 && (
-                        <span className="ml-0.5 min-w-[18px] h-[18px] bg-[#93A295] text-white text-[9px] font-bold rounded-full flex items-center justify-center px-1">
-                          {pastAppointments.length}
-                        </span>
-                      )}
-                    </>
-                  )}
-                </button>
-              ))}
+            {/* ── Page Header ── */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-xl font-bold text-gray-900">Mis citas</h1>
+                <p className="text-sm text-gray-400 mt-0.5">Gestiona tus sesiones y revisa tu historial</p>
+              </div>
+              <button
+                onClick={() => navigate("/especialidades")}
+                className="flex items-center gap-1.5 text-sm font-semibold text-white bg-[#5B6A57] hover:bg-[#4a5847] rounded-lg h-9 px-4 transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Nueva cita
+              </button>
             </div>
 
-            {/* Content */}
-            {isLoading ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="bg-white rounded-2xl border border-[rgba(96,117,98,0.12)] p-4 animate-pulse">
-                    <div className="flex gap-3">
-                      <div className="w-11 h-11 rounded-xl bg-[#F0F4F0]" />
-                      <div className="flex-1 space-y-2">
-                        <div className="h-3.5 bg-[#F0F4F0] rounded-full w-1/3" />
-                        <div className="h-3 bg-[#F0F4F0] rounded-full w-1/2" />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : tab === "upcoming" ? (
-              upcomingAppointments.length === 0 ? (
-                <div className="bg-white rounded-2xl border border-dashed border-[rgba(96,117,98,0.25)] p-12 text-center">
-                  <div className="w-14 h-14 rounded-2xl bg-[#F0F4F0] flex items-center justify-center mx-auto mb-4">
-                    <CalendarX className="w-7 h-7 text-[#93A295]" />
-                  </div>
-                  <p className="font-semibold text-[#333] text-sm">No tienes citas próximas</p>
-                  <p className="text-xs text-[#93A295] mt-1 mb-4">Agenda una sesión con un especialista</p>
-                  <button
-                    onClick={() => navigate("/especialidades")}
-                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-white rounded-xl h-9 px-5 transition-opacity hover:opacity-90"
-                    style={{ background: "linear-gradient(135deg,#3d4e3f,#607562)" }}
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    Agendar ahora
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {upcomingAppointments.map((apt) => (
-                    <UpcomingCard key={apt.id} apt={apt} />
+            {/* ── Grid ── */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
+
+              {/* ── Columna principal (2/3) ── */}
+              <div className="lg:col-span-2 space-y-4">
+
+                {/* Tabs */}
+                <div className="flex gap-1 bg-gray-50 rounded-xl p-1">
+                  {(["upcoming", "history"] as const).map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => setTab(t)}
+                      className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-all ${
+                        tab === t
+                          ? "bg-white text-gray-900 shadow-sm"
+                          : "text-gray-400 hover:text-gray-600"
+                      }`}
+                    >
+                      {t === "upcoming" ? (
+                        <>
+                          <CalendarCheck className="w-3.5 h-3.5" />
+                          Próximas
+                          {upcomingAppointments.length > 0 && (
+                            <span className="ml-0.5 min-w-[18px] h-[18px] bg-[#5B6A57] text-white text-[9px] font-bold rounded-full flex items-center justify-center px-1">
+                              {upcomingAppointments.length}
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <History className="w-3.5 h-3.5" />
+                          Historial
+                          {pastAppointments.length > 0 && (
+                            <span className="ml-0.5 min-w-[18px] h-[18px] bg-gray-300 text-white text-[9px] font-bold rounded-full flex items-center justify-center px-1">
+                              {pastAppointments.length}
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </button>
                   ))}
                 </div>
-              )
-            ) : pastAppointments.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-dashed border-[rgba(96,117,98,0.25)] p-12 text-center">
-                <div className="w-14 h-14 rounded-2xl bg-[#F0F4F0] flex items-center justify-center mx-auto mb-4">
-                  <History className="w-7 h-7 text-[#93A295]" />
-                </div>
-                <p className="font-semibold text-[#333] text-sm">Sin historial de citas</p>
-                <p className="text-xs text-[#93A295] mt-1">Tus sesiones completadas aparecerán aquí</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {pastAppointments.map((apt) => (
-                  <HistoryCard key={apt.id} apt={apt} />
-                ))}
-              </div>
-            )}
-          </div>
 
-          {/* ── COLUMNA LATERAL (1/3) — hidden when video call active ── */}
-          {!activeCall && <div className="space-y-4">
-            {/* Stats card */}
-            <div
-              className="rounded-2xl p-5 text-white relative overflow-hidden"
-              style={{ background: "linear-gradient(135deg,#3d4e3f,#607562)" }}
-            >
-              <div className="absolute top-0 right-0 w-28 h-28 rounded-full pointer-events-none" style={{ background: "rgba(255,255,255,0.06)", transform: "translate(35%,-35%)" }} />
-              <p className="text-[10px] text-white/60 uppercase tracking-widest font-medium mb-3">Resumen</p>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-white/10 rounded-xl p-3">
-                  <p className="text-2xl font-bold text-white">{upcomingAppointments.length}</p>
-                  <p className="text-[10px] text-white/60 mt-0.5">Próximas</p>
-                </div>
-                <div className="bg-white/10 rounded-xl p-3">
-                  <p className="text-2xl font-bold text-white">{completedCount}</p>
-                  <p className="text-[10px] text-white/60 mt-0.5">Completadas</p>
-                </div>
+                {/* Content */}
+                {isLoading ? (
+                  <div className="space-y-3">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="bg-white rounded-xl border border-gray-100 p-4 animate-pulse">
+                        <div className="flex gap-3">
+                          <div className="w-12 h-12 rounded-full bg-gray-100" />
+                          <div className="flex-1 space-y-2">
+                            <div className="h-3.5 bg-gray-100 rounded-full w-1/3" />
+                            <div className="h-3 bg-gray-100 rounded-full w-1/2" />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : tab === "upcoming" ? (
+                  upcomingAppointments.length === 0 ? (
+                    <div className="bg-white rounded-xl border border-dashed border-gray-200 p-12 text-center">
+                      <div className="w-14 h-14 rounded-xl bg-gray-50 flex items-center justify-center mx-auto mb-4">
+                        <CalendarX className="w-7 h-7 text-gray-300" />
+                      </div>
+                      <p className="font-semibold text-gray-900 text-sm">No tienes citas próximas</p>
+                      <p className="text-xs text-gray-400 mt-1 mb-4">Agenda una sesión con un especialista</p>
+                      <button
+                        onClick={() => navigate("/especialidades")}
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-white bg-[#5B6A57] hover:bg-[#4a5847] rounded-lg h-9 px-5 transition-colors"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        Agendar ahora
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {upcomingAppointments.map((apt) => (
+                        <UpcomingCard key={apt.id} apt={apt} />
+                      ))}
+                    </div>
+                  )
+                ) : pastAppointments.length === 0 ? (
+                  <div className="bg-white rounded-xl border border-dashed border-gray-200 p-12 text-center">
+                    <div className="w-14 h-14 rounded-xl bg-gray-50 flex items-center justify-center mx-auto mb-4">
+                      <History className="w-7 h-7 text-gray-300" />
+                    </div>
+                    <p className="font-semibold text-gray-900 text-sm">Sin historial de citas</p>
+                    <p className="text-xs text-gray-400 mt-1">Tus sesiones completadas aparecerán aquí</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {pastAppointments.map((apt) => (
+                      <HistoryCard key={apt.id} apt={apt} />
+                    ))}
+                  </div>
+                )}
               </div>
-              {pendingReviews > 0 && (
-                <div className="mt-3 bg-yellow-400/20 border border-yellow-400/30 rounded-xl px-3 py-2 flex items-center gap-2">
-                  <Star className="w-3.5 h-3.5 text-yellow-300 flex-shrink-0" />
-                  <p className="text-[11px] text-yellow-100">
-                    Tienes <strong>{pendingReviews}</strong> sesión{pendingReviews > 1 ? "es" : ""} por calificar
-                  </p>
+
+              {/* ── Columna lateral (1/3) — oculta durante videollamada ── */}
+              {!activeCall && (
+                <div className="lg:col-span-1 space-y-4">
+
+                  {/* Stats */}
+                  <div className="rounded-xl bg-gray-50 p-4">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-widest font-semibold mb-3">Resumen</p>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <CalendarCheck className="w-4 h-4 text-[#5B6A57]" />
+                          <span className="text-sm text-gray-600">Próximas</span>
+                        </div>
+                        <span className="text-sm font-bold text-gray-900">{upcomingAppointments.length}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                          <span className="text-sm text-gray-600">Completadas</span>
+                        </div>
+                        <span className="text-sm font-bold text-gray-900">{completedCount}</span>
+                      </div>
+                    </div>
+                    {pendingReviews > 0 && (
+                      <div className="mt-3 bg-yellow-50 border border-yellow-100 rounded-lg px-3 py-2 flex items-center gap-2">
+                        <Star className="w-3.5 h-3.5 text-yellow-500 flex-shrink-0" />
+                        <p className="text-[11px] text-yellow-700">
+                          <strong>{pendingReviews}</strong> sesión{pendingReviews > 1 ? "es" : ""} por calificar
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Accesos rápidos */}
+                  <div className="bg-white rounded-xl border border-gray-100 p-4">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-widest font-semibold mb-3">Accesos rápidos</p>
+                    <div className="space-y-0.5">
+                      <button
+                        onClick={() => navigate("/especialidades")}
+                        className="w-full flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-gray-50 transition-colors text-left"
+                      >
+                        <Plus className="w-4 h-4 text-[#5B6A57] flex-shrink-0" />
+                        <span className="text-sm text-gray-700">Explorar especialistas</span>
+                        <ArrowRight className="w-3.5 h-3.5 text-gray-300 ml-auto" />
+                      </button>
+                      <button
+                        onClick={() => navigate("/wallet")}
+                        className="w-full flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-gray-50 transition-colors text-left"
+                      >
+                        <CreditCard className="w-4 h-4 text-[#5B6A57] flex-shrink-0" />
+                        <span className="text-sm text-gray-700">Mi wallet</span>
+                        <ArrowRight className="w-3.5 h-3.5 text-gray-300 ml-auto" />
+                      </button>
+                      <button
+                        onClick={() => { setTab("history"); }}
+                        className="w-full flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-gray-50 transition-colors text-left"
+                      >
+                        <History className="w-4 h-4 text-[#5B6A57] flex-shrink-0" />
+                        <span className="text-sm text-gray-700">Ver historial</span>
+                        <ArrowRight className="w-3.5 h-3.5 text-gray-300 ml-auto" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Tip */}
+                  <div className="bg-[#f5f0eb] rounded-xl p-4">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold mb-2">Consejo</p>
+                    <p className="text-xs text-gray-600 leading-relaxed">
+                      Cancela con al menos <strong>4 horas</strong> de anticipación para recibir el reembolso completo de tus créditos.
+                    </p>
+                  </div>
+
                 </div>
               )}
             </div>
 
-            {/* Quick actions */}
-            <div className="bg-white rounded-2xl border border-[rgba(96,117,98,0.15)] p-4">
-              <p className="text-[10px] text-[#93A295] uppercase tracking-widest font-semibold mb-3">Acciones rápidas</p>
-              <div className="space-y-1.5">
-                <button
-                  onClick={() => navigate("/especialidades")}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#F0F4F0] transition-colors text-left group"
-                >
-                  <div className="w-8 h-8 rounded-lg bg-[#F0F4F0] group-hover:bg-white flex items-center justify-center flex-shrink-0 transition-colors">
-                    <Plus className="w-4 h-4 text-[#607562]" />
-                  </div>
-                  <span className="text-[12px] font-medium text-[#333]">Agendar nueva cita</span>
-                  <ArrowRight className="w-3.5 h-3.5 text-[#93A295] ml-auto" />
-                </button>
-                <button
-                  onClick={() => { setTab("history"); }}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#F0F4F0] transition-colors text-left group"
-                >
-                  <div className="w-8 h-8 rounded-lg bg-[#F0F4F0] group-hover:bg-white flex items-center justify-center flex-shrink-0 transition-colors">
-                    <History className="w-4 h-4 text-[#607562]" />
-                  </div>
-                  <span className="text-[12px] font-medium text-[#333]">Ver historial</span>
-                  <ArrowRight className="w-3.5 h-3.5 text-[#93A295] ml-auto" />
-                </button>
-                <button
-                  onClick={() => navigate("/wallet")}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#F0F4F0] transition-colors text-left group"
-                >
-                  <div className="w-8 h-8 rounded-lg bg-[#F0F4F0] group-hover:bg-white flex items-center justify-center flex-shrink-0 transition-colors">
-                    <svg viewBox="0 0 24 24" className="w-4 h-4 text-[#607562]" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-                  </div>
-                  <span className="text-[12px] font-medium text-[#333]">Mi wallet</span>
-                  <ArrowRight className="w-3.5 h-3.5 text-[#93A295] ml-auto" />
-                </button>
-              </div>
-            </div>
-
-            {/* Tip card */}
-            <div className="bg-[#F7FAFC] rounded-2xl border border-[rgba(96,117,98,0.12)] p-4">
-              <p className="text-[10px] text-[#93A295] uppercase tracking-widest font-semibold mb-2">Consejo</p>
-              <p className="text-[12px] text-[#607562] leading-relaxed">
-                Cancela con al menos <strong>4 horas</strong> de anticipación para recibir el reembolso completo de tus créditos.
-              </p>
-            </div>
-          </div>}
+            <div className="h-6 md:h-0" />
+          </div>
         </div>
 
-        {/* Spacer for mobile nav */}
-        <div className="h-6 md:h-0" />
-      </div>
-
-      {/* ─── Modal confirmación de cancelación ─── */}
-      {confirmCancelId !== null && (() => {
-        const apt = upcomingAppointments.find((a) => a.id === confirmCancelId);
-        if (!apt) return null;
-        const hoursUntil = (parseLocalDate(apt.appointmentDate).getTime() - Date.now()) / 3_600_000;
-        const isFree = hoursUntil >= 4;
-        const sessionCost = sessionCostByDuration(apt.durationMinutes);
-        return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
-              <h2 className="text-base font-bold text-[#1a1a1a]">¿Cancelar cita?</h2>
-              <p className="text-sm text-[#666] leading-relaxed">
-                {isFree
-                  ? "Podrás cancelar sin costo. Tus créditos serán devueltos."
-                  : `Perderás los ${sessionCost} créditos de esta sesión. No se realizará ningún cargo adicional a tu tarjeta.`}
-              </p>
-              {!isFree && (
-                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
-                  La cita comienza en menos de 4 horas.
+        {/* ─── Modal confirmación de cancelación ─── */}
+        {confirmCancelId !== null && (() => {
+          const apt = upcomingAppointments.find((a) => a.id === confirmCancelId);
+          if (!apt) return null;
+          const hoursUntil = (parseLocalDate(apt.appointmentDate).getTime() - Date.now()) / 3_600_000;
+          const isFree = hoursUntil >= 4;
+          const sessionCost = sessionCostByDuration(apt.durationMinutes);
+          return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+              <div className="bg-white rounded-2xl border border-gray-100 w-full max-w-sm p-6 space-y-4">
+                <h2 className="text-base font-bold text-gray-900">¿Cancelar cita?</h2>
+                <p className="text-sm text-gray-500 leading-relaxed">
+                  {isFree
+                    ? "Podrás cancelar sin costo. Tus créditos serán devueltos."
+                    : `Perderás los ${sessionCost} créditos de esta sesión. No se realizará ningún cargo adicional a tu tarjeta.`}
                 </p>
-              )}
-              <div className="flex gap-2 pt-1">
-                <button
-                  onClick={() => setConfirmCancelId(null)}
-                  className="flex-1 h-10 rounded-xl border border-[rgba(96,117,98,0.2)] text-sm font-medium text-[#607562] hover:bg-[#f0f4f0] transition-colors"
-                >
-                  Volver
-                </button>
-                <button
-                  onClick={() => { handleCancel(confirmCancelId); setConfirmCancelId(null); }}
-                  className="flex-1 h-10 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-90"
-                  style={{ background: "linear-gradient(135deg,#7a2020,#9e2a2a)" }}
-                >
-                  Confirmar cancelación
-                </button>
+                {!isFree && (
+                  <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+                    La cita comienza en menos de 4 horas.
+                  </p>
+                )}
+                <div className="flex gap-2 pt-1">
+                  <button
+                    onClick={() => setConfirmCancelId(null)}
+                    className="flex-1 h-10 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                  >
+                    Volver
+                  </button>
+                  <button
+                    onClick={() => { handleCancel(confirmCancelId); setConfirmCancelId(null); }}
+                    className="flex-1 h-10 rounded-lg bg-red-600 hover:bg-red-700 text-sm font-semibold text-white transition-colors"
+                  >
+                    Confirmar cancelación
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        );
-      })()}
+          );
+        })()}
 
-      {/* ─── Modal obligatorio de reseña pendiente ─── */}
-      {pendingReviewApt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
-            <div className="text-center space-y-2">
-              <div
-                className="w-14 h-14 rounded-2xl mx-auto flex items-center justify-center text-white font-bold text-xl"
-                style={{ background: "linear-gradient(135deg,#3d4e3f,#607562)" }}
+        {/* ─── Modal obligatorio de reseña pendiente ─── */}
+        {pendingReviewApt && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+            <div className="bg-white rounded-2xl border border-gray-100 w-full max-w-sm p-6 space-y-4">
+              <div className="text-center space-y-2">
+                <div className="w-14 h-14 rounded-full bg-[#5B6A57] mx-auto flex items-center justify-center text-white font-bold text-xl">
+                  {((pendingReviewApt as any).professionalName ?? "P").charAt(0).toUpperCase()}
+                </div>
+                <h2 className="text-base font-bold text-gray-900">Califica tu sesión</h2>
+                <p className="text-xs text-gray-400">
+                  Con {(pendingReviewApt as any).professionalName ?? "el especialista"} ·{" "}
+                  {format(parseLocalDate(pendingReviewApt.appointmentDate), "d 'de' MMMM yyyy", { locale: es })}
+                </p>
+                <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-1.5">
+                  El pago al profesional se libera al enviar tu reseña.
+                </p>
+              </div>
+              <div className="flex justify-center">
+                <StarRating value={prRating} onChange={setPrRating} />
+              </div>
+              <textarea
+                value={prComment}
+                onChange={(e) => setPrComment(e.target.value)}
+                placeholder="Comparte tu experiencia (opcional)..."
+                rows={3}
+                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-[#5B6A57]/20 bg-gray-50 text-gray-800"
+              />
+              <button
+                className="w-full flex items-center justify-center gap-2 text-sm font-semibold text-white bg-[#5B6A57] hover:bg-[#4a5847] rounded-lg h-10 px-4 transition-colors disabled:opacity-50"
+                disabled={submitReviewMutation.isPending}
+                onClick={() =>
+                  submitReviewMutation.mutate({
+                    appointmentId: pendingReviewApt.id,
+                    rating: prRating,
+                    comment: prComment || undefined,
+                  })
+                }
               >
-                {((pendingReviewApt as any).professionalName ?? "P").charAt(0).toUpperCase()}
-              </div>
-              <h2 className="text-base font-bold text-[#1a1a1a]">Califica tu sesión</h2>
-              <p className="text-xs text-[#93A295]">
-                Con {(pendingReviewApt as any).professionalName ?? "el especialista"} ·{" "}
-                {format(parseLocalDate(pendingReviewApt.appointmentDate), "d 'de' MMMM yyyy", { locale: es })}
-              </p>
-              <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded-xl px-3 py-1.5">
-                El pago al profesional se libera al enviar tu reseña.
-              </p>
+                {submitReviewMutation.isPending ? (
+                  <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+                ) : (
+                  <ThumbsUp className="w-4 h-4" />
+                )}
+                Enviar reseña
+              </button>
             </div>
-            <div className="flex justify-center">
-              <StarRating value={prRating} onChange={setPrRating} />
-            </div>
-            <textarea
-              value={prComment}
-              onChange={(e) => setPrComment(e.target.value)}
-              placeholder="Comparte tu experiencia (opcional)..."
-              rows={3}
-              className="w-full text-sm border border-[rgba(96,117,98,0.2)] rounded-xl px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-[rgba(96,117,98,0.3)] bg-[#F7FAFC] text-[#333]"
-            />
-            <button
-              className="w-full flex items-center justify-center gap-2 text-sm font-semibold text-white rounded-xl h-10 px-4 transition-opacity hover:opacity-90 disabled:opacity-50"
-              style={{ background: "linear-gradient(135deg,#3d4e3f,#607562)" }}
-              disabled={submitReviewMutation.isPending}
-              onClick={() =>
-                submitReviewMutation.mutate({
-                  appointmentId: pendingReviewApt.id,
-                  rating: prRating,
-                  comment: prComment || undefined,
-                })
-              }
-            >
-              {submitReviewMutation.isPending ? (
-                <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
-              ) : (
-                <ThumbsUp className="w-4 h-4" />
-              )}
-              Enviar reseña
-            </button>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* ── Video call panel (right column, visible 5 min before start) ── */}
-      {activeCall && (
-        <div style={{ width: "420px", minWidth: "420px", height: "calc(100vh - 120px)", flexShrink: 0, position: "sticky", top: "24px" }}>
-          <VideoCallPanel
-            roomUrl={activeCall.url}
-            appointmentId={activeCall.appointmentId}
-            professionalName={activeCall.professionalName}
-            startTime={activeCall.startTime}
-            endTime={activeCall.endTime}
-            onLeave={() => {
-              if (activeCall) {
-                markPendingReviewMutation.mutate({ appointmentId: activeCall.appointmentId });
-              }
-              setActiveCall(null);
-            }}
-          />
-        </div>
-      )}
+        {/* ── Video call panel (columna derecha, aparece 5 min antes) ── */}
+        {activeCall && (
+          <div style={{ width: "420px", minWidth: "420px", height: "calc(100vh - 120px)", flexShrink: 0, position: "sticky", top: "24px" }}>
+            <VideoCallPanel
+              roomUrl={activeCall.url}
+              appointmentId={activeCall.appointmentId}
+              professionalName={activeCall.professionalName}
+              startTime={activeCall.startTime}
+              endTime={activeCall.endTime}
+              onLeave={() => {
+                if (activeCall) {
+                  markPendingReviewMutation.mutate({ appointmentId: activeCall.appointmentId });
+                }
+                setActiveCall(null);
+              }}
+            />
+          </div>
+        )}
       </div>
     </DashboardLayout>
   );
