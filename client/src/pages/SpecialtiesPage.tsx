@@ -185,11 +185,12 @@ export default function SpecialtiesPage() {
 
   return (
     <DashboardLayout>
-      <div className="bg-white min-h-full">
-        <div className="max-w-7xl mx-auto w-full px-4 md:px-6 py-6">
+      <div className="bg-white flex flex-col" style={{ height: "calc(100vh - 58px)" }}>
+        <div className="max-w-7xl mx-auto w-full px-4 md:px-6 flex flex-col h-full">
 
           {/* ── Isla: header + búsqueda + chips ── */}
-          <div className="bg-gray-50 rounded-2xl p-5 mb-6">
+          <div className="flex-shrink-0 pt-6 pb-4">
+          <div className="bg-gray-50 rounded-2xl p-5">
             <h1 className="text-xl font-semibold text-gray-900 mb-1">Especialidades</h1>
             <p className="text-sm text-gray-500 mb-4">Encuentra el especialista ideal para lo que necesitas</p>
 
@@ -244,6 +245,13 @@ export default function SpecialtiesPage() {
               ))}
             </div>
           </div>
+          </div>
+
+          {/* ── Scrollable zone ── */}
+          <div
+            className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden"
+            style={{ scrollbarWidth: "none" }}
+          >
 
           {/* ── Grid de cards ── */}
           {filtered.length === 0 ? (
@@ -381,6 +389,8 @@ export default function SpecialtiesPage() {
               Ver todos los especialistas
             </Button>
           </div>
+
+          </div>{/* end scrollable zone */}
 
         </div>
       </div>
