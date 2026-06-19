@@ -184,7 +184,7 @@ export default function Home() {
 
       {/* NAVBAR */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-border shadow-sm">
-        <div className="max-w-7xl mx-auto w-full px-4 md:px-6">
+        <div className="w-[95%] mx-auto">
           <div className="flex items-center justify-between h-14 md:h-16">
             <Link href="/">
               <div className="flex items-center cursor-pointer">
@@ -278,7 +278,7 @@ export default function Home() {
       </nav>
 
       {/* PAGE CONTENT */}
-      <div className="max-w-7xl mx-auto w-full px-4 md:px-6">
+      <div className="w-[95%] mx-auto">
 
         {/* HERO — exactly two layers, no extra wrapper */}
         <div className="pt-[72px] md:pt-[80px] mb-8 md:mb-10">
@@ -643,7 +643,7 @@ export default function Home() {
 
       {/* TESTIMONIOS */}
       <section className="py-8 md:py-16">
-        <div className="max-w-7xl mx-auto w-full px-4 md:px-6">
+        <div className="w-[95%] mx-auto">
           <div className="mb-6 text-center">
             <p className="text-xs font-semibold text-[#A7774E] uppercase tracking-widest mb-2">Testimonios</p>
             <h2 className="text-2xl md:text-3xl font-semibold text-gray-900">Lo que dicen nuestros usuarios</h2>
@@ -701,7 +701,7 @@ export default function Home() {
 
       {/* CTA */}
       <section className="py-8 md:py-16">
-        <div className="max-w-7xl mx-auto w-full px-4 md:px-6">
+        <div className="w-[95%] mx-auto">
           <div className="bg-[#3d4a3a] rounded-2xl p-8 md:p-12 text-center relative overflow-hidden">
             <div className="absolute inset-0 opacity-10 pointer-events-none">
               <div className="absolute top-0 right-0 w-64 h-64 bg-white rounded-full blur-3xl" />
@@ -724,7 +724,7 @@ export default function Home() {
 
       {/* CTA PROFESIONALES */}
       <section className="py-8 md:py-16">
-        <div className="max-w-7xl mx-auto w-full px-4 md:px-6">
+        <div className="w-[95%] mx-auto">
           <div className="flex flex-col md:flex-row items-center justify-between gap-8 md:gap-12">
             <div className="text-center md:text-left max-w-xl">
               <span className="text-xs font-semibold tracking-widest text-[#A7774E] uppercase mb-3 block">Para profesionales</span>
@@ -767,7 +767,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="py-8 md:py-12" style={{ backgroundColor: "#5B6A57" }}>
-        <div className="max-w-7xl mx-auto w-full px-4 md:px-6">
+        <div className="w-[95%] mx-auto">
           <div className="hidden md:grid md:grid-cols-4 gap-8 mb-8">
             <div>
               <div className="mb-4">
