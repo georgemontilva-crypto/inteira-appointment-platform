@@ -520,7 +520,10 @@ export default function AppointmentsPage() {
                     <p className="text-xs text-gray-400 mt-1">Tus sesiones completadas aparecerán aquí</p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div
+                    className="max-h-[600px] overflow-y-auto space-y-3 [&::-webkit-scrollbar]:hidden"
+                    style={{ scrollbarWidth: "none" }}
+                  >
                     {pastAppointments.map((apt) => (
                       <HistoryCard key={apt.id} apt={apt} />
                     ))}
