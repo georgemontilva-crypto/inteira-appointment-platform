@@ -283,11 +283,12 @@ export default function Home() {
         {/* HERO — exactly two layers, no extra wrapper */}
         <div className="pt-[72px] md:pt-[80px] mb-8 md:mb-10">
           <div
-            className="rounded-2xl min-h-[400px] flex items-center px-6 md:px-10 relative overflow-hidden"
+            className="rounded-2xl flex items-center px-6 md:px-10 relative overflow-hidden w-full min-h-[320px] md:min-h-[500px]"
             style={{
               backgroundImage: `url(${heroImageUrl})`,
               backgroundSize: "cover",
               backgroundPosition: "center",
+              aspectRatio: "1289 / 715",
             }}
           >
             <div className="bg-white rounded-2xl p-6 max-w-[360px] z-10 relative shadow-sm">
