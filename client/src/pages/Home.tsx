@@ -290,7 +290,7 @@ export default function Home() {
         {/* HERO — grid 2 columnas, imagen de fondo + overlay gradiente */}
         <div className="pt-[72px] md:pt-[80px] mb-8 md:mb-10">
           <section
-            className="rounded-2xl overflow-hidden grid grid-cols-1 md:grid-cols-2 gap-0 items-center relative"
+            className="rounded-2xl overflow-hidden grid grid-cols-1 md:grid-cols-2 gap-0 items-center relative md:h-[600px]"
             style={{
               backgroundImage: `url(${heroImageUrl})`,
               backgroundSize: "cover",
@@ -301,7 +301,7 @@ export default function Home() {
               className="absolute inset-0"
               style={{ background: "linear-gradient(135deg, rgba(91,106,87,0.92) 0%, rgba(61,74,58,0.92) 100%)" }}
             />
-            <div className="relative z-10 p-10 md:p-16 text-white">
+            <div className="relative z-10 p-8 md:p-12 text-white">
               <h1 className="text-3xl md:text-5xl font-bold mb-5">Conecta con el especialista correcto</h1>
               <p className="text-lg md:text-xl mb-7 opacity-95">Psicología, Legal, Finanzas, Emprendimiento y más.</p>
               <a href={isAuthenticated ? "/especialidades" : "/registro"}>
@@ -310,7 +310,7 @@ export default function Home() {
                 </button>
               </a>
             </div>
-            <div className="relative z-10 p-10 md:p-16">
+            <div className="relative z-10 p-8 md:p-12">
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-7 text-white border border-white/20">
                 <h4 className="text-xl font-semibold mb-3">¿Emergencia? ¿Necesitas venir ASAP?</h4>
                 <p className="text-base opacity-90">Haz clic aquí para atención inmediata</p>
