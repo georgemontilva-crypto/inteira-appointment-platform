@@ -338,6 +338,12 @@ export default function AdminDashboard() {
     onError: () => toast.error("Error al actualizar la descripción"),
   });
 
+  const [specialtyImgUploading, setSpecialtyImgUploading] = useState<number | null>(null);
+  const updateSpecialtyImageMutation = trpc.specialty.updateImage.useMutation({
+    onSuccess: () => { refetchSpecialties(); toast.success("Imagen de portada actualizada"); },
+    onError: () => toast.error("Error al actualizar la imagen"),
+  });
+
   const cronMutation = trpc.admin.runCronJobs.useMutation({
     onSuccess: (data) => toast.success(data.message),
     onError: () => toast.error("Error al ejecutar cron jobs"),
@@ -1436,6 +1442,47 @@ export default function AdminDashboard() {
                                 >
                                   Guardar descripción
                                 </Button>
+                              </div>
+                              <div>
+                                <p className="text-xs font-medium text-muted-foreground mb-1.5">Imagen de portada (card):</p>
+                                {(s as any).imageUrl && (
+                                  <img src={(s as any).imageUrl} alt="portada" className="w-full h-20 object-cover rounded-lg mb-2 border border-border" />
+                                )}
+                                <label className="cursor-pointer">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="pointer-events-none"
+                                    disabled={specialtyImgUploading === s.id}
+                                    asChild
+                                  >
+                                    <span>
+                                      {specialtyImgUploading === s.id
+                                        ? <><RefreshCw className="w-3.5 h-3.5 mr-1.5 animate-spin" />Subiendo…</>
+                                        : <><Image className="w-3.5 h-3.5 mr-1.5" />Subir imagen</>
+                                      }
+                                    </span>
+                                  </Button>
+                                  <input
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/webp"
+                                    className="hidden"
+                                    onChange={async (e) => {
+                                      const file = e.target.files?.[0];
+                                      if (!file) return;
+                                      setSpecialtyImgUploading(s.id);
+                                      try {
+                                        const url = await uploadSiteAsset(file);
+                                        updateSpecialtyImageMutation.mutate({ id: s.id, imageUrl: url });
+                                      } catch {
+                                        toast.error("Error al subir la imagen");
+                                      } finally {
+                                        setSpecialtyImgUploading(null);
+                                        e.target.value = "";
+                                      }
+                                    }}
+                                  />
+                                </label>
                               </div>
                             </div>
                           )}

@@ -15,7 +15,7 @@ import {
   Sunset, HeartCrack, Bandage, Droplets, ShieldPlus,
   Footprints, Bike, Wheat, Carrot, Grape, Citrus,
   Feather, Flower, Flower2, TestTube, Award, Star, Search,
-  Target,
+  Target, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type React from "react";
@@ -109,6 +109,17 @@ const CATEGORY_KEYWORDS: Record<CategoryKey, string[]> = {
   otros: [],
 };
 
+const CATEGORY_FALLBACK_BG: Record<CategoryKey | "default", string> = {
+  salud_mental:  "#1e2e28",
+  salud_fisica:  "#1a2a3a",
+  negocios:      "#281e14",
+  educacion:     "#1a2234",
+  legal:         "#221830",
+  creatividad:   "#2e1824",
+  otros:         "#1e2220",
+  default:       "#1e2220",
+};
+
 function classifySpecialty(name: string): CategoryKey {
   const lower = name.toLowerCase();
   for (const [key, keywords] of Object.entries(CATEGORY_KEYWORDS) as [CategoryKey, string[]][]) {
@@ -134,8 +145,8 @@ const gridVariants = {
 };
 
 const cardVariants = {
-  hidden: { opacity: 0, y: 8 },
-  show:   { opacity: 1, y: 0, transition: { duration: 0.2 } },
+  hidden: { opacity: 0, y: 12 },
+  show:   { opacity: 1, y: 0, transition: { duration: 0.22 } },
 };
 
 export default function SpecialtiesPage() {
@@ -175,63 +186,66 @@ export default function SpecialtiesPage() {
   return (
     <DashboardLayout>
       <div className="bg-white min-h-full">
-        {/* Hero strip */}
-        <div className="bg-[#5B6A57] px-6 py-8">
-          <h1 className="text-2xl font-semibold text-white">Encuentra tu especialista</h1>
-          <p className="text-[#c5d0c2] text-sm mt-1">Asesorías online con profesionales certificados</p>
-          <div className="mt-4 relative max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar especialidad..."
-              className="w-full pl-9 pr-9 py-2.5 rounded-xl text-sm bg-white outline-none focus:ring-2 focus:ring-white/30 transition-all"
-            />
-            {search && (
-              <button
-                onClick={() => setSearch("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-lg leading-none"
-              >
-                ×
-              </button>
-            )}
-          </div>
-        </div>
+        <div className="max-w-7xl mx-auto w-full px-4 md:px-6 py-6">
 
-        {/* Category chips — horizontal scroll */}
-        <div
-          className="px-6 py-3 border-b border-gray-100 flex gap-2 overflow-x-auto"
-          style={{ scrollbarWidth: "none" }}
-        >
-          <button
-            onClick={() => setActiveCategory("all")}
-            className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-              activeCategory === "all"
-                ? "bg-[#5B6A57] text-white"
-                : "border border-gray-200 text-gray-600 hover:border-[#5B6A57] hover:text-[#5B6A57]"
-            }`}
-          >
-            Todas
-          </button>
-          {activeCategories.map((cat) => (
-            <button
-              key={cat.key}
-              onClick={() => setActiveCategory(activeCategory === cat.key ? "all" : cat.key)}
-              className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                activeCategory === cat.key
-                  ? "bg-[#5B6A57] text-white"
-                  : "border border-gray-200 text-gray-600 hover:border-[#5B6A57] hover:text-[#5B6A57]"
-              }`}
+          {/* ── Isla: header + búsqueda + chips ── */}
+          <div className="bg-gray-50 rounded-2xl p-5 mb-6">
+            <h1 className="text-xl font-semibold text-gray-900 mb-1">Especialidades</h1>
+            <p className="text-sm text-gray-500 mb-4">Encuentra el especialista ideal para lo que necesitas</p>
+
+            {/* Barra de búsqueda */}
+            <div className="relative mb-4">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar especialidad..."
+                className="w-full pl-9 pr-9 py-2.5 rounded-xl text-sm bg-white border border-gray-200 outline-none focus:ring-2 focus:ring-[#5B6A57]/20 focus:border-[#5B6A57]/40 transition-all"
+              />
+              {search && (
+                <button
+                  onClick={() => setSearch("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            {/* Chips de categoría — scroll horizontal */}
+            <div
+              className="flex gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden"
+              style={{ scrollbarWidth: "none" }}
             >
-              <cat.Icon className="w-3.5 h-3.5" />
-              {cat.label}
-            </button>
-          ))}
-        </div>
+              <button
+                onClick={() => setActiveCategory("all")}
+                className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                  activeCategory === "all"
+                    ? "bg-[#5B6A57] text-white"
+                    : "bg-white border border-gray-200 text-gray-600 hover:border-[#5B6A57] hover:text-[#5B6A57]"
+                }`}
+              >
+                Todas
+              </button>
+              {activeCategories.map((cat) => (
+                <button
+                  key={cat.key}
+                  onClick={() => setActiveCategory(activeCategory === cat.key ? "all" : cat.key)}
+                  className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                    activeCategory === cat.key
+                      ? "bg-[#5B6A57] text-white"
+                      : "bg-white border border-gray-200 text-gray-600 hover:border-[#5B6A57] hover:text-[#5B6A57]"
+                  }`}
+                >
+                  <cat.Icon className="w-3.5 h-3.5" />
+                  {cat.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
-        {/* Main grid */}
-        <div className="px-6 py-5">
+          {/* ── Grid de cards ── */}
           {filtered.length === 0 ? (
             <div className="text-center py-16 text-gray-400">
               <Search className="w-10 h-10 mx-auto mb-3 opacity-30" />
@@ -252,101 +266,122 @@ export default function SpecialtiesPage() {
               </p>
               <motion.div
                 key={`${search}-${activeCategory}`}
-                className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3"
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
                 variants={gridVariants}
                 initial="hidden"
                 animate="show"
               >
                 {filtered.map((s: any) => {
                   const IconComp = resolveIconComponent(s.icon, s.name);
+                  const fallbackBg = CATEGORY_FALLBACK_BG[s.category as CategoryKey] ?? CATEGORY_FALLBACK_BG.default;
                   return (
-                    <motion.button
+                    <motion.div
                       key={s.id}
                       variants={cardVariants}
-                      whileHover={{ y: -2 }}
+                      whileHover={{ y: -3 }}
                       onClick={() => navigate(`/especialidades/${(s as any).slug || s.id}`)}
-                      className="flex flex-col items-start p-3 bg-white rounded-xl border border-gray-100 hover:border-[#5B6A57] hover:shadow-md transition-shadow w-full text-left"
+                      className="relative rounded-[20px] overflow-hidden h-[220px] cursor-pointer group"
+                      style={{ backgroundColor: fallbackBg }}
                     >
-                      <div className="relative flex-shrink-0">
-                        <div className="w-9 h-9 rounded-lg bg-[#f0f3ef] flex items-center justify-center mb-2">
-                          <IconComp className="w-4 h-4 text-[#5B6A57]" />
+                      {/* Imagen de fondo */}
+                      {(s as any).imageUrl && (
+                        <div
+                          className="absolute inset-0 bg-cover bg-center transition-transform duration-300 group-hover:scale-105"
+                          style={{ backgroundImage: `url(${(s as any).imageUrl})` }}
+                        />
+                      )}
+
+                      {/* Degradado izquierda→derecha */}
+                      <div
+                        className="absolute inset-0"
+                        style={{
+                          background: "linear-gradient(to right, rgba(20,26,20,0.97) 0%, rgba(20,26,20,0.85) 35%, rgba(20,26,20,0.35) 65%, rgba(20,26,20,0.05) 100%)",
+                        }}
+                      />
+
+                      {/* Contenido */}
+                      <div className="relative h-full flex flex-col justify-between p-[18px] z-10">
+                        {/* Top row */}
+                        <div className="flex justify-between items-start">
+                          <div className="w-9 h-9 rounded-[10px] bg-white/15 flex items-center justify-center">
+                            <IconComp className="w-[17px] h-[17px] text-white" />
+                          </div>
+                          {(s.professionalCount ?? 0) > 0 && (
+                            <span className="bg-white/20 text-white text-[11px] px-2.5 py-1 rounded-full font-medium">
+                              {s.professionalCount} prof.
+                            </span>
+                          )}
                         </div>
-                        {(s.professionalCount ?? 0) > 0 && (
-                          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#A7774E] text-white text-[10px] font-semibold flex items-center justify-center">
-                            {s.professionalCount}
-                          </span>
-                        )}
+
+                        {/* Bottom text */}
+                        <div>
+                          <h3 className="text-[17px] font-medium text-white leading-snug">{s.name}</h3>
+                          {s.description && (
+                            <p className="text-xs text-white/60 mt-1 line-clamp-1">{s.description}</p>
+                          )}
+                        </div>
                       </div>
-                      <p className="text-sm font-medium text-gray-900 leading-tight">{s.name}</p>
-                      <p className="text-xs text-gray-400 mt-0.5 line-clamp-1 leading-snug">
-                        {s.description ?? "Ver especialistas"}
-                      </p>
-                    </motion.button>
+                    </motion.div>
                   );
                 })}
               </motion.div>
             </>
           )}
-        </div>
 
-        {/* Stats strip */}
-        <div className="bg-gray-50 border-y border-gray-100 py-6 px-6 mt-6">
-          <div className="grid grid-cols-3 gap-4 max-w-lg">
-            <div className="text-center">
-              <p className="text-2xl font-semibold text-[#5B6A57]">50+</p>
-              <p className="text-xs text-gray-500 mt-0.5">Especialistas</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-semibold text-[#5B6A57]">8</p>
-              <p className="text-xs text-gray-500 mt-0.5">Áreas de conocimiento</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-semibold text-[#5B6A57]">50 min</p>
-              <p className="text-xs text-gray-500 mt-0.5">Por sesión</p>
-            </div>
-          </div>
-        </div>
-
-        {/* ¿Cómo funciona? */}
-        <div className="px-6 py-6">
-          <h2 className="text-base font-semibold text-gray-900 mb-4">¿Cómo funciona?</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="flex gap-3 items-start">
-              <div className="w-8 h-8 rounded-full bg-[#5B6A57] text-white text-sm font-semibold flex items-center justify-center flex-shrink-0">1</div>
-              <div>
-                <p className="text-sm font-medium text-gray-900">Elige tu especialidad</p>
-                <p className="text-xs text-gray-500 mt-0.5">Explora las áreas disponibles y encuentra lo que necesitas</p>
+          {/* ── Stats strip ── */}
+          <div className="bg-gray-50 rounded-2xl py-6 px-6 mt-8">
+            <div className="grid grid-cols-3 gap-4 max-w-lg">
+              <div className="text-center">
+                <p className="text-2xl font-semibold text-[#5B6A57]">50+</p>
+                <p className="text-xs text-gray-500 mt-0.5">Especialistas</p>
               </div>
-            </div>
-            <div className="flex gap-3 items-start">
-              <div className="w-8 h-8 rounded-full bg-[#5B6A57] text-white text-sm font-semibold flex items-center justify-center flex-shrink-0">2</div>
-              <div>
-                <p className="text-sm font-medium text-gray-900">Selecciona un profesional</p>
-                <p className="text-xs text-gray-500 mt-0.5">Revisa perfiles, calificaciones y disponibilidad</p>
+              <div className="text-center">
+                <p className="text-2xl font-semibold text-[#5B6A57]">8</p>
+                <p className="text-xs text-gray-500 mt-0.5">Áreas de conocimiento</p>
               </div>
-            </div>
-            <div className="flex gap-3 items-start">
-              <div className="w-8 h-8 rounded-full bg-[#5B6A57] text-white text-sm font-semibold flex items-center justify-center flex-shrink-0">3</div>
-              <div>
-                <p className="text-sm font-medium text-gray-900">Agenda tu sesión</p>
-                <p className="text-xs text-gray-500 mt-0.5">Elige fecha y hora. Recibirás el link de videollamada al instante</p>
+              <div className="text-center">
+                <p className="text-2xl font-semibold text-[#5B6A57]">50 min</p>
+                <p className="text-xs text-gray-500 mt-0.5">Por sesión</p>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* CTA banner */}
-        <div className="mx-6 mb-6 rounded-2xl bg-[#5B6A57] p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div>
-            <p className="text-white font-semibold text-base">¿No sabes por dónde empezar?</p>
-            <p className="text-[#c5d0c2] text-sm mt-0.5">Cuéntanos qué necesitas y te ayudamos a encontrar el especialista ideal</p>
+          {/* ── ¿Cómo funciona? ── */}
+          <div className="py-6">
+            <h2 className="text-base font-semibold text-gray-900 mb-4">¿Cómo funciona?</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {[
+                { n: "1", title: "Elige tu especialidad", desc: "Explora las áreas disponibles y encuentra lo que necesitas" },
+                { n: "2", title: "Selecciona un profesional", desc: "Revisa perfiles, calificaciones y disponibilidad" },
+                { n: "3", title: "Agenda tu sesión", desc: "Elige fecha y hora. Recibirás el link de videollamada al instante" },
+              ].map(({ n, title, desc }) => (
+                <div key={n} className="flex gap-3 items-start">
+                  <div className="w-8 h-8 rounded-full bg-[#5B6A57] text-white text-sm font-semibold flex items-center justify-center flex-shrink-0">
+                    {n}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{title}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-          <Button
-            className="bg-white text-[#3d4e3f] hover:bg-gray-100 font-medium flex-shrink-0"
-            onClick={() => { setSearch(""); setActiveCategory("all"); }}
-          >
-            Ver todos los especialistas
-          </Button>
+
+          {/* ── CTA banner ── */}
+          <div className="rounded-2xl bg-[#5B6A57] p-6 flex flex-col sm:flex-row items-center justify-between gap-4 mb-2">
+            <div>
+              <p className="text-white font-semibold text-base">¿No sabes por dónde empezar?</p>
+              <p className="text-[#c5d0c2] text-sm mt-0.5">Cuéntanos qué necesitas y te ayudamos a encontrar el especialista ideal</p>
+            </div>
+            <Button
+              className="bg-white text-[#3d4e3f] hover:bg-gray-100 font-medium flex-shrink-0 border-0"
+              onClick={() => { setSearch(""); setActiveCategory("all"); }}
+            >
+              Ver todos los especialistas
+            </Button>
+          </div>
+
         </div>
       </div>
     </DashboardLayout>

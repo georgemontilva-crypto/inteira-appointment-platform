@@ -2268,6 +2268,16 @@ export const appRouter = router({
         await db.updateSpecialtyDescription(input.id, input.description);
         return { success: true };
       }),
+
+    updateImage: protectedProcedure
+      .input(z.object({ id: z.number(), imageUrl: z.string().url().max(500) }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") {
+          throw new TRPCError({ code: "FORBIDDEN" });
+        }
+        await db.updateSpecialtyImageUrl(input.id, input.imageUrl);
+        return { success: true };
+      }),
   }),
 
   // Appointment routes

@@ -573,6 +573,12 @@ export async function updateSpecialtyDescription(id: number, description: string
   await db.update(specialties).set({ description } as any).where(eq(specialties.id, id));
 }
 
+export async function updateSpecialtyImageUrl(id: number, imageUrl: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await (db as any).execute(`UPDATE \`specialties\` SET \`imageUrl\` = ? WHERE \`id\` = ?`, [imageUrl, id]);
+}
+
 // Subscription Plan functions
 export async function getAllSubscriptionPlans() {
   const db = await getDb();

@@ -462,6 +462,22 @@ async function runStartupMigrations() {
       console.warn("[Migration] Could not add specialties.icon column:", e?.message);
     }
 
+    // Ensure specialties.imageUrl column exists
+    try {
+      const [sImgCols] = await db.execute(
+        "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'specialties' AND COLUMN_NAME = 'imageUrl'"
+      ) as any;
+      const sImgExists = Array.isArray(sImgCols) ? sImgCols.length > 0 : false;
+      if (!sImgExists) {
+        await db.execute("ALTER TABLE `specialties` ADD COLUMN `imageUrl` VARCHAR(500) NULL DEFAULT NULL");
+        console.log("[Migration] specialties.imageUrl column added");
+      } else {
+        console.log("[Migration] specialties.imageUrl column already exists");
+      }
+    } catch (e: any) {
+      console.warn("[Migration] Could not add specialties.imageUrl column:", e?.message);
+    }
+
     // Ensure professionals.slug column exists and backfill existing rows
     try {
       const [pSlugCols] = await db.execute(
