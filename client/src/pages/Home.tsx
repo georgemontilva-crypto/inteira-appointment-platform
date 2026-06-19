@@ -287,37 +287,36 @@ export default function Home() {
       {/* PAGE CONTENT */}
       <div className="w-[95%] mx-auto">
 
-        {/* HERO — exactly two layers, no extra wrapper */}
+        {/* HERO — grid 2 columnas, imagen de fondo + overlay gradiente */}
         <div className="pt-[72px] md:pt-[80px] mb-8 md:mb-10">
-          <div
-            className="rounded-2xl flex items-center px-6 md:px-10 relative overflow-hidden w-full min-h-[360px] md:min-h-[420px] max-h-[500px]"
+          <section
+            className="rounded-2xl overflow-hidden grid grid-cols-1 md:grid-cols-2 gap-0 items-center relative"
             style={{
               backgroundImage: `url(${heroImageUrl})`,
               backgroundSize: "cover",
               backgroundPosition: "center",
             }}
           >
-            <div className="bg-white rounded-2xl p-7 md:p-8 max-w-[400px] z-10 relative shadow-lg">
-              <p className="text-[10px] tracking-[0.15em] text-[#A7774E] font-semibold uppercase mb-3">AGENDA TU CONSULTA HOY</p>
-              <h1 className="text-3xl md:text-4xl font-medium text-gray-900 leading-tight mb-3">
-                Conecta con el especialista correcto
-              </h1>
-              <p className="text-sm text-gray-500 leading-relaxed mb-6">
-                Psicología, Legal, Finanzas, Emprendimiento y más.
-              </p>
-              <div className="flex items-center gap-4">
-                <a href={isAuthenticated ? "/especialidades" : "/registro"}>
-                  <button className="bg-[#5B6A57] text-white rounded-lg px-5 py-2.5 text-sm font-medium hover:bg-[#3d4a3a] transition-colors">
-                    Agendar ahora
-                  </button>
-                </a>
-                <a href="/especialidades" className="text-xs text-gray-500 hover:text-gray-800 transition-colors">
-                  ¿Necesitas ayuda urgente?<br />
-                  <span className="font-semibold text-gray-900">Click aquí →</span>
-                </a>
+            <div
+              className="absolute inset-0"
+              style={{ background: "linear-gradient(135deg, rgba(91,106,87,0.92) 0%, rgba(61,74,58,0.92) 100%)" }}
+            />
+            <div className="relative z-10 p-10 md:p-16 text-white">
+              <h1 className="text-3xl md:text-5xl font-bold mb-5">Conecta con el especialista correcto</h1>
+              <p className="text-lg md:text-xl mb-7 opacity-95">Psicología, Legal, Finanzas, Emprendimiento y más.</p>
+              <a href={isAuthenticated ? "/especialidades" : "/registro"}>
+                <button className="bg-white text-[#5B6A57] rounded px-7 py-3 font-semibold hover:-translate-y-0.5 hover:shadow-lg transition-all">
+                  Agendar cita
+                </button>
+              </a>
+            </div>
+            <div className="relative z-10 p-10 md:p-16">
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-7 text-white border border-white/20">
+                <h4 className="text-xl font-semibold mb-3">¿Emergencia? ¿Necesitas venir ASAP?</h4>
+                <p className="text-base opacity-90">Haz clic aquí para atención inmediata</p>
               </div>
             </div>
-          </div>
+          </section>
         </div>
 
         {/* ESPECIALIDADES */}
