@@ -1358,7 +1358,7 @@ setInterval(async () => {
       client.execute(
         `SELECT a.id, a.videoCallLink, a.appointmentDate,
                 u.email AS userEmail, u.name AS userName,
-                pu.name AS professionalName
+                pu.name AS professionalName, pu.email AS professionalEmail
          FROM appointments a
          JOIN users u  ON u.id  = a.userId
          JOIN professionals p  ON p.id  = a.professionalId
@@ -1376,13 +1376,22 @@ setInterval(async () => {
     });
 
     if (upcoming.length > 0) {
-      const { sendAppointmentReminder15min } = await import("../email");
+      const { sendAppointmentReminder15min, sendProfessionalReminder15min } = await import("../email");
       for (const row of upcoming) {
         if (row.userEmail) {
           await sendAppointmentReminder15min({
             userEmail: row.userEmail,
             userName: row.userName ?? "Usuario",
             professionalName: row.professionalName ?? "Especialista",
+            appointmentDate: new Date(row.appointmentDate),
+            videoCallLink: row.videoCallLink ?? "",
+          }).catch(() => {});
+        }
+        if (row.professionalEmail) {
+          await sendProfessionalReminder15min({
+            professionalEmail: row.professionalEmail,
+            professionalName: row.professionalName ?? "Especialista",
+            clientName: row.userName ?? "Usuario",
             appointmentDate: new Date(row.appointmentDate),
             videoCallLink: row.videoCallLink ?? "",
           }).catch(() => {});

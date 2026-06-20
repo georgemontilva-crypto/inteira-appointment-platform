@@ -522,7 +522,7 @@ export async function sendAdminNewUserRegistration(params: {
   return results.every(Boolean);
 }
 
-// 11. Appointment reminder — 15 minutes before
+// 11. Appointment reminder — 15 minutes before (to user)
 export async function sendAppointmentReminder15min(params: {
   userEmail: string;
   userName: string;
@@ -546,6 +546,34 @@ export async function sendAppointmentReminder15min(params: {
   return sendEmail({
     to: params.userEmail,
     subject: `⏰ Tu cita comienza en 15 minutos — ${params.professionalName}`,
+    html: baseTemplate(content),
+  });
+}
+
+// 11b. Appointment reminder — 15 minutes before (to professional)
+export async function sendProfessionalReminder15min(params: {
+  professionalEmail: string;
+  professionalName: string;
+  clientName: string;
+  appointmentDate: Date;
+  videoCallLink: string;
+}): Promise<boolean> {
+  const timeStr = params.appointmentDate.toLocaleTimeString("es-MX", {
+    hour: "2-digit", minute: "2-digit",
+  });
+
+  const content = `
+    <p>Hola <strong>${params.professionalName}</strong>,</p>
+    <p>Tu sesión con <strong>${params.clientName}</strong> comienza en <strong>15 minutos</strong> (${timeStr} hrs).</p>
+    <p>Recuerda estar disponible y con tu conexión lista antes del inicio.</p>
+    <a href="${params.videoCallLink}" class="btn">Unirse ahora</a>
+    <div class="divider"></div>
+    <p style="font-size:13px; color:#6b7280;">El enlace de videollamada también está disponible en tu panel de especialista.</p>
+  `;
+
+  return sendEmail({
+    to: params.professionalEmail,
+    subject: `⏰ Tu sesión con ${params.clientName} comienza en 15 minutos`,
     html: baseTemplate(content),
   });
 }
