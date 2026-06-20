@@ -113,7 +113,7 @@ export default function BookAppointment() {
 
     bookMutation.mutate({
       professionalId,
-      appointmentDate: localISO,
+      appointmentDate: new Date(localISO).toISOString(),
       sessionType,
       notes: notes || undefined,
       timezoneOffset: new Date().getTimezoneOffset() * -1,
