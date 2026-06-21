@@ -203,12 +203,12 @@ export default function AuthenticatedHome() {
                     {format(parseLocalDate(nextWithVideo.appointmentDate), "HH:mm", { locale: es })} · {nextWithVideo.durationMinutes} min · {(nextWithVideo as any).professionalName ?? `Especialista #${nextWithVideo.professionalId}`}
                   </p>
                 </div>
-                <a href={nextWithVideo.videoCallLink!} target="_blank" rel="noopener noreferrer">
+                <Link href="/citas">
                   <Button size="sm" className="gradient-brand text-white border-0 text-xs h-8 px-3 flex-shrink-0 font-semibold">
                     <Video className="w-3 h-3 mr-1" />
                     Unirse
                   </Button>
-                </a>
+                </Link>
               </div>
             </div>
           );
@@ -344,12 +344,12 @@ export default function AuthenticatedHome() {
                       {statusLabels[apt.status]}
                     </Badge>
                     {apt.videoCallLink && (
-                      <a href={apt.videoCallLink} target="_blank" rel="noopener noreferrer">
+                      <Link href="/citas">
                         <Button size="sm" className="gradient-brand text-white border-0 h-6 text-[10px] px-2">
                           <Video className="w-3 h-3 mr-1" />
                           Unirse
                         </Button>
-                      </a>
+                      </Link>
                     )}
                   </div>
                 </div>
