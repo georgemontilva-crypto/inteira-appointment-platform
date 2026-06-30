@@ -104,11 +104,11 @@ function isSlotBooked(
 }
 
 /**
- * Format time as HH:MM
+ * Format time as HH:MM using UTC components (slots are stored in UTC).
  */
 function formatTime(date: Date): string {
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const hours = String(date.getUTCHours()).padStart(2, "0");
+  const minutes = String(date.getUTCMinutes()).padStart(2, "0");
   return `${hours}:${minutes}`;
 }
 

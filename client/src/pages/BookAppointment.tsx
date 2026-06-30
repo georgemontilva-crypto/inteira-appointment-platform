@@ -105,15 +105,24 @@ export default function BookAppointment() {
     setStep("confirm");
   };
 
+  const to12Hour = (time24: string): string => {
+    const [h, m] = time24.split(":").map(Number);
+    const period = h >= 12 ? "PM" : "AM";
+    const h12 = h % 12 === 0 ? 12 : h % 12;
+    return `${h12}:${String(m).padStart(2, "0")} ${period}`;
+  };
+
   const handleConfirm = () => {
     if (!selectedDate || !selectedSlot) return;
     const [hours, minutes] = selectedSlot.split(":").map(Number);
     const pad = (n: number) => String(n).padStart(2, "0");
     const localISO = `${selectedDate.getFullYear()}-${pad(selectedDate.getMonth() + 1)}-${pad(selectedDate.getDate())}T${pad(hours)}:${pad(minutes)}:00`;
+    const utcDate = new Date(localISO);
+    const mysqlDatetime = utcDate.toISOString().slice(0, 19).replace("T", " ");
 
     bookMutation.mutate({
       professionalId,
-      appointmentDate: new Date(localISO).toISOString(),
+      appointmentDate: mysqlDatetime,
       sessionType,
       notes: notes || undefined,
       timezoneOffset: new Date().getTimezoneOffset() * -1,
@@ -175,7 +184,7 @@ export default function BookAppointment() {
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <Clock className="w-4 h-4 text-primary" />
-                  <span>{selectedSlot} hrs</span>
+                  <span>{to12Hour(selectedSlot)} hrs</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <Video className="w-4 h-4 text-primary" />
@@ -346,7 +355,7 @@ export default function BookAppointment() {
                                   : "border-border hover:border-primary/50 hover:bg-primary/5 hover:text-primary"
                               }`}
                             >
-                              {slot}
+                              {to12Hour(slot)}
                             </button>
                           ))}
                         </div>
@@ -478,7 +487,7 @@ export default function BookAppointment() {
                       {selectedSlot && (
                         <div className="flex items-center gap-2 text-sm">
                           <Clock className="w-4 h-4 text-primary" />
-                          <span>{selectedSlot} hrs</span>
+                          <span>{to12Hour(selectedSlot)} hrs</span>
                         </div>
                       )}
                       <div className="flex items-center gap-2 text-sm">
