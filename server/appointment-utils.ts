@@ -72,8 +72,8 @@ export function getAvailableSlots(
       if (isAvailable) {
         slots.push({
           date: new Date(currentTime),
-          startTime: formatTime(currentTime),
-          endTime: formatTime(slotEnd),
+          startTime: formatTime(currentTime, offsetMs),
+          endTime: formatTime(slotEnd, offsetMs),
         });
       }
 
@@ -104,11 +104,13 @@ function isSlotBooked(
 }
 
 /**
- * Format time as HH:MM using UTC components (slots are stored in UTC).
+ * Format time as HH:MM in the client's local timezone.
+ * Slots are stored in UTC; offsetMs converts them back to local time.
  */
-function formatTime(date: Date): string {
-  const hours = String(date.getUTCHours()).padStart(2, "0");
-  const minutes = String(date.getUTCMinutes()).padStart(2, "0");
+function formatTime(date: Date, offsetMs: number = 0): string {
+  const localDate = new Date(date.getTime() + offsetMs);
+  const hours = String(localDate.getUTCHours()).padStart(2, "0");
+  const minutes = String(localDate.getUTCMinutes()).padStart(2, "0");
   return `${hours}:${minutes}`;
 }
 

@@ -114,6 +114,7 @@ export const appointmentRouter = router({
         bookedTimes,
         offsetMs,
       );
+      console.log("[Slots] offsetMs:", offsetMs, "date:", clientMidnight.toISOString(), "slots count:", slots.length, "slots:", slots.map(s => s.startTime));
       // Return simple time strings like "09:00", "10:00"
       return slots.map((s) => s.startTime);
     }),
