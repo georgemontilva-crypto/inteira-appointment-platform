@@ -1,4 +1,5 @@
 import { randomBytes } from "crypto";
+import bcrypt from "bcryptjs";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
@@ -503,6 +504,7 @@ export const appRouter = router({
       .input(professionalRegistrationSchema.extend({
         email: z.string().email(),
         fullName: z.string().min(1).max(100),
+        password: z.string().min(8).optional(),
       }))
       .mutation(async ({ input }) => {
         const email = input.email.toLowerCase().trim();
@@ -521,16 +523,18 @@ export const appRouter = router({
         if (!dbInst) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB no disponible" });
         const rawClient = (dbInst as any).$client;
 
-        const openId = `email_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+        const openId = `email:${email}`;
+        const hashedPassword = input.password ? await bcrypt.hash(input.password, 10) : null;
         const safeName = input.fullName.trim().replace(/'/g, "''");
         const safeEmail = email.replace(/'/g, "''");
         const safeOpenId = openId.replace(/'/g, "''");
         const now = new Date().toISOString().slice(0, 19).replace("T", " ");
+        const safePassword = hashedPassword ? `'${hashedPassword.replace(/'/g, "''")}'` : "NULL";
 
         const newUser = await new Promise<{ id: number }>((resolve, reject) => {
           rawClient.execute(
-            `INSERT INTO \`users\` (\`openId\`, \`email\`, \`name\`, \`role\`, \`loginMethod\`, \`createdAt\`, \`updatedAt\`)
-             VALUES ('${safeOpenId}', '${safeEmail}', '${safeName}', 'user', 'email', '${now}', '${now}')`,
+            `INSERT INTO \`users\` (\`openId\`, \`email\`, \`name\`, \`password\`, \`role\`, \`loginMethod\`, \`createdAt\`, \`updatedAt\`)
+             VALUES ('${safeOpenId}', '${safeEmail}', '${safeName}', ${safePassword}, 'user', 'email', '${now}', '${now}')`,
             [],
             (err: any, result: any) => {
               if (err) return reject(err);

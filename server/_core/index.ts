@@ -1019,6 +1019,22 @@ async function runStartupMigrations() {
       );
     });
 
+    // Ensure users.password column exists (email+password auth for professionals)
+    try {
+      const [pwdCols] = await db.execute(
+        "SELECT COUNT(*) as cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'password'"
+      ) as any;
+      const pwdExists = Array.isArray(pwdCols) ? Number(pwdCols[0]?.cnt) > 0 : Number(pwdCols?.cnt) > 0;
+      if (!pwdExists) {
+        await db.execute("ALTER TABLE `users` ADD COLUMN `password` VARCHAR(255) NULL DEFAULT NULL");
+        console.log("[Migration] users.password column added");
+      } else {
+        console.log("[Migration] users.password column already exists");
+      }
+    } catch (e: any) {
+      console.warn("[Migration] Could not add users.password column:", e?.message);
+    }
+
     // Seed initial event banners if table is empty
     await new Promise<void>((resolve) => {
       client.execute(

@@ -5,8 +5,48 @@ import { getSessionCookieOptions } from "./cookies";
 import { sdk } from "./sdk";
 import * as db from "../db";
 import { getDb } from "../db";
+import bcrypt from "bcryptjs";
 
 export const emailAuthRouter = Router();
+
+// ── POST /api/auth/email/login-password — LOGIN con contraseña (profesionales) ─
+emailAuthRouter.post("/login-password", async (req: Request, res: Response) => {
+  const { email, password } = req.body as { email?: string; password?: string };
+
+  if (!email?.trim() || !password) {
+    return res.status(400).json({ error: "Email y contraseña son requeridos" });
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ error: "Email inválido" });
+  }
+
+  const user = await db.getUserByEmail(email.toLowerCase().trim());
+
+  // Timing-safe: always run compare to prevent user enumeration
+  const hash = user?.password ?? "$2b$10$invalidhashpaddingtomatchtime00000000000000000000";
+  const valid = await bcrypt.compare(password, hash);
+
+  if (!user || !user.password || !valid) {
+    return res.status(401).json({ error: "Credenciales incorrectas" });
+  }
+
+  const openId = user.openId as string;
+  const fullName = (user.name as string) ?? "";
+
+  const sessionToken = await sdk.createSessionToken(openId, {
+    name: fullName,
+    expiresInMs: ONE_YEAR_MS,
+  });
+
+  const cookieOptions = getSessionCookieOptions(req);
+  res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+
+  let destination = "/dashboard";
+  if (user.role === "professional") destination = "/panel-profesional";
+  else if (user.role === "admin") destination = "/admin";
+
+  return res.json({ success: true, redirectTo: destination });
+});
 
 // ── POST /api/auth/email/request-otp — LOGIN (el usuario debe existir) ────────
 emailAuthRouter.post("/request-otp", async (req: Request, res: Response) => {
