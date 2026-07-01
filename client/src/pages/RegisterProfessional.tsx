@@ -132,6 +132,9 @@ export default function RegisterProfessional({ embedded = false }: { embedded?: 
     documentNationality: "",
   });
 
+  const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
+
   const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [professionalLicense, setProfessionalLicense] = useState<File | null>(null);
@@ -180,6 +183,8 @@ export default function RegisterProfessional({ embedded = false }: { embedded?: 
     e.preventDefault();
     if (!form.firstName || !form.lastName) return toast.error("Nombre y apellido son obligatorios");
     if (!isAuthenticated && !form.email.trim()) return toast.error("El email es obligatorio");
+    if (!isAuthenticated && password.length < 8) return toast.error("La contraseña debe tener al menos 8 caracteres");
+    if (!isAuthenticated && password !== passwordConfirm) return toast.error("Las contraseñas no coinciden");
     if (!form.specialtyId) return toast.error("Selecciona la especialidad en la plataforma");
     if (!form.bio.trim()) return toast.error("La descripción profesional es obligatoria");
     if (!profilePhoto) return toast.error("La foto de perfil es obligatoria");
@@ -212,7 +217,7 @@ export default function RegisterProfessional({ embedded = false }: { embedded?: 
       if (isAuthenticated) {
         registerMutation.mutate(payload);
       } else {
-        registerNewMutation.mutate({ ...payload, email: form.email.trim(), fullName });
+        registerNewMutation.mutate({ ...payload, email: form.email.trim(), fullName, password: password || undefined });
       }
     } catch (err: unknown) {
       toast.error((err as Error).message ?? "Error al subir archivos");
@@ -307,6 +312,22 @@ export default function RegisterProfessional({ embedded = false }: { embedded?: 
               onChange={(e) => handleChange("username", e.target.value)} />
           </div>
         </div>
+
+        {/* Fila 2b: Contraseña (solo usuarios no autenticados) */}
+        {!isAuthenticated && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="e-password">Contraseña <span className="text-red-500">*</span></Label>
+              <Input id="e-password" type="password" placeholder="Mínimo 8 caracteres"
+                value={password} onChange={(e) => setPassword(e.target.value)} minLength={8} required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="e-passwordConfirm">Confirmar contraseña <span className="text-red-500">*</span></Label>
+              <Input id="e-passwordConfirm" type="password" placeholder="Repite tu contraseña"
+                value={passwordConfirm} onChange={(e) => setPasswordConfirm(e.target.value)} minLength={8} required />
+            </div>
+          </div>
+        )}
 
         {/* Fila 3: Especialidad | Años de experiencia */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -518,6 +539,32 @@ export default function RegisterProfessional({ embedded = false }: { embedded?: 
                       onChange={(e) => handleChange("email", e.target.value)}
                       required
                     />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="password">Contraseña <span className="text-red-500">*</span></Label>
+                      <Input
+                        id="password"
+                        type="password"
+                        placeholder="Mínimo 8 caracteres"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        minLength={8}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="passwordConfirm">Confirmar contraseña <span className="text-red-500">*</span></Label>
+                      <Input
+                        id="passwordConfirm"
+                        type="password"
+                        placeholder="Repite tu contraseña"
+                        value={passwordConfirm}
+                        onChange={(e) => setPasswordConfirm(e.target.value)}
+                        minLength={8}
+                        required
+                      />
+                    </div>
                   </div>
                   <p className="text-xs text-muted-foreground">
                     ¿Ya tienes cuenta?{" "}
