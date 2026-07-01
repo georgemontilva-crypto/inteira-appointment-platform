@@ -89,9 +89,9 @@ function Router() {
         {(params) => <PrivateRoute><BookAppointment /></PrivateRoute>}
       </Route>
 
-      {/* Registration — requiere auth */}
+      {/* Registro de profesionales — pública, RegisterProfessional maneja auth internamente */}
       <Route path="/registro-profesional">
-        <PrivateRoute><RegisterProfessional /></PrivateRoute>
+        <RegisterProfessional />
       </Route>
 
       {/* Plans — requiere auth */}
