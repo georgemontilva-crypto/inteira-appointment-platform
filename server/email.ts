@@ -204,7 +204,8 @@ export async function sendProfessionalApproval(params: {
       <p>Ya puedes configurar tu disponibilidad horaria y comenzar a recibir citas.</p>
       <div class="info-box">
         <p><strong>¿Cómo acceder?</strong></p>
-        <p>Ve a <a href="https://inteira.app/login" style="color:#607562;">inteira.app/login</a> e ingresa con tu correo <strong>${params.professionalEmail}</strong> — recibirás un código de verificación por email.</p>
+        <p>Ve a <a href="https://inteira.app/login" style="color:#607562;">inteira.app/login</a> e inicia sesión con tu correo <strong>${params.professionalEmail}</strong> y la contraseña que configuraste al registrarte.</p>
+        <p style="margin-top:8px;font-size:13px;color:#6b7280;">Si no recuerdas tu contraseña o te registraste sin una, selecciona la pestaña <strong>"Código por email"</strong> en la página de inicio de sesión para recibir un código de acceso.</p>
       </div>
       <a href="https://inteira.app/login" class="btn">Ir a mi panel</a>
     `
