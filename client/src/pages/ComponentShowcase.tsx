@@ -847,7 +847,7 @@ export default function ComponentsShowcase() {
                   <Breadcrumb>
                     <BreadcrumbList>
                       <BreadcrumbItem>
-                        <BreadcrumbLink href="/">Home</BreadcrumbLink>
+                        <BreadcrumbLink href="https://inteira.mx/">Home</BreadcrumbLink>
                       </BreadcrumbItem>
                       <BreadcrumbSeparator />
                       <BreadcrumbItem>

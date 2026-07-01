@@ -113,7 +113,7 @@ export default function Specialties() {
       {/* ── Header ── */}
       <div className="bg-[#607562] text-white">
         <div className="container py-7 md:py-12">
-          <Link href="/">
+          <a href="https://inteira.mx/">
             <Button
               variant="ghost"
               className="text-white/80 hover:text-white hover:bg-white/10 mb-3 md:mb-4 -ml-2 active:scale-95 transition-transform"
@@ -121,7 +121,7 @@ export default function Specialties() {
               <ArrowLeft className="w-4 h-4 mr-2" />
               <span className="text-sm">Inicio</span>
             </Button>
-          </Link>
+          </a>
           <h1 className="text-2xl md:text-4xl font-bold mb-1.5 md:mb-3" style={{ fontFamily: "Poppins, sans-serif" }}>
             Especialidades
           </h1>

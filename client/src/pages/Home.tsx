@@ -162,7 +162,7 @@ export default function Home() {
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-border shadow-sm">
         <div className="w-[95%] mx-auto">
           <div className="flex items-center justify-between h-14 md:h-16">
-            <Link href="/">
+            <a href="https://inteira.mx/">
               <div className="flex items-center cursor-pointer">
                 <img
                   src="https://d2xsxph8kpxj0f.cloudfront.net/310519663083109800/hvpTFzVHTUDdmneoDhwUNk/logo-verde_8475ff2a.webp"
@@ -170,7 +170,7 @@ export default function Home() {
                   className="h-8 md:h-9 w-auto object-contain"
                 />
               </div>
-            </Link>
+            </a>
 
             <div className="hidden md:flex items-center gap-8">
               <a href="#especialidades" className="text-sm font-medium text-gray-500 hover:text-[#5B6A57] transition-colors">Especialidades</a>

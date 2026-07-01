@@ -269,9 +269,9 @@ export default function RegisterProfessional({ embedded = false }: { embedded?: 
             <p className="text-sm text-muted-foreground mb-8">
               Recibirás un correo cuando tu cuenta sea aprobada o si se necesita información adicional.
             </p>
-            <Link href="/">
+            <a href="https://inteira.mx/">
               <Button className="bg-primary hover:bg-primary/90 text-white">Volver al inicio</Button>
-            </Link>
+            </a>
           </CardContent>
         </Card>
       </div>
@@ -495,12 +495,12 @@ export default function RegisterProfessional({ embedded = false }: { embedded?: 
       {/* Header */}
       <div className="bg-[#607562] text-white py-10">
         <div className="container">
-          <Link href="/">
+          <a href="https://inteira.mx/">
             <Button variant="ghost" className="text-white/80 hover:text-white hover:bg-white/10 mb-4 -ml-2">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Inicio
             </Button>
-          </Link>
+          </a>
           <h1 className="text-3xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
             Registro de asesor
           </h1>

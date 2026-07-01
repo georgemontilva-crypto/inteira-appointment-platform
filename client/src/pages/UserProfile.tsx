@@ -48,7 +48,7 @@ export default function UserProfile() {
   }, [profile]);
 
   const deleteAccountMutation = trpc.user.deleteAccount.useMutation({
-    onSuccess: () => { window.location.href = "/"; },
+    onSuccess: () => { window.location.href = "https://inteira.mx/"; },
     onError: (err) => toast.error(err.message ?? "Error al eliminar la cuenta"),
   });
 

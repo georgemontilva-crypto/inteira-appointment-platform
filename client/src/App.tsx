@@ -2,6 +2,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Spinner } from "@/components/ui/spinner";
 import NotFound from "@/pages/NotFound";
+import { useEffect } from "react";
 import { Redirect, Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -52,13 +53,19 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 function RootRedirect() {
   const { isAuthenticated, loading, user } = useAuth();
 
-  if (loading) return (
+  useEffect(() => {
+    if (loading) return;
+    if (!isAuthenticated) {
+      window.location.href = "https://inteira.mx/";
+    }
+  }, [loading, isAuthenticated]);
+
+  if (loading || !isAuthenticated) return (
     <div className="flex items-center justify-center h-screen">
       <img src="https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/Inteira-Verde-1.webp" className="h-10 animate-pulse" />
     </div>
   );
 
-  if (!isAuthenticated) return <Redirect to="/login" />;
   if (user?.role === "professional") return <Redirect to="/panel-profesional" />;
   if (user?.role === "admin") return <Redirect to="/admin" />;
   return <Redirect to="/dashboard" />;
@@ -67,8 +74,8 @@ function RootRedirect() {
 function Router() {
   return (
     <Switch>
-      {/* Landing pública */}
-      <Route path="/" component={Home} />
+      {/* Raíz: redirige según sesión (no autenticado → https://inteira.mx/) */}
+      <Route path="/" component={RootRedirect} />
       {/* Landing (acceso directo) */}
       <Route path="/landing" component={Home} />
       {/* Landing profesionales */}

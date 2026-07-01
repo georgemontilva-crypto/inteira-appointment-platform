@@ -266,7 +266,7 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
               >Profesional</button>
             </div>
           ) : (
-            <a href="/"><img src={logo} alt="Inteira" style={{ height: "24px", width: "auto", objectFit: "contain" }} /></a>
+            <a href="https://inteira.mx/"><img src={logo} alt="Inteira" style={{ height: "24px", width: "auto", objectFit: "contain" }} /></a>
           )}
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             {/* Wallet chip — mobile */}
@@ -307,7 +307,7 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
 
         {/* DESKTOP TOPBAR */}
         <div className="hidden md:flex items-center gap-2 px-4 h-[58px]">
-          <a href="/"><img src={logo} alt="Inteira" style={{ height: "28px", width: "auto", objectFit: "contain" }} /></a>
+          <a href="https://inteira.mx/"><img src={logo} alt="Inteira" style={{ height: "28px", width: "auto", objectFit: "contain" }} /></a>
           <div className="flex-1" />
           <div className="flex items-center gap-2">
             {/* Wallet chip — desktop */}
@@ -480,7 +480,7 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
                     </>
                   );
                   if (item.href === "/") {
-                    return <a key="inicio" href="/" className={rowClass}>{inner}</a>;
+                    return <a key="inicio" href="https://inteira.mx/" className={rowClass}>{inner}</a>;
                   }
                   return (
                     <Link key={item.href} href={item.href}>

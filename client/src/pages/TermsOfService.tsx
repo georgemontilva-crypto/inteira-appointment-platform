@@ -1,4 +1,3 @@
-import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 
@@ -8,12 +7,12 @@ export default function TermsOfService() {
       {/* Header */}
       <div className="gradient-hero text-white py-8">
         <div className="container">
-          <Link href="/">
+          <a href="https://inteira.mx/">
             <Button variant="ghost" className="text-white/80 hover:text-white hover:bg-white/10 mb-4 -ml-2">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Volver al inicio
             </Button>
-          </Link>
+          </a>
           <h1 className="text-2xl md:text-3xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
             Términos de Uso
           </h1>

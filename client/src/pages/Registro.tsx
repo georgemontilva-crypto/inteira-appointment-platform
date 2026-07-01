@@ -95,7 +95,7 @@ export default function Registro() {
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="px-6 py-5 flex items-center">
-        <a href="/" className="flex items-center gap-2">
+        <a href="https://inteira.mx/" className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-xl gradient-brand flex items-center justify-center overflow-hidden">
             <img src="/logo-icon.webp" alt="Inteira" className="w-5 h-5 object-contain" />
           </div>
@@ -254,7 +254,7 @@ export default function Registro() {
 
           {/* Volver al inicio */}
           <p className="text-center mt-6 text-sm text-muted-foreground">
-            <a href="/" className="text-primary hover:underline font-medium">
+            <a href="https://inteira.mx/" className="text-primary hover:underline font-medium">
               ← Volver al inicio
             </a>
           </p>

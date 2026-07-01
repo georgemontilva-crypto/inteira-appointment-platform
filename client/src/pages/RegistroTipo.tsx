@@ -32,7 +32,7 @@ export default function RegistroTipo() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-background">
       {/* Logo */}
-      <a href="/">
+      <a href="https://inteira.mx/">
         <img src="https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/Inteira-Verde-1.webp" alt="Inteira" className="h-16 mb-8" />
       </a>
 

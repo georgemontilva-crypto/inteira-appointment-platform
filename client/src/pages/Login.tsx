@@ -154,7 +154,7 @@ export default function Login() {
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="px-6 py-5 flex items-center">
-        <a href="/">
+        <a href="https://inteira.mx/">
           <img src="https://pub-cc4c932d49594db4a582c5a9a78363f7.r2.dev/imagenes%20carrusel/Inteira-Horizontal-Verde-1%20(1).webp" alt="Inteira" className="h-8" />
         </a>
       </header>
@@ -417,7 +417,7 @@ export default function Login() {
 
           {/* Volver al inicio */}
           <p className="text-center mt-6 text-sm text-muted-foreground">
-            <a href="/" className="text-primary hover:underline font-medium">
+            <a href="https://inteira.mx/" className="text-primary hover:underline font-medium">
               ← Volver al inicio
             </a>
           </p>
