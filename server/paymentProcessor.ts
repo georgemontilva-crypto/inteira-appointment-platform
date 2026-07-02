@@ -27,13 +27,17 @@ export async function processPayment(stripeSessionId: string, data?: {
 
   try {
     // Obtener el item por stripeSessionId
-    const findResult = await client.execute(
-      "SELECT id, userId, productType, credits, attempts, status FROM paymentQueue WHERE stripeSessionId=? LIMIT 1",
-      [stripeSessionId]
-    ) as any;
-    const findRows = Array.isArray(findResult) ? findResult[0] : [];
-    const findArr = Array.isArray(findRows) ? findRows : [];
-    const item = findArr[0];
+    const findRows = await new Promise<any[]>((resolve, reject) => {
+      client.execute(
+        "SELECT id, userId, productType, credits, attempts, status FROM paymentQueue WHERE stripeSessionId=? LIMIT 1",
+        [stripeSessionId],
+        (err: any, results: any) => {
+          if (err) return reject(err);
+          resolve(Array.isArray(results) ? results : []);
+        }
+      );
+    });
+    const item = findRows[0];
 
     if (!item) {
       if (data) {
@@ -58,10 +62,13 @@ export async function processPayment(stripeSessionId: string, data?: {
 
         // best-effort: insertar como completado para idempotencia futura
         try {
-          await client.execute(
-            "INSERT INTO paymentQueue (stripeSessionId, userId, productType, credits, amount, currency, status, processedAt) VALUES (?, ?, ?, ?, ?, ?, 'completed', NOW()) ON DUPLICATE KEY UPDATE status='completed', processedAt=NOW(), updatedAt=NOW()",
-            [stripeSessionId, data.userId, data.productType, data.credits, data.amount, data.currency]
-          );
+          await new Promise<void>((resolve, reject) => {
+            client.execute(
+              "INSERT INTO paymentQueue (stripeSessionId, userId, productType, credits, amount, currency, status, processedAt) VALUES (?, ?, ?, ?, ?, ?, 'completed', NOW()) ON DUPLICATE KEY UPDATE status='completed', processedAt=NOW(), updatedAt=NOW()",
+              [stripeSessionId, data.userId, data.productType, data.credits, data.amount, data.currency],
+              (err: any) => { if (err) return reject(err); resolve(); }
+            );
+          });
         } catch (e: any) {
           console.warn("[PaymentProcessor] No se pudo registrar en cola:", e?.message);
         }
@@ -77,24 +84,34 @@ export async function processPayment(stripeSessionId: string, data?: {
     }
 
     // Marcar como processing
-    await client.execute(
-      "UPDATE paymentQueue SET status='processing', attempts=attempts+1, updatedAt=NOW() WHERE stripeSessionId=?",
-      [stripeSessionId]
-    );
+    await new Promise<void>((resolve, reject) => {
+      client.execute(
+        "UPDATE paymentQueue SET status='processing', attempts=attempts+1, updatedAt=NOW() WHERE stripeSessionId=?",
+        [stripeSessionId],
+        (err: any) => { if (err) return reject(err); resolve(); }
+      );
+    });
 
     // Verificar idempotencia — ¿ya tiene creditBatch reciente?
-    const batchResult = await client.execute(
-      "SELECT id FROM creditBatches WHERE userId=? AND source=? AND createdAt >= DATE_SUB(NOW(), INTERVAL 24 HOUR) LIMIT 1",
-      [item.userId, item.productType]
-    ) as any;
-    const batchRows = Array.isArray(batchResult) ? batchResult[0] : [];
-    const batchArr = Array.isArray(batchRows) ? batchRows : [];
+    const batchArr = await new Promise<any[]>((resolve, reject) => {
+      client.execute(
+        "SELECT id FROM creditBatches WHERE userId=? AND source=? AND createdAt >= DATE_SUB(NOW(), INTERVAL 24 HOUR) LIMIT 1",
+        [item.userId, item.productType],
+        (err: any, results: any) => {
+          if (err) return reject(err);
+          resolve(Array.isArray(results) ? results : []);
+        }
+      );
+    });
 
     if (batchArr.length > 0) {
-      await client.execute(
-        "UPDATE paymentQueue SET status='completed', processedAt=NOW(), updatedAt=NOW() WHERE stripeSessionId=?",
-        [stripeSessionId]
-      );
+      await new Promise<void>((resolve, reject) => {
+        client.execute(
+          "UPDATE paymentQueue SET status='completed', processedAt=NOW(), updatedAt=NOW() WHERE stripeSessionId=?",
+          [stripeSessionId],
+          (err: any) => { if (err) return reject(err); resolve(); }
+        );
+      });
       console.log("[PaymentProcessor] Ya tenía creditBatch:", stripeSessionId);
       return true;
     }
@@ -104,10 +121,13 @@ export async function processPayment(stripeSessionId: string, data?: {
     await addCreditBatch(item.userId, item.productType as CreditSource);
 
     // Marcar como completado
-    await client.execute(
-      "UPDATE paymentQueue SET status='completed', processedAt=NOW(), updatedAt=NOW() WHERE stripeSessionId=?",
-      [stripeSessionId]
-    );
+    await new Promise<void>((resolve, reject) => {
+      client.execute(
+        "UPDATE paymentQueue SET status='completed', processedAt=NOW(), updatedAt=NOW() WHERE stripeSessionId=?",
+        [stripeSessionId],
+        (err: any) => { if (err) return reject(err); resolve(); }
+      );
+    });
 
     console.log(`[PaymentProcessor] ✅ ${item.credits} créditos acreditados — userId=${item.userId} productType=${item.productType}`);
 
@@ -149,20 +169,29 @@ export async function processPayment(stripeSessionId: string, data?: {
     // Leer attempts actuales para decidir status
     let attempts = 1;
     try {
-      const attResult = await client.execute(
-        "SELECT attempts FROM paymentQueue WHERE stripeSessionId=? LIMIT 1",
-        [stripeSessionId]
-      ) as any;
-      const attRows = Array.isArray(attResult) ? attResult[0] : [];
-      const attArr = Array.isArray(attRows) ? attRows : [];
-      attempts = attArr[0]?.attempts ?? 1;
+      const attRows = await new Promise<any[]>((resolve, reject) => {
+        client.execute(
+          "SELECT attempts FROM paymentQueue WHERE stripeSessionId=? LIMIT 1",
+          [stripeSessionId],
+          (err2: any, results: any) => {
+            if (err2) return reject(err2);
+            resolve(Array.isArray(results) ? results : []);
+          }
+        );
+      });
+      attempts = attRows[0]?.attempts ?? 1;
     } catch {}
 
     const newStatus = attempts >= 3 ? "failed" : "pending";
-    await client.execute(
-      "UPDATE paymentQueue SET status=?, lastError=?, updatedAt=NOW() WHERE stripeSessionId=?",
-      [newStatus, (err?.message ?? "Unknown error").slice(0, 500), stripeSessionId]
-    ).catch(() => {});
+    try {
+      await new Promise<void>((resolve, reject) => {
+        client.execute(
+          "UPDATE paymentQueue SET status=?, lastError=?, updatedAt=NOW() WHERE stripeSessionId=?",
+          [newStatus, (err?.message ?? "Unknown error").slice(0, 500), stripeSessionId],
+          (err2: any) => { if (err2) return reject(err2); resolve(); }
+        );
+      });
+    } catch {}
 
     console.error(`[PaymentProcessor] ❌ Falló intento ${attempts}/3 — ${stripeSessionId}: ${err?.message}`);
 
@@ -181,11 +210,16 @@ export async function retryPendingPayments(): Promise<void> {
   const client = (db as any).$client;
 
   try {
-    const result = await client.execute(
-      "SELECT stripeSessionId FROM paymentQueue WHERE status='pending' AND attempts < 3 AND updatedAt < DATE_SUB(NOW(), INTERVAL 2 MINUTE) LIMIT 10"
-    ) as any;
-    const rows = Array.isArray(result) ? result[0] : [];
-    const arr = Array.isArray(rows) ? rows : [];
+    const arr = await new Promise<any[]>((resolve, reject) => {
+      client.execute(
+        "SELECT stripeSessionId FROM paymentQueue WHERE status='pending' AND attempts < 3 AND updatedAt < DATE_SUB(NOW(), INTERVAL 2 MINUTE) LIMIT 10",
+        [],
+        (err: any, results: any) => {
+          if (err) return reject(err);
+          resolve(Array.isArray(results) ? results : []);
+        }
+      );
+    });
 
     if (arr.length > 0) {
       console.log(`[PaymentProcessor] Reintentando ${arr.length} pagos pendientes`);

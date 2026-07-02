@@ -79,12 +79,16 @@ export async function chargeProfessionalPenalty(
 ): Promise<void> {
   const db = await getDb();
   if (!db) return;
-  await (db as any).$client.execute(
-    `UPDATE professionalWallet
-     SET balance = GREATEST(0, balance - ?)
-     WHERE professionalId = ?`,
-    [amount, professionalId]
-  );
+  const client = (db as any).$client;
+  await new Promise<void>((resolve, reject) => {
+    client.execute(
+      `UPDATE professionalWallet
+       SET balance = GREATEST(0, balance - ?)
+       WHERE professionalId = ?`,
+      [amount, professionalId],
+      (err: any) => { if (err) return reject(err); resolve(); }
+    );
+  });
 }
 
 export async function getProfessionalWallet(professionalId: number) {

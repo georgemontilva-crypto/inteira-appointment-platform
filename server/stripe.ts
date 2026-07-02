@@ -285,10 +285,13 @@ async function handleSuccessfulPayment(session: Stripe.Checkout.Session) {
     const client = (db as any).$client;
 
     // INSERT en cola
-    await client.execute(
-      "INSERT INTO paymentQueue (stripeSessionId, userId, productType, credits, amount, currency, status) VALUES (?, ?, ?, ?, ?, ?, 'pending') ON DUPLICATE KEY UPDATE updatedAt=NOW()",
-      [session.id, userIdNum, productType, creditsNum, String((session.amount_total ?? 0) / 100), (session.currency ?? "mxn").toUpperCase()]
-    );
+    await new Promise<void>((resolve, reject) => {
+      client.execute(
+        "INSERT INTO paymentQueue (stripeSessionId, userId, productType, credits, amount, currency, status) VALUES (?, ?, ?, ?, ?, ?, 'pending') ON DUPLICATE KEY UPDATE updatedAt=NOW()",
+        [session.id, userIdNum, productType, creditsNum, String((session.amount_total ?? 0) / 100), (session.currency ?? "mxn").toUpperCase()],
+        (err: any) => { if (err) return reject(err); resolve(); }
+      );
+    });
 
     // Procesar directamente con stripeSessionId + datos como fallback
     const { processPayment } = await import("./paymentProcessor");

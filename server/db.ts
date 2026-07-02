@@ -225,25 +225,28 @@ export async function createProfessional(
   if (!db) throw new Error("Database not available");
   const client = (db as any).$client;
 
-  await client.execute(
-    `INSERT INTO professionals
-     (userId, specialtyId, licenseNumber, status, bio, profilePhoto, licenseDocument, education, certifications, yearsOfExperience, hourlyRate, identityDocUrl, documentNationality)
-     VALUES (?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      userId,
-      specialtyId,
-      licenseNumber,
-      data?.bio ?? null,
-      data?.profilePhoto ?? null,
-      data?.licenseDocument ?? null,
-      data?.education ?? null,
-      data?.certifications ?? null,
-      data?.yearsOfExperience ?? null,
-      data?.hourlyRate ?? null,
-      data?.identityDocUrl ?? null,
-      data?.documentNationality ?? null,
-    ]
-  );
+  await new Promise<void>((resolve, reject) => {
+    client.execute(
+      `INSERT INTO professionals
+       (userId, specialtyId, licenseNumber, status, bio, profilePhoto, licenseDocument, education, certifications, yearsOfExperience, hourlyRate, identityDocUrl, documentNationality)
+       VALUES (?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        userId,
+        specialtyId,
+        licenseNumber,
+        data?.bio ?? null,
+        data?.profilePhoto ?? null,
+        data?.licenseDocument ?? null,
+        data?.education ?? null,
+        data?.certifications ?? null,
+        data?.yearsOfExperience ?? null,
+        data?.hourlyRate ?? null,
+        data?.identityDocUrl ?? null,
+        data?.documentNationality ?? null,
+      ],
+      (err: any) => { if (err) return reject(err); resolve(); }
+    );
+  });
 }
 
 export async function getProfessionalByUserId(userId: number) {
@@ -900,10 +903,13 @@ export async function recordStripePayment(data: {
   const client = (db as any).session?.client ?? (db as any).client ?? (db as any).$client;
 
   if (client && typeof client.execute === 'function') {
-    await client.execute(
-      "INSERT INTO payments (userId, stripeSessionId, stripePaymentIntentId, amount, currency, status, type, creditsGranted, metadata) VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?)",
-      [data.userId, data.stripePaymentId, data.stripePaymentId, data.amount, data.currency, PAYMENT_STATUS_COMPLETED, data.paymentType ?? "subscription", JSON.stringify({ productType: data.productType })]
-    );
+    await new Promise<void>((resolve, reject) => {
+      client.execute(
+        "INSERT INTO payments (userId, stripeSessionId, stripePaymentIntentId, amount, currency, status, type, creditsGranted, metadata) VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?)",
+        [data.userId, data.stripePaymentId, data.stripePaymentId, data.amount, data.currency, PAYMENT_STATUS_COMPLETED, data.paymentType ?? "subscription", JSON.stringify({ productType: data.productType })],
+        (err: any) => { if (err) return reject(err); resolve(); }
+      );
+    });
   } else {
     // Fallback: construir query con valores escapados manualmente
     const escaped = {
@@ -1090,12 +1096,17 @@ export async function getAdminUsers() {
   if (!db) return [];
   const client = (db as any).$client;
   try {
-    const result = await client.execute(
-      "SELECT * FROM users WHERE role = ?",
-      ['admin']
-    ) as any;
-    const rows = Array.isArray(result) ? result[0] : [];
-    return Array.isArray(rows) ? rows : [];
+    const rows = await new Promise<any[]>((resolve, reject) => {
+      client.execute(
+        "SELECT * FROM users WHERE role = ?",
+        ['admin'],
+        (err: any, results: any) => {
+          if (err) return reject(err);
+          resolve(Array.isArray(results) ? results : []);
+        }
+      );
+    });
+    return rows;
   } catch (e: any) {
     console.error("[DB] getAdminUsers error:", e?.message);
     return [];
