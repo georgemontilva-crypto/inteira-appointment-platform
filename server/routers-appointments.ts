@@ -447,6 +447,7 @@ export const appointmentRouter = router({
           canceledBy: canceledByRole === "user" ? "el usuario" : "el profesional",
           hasRefund,
           credits: sessionCost,
+          timezoneOffsetMinutes: appointment.timezoneOffset ?? -360,
         }).catch(() => {});
       }
 
@@ -457,6 +458,7 @@ export const appointmentRouter = router({
           patientName: canceledUser?.name ?? "Usuario",
           appointmentDate: new Date(appointment.appointmentDate),
           canceledBy: canceledByRole as "user" | "professional" | "admin",
+          timezoneOffsetMinutes: appointment.timezoneOffset ?? -360,
         }).catch(() => {});
       }
 

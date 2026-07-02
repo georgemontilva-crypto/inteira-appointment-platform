@@ -233,16 +233,9 @@ export async function sendAppointmentCancellation(params: {
   canceledBy: string;
   hasRefund: boolean;
   credits: number;
+  timezoneOffsetMinutes: number;
 }): Promise<boolean> {
-  const dateStr = params.appointmentDate.toLocaleDateString("es-MX", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  });
-  const timeStr = params.appointmentDate.toLocaleTimeString("es-MX", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const { dateStr, timeStr } = formatDateTimeForEmail(params.appointmentDate, params.timezoneOffsetMinutes);
 
   const creditsLine = params.hasRefund
     ? `<p style="color:#16a34a;">✅ Tus <strong>${params.credits} créditos</strong> retenidos serán restituidos a tu wallet.</p>`
@@ -275,13 +268,9 @@ export async function sendAppointmentCancelledToProfessional(params: {
   patientName: string;
   appointmentDate: Date;
   canceledBy: "user" | "professional" | "admin";
+  timezoneOffsetMinutes: number;
 }): Promise<boolean> {
-  const dateStr = params.appointmentDate.toLocaleDateString("es-MX", {
-    weekday: "long", year: "numeric", month: "long", day: "numeric",
-  });
-  const timeStr = params.appointmentDate.toLocaleTimeString("es-MX", {
-    hour: "2-digit", minute: "2-digit",
-  });
+  const { dateStr, timeStr } = formatDateTimeForEmail(params.appointmentDate, params.timezoneOffsetMinutes);
 
   const canceledByLabel = params.canceledBy === "user"
     ? "el cliente"
