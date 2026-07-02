@@ -525,10 +525,9 @@ export async function sendAppointmentReminder15min(params: {
   professionalName: string;
   appointmentDate: Date;
   videoCallLink: string;
+  timezoneOffsetMinutes: number;
 }): Promise<boolean> {
-  const timeStr = params.appointmentDate.toLocaleTimeString("es-MX", {
-    hour: "2-digit", minute: "2-digit",
-  });
+  const { timeStr } = formatDateTimeForEmail(params.appointmentDate, params.timezoneOffsetMinutes);
 
   const content = `
     <p>Hola <strong>${params.userName}</strong>,</p>
@@ -553,10 +552,9 @@ export async function sendProfessionalReminder15min(params: {
   clientName: string;
   appointmentDate: Date;
   videoCallLink: string;
+  timezoneOffsetMinutes: number;
 }): Promise<boolean> {
-  const timeStr = params.appointmentDate.toLocaleTimeString("es-MX", {
-    hour: "2-digit", minute: "2-digit",
-  });
+  const { timeStr } = formatDateTimeForEmail(params.appointmentDate, params.timezoneOffsetMinutes);
 
   const content = `
     <p>Hola <strong>${params.professionalName}</strong>,</p>

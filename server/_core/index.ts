@@ -1388,7 +1388,7 @@ setInterval(async () => {
 
     const upcoming = await new Promise<any[]>((resolve) => {
       client.execute(
-        `SELECT a.id, a.videoCallLink, a.appointmentDate,
+        `SELECT a.id, a.videoCallLink, a.appointmentDate, a.timezoneOffset,
                 u.email AS userEmail, u.name AS userName,
                 pu.name AS professionalName, pu.email AS professionalEmail
          FROM appointments a
@@ -1410,6 +1410,9 @@ setInterval(async () => {
     if (upcoming.length > 0) {
       const { sendAppointmentReminder15min, sendProfessionalReminder15min } = await import("../email");
       for (const row of upcoming) {
+        // Citas viejas creadas antes de este fix no tienen timezoneOffset guardado;
+        // -360 (México, el timezone más común de la plataforma) es el fallback razonable.
+        const timezoneOffsetMinutes = row.timezoneOffset ?? -360;
         if (row.userEmail) {
           await sendAppointmentReminder15min({
             userEmail: row.userEmail,
@@ -1417,6 +1420,7 @@ setInterval(async () => {
             professionalName: row.professionalName ?? "Especialista",
             appointmentDate: new Date(row.appointmentDate),
             videoCallLink: row.videoCallLink ?? "",
+            timezoneOffsetMinutes,
           }).catch(() => {});
         }
         if (row.professionalEmail) {
@@ -1426,6 +1430,7 @@ setInterval(async () => {
             clientName: row.userName ?? "Usuario",
             appointmentDate: new Date(row.appointmentDate),
             videoCallLink: row.videoCallLink ?? "",
+            timezoneOffsetMinutes,
           }).catch(() => {});
         }
         await new Promise<void>((resolve) => {
