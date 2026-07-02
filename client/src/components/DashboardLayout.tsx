@@ -80,6 +80,7 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
   const [profileDropOpen, setProfileDropOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
+  const mobileNotifRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
   const [changelogOpen, setChangelogOpen] = useState(false);
   const [hasUnseenVersion, setHasUnseenVersion] = useState(() => {
@@ -104,8 +105,10 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
   // Close dropdowns on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifOpen(false);
-      if (profileRef.current && !profileRef.current.contains(e.target as Node)) setProfileDropOpen(false);
+      const target = e.target as Node;
+      const insideNotif = (notifRef.current && notifRef.current.contains(target)) || (mobileNotifRef.current && mobileNotifRef.current.contains(target));
+      if (!insideNotif) setNotifOpen(false);
+      if (profileRef.current && !profileRef.current.contains(target)) setProfileDropOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -146,22 +149,10 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
   const markAllRead = trpc.notifications.markAllRead.useMutation({ onSuccess: () => {} });
   const markOneRead = trpc.notifications.markRead.useMutation({ onSuccess: () => {} });
 
-  // Wallet — always fetched to show chip in top bar
-  const { data: walletData } = trpc.user.getWallet.useQuery(undefined, {
-    enabled: !!user && !isProMode,
-    staleTime: 60_000,
-    refetchInterval: 60_000,
-  });
-
   // Professional data (for pro mode)
   const { data: proProfile } = trpc.professional.getProfile.useQuery(undefined, {
     enabled: isProfessional,
     staleTime: 5 * 60 * 1000,
-  });
-  const { data: proWalletData } = trpc.professional.getWallet.useQuery(undefined, {
-    enabled: isProfessional,
-    staleTime: 60_000,
-    refetchInterval: 60_000,
   });
 
   const count = unreadCount?.count ?? 0;
@@ -269,22 +260,48 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
             <a href="https://inteira.mx/"><img src={logo} alt="Inteira" style={{ height: "24px", width: "auto", objectFit: "contain" }} /></a>
           )}
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            {/* Wallet chip — mobile */}
-            <a
-              href="/wallet"
-              style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(96,117,98,0.1)", borderRadius: 20, padding: "3px 10px 3px 6px", textDecoration: "none", color: "#3d4e3f" }}
-            >
-              <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" stroke="none"><circle cx="12" cy="12" r="10"/><text x="12" y="16" textAnchor="middle" fontSize="10" fontWeight="bold" fill="white">$</text></svg>
-              <span style={{ fontSize: 12, fontWeight: 600, color: "#3d4e3f", lineHeight: 1 }}>
-                {isProfessional
-                  ? `$${(parseFloat((proWalletData as any)?.wallet?.balance ?? "0") || 0).toLocaleString("es-MX")}`
-                  : (walletData?.balance ?? 0).toLocaleString("es-MX")}
-              </span>
-            </a>
-            <button onClick={() => openPanel("notifications")} style={{ position: "relative", background: "none", border: "none", cursor: "pointer", color: "#607562", padding: 0, display: "flex" }}>
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-              {count > 0 && <span style={{ position: "absolute", top: -4, right: -4, width: 8, height: 8, borderRadius: "50%", background: "#ef4444" }} />}
-            </button>
+            {/* Notification bell + dropdown — mobile */}
+            <div className="relative" ref={mobileNotifRef}>
+              <button onClick={() => setNotifOpen((o) => !o)} style={{ position: "relative", background: "none", border: "none", cursor: "pointer", color: "#607562", padding: 0, display: "flex" }}>
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                {count > 0 && <span style={{ position: "absolute", top: -4, right: -4, width: 8, height: 8, borderRadius: "50%", background: "#ef4444" }} />}
+              </button>
+              {notifOpen && (
+                <div className="absolute right-0 top-[calc(100%+8px)] w-[300px] bg-white rounded-[14px] shadow-[0_8px_32px_rgba(0,0,0,0.14)] border border-[rgba(96,117,98,0.12)] overflow-hidden z-50">
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-[rgba(96,117,98,0.08)]">
+                    <p className="text-[13px] font-semibold text-[#333]">Notificaciones</p>
+                    {count > 0 && (
+                      <button onClick={() => markAllRead.mutate()} className="text-[11px] text-[#607562] hover:underline">Marcar todas leídas</button>
+                    )}
+                  </div>
+                  <div className="max-h-[360px] overflow-y-auto" style={{ scrollbarWidth: "thin" }}>
+                    {!notifications || notifications.length === 0 ? (
+                      <div className="py-10 text-center">
+                        <Icon name="bell" className="w-8 h-8 text-[#93A295] mx-auto mb-2" />
+                        <p className="text-[12px] text-[#93A295]">Sin notificaciones</p>
+                      </div>
+                    ) : (
+                      notifications.slice(0, 10).map((n: any) => (
+                        <div
+                          key={n.id}
+                          onClick={() => { if (!n.isRead) markOneRead.mutate({ id: n.id }); if (n.link) { window.location.href = n.link; } setNotifOpen(false); }}
+                          className={`flex gap-3 px-4 py-3 border-b border-[rgba(96,117,98,0.07)] cursor-pointer transition-colors ${!n.isRead ? "bg-[#f5f8f5] hover:bg-[#eef3ee]" : "hover:bg-[#F7FAFC]"}`}
+                        >
+                          <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 text-[#607562]" style={{ background: "rgba(96,117,98,0.1)" }}>
+                            <Icon name="bell" className="w-3.5 h-3.5" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[12px] font-semibold text-[#333] leading-snug">{n.title}</p>
+                            <p className="text-[11px] text-[#666] mt-0.5 leading-snug line-clamp-2">{n.message}</p>
+                          </div>
+                          {!n.isRead && <div className="w-2 h-2 rounded-full bg-[#607562] flex-shrink-0 mt-2" />}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
             {/* CTA: clock for pro mode, + otherwise */}
             {user?.role === "professional" && isProMode ? (
               <button onClick={() => { window.location.href = "/panel-profesional#disponibilidad"; }} style={{ background: "#607562", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", border: "none", cursor: "pointer" }}>
@@ -310,23 +327,6 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
           <a href="https://inteira.mx/"><img src={logo} alt="Inteira" style={{ height: "28px", width: "auto", objectFit: "contain" }} /></a>
           <div className="flex-1" />
           <div className="flex items-center gap-2">
-            {/* Wallet chip — desktop */}
-            <a
-              href="/wallet"
-              className="flex items-center gap-1.5 rounded-full hover:bg-[#eef3ee] transition-colors"
-              style={{ padding: "5px 12px 5px 8px", background: "rgba(96,117,98,0.09)", textDecoration: "none" }}
-            >
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="#607562" stroke="none"><circle cx="12" cy="12" r="10"/><text x="12" y="16.5" textAnchor="middle" fontSize="11" fontWeight="bold" fill="white">$</text></svg>
-              <span style={{ fontSize: 13, fontWeight: 600, color: "#3d4e3f", lineHeight: 1 }}>
-                {isProfessional
-                  ? `$${(parseFloat((proWalletData as any)?.wallet?.balance ?? "0") || 0).toLocaleString("es-MX")}`
-                  : (walletData?.balance ?? 0).toLocaleString("es-MX")}
-              </span>
-              <span style={{ fontSize: 10, color: "#93A295", fontWeight: 500 }}>
-                {isProfessional ? "MXN" : "créditos"}
-              </span>
-            </a>
-
             {/* Notification bell + dropdown */}
             <div className="relative" ref={notifRef}>
               <button
@@ -516,7 +516,7 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
               Cerrar sesión
             </button>
             <div className="p-2 border-t border-[rgba(96,117,98,0.1)]">
-              <div className="flex items-center gap-2 px-2 py-1.5 rounded-[9px] bg-[#F7FAFC] border border-[rgba(96,117,98,0.15)] cursor-pointer" onClick={() => openPanel("profile")}>
+              <div className="flex items-center gap-2 px-2 py-1.5 rounded-[9px] bg-[#F7FAFC] border border-[rgba(96,117,98,0.15)] cursor-pointer" onClick={() => navigate("/perfil")}>
                 <div className="flex-shrink-0"><UserAvatar size="md" /></div>
                 <div className="min-w-0 flex-1">
                   <p className="text-[11px] font-medium text-[#333333] truncate">{user?.name ?? "Usuario"}</p>
@@ -654,292 +654,6 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
                 <span className="text-[13px] font-medium text-red-500">Cerrar sesión</span>
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* RIGHT PANEL — removed in FASE 2, replaced by inline dropdowns */}
-      {false && (
-        <div className="fixed inset-0 z-50" onClick={() => {}}>
-          <div className="absolute inset-0 bg-black/25" style={{ backdropFilter: "blur(2px)" }} />
-          <div
-            className="absolute bottom-0 left-0 right-0 h-[85vh] md:inset-auto md:top-2 md:right-2 md:bottom-2 md:w-[380px] md:h-auto bg-white flex flex-col overflow-hidden rounded-t-[20px] md:rounded-[16px]"
-            style={{ border: "1px solid rgba(96,117,98,0.15)", boxShadow: "0 24px 64px rgba(0,0,0,0.18), 0 4px 16px rgba(96,117,98,0.1)" }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Pill handle — mobile only */}
-            <div className="md:hidden" style={{ flexShrink: 0, paddingTop: 12 }}>
-              <div style={{ width: 40, height: 4, background: "#e0e8e0", borderRadius: 2, margin: "0 auto" }} />
-            </div>
-            {/* Panel header: dark user section + tabs */}
-            <div style={{ background: "linear-gradient(145deg,#1e2f20,#2d4030)", flexShrink: 0, padding: "20px 20px 0" }}>
-              <div className="flex items-center gap-3 mb-5">
-                <div className="relative flex-shrink-0">
-                  {isProMode && isProfessional && ((proProfile as any)?.profilePhoto ?? (proProfile as any)?.profileImage) ? (
-                    <img src={(proProfile as any).profilePhoto ?? (proProfile as any).profileImage} style={{ width: 56, height: 56, borderRadius: "50%", objectFit: "cover" }} referrerPolicy="no-referrer" />
-                  ) : (
-                    <UserAvatar size="lg" />
-                  )}
-                  <span className="absolute bottom-0.5 right-0.5 w-3 h-3 rounded-full bg-green-400" style={{ border: "2px solid #1e2f20" }} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p style={{ fontWeight: 600, fontSize: 16, color: "#fff", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {isProMode && isProfessional ? ((proProfile as any)?.name ?? user?.name) : user?.name}
-                  </p>
-                  <p style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", margin: "2px 0 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {isProMode && isProfessional ? ((proProfile as any)?.specialty?.name ?? "Especialista") : user?.email}
-                  </p>
-                  <span style={{ display: "inline-block", marginTop: 6, background: "rgba(255,255,255,0.15)", color: "#fff", fontSize: 11, padding: "2px 10px", borderRadius: 20, fontWeight: 600 }}>
-                    {isProMode && isProfessional
-                      ? `PROFESIONAL · ${(proProfile as any)?.tier === "pro" ? "PRO" : "BÁSICO"}`
-                      : user?.role?.toUpperCase()}
-                  </span>
-                </div>
-                <button
-                  onClick={() => setPanelOpen(false)}
-                  className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors"
-                  style={{ background: "rgba(255,255,255,0.1)" }}
-                >
-                  <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" style={{ color: "rgba(255,255,255,0.6)" }} fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                </button>
-              </div>
-
-              {/* Tabs */}
-              <div className="flex">
-                {([ { id: "notifications" as PanelTab, icon: "bell", label: "Avisos" }, { id: "wallet" as PanelTab, icon: "wallet", label: "Wallet" }, { id: "profile" as PanelTab, icon: "user", label: "Perfil" } ] as const).map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className="flex items-center justify-center gap-1.5 flex-1 py-2.5 text-[11px] font-medium transition-all"
-                    style={{
-                      color: activeTab === tab.id ? "white" : "rgba(255,255,255,0.4)",
-                      borderBottom: activeTab === tab.id ? "2px solid rgba(255,255,255,0.85)" : "2px solid transparent",
-                    }}
-                  >
-                    <Icon name={tab.icon} className="w-3.5 h-3.5" />
-                    {tab.label}
-                    {tab.id === "notifications" && count > 0 && (
-                      <span className="min-w-[14px] h-[14px] bg-red-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center px-0.5">{count > 9 ? "9+" : count}</span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Tab: Notifications */}
-            {activeTab === "notifications" && (
-              <>
-                <div className="flex justify-end px-4 py-2.5 border-b border-[rgba(96,117,98,0.08)]">
-                  {count > 0 && (
-                    <button onClick={() => markAllRead.mutate()} className="text-[11px] text-[#607562] hover:underline">
-                      Marcar todas como leídas
-                    </button>
-                  )}
-                </div>
-                <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(96,117,98,0.2) transparent" }}>
-                  {!notifications || notifications.length === 0 ? (
-                    <div className="py-14 text-center">
-                      <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3" style={{ background: "rgba(96,117,98,0.07)" }}>
-                        <Icon name="bell" className="w-5 h-5 text-[#93A295]" />
-                      </div>
-                      <p className="text-[13px] text-[#93A295]">No hay notificaciones</p>
-                    </div>
-                  ) : (
-                    notifications.map((n: any) => (
-                      <div
-                        key={n.id}
-                        onClick={() => { if (!n.isRead) markOneRead.mutate({ id: n.id }); if (n.link) window.location.href = n.link; }}
-                        className={`flex gap-3 px-4 py-3.5 border-b border-[rgba(96,117,98,0.07)] cursor-pointer transition-colors ${!n.isRead ? "bg-[#f5f8f5] hover:bg-[#eef3ee]" : "hover:bg-[#F7FAFC]"}`}
-                      >
-                        <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 text-[#607562]" style={{ background: "rgba(96,117,98,0.1)" }}>
-                          <Icon name="bell" className="w-4 h-4" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-2">
-                            <p className="text-[12px] font-semibold text-[#333333] leading-snug">{n.title}</p>
-                            <span className="text-[9px] text-[#93A295] flex-shrink-0 mt-0.5">{new Date(n.createdAt).toLocaleDateString("es", { day: "numeric", month: "short" })}</span>
-                          </div>
-                          <p className="text-[11px] text-[#666] mt-0.5 leading-snug line-clamp-2">{n.message}</p>
-                          {n.link && <p className="text-[10px] text-[#607562] mt-1 font-medium">Ver detalles →</p>}
-                        </div>
-                        {!n.isRead && <div className="w-2 h-2 rounded-full bg-[#607562] flex-shrink-0 mt-2" />}
-                      </div>
-                    ))
-                  )}
-                </div>
-              </>
-            )}
-
-            {/* Tab: Wallet */}
-            {activeTab === "wallet" && (
-              <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(96,117,98,0.2) transparent" }}>
-                {isProfessional && isProMode ? (
-                  /* ── Professional earnings wallet ── */
-                  <>
-                    <div className="rounded-2xl p-5 text-white relative overflow-hidden" style={{ background: "linear-gradient(135deg,#0d1f10,#1a2e1a)" }}>
-                      <div className="absolute top-0 right-0 w-36 h-36 rounded-full pointer-events-none" style={{ background: "rgba(255,255,255,0.04)", transform: "translate(40%,-40%)" }} />
-                      <p className="text-[9px] font-bold uppercase tracking-[0.18em] mb-3" style={{ color: "rgba(255,255,255,0.45)" }}>GANANCIAS DISPONIBLES</p>
-                      <p className="text-4xl font-bold text-white leading-none">
-                        ${(parseFloat((proWalletData as any)?.wallet?.balance ?? "0") || 0).toLocaleString("es-MX")}
-                      </p>
-                      <p className="text-[12px] mt-1 font-medium" style={{ color: "rgba(255,255,255,0.35)" }}>MXN</p>
-                      <p className="text-[10px] mt-3 truncate" style={{ color: "rgba(255,255,255,0.25)" }}>
-                        Total acumulado: ${(parseFloat((proWalletData as any)?.wallet?.totalEarned ?? "0") || 0).toLocaleString("es-MX")} MXN
-                      </p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Link href="/panel-profesional#ganancias">
-                        <a className="flex flex-col items-center gap-1.5 p-3.5 rounded-xl border hover:bg-[#f0f4f0] transition-colors cursor-pointer text-center" style={{ background: "#F7FAFC", borderColor: "rgba(96,117,98,0.15)" }} onClick={() => setPanelOpen(false)}>
-                          <Icon name="wallet" className="w-4 h-4 text-[#607562]" />
-                          <span className="text-[11px] font-medium text-[#607562]">Ver ganancias</span>
-                        </a>
-                      </Link>
-                      <Link href="/panel-profesional#ganancias">
-                        <a className="flex flex-col items-center gap-1.5 p-3.5 rounded-xl border hover:bg-[#f0f4f0] transition-colors cursor-pointer text-center" style={{ background: "#F7FAFC", borderColor: "rgba(96,117,98,0.15)" }} onClick={() => setPanelOpen(false)}>
-                          <Icon name="logout" className="w-4 h-4 text-[#607562]" />
-                          <span className="text-[11px] font-medium text-[#607562]">Retirar</span>
-                        </a>
-                      </Link>
-                    </div>
-                    <div>
-                      <p className="text-[10px] text-[#93A295] uppercase tracking-widest font-semibold mb-3">Últimas ganancias</p>
-                      {!(proWalletData as any)?.earnings?.length ? (
-                        <p className="text-[12px] text-[#93A295] text-center py-4">Sin ganancias recientes</p>
-                      ) : (
-                        <div className="flex flex-col gap-1.5">
-                          {((proWalletData as any)?.earnings ?? []).slice(0, 5).map((e: any) => (
-                            <div key={e.id} className="flex items-center justify-between px-3.5 py-2.5 rounded-xl border" style={{ background: "#F7FAFC", borderColor: "rgba(96,117,98,0.1)" }}>
-                              <div className="min-w-0">
-                                <p className="text-[12px] font-medium text-[#333] truncate">{e.description ?? "Sesión completada"}</p>
-                                <p className="text-[10px] text-[#93A295]">{new Date(e.createdAt).toLocaleDateString("es", { day: "numeric", month: "short", year: "numeric" })}</p>
-                              </div>
-                              <span className="text-[13px] font-bold flex-shrink-0 ml-3 text-emerald-600">+${e.netAmount ?? e.amount}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </>
-                ) : (
-                  /* ── User credits wallet ── */
-                  <>
-                    <div className="rounded-2xl p-5 text-white relative overflow-hidden" style={{ background: "linear-gradient(135deg,#0d1f10,#1a2e1a)" }}>
-                      <div className="absolute top-0 right-0 w-36 h-36 rounded-full pointer-events-none" style={{ background: "rgba(255,255,255,0.04)", transform: "translate(40%,-40%)" }} />
-                      <div className="absolute bottom-0 left-0 w-24 h-24 rounded-full pointer-events-none" style={{ background: "rgba(255,255,255,0.03)", transform: "translate(-30%,40%)" }} />
-                      <p className="text-[9px] font-bold uppercase tracking-[0.18em] mb-3" style={{ color: "rgba(255,255,255,0.45)" }}>SALDO DISPONIBLE</p>
-                      <p className="text-4xl font-bold text-white leading-none">
-                        {(walletData?.balance ?? 0).toLocaleString("es-MX")}
-                      </p>
-                      <p className="text-[12px] mt-1 font-medium" style={{ color: "rgba(255,255,255,0.35)" }}>créditos</p>
-                      <p className="text-[10px] mt-3 truncate" style={{ color: "rgba(255,255,255,0.25)" }}>Inteira Wallet · {user?.email}</p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Link href="/wallet">
-                        <a className="flex flex-col items-center gap-1.5 p-3.5 rounded-xl border hover:bg-[#f0f4f0] transition-colors cursor-pointer text-center" style={{ background: "#F7FAFC", borderColor: "rgba(96,117,98,0.15)" }} onClick={() => setPanelOpen(false)}>
-                          <Icon name="wallet" className="w-4 h-4 text-[#607562]" />
-                          <span className="text-[11px] font-medium text-[#607562]">Ver wallet</span>
-                        </a>
-                      </Link>
-                      <Link href="/planes">
-                        <a className="flex flex-col items-center gap-1.5 p-3.5 rounded-xl border hover:bg-[#f0f4f0] transition-colors cursor-pointer text-center" style={{ background: "#F7FAFC", borderColor: "rgba(96,117,98,0.15)" }} onClick={() => setPanelOpen(false)}>
-                          <Icon name="star" className="w-4 h-4 text-[#607562]" />
-                          <span className="text-[11px] font-medium text-[#607562]">Ver planes</span>
-                        </a>
-                      </Link>
-                    </div>
-                    <div>
-                      <p className="text-[10px] text-[#93A295] uppercase tracking-widest font-semibold mb-3">Movimientos recientes</p>
-                      {!walletData?.transactions || walletData.transactions.length === 0 ? (
-                        <p className="text-[12px] text-[#93A295] text-center py-4">Sin movimientos recientes</p>
-                      ) : (
-                        <div className="flex flex-col gap-1.5">
-                          {walletData.transactions.slice(0, 5).map((tx: any) => {
-                            const isPositive = tx.delta > 0;
-                            const reasonLabel: Record<string, string> = { purchase: "Compra", consume: "Consumo", expire: "Vencimiento", refund: "Reembolso" };
-                            return (
-                              <div key={tx.id} className="flex items-center justify-between px-3.5 py-2.5 rounded-xl border" style={{ background: "#F7FAFC", borderColor: "rgba(96,117,98,0.1)" }}>
-                                <div className="min-w-0">
-                                  <p className="text-[12px] font-medium text-[#333] truncate">{tx.description || reasonLabel[tx.reason] || tx.reason}</p>
-                                  <p className="text-[10px] text-[#93A295]">{new Date(tx.createdAt).toLocaleDateString("es", { day: "numeric", month: "short", year: "numeric" })}</p>
-                                </div>
-                                <span className={`text-[13px] font-bold flex-shrink-0 ml-3 ${isPositive ? "text-emerald-600" : "text-red-500"}`}>
-                                  {isPositive ? "+" : ""}{tx.delta}
-                                </span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-
-            {/* Tab: Profile */}
-            {activeTab === "profile" && (
-              <div className="flex-1 overflow-y-auto flex flex-col" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(96,117,98,0.2) transparent" }}>
-                <div className="p-3 flex-1">
-                  <p className="text-[9px] text-[#93A295] uppercase tracking-widest font-semibold px-3 py-2">Cuenta</p>
-
-                  {[
-                    { href: "/perfil", icon: "user", label: "Mi perfil" },
-                    { href: "/suscripcion", icon: "star", label: "Mi suscripción" },
-                  ].map((item) => (
-                    <Link key={item.href} href={item.href}>
-                      <a className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-[#f0f4f0] transition-colors cursor-pointer mb-0.5" onClick={() => setPanelOpen(false)}>
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "rgba(96,117,98,0.08)" }}>
-                          <Icon name={item.icon} className="w-4 h-4 text-[#607562]" />
-                        </div>
-                        <span className="text-[13px] font-medium text-[#333] flex-1">{item.label}</span>
-                        <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 text-[#ccc]" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
-                      </a>
-                    </Link>
-                  ))}
-
-                  <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-[#f0f4f0] transition-colors mb-0.5" onClick={() => setActiveTab("notifications")}>
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "rgba(96,117,98,0.08)" }}>
-                      <Icon name="bell" className="w-4 h-4 text-[#607562]" />
-                    </div>
-                    <span className="text-[13px] font-medium text-[#333] flex-1 text-left">Notificaciones</span>
-                    {count > 0 && <span className="min-w-[18px] h-[18px] bg-red-600 text-white text-[9px] font-bold rounded-full flex items-center justify-center px-1">{count}</span>}
-                  </button>
-
-                  {user?.role === "admin" && (
-                    <Link href="/admin">
-                      <a className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-[#fff0ee] transition-colors cursor-pointer mb-0.5" onClick={() => setPanelOpen(false)}>
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "rgba(180,60,60,0.08)" }}>
-                          <Icon name="shield" className="w-4 h-4 text-red-500" />
-                        </div>
-                        <span className="text-[13px] font-medium text-red-600 flex-1">Panel Admin</span>
-                        <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 text-[#ccc]" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
-                      </a>
-                    </Link>
-                  )}
-                  {user?.role === "professional" && (
-                    <Link href="/panel-profesional">
-                      <a className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-[#f0f4f0] transition-colors cursor-pointer mb-0.5" onClick={() => setPanelOpen(false)}>
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "rgba(96,117,98,0.08)" }}>
-                          <Icon name="shield" className="w-4 h-4 text-[#607562]" />
-                        </div>
-                        <span className="text-[13px] font-medium text-[#333] flex-1">Mi panel profesional</span>
-                        <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 text-[#ccc]" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
-                      </a>
-                    </Link>
-                  )}
-                </div>
-
-                {/* Sign out */}
-                <div className="p-3 border-t border-[rgba(96,117,98,0.1)]">
-                  <button onClick={logout} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-[#fff5f5] transition-colors text-left">
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "rgba(239,68,68,0.08)" }}>
-                      <Icon name="logout" className="w-4 h-4 text-red-500" />
-                    </div>
-                    <span className="text-[13px] font-medium text-red-500">Cerrar sesión</span>
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       )}
