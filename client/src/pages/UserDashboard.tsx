@@ -35,7 +35,6 @@ import {
   Globe,
   Activity,
   Users,
-  Bell,
   Wallet,
   ArrowRight,
   CheckCircle2,
@@ -194,11 +193,6 @@ export default function UserDashboard() {
   const adBannerUrl = adConfig?.dashboard_ad_banner_url ?? "";
   const adBannerLink = adConfig?.dashboard_ad_banner_link ?? "";
 
-  const { data: notifications } = trpc.notifications.getAll.useQuery(undefined, {
-    enabled: isAuthenticated,
-    refetchInterval: 60_000,
-  });
-
   // ── Mutations ──────────────────────────────────────────────────────────
   const cancelMutation = trpc.appointment.cancelAppointment.useMutation({
     onSuccess: () => {
@@ -227,13 +221,6 @@ export default function UserDashboard() {
     },
     onError: (err) => {
       toast.error("Error al enviar reseña", { description: err.message });
-    },
-  });
-
-  const markAllReadMutation = trpc.notifications.markAllRead.useMutation({
-    onSuccess: () => {
-      utils.notifications.getAll.invalidate();
-      toast.success("Notificaciones marcadas como leídas");
     },
   });
 
@@ -278,7 +265,6 @@ export default function UserDashboard() {
   const completedCount =
     appointments?.filter((a) => a.status === "completed").length ?? 0;
   const nextAppointment = upcomingAppointments[0] ?? null;
-  const unreadNotifications = notifications?.filter((n: any) => !n.isRead) ?? [];
   const visibleHistory = showAllHistory
     ? pastAppointments
     : pastAppointments.slice(0, 3);
@@ -357,19 +343,6 @@ export default function UserDashboard() {
                 <span className="text-sm font-bold">{creditBalance.toLocaleString("es-MX")}</span>
                 <span className="text-xs font-normal text-[#5B6A57]/70">créditos</span>
               </div>
-              <button
-                onClick={() => {
-                  if (unreadNotifications.length > 0) markAllReadMutation.mutate();
-                }}
-                className="relative w-9 h-9 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
-              >
-                <Bell className="w-4 h-4 text-gray-600" />
-                {unreadNotifications.length > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                    {unreadNotifications.length > 9 ? "9+" : unreadNotifications.length}
-                  </span>
-                )}
-              </button>
             </div>
           </div>
 
