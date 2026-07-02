@@ -890,6 +890,22 @@ async function runStartupMigrations() {
       });
     }
 
+    // Add timezoneOffset column to appointments (client's tz offset in minutes at booking time, e.g. -300 for Colombia, -360 for México)
+    try {
+      const [tzRows] = await db.execute(
+        `SELECT COUNT(*) as cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'appointments' AND COLUMN_NAME = 'timezoneOffset'`
+      ) as any;
+      const tzExists = Array.isArray(tzRows) ? Number(tzRows[0]?.cnt) > 0 : Number(tzRows?.cnt) > 0;
+      if (!tzExists) {
+        await db.execute("ALTER TABLE `appointments` ADD COLUMN `timezoneOffset` INT NULL DEFAULT NULL");
+        console.log("[Migration] appointments.timezoneOffset column added");
+      } else {
+        console.log("[Migration] appointments.timezoneOffset column already exists");
+      }
+    } catch (e: any) {
+      console.warn("[Migration] Could not add timezoneOffset column:", e?.message);
+    }
+
     // Reset subscription plans to correct values
     try {
       await new Promise<void>((resolve) => {

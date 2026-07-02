@@ -205,6 +205,7 @@ export const appointmentRouter = router({
         videoCallId: undefined,
         notes: input.notes,
         status: "scheduled",
+        timezoneOffset: input.timezoneOffset,
       });
 
       // Generate Daily.co room using the real appointment ID
@@ -246,6 +247,7 @@ export const appointmentRouter = router({
           durationMinutes,
           videoCallType: "daily",
           videoCallLink: videoCall.url,
+          timezoneOffsetMinutes: input.timezoneOffset,
         });
       }
 
@@ -257,6 +259,7 @@ export const appointmentRouter = router({
           patientName: userRecord?.name ?? "Usuario",
           appointmentDate: appointmentDateObj,
           durationMinutes,
+          timezoneOffsetMinutes: input.timezoneOffset,
           videoCallLink: videoCall.url,
         }).catch(() => {});
       }

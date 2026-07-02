@@ -710,14 +710,15 @@ export async function createAppointment(data: {
   videoCallId?: string;
   notes?: string;
   status?: string;
+  timezoneOffset?: number | null;
 }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const client = (db as any).$client;
   return new Promise<number>((resolve, reject) => {
     client.execute(
-      `INSERT INTO appointments (userId, professionalId, specialtyId, appointmentDate, durationMinutes, videoCallType, videoCallLink, videoCallId, notes, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO appointments (userId, professionalId, specialtyId, appointmentDate, durationMinutes, videoCallType, videoCallLink, videoCallId, notes, status, timezoneOffset)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         data.userId,
         data.professionalId,
@@ -728,7 +729,8 @@ export async function createAppointment(data: {
         data.videoCallLink ?? null,
         data.videoCallId ?? null,
         data.notes ?? null,
-        data.status ?? 'scheduled'
+        data.status ?? 'scheduled',
+        data.timezoneOffset ?? null
       ],
       (err: any, results: any) => {
         if (err) reject(err);

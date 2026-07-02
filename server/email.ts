@@ -97,6 +97,20 @@ function baseTemplate(content: string): string {
   `;
 }
 
+// Shift a Date by the user's own timezone offset (minutes, negative west of UTC —
+// e.g. -300 for Colombia, -360 for México) and format it forcing timeZone: "UTC"
+// so Intl doesn't apply a second, server-local shift on top of our manual one.
+function formatDateTimeForEmail(date: Date, timezoneOffsetMinutes: number) {
+  const localDate = new Date(date.getTime() + timezoneOffsetMinutes * 60 * 1000);
+  const dateStr = localDate.toLocaleDateString("es-MX", {
+    weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "UTC",
+  });
+  const timeStr = localDate.toLocaleTimeString("es-MX", {
+    hour: "2-digit", minute: "2-digit", timeZone: "UTC",
+  });
+  return { dateStr, timeStr };
+}
+
 // 1. Appointment confirmation
 export async function sendAppointmentConfirmation(params: {
   userEmail: string;
@@ -107,17 +121,9 @@ export async function sendAppointmentConfirmation(params: {
   durationMinutes: number;
   videoCallType: string;
   videoCallLink: string;
+  timezoneOffsetMinutes: number;
 }): Promise<boolean> {
-  const dateStr = params.appointmentDate.toLocaleDateString("es-MX", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-  const timeStr = params.appointmentDate.toLocaleTimeString("es-MX", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const { dateStr, timeStr } = formatDateTimeForEmail(params.appointmentDate, params.timezoneOffsetMinutes);
 
   const content = `
     <p>Hola <strong>${params.userName}</strong>,</p>
@@ -151,16 +157,9 @@ export async function sendAppointmentReminder(params: {
   appointmentDate: Date;
   videoCallLink: string;
   hoursUntil: 24 | 1;
+  timezoneOffsetMinutes: number;
 }): Promise<boolean> {
-  const dateStr = params.appointmentDate.toLocaleDateString("es-MX", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  });
-  const timeStr = params.appointmentDate.toLocaleTimeString("es-MX", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const { dateStr, timeStr } = formatDateTimeForEmail(params.appointmentDate, params.timezoneOffsetMinutes);
 
   const timeLabel = params.hoursUntil === 24 ? "mañana" : "en 1 hora";
   const emoji = params.hoursUntil === 24 ? "📅" : "⏰";
@@ -404,13 +403,9 @@ export async function sendProfessionalAppointmentConfirmation(params: {
   appointmentDate: Date;
   durationMinutes: number;
   videoCallLink: string;
+  timezoneOffsetMinutes: number;
 }): Promise<boolean> {
-  const dateStr = params.appointmentDate.toLocaleDateString("es-MX", {
-    weekday: "long", year: "numeric", month: "long", day: "numeric",
-  });
-  const timeStr = params.appointmentDate.toLocaleTimeString("es-MX", {
-    hour: "2-digit", minute: "2-digit",
-  });
+  const { dateStr, timeStr } = formatDateTimeForEmail(params.appointmentDate, params.timezoneOffsetMinutes);
 
   const content = `
     <p>Hola <strong>${params.professionalName}</strong>,</p>
