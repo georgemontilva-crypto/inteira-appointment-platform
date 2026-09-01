@@ -44,6 +44,9 @@ const SOURCE_COLORS: Record<string, string> = {
 const REASON_LABELS: Record<string, string> = {
   purchase: "Compra",
   consume: "Consumo",
+  consumed: "Consumo",
+  reserved: "Reservado",
+  refunded: "Reservación liberada",
   expire: "Expiración",
   refund: "Reembolso",
 };
@@ -231,7 +234,9 @@ export default function WalletPage() {
     (b) => b.remaining > 0 && !b.expiredEarly && new Date(b.expiresAt) > new Date()
   );
 
-  const sessionsCompleted = transactions.filter((tx) => tx.reason === "consume").length;
+  const sessionsCompleted = transactions.filter(
+    (tx) => tx.reason === "consume" || tx.reason === "consumed"
+  ).length;
   const totalCreditsUsed = Math.abs(
     transactions.filter((tx) => tx.delta < 0).reduce((sum, tx) => sum + tx.delta, 0)
   );

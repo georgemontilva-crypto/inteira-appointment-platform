@@ -329,9 +329,13 @@ export async function confirmCredits(appointmentId: number): Promise<void> {
  * No BEGIN/COMMIT — TiDB serverless does not support explicit transactions via this client.
  * Idempotent: guard via WHERE reason='reserved' on the UPDATE.
  */
-export async function refundCredits(userId: number, appointmentId: number): Promise<void> {
+export async function refundCredits(
+  userId: number,
+  appointmentId: number,
+  note?: string
+): Promise<number> {
   const db = await getDb();
-  if (!db) return;
+  if (!db) return 0;
   const client = (db as any).$client;
 
   const exec = (sql: string, params: any[] = []) =>
@@ -341,38 +345,65 @@ export async function refundCredits(userId: number, appointmentId: number): Prom
       });
     });
 
-  // Idempotency guard: if no reserved transactions exist, already refunded (or never reserved)
-  const reservedTxs: any[] = await exec(
-    `SELECT * FROM creditTransactions WHERE reason = 'reserved' AND appointmentId = ?`,
+  // Refund both states:
+  //  · 'reserved' — never charged, just release the hold.
+  //  · 'consumed' — already charged (user clicked "Unirse", or cron confirmed it).
+  //    This is the case that used to silently no-op, so a professional no-show
+  //    after the user joined produced NO refund row in the wallet history.
+  const txs: any[] = await exec(
+    `SELECT * FROM creditTransactions
+     WHERE reason IN ('reserved', 'consumed') AND appointmentId = ?`,
     [appointmentId]
   ).then((r: any) => (Array.isArray(r) ? r : []));
 
-  if (reservedTxs.length === 0) return;
+  if (txs.length === 0) {
+    console.warn(`[refundCredits] nothing to refund for appointment ${appointmentId}`);
+    return 0;
+  }
 
-  for (const tx of reservedTxs) {
+  const label = note ?? `cita #${appointmentId}`;
+  let totalRefunded = 0;
+
+  for (const tx of txs) {
     const toRefund = Math.abs(tx.delta);
+    const wasConsumed = tx.reason === "consumed";
 
-    // WHERE reason='reserved' is the DB-level idempotency guard
+    // DB-level idempotency guard: a concurrent call that already flipped this
+    // row gets affectedRows = 0 and is skipped.
     const result = await exec(
-      `UPDATE creditTransactions SET reason = 'refunded' WHERE id = ? AND reason = 'reserved'`,
-      [tx.id]
+      `UPDATE creditTransactions SET reason = 'refunded' WHERE id = ? AND reason = ?`,
+      [tx.id, tx.reason]
     );
     if ((result as any)?.affectedRows === 0) {
       console.warn(`[refundCredits] tx ${tx.id} already refunded — skipping`);
       continue;
     }
 
-    await exec(
-      `UPDATE creditBatches SET reservedAmount = GREATEST(0, reservedAmount - ?) WHERE id = ?`,
-      [toRefund, tx.batchId]
-    );
+    if (wasConsumed) {
+      // Money already left the batch — put it back.
+      await exec(
+        `UPDATE creditBatches SET remaining = remaining + ? WHERE id = ?`,
+        [toRefund, tx.batchId]
+      );
+    } else {
+      // Only held — release the hold.
+      await exec(
+        `UPDATE creditBatches SET reservedAmount = GREATEST(0, reservedAmount - ?) WHERE id = ?`,
+        [toRefund, tx.batchId]
+      );
+    }
 
     await exec(
       `INSERT INTO creditTransactions (userId, batchId, delta, reason, appointmentId, description)
        VALUES (?, ?, ?, 'refund', ?, ?)`,
-      [userId, tx.batchId, toRefund, appointmentId, `Reembolso de ${toRefund} créditos (cita #${appointmentId})`]
+      [userId, tx.batchId, toRefund, appointmentId, `Reembolso de ${toRefund} créditos (${label})`]
     );
+
+    totalRefunded += toRefund;
   }
+
+  console.log(`[refundCredits] appointment ${appointmentId}: refunded ${totalRefunded} credits`);
+  return totalRefunded;
 }
 
 /**

@@ -160,6 +160,10 @@ export const appointments = mysqlTable("appointments", {
   videoCallLink: text("videoCallLink"),
   videoCallId: varchar("videoCallId", { length: 255 }),
   notes: longtext("notes"),
+  // Attendance tracking — who actually entered the video room, and when.
+  // Used to detect professional no-shows and refund the client automatically.
+  userJoinedAt: datetime("userJoinedAt"),
+  professionalJoinedAt: datetime("professionalJoinedAt"),
   canceledAt: timestamp("canceledAt"),
   canceledBy: mysqlEnum("canceledBy", ["user", "professional", "admin"]),
   cancellationReason: longtext("cancellationReason"),

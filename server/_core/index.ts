@@ -703,6 +703,15 @@ async function runStartupMigrations() {
     ).catch(() => {});
     console.log("[Migration] creditTransactions reason enum expanded");
 
+    // Attendance tracking columns — needed to detect professional no-shows
+    await db.execute(
+      "ALTER TABLE `appointments` ADD COLUMN `userJoinedAt` DATETIME NULL"
+    ).catch(() => {});
+    await db.execute(
+      "ALTER TABLE `appointments` ADD COLUMN `professionalJoinedAt` DATETIME NULL"
+    ).catch(() => {});
+    console.log("[Migration] appointments attendance columns ready");
+
     // Sanitize any source values not in the new enum before modifying the column
     await db.execute(
       "UPDATE `creditBatches` SET `source` = 'purchase' WHERE `source` NOT IN ('purchase','plan','plan_basic','plan_pro','individual_basic','individual_premium','admin_grant','test_20','bonus','referral')"
@@ -1254,11 +1263,17 @@ setInterval(async () => {
       );
     });
 
-    // Check 1: auto no-show para citas scheduled/in_progress sin atender después de 3 horas
-    // El no-show es del USUARIO — el profesional recibe su pago igual
-    const noShowCandidates = await new Promise<any[]>((resolve) => {
+    // Check 1: citas scheduled/in_progress sin cerrar después de 3 horas.
+    // Antes se asumía SIEMPRE que el ausente era el usuario y se le pagaba al
+    // profesional. Ahora se decide según quién entró realmente a la sala:
+    //   · profesional NO entró  → reembolso al usuario, el profesional NO cobra
+    //   · profesional entró, usuario no → no-show del usuario (comportamiento previo)
+    //   · ninguno entró         → reembolso al usuario (no hubo servicio)
+    const staleAppointments = await new Promise<any[]>((resolve) => {
       client.execute(
-        `SELECT a.id, a.professionalId, a.userId, a.appointmentDate, a.durationMinutes, p.tier, u.email AS userEmail, u.name AS userName
+        `SELECT a.id, a.professionalId, a.userId, a.appointmentDate, a.durationMinutes,
+                a.userJoinedAt, a.professionalJoinedAt,
+                p.tier, p.userId AS profUserId, u.email AS userEmail, u.name AS userName
          FROM appointments a
          JOIN professionals p ON p.id = a.professionalId
          JOIN \`users\` u ON u.id = a.userId
@@ -1272,33 +1287,75 @@ setInterval(async () => {
       );
     });
 
-    await new Promise<void>((resolve) => {
-      client.execute(
-        `UPDATE appointments SET status = 'no-show', updatedAt = NOW()
-         WHERE status IN ('scheduled', 'in_progress')
-         AND DATE_ADD(appointmentDate, INTERVAL 3 HOUR) < NOW()`,
-        [],
-        (err: any) => {
-          if (err) console.error("[Cron] auto-noshow error:", err?.message);
-          else console.log(`[Cron] auto-noshow check done (${noShowCandidates.length} rows)`);
-          resolve();
-        }
-      );
-    });
-
-    // Profesional recibe su pago aunque el usuario no haya asistido
-    if (noShowCandidates.length > 0) {
+    if (staleAppointments.length > 0) {
       const { creditProfessionalEarning } = await import("../professionalWallet");
-      const { confirmCredits } = await import("../credits");
+      const { confirmCredits, refundCredits } = await import("../credits");
       const { sendCreditsDebitedEmail } = await import("../email");
       const { createNotification } = await import("../notifications");
-      for (const row of noShowCandidates) {
+
+      for (const row of staleAppointments) {
+        const professionalAttended = !!row.professionalJoinedAt;
+        const sessionCost = row.durationMinutes > 60 ? 1500 : 350;
+
+        if (!professionalAttended) {
+          // ── El profesional nunca entró: la cita no se prestó ──────────────
+          await new Promise<void>((resolve) => {
+            client.execute(
+              `UPDATE appointments SET status = 'canceled', canceledBy = 'professional',
+                      canceledAt = NOW(), cancellationReason = 'El profesional no se presentó a la sesión',
+                      updatedAt = NOW()
+               WHERE id = ? AND status IN ('scheduled', 'in_progress')`,
+              [row.id],
+              (err: any) => { if (err) console.error("[Cron] prof-noshow update:", err?.message); resolve(); }
+            );
+          });
+
+          const refunded = await refundCredits(
+            row.userId, row.id, "el profesional no se presentó"
+          ).catch((e: any) => { console.error("[Cron] refundCredits:", e?.message); return 0; });
+
+          console.log(`[Cron] Professional no-show on appointment ${row.id}: refunded ${refunded} credits to user ${row.userId}`);
+
+          createNotification({
+            userId: row.userId,
+            type: "refund",
+            title: "💰 Créditos devueltos",
+            message: `El profesional no se presentó a tu cita. Te devolvimos ${refunded || sessionCost} créditos a tu wallet.`,
+            link: "/wallet",
+            audience: "user",
+          }).catch(() => {});
+
+          createNotification({
+            userId: row.profUserId,
+            type: "no_show",
+            title: "⚠️ No asististe a una asesoría",
+            message: "No ingresaste a una sesión agendada. Se reembolsó al cliente y no se generó pago.",
+            link: "/profesional/citas",
+            audience: "professional",
+          }).catch(() => {});
+
+          continue;
+        }
+
+        // ── El profesional sí entró y el usuario no: no-show del usuario ────
+        await new Promise<void>((resolve) => {
+          client.execute(
+            `UPDATE appointments SET status = 'no-show', updatedAt = NOW()
+             WHERE id = ? AND status IN ('scheduled', 'in_progress')`,
+            [row.id],
+            (err: any) => { if (err) console.error("[Cron] auto-noshow error:", err?.message); resolve(); }
+          );
+        });
+
         await confirmCredits(row.id).catch(() => {});
-        await creditProfessionalEarning(row.professionalId, row.id, (row.tier ?? "basic") as "basic" | "pro", row.durationMinutes > 60 ? "premium" : "basic").catch(() => {});
-        console.log(`[Cron] No-show: professional ${row.professionalId} credited for appointment ${row.id}`);
-        // Notify user their credits were consumed for the no-show
+        await creditProfessionalEarning(
+          row.professionalId, row.id,
+          (row.tier ?? "basic") as "basic" | "pro",
+          row.durationMinutes > 60 ? "premium" : "basic"
+        ).catch(() => {});
+        console.log(`[Cron] User no-show: professional ${row.professionalId} credited for appointment ${row.id}`);
+
         if (row.userEmail) {
-          const sessionCost = row.durationMinutes > 60 ? 1500 : 350;
           sendCreditsDebitedEmail({
             userEmail: row.userEmail,
             userName: row.userName ?? "Usuario",

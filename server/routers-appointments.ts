@@ -708,6 +708,18 @@ export const appointmentRouter = router({
       if (!appointment || Number(appointment.userId) !== Number(ctx.user.id)) {
         throw new TRPCError({ code: "FORBIDDEN" });
       }
+      // Record attendance regardless of status (used for no-show arbitration)
+      const joinDb = await db.getDb();
+      if (joinDb) {
+        await new Promise<void>((resolve) => {
+          (joinDb as any).$client.execute(
+            "UPDATE appointments SET userJoinedAt = COALESCE(userJoinedAt, NOW()) WHERE id = ?",
+            [input.appointmentId],
+            (err: any) => { if (err) console.error("[Attendance] userJoinedAt:", err?.message); resolve(); }
+          );
+        });
+      }
+
       // Idempotent: only act on scheduled appointments
       if (appointment.status !== "scheduled") return { success: true };
 
@@ -758,6 +770,96 @@ export const appointmentRouter = router({
       });
 
       return { success: true };
+    }),
+
+  // Called when the PROFESSIONAL opens the video room — records attendance so
+  // the cron can tell a client no-show apart from a professional no-show.
+  markProfessionalJoined: protectedProcedure
+    .input(z.object({ appointmentId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const appointment = await db.getAppointmentById(input.appointmentId);
+      if (!appointment) throw new TRPCError({ code: "NOT_FOUND", message: "Cita no encontrada" });
+
+      const professional = await db.getProfessionalByUserId(ctx.user.id);
+      if (!professional || Number(appointment.professionalId) !== Number(professional.id)) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "No autorizado" });
+      }
+
+      const dbInstance = await db.getDb();
+      if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+      await new Promise<void>((resolve, reject) => {
+        (dbInstance as any).$client.execute(
+          "UPDATE appointments SET professionalJoinedAt = COALESCE(professionalJoinedAt, NOW()) WHERE id = ?",
+          [input.appointmentId],
+          (err: any) => { if (err) reject(err); else resolve(); }
+        );
+      });
+
+      return { success: true };
+    }),
+
+  // User reports that the professional never showed up → immediate refund.
+  // Only allowed once the session window has clearly passed and only if the
+  // professional never registered attendance.
+  reportProfessionalNoShow: protectedProcedure
+    .input(z.object({ appointmentId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const appointment = await db.getAppointmentById(input.appointmentId);
+      if (!appointment) throw new TRPCError({ code: "NOT_FOUND", message: "Cita no encontrada" });
+      if (Number(appointment.userId) !== Number(ctx.user.id)) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "No autorizado" });
+      }
+      if (!["scheduled", "in_progress", "pending_review"].includes(appointment.status)) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Esta cita ya fue cerrada. Contacta a soporte." });
+      }
+      if ((appointment as any).professionalJoinedAt) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "El profesional sí ingresó a la sesión. Si hubo un problema, contacta a soporte.",
+        });
+      }
+
+      // Wait until 15 minutes past the start time before allowing the report.
+      const startsAt = new Date((appointment as any).appointmentDate).getTime();
+      if (Date.now() < startsAt + 15 * 60 * 1000) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Espera al menos 15 minutos después de la hora de inicio antes de reportar.",
+        });
+      }
+
+      const dbInstance = await db.getDb();
+      if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+      await new Promise<void>((resolve, reject) => {
+        (dbInstance as any).$client.execute(
+          `UPDATE appointments SET status = 'canceled', canceledBy = 'professional',
+                  canceledAt = NOW(), cancellationReason = 'El profesional no se presentó a la sesión',
+                  updatedAt = NOW()
+           WHERE id = ? AND status IN ('scheduled', 'in_progress', 'pending_review')`,
+          [input.appointmentId],
+          (err: any) => { if (err) reject(err); else resolve(); }
+        );
+      });
+
+      const refunded = await refundCredits(
+        appointment.userId, input.appointmentId, "el profesional no se presentó"
+      ).catch((err: any) => {
+        console.error("[Credits] refundCredits error (professional no-show report):", err?.message);
+        return 0;
+      });
+
+      createNotification({
+        userId: ctx.user.id,
+        type: "refund",
+        title: "💰 Créditos devueltos",
+        message: `Te devolvimos ${refunded} créditos porque el profesional no se presentó.`,
+        link: "/wallet",
+        audience: "user",
+      }).catch(() => {});
+
+      return { success: true, refunded };
     }),
 
   // Mark appointment as no-show (professional action)

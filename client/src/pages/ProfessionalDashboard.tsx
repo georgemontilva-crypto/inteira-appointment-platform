@@ -263,6 +263,19 @@ export default function ProfessionalDashboard() {
     onError: () => toast.error("Error al registrar no-show"),
   });
 
+  // Registra la asistencia del profesional. Si no se registra, el cron trata la
+  // cita como ausencia del profesional y reembolsa al cliente.
+  const markProfessionalJoinedMutation = trpc.appointment.markProfessionalJoined.useMutation();
+
+  const openCall = (call: Parameters<typeof setActiveCall>[0]) => {
+    if (call && (call as any).appointmentId) {
+      markProfessionalJoinedMutation
+        .mutateAsync({ appointmentId: (call as any).appointmentId })
+        .catch(() => {});
+    }
+    setActiveCall(call);
+  };
+
   // Si hay error FORBIDDEN el acceso profesional fue revocado — redirigir al
   // dashboard de cliente sin cerrar sesión (el usuario sigue siendo cliente).
   const isForbidden = (profileError as any)?.data?.code === "FORBIDDEN";
@@ -593,7 +606,7 @@ export default function ProfessionalDashboard() {
                   size="sm"
                   disabled={!canJoin(nextWithVideo)}
                   className="gradient-brand text-white border-0 text-xs h-8 px-3 flex-shrink-0 font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
-                  onClick={() => canJoin(nextWithVideo) && setActiveCall({
+                  onClick={() => canJoin(nextWithVideo) && openCall({
                     url: (nextWithVideo as any).videoCallLink,
                     appointmentId: nextWithVideo.id,
                     professionalName: (nextWithVideo as any).userName ?? `Usuario #${nextWithVideo.userId}`,
@@ -702,7 +715,7 @@ export default function ProfessionalDashboard() {
                         size="sm"
                         className="w-full gradient-brand text-white border-0 h-10 text-sm font-semibold"
                         disabled={!canJoin(next)}
-                        onClick={() => canJoin(next) && setActiveCall({
+                        onClick={() => canJoin(next) && openCall({
                           url: (next as any).videoCallLink,
                           appointmentId: next.id,
                           professionalName: (next as any).userName ?? `Usuario #${next.userId}`,
@@ -829,7 +842,7 @@ export default function ProfessionalDashboard() {
                                   <Button
                                     size="sm"
                                     className="gradient-brand text-white border-0 h-8 text-xs px-4 font-semibold shadow-md"
-                                    onClick={() => setActiveCall({
+                                    onClick={() => openCall({
                                       url: apt.videoCallLink!,
                                       appointmentId: apt.id,
                                       professionalName: (apt as any).userName ?? `Usuario #${apt.userId}`,
@@ -845,7 +858,7 @@ export default function ProfessionalDashboard() {
                                     size="sm"
                                     disabled={!joinable}
                                     className="gradient-brand text-white border-0 h-7 text-xs px-3 disabled:opacity-50"
-                                    onClick={() => joinable && setActiveCall({
+                                    onClick={() => joinable && openCall({
                                       url: apt.videoCallLink!,
                                       appointmentId: apt.id,
                                       professionalName: (apt as any).userName ?? `Usuario #${apt.userId}`,
