@@ -194,6 +194,9 @@ const STATUS_MAP: Record<string, { label: string; cls: string }> = {
 
 export default function AdminDashboard() {
   const { user, isAuthenticated, loading } = useAuth();
+  // Colaboradora: admin con panel completo salvo planes/precios y gestión de roles.
+  const isLimitedAdmin = (user as any)?.adminScope === "no_finance";
+  const isFullAdmin = user?.role === "admin" && !isLimitedAdmin;
   const [activeTab, setActiveTab] = useState<"overview" | "usuarios" | "profesionales" | "activos" | "citas" | "contenido" | "planes" | "codigos" | "retiros" | "herramientas">("overview");
   const [bannerForm, setBannerForm] = useState({ imageUrl: "", title: "", linkUrl: "" });
   const [bannerUploading, setBannerUploading] = useState(false);
@@ -486,6 +489,11 @@ export default function AdminDashboard() {
     onError: (err: any) => toast.error(err?.message ?? "Error al cambiar rol"),
   });
 
+  const setAdminScopeMutation = trpc.admin.setAdminScope.useMutation({
+    onSuccess: () => { refetchUsers(); toast.success("Permisos actualizados"); },
+    onError: (err: any) => toast.error(err?.message ?? "Error al actualizar permisos"),
+  });
+
   // ── Prepaid cards ─────────────────────────────────────────────────────────
   const [prepaidProductType, setPrepaidProductType] = useState<"individual_basic" | "individual_premium" | "plan_basic" | "plan_pro">("individual_basic");
   const { data: prepaidCards, refetch: refetchPrepaidCards } = trpc.admin.listPrepaidCards.useQuery(undefined, { enabled: isAuthenticated });
@@ -592,7 +600,7 @@ export default function AdminDashboard() {
               { key: "activos",       label: "Profesionales activos", icon: <UserCheck className="w-4 h-4" /> },
               { key: "citas",         label: "Citas",                 icon: <Calendar className="w-4 h-4" /> },
               { key: "contenido",     label: "Contenido",             icon: <Image className="w-4 h-4" /> },
-              { key: "planes",        label: "Planes",                icon: <Settings className="w-4 h-4" /> },
+              ...(isFullAdmin ? [{ key: "planes" as const, label: "Planes", icon: <Settings className="w-4 h-4" /> }] : []),
               { key: "codigos",       label: "Códigos",               icon: <Tag className="w-4 h-4" /> },
               { key: "retiros",       label: "Retiros",               icon: <CreditCard className="w-4 h-4" /> },
               { key: "herramientas",  label: "Herramientas",          icon: <Wrench className="w-4 h-4" /> },
@@ -740,6 +748,33 @@ export default function AdminDashboard() {
                               </td>
                               <td className="px-4 py-3">
                                 {u.role === "admin" ? (
+                                  <div className="flex flex-col gap-1">
+                                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${roleBadge}`}>
+                                      {roleLabel}
+                                    </span>
+                                    {(u as any).adminScope === "no_finance" && (
+                                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 text-amber-700">
+                                        Colaboradora
+                                      </span>
+                                    )}
+                                    {isFullAdmin && u.id !== user?.id && (
+                                      <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer">
+                                        <input
+                                          type="checkbox"
+                                          className="h-3 w-3 accent-primary"
+                                          checked={(u as any).adminScope === "no_finance"}
+                                          onChange={(e) =>
+                                            setAdminScopeMutation.mutate({
+                                              userId: u.id,
+                                              scope: e.target.checked ? "no_finance" : "full",
+                                            })
+                                          }
+                                        />
+                                        Sin acceso a planes/roles
+                                      </label>
+                                    )}
+                                  </div>
+                                ) : !isFullAdmin ? (
                                   <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${roleBadge}`}>
                                     {roleLabel}
                                   </span>
@@ -788,7 +823,7 @@ export default function AdminDashboard() {
                                       Guardar rol
                                     </button>
                                   )}
-                                  {u.role !== "admin" && (
+                                  {u.role !== "admin" && isFullAdmin && (
                                     <button
                                       onClick={() => {
                                         if (window.confirm(`¿Eliminar a ${u.name ?? u.email}? Esta acción no se puede deshacer.`)) {
@@ -3022,7 +3057,7 @@ export default function AdminDashboard() {
         )}
 
         {/* Tab: Planes */}
-        {activeTab === "planes" && (
+        {activeTab === "planes" && isFullAdmin && (
           <div className="space-y-6 max-w-3xl">
             <h2 className="text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
               Gestionar planes de suscripción

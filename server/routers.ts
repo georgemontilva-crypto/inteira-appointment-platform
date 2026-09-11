@@ -73,6 +73,30 @@ const userProfileUpdateSchema = z.object({
 // In-memory rate limit store for discount code validation (5 req/min per IP)
 const discountRateLimit = new Map<string, { count: number; resetAt: number }>();
 
+/**
+ * Cualquier admin (full o colaboradora con adminScope='no_finance').
+ */
+function requireAdmin(ctx: any) {
+  if (!ctx.user || ctx.user.role !== "admin") {
+    throw new TRPCError({ code: "FORBIDDEN", message: "User is not an admin" });
+  }
+}
+
+/**
+ * Solo admin con alcance total. Protege lo que una colaboradora NO debe tocar:
+ * planes y precios de suscripción, y la gestión de roles/borrado de usuarios
+ * (sin este segundo candado podría promoverse a sí misma a admin full).
+ */
+function requireFullAdmin(ctx: any) {
+  requireAdmin(ctx);
+  if (ctx.user.adminScope === "no_finance") {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Tu cuenta de colaboradora no tiene acceso a esta sección.",
+    });
+  }
+}
+
 export const appRouter = router({
   system: systemRouter,
 
@@ -1198,7 +1222,7 @@ export const appRouter = router({
 
       const sql = `
         SELECT
-          u.id, u.name, u.email, u.role, u.createdAt, u.loginMethod, u.profileImage,
+          u.id, u.name, u.email, u.role, u.adminScope, u.createdAt, u.loginMethod, u.profileImage,
           (SELECT cb.source FROM \`creditBatches\` cb
            WHERE cb.userId = u.id
              AND cb.source IN ('plan_basic', 'plan_pro')
@@ -1242,7 +1266,7 @@ export const appRouter = router({
     deleteUser: protectedProcedure
       .input(z.object({ userId: z.number() }))
       .mutation(async ({ ctx, input }) => {
-        if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+        requireFullAdmin(ctx);
         if (input.userId === ctx.user.id) throw new TRPCError({ code: "BAD_REQUEST", message: "No puedes eliminarte a ti mismo" });
         const dbInstance = await db.getDb();
         if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
@@ -1278,7 +1302,7 @@ export const appRouter = router({
     changeUserRole: protectedProcedure
       .input(z.object({ userId: z.number(), role: z.enum(["user", "professional", "admin"]) }))
       .mutation(async ({ ctx, input }) => {
-        if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+        requireFullAdmin(ctx);
         const dbInstance = await db.getDb();
         if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
         const client = (dbInstance as any).$client;
@@ -1286,6 +1310,40 @@ export const appRouter = router({
           client.execute(
             "UPDATE users SET role = ? WHERE id = ?",
             [input.role, input.userId],
+            (err: any) => { if (err) reject(err); else resolve(); }
+          );
+        });
+        return { success: true };
+      }),
+
+    /**
+     * Designa (o revoca) una colaboradora: un admin con acceso al panel completo
+     * salvo planes/precios y gestión de roles. Solo un admin full puede hacerlo.
+     */
+    setAdminScope: protectedProcedure
+      .input(z.object({ userId: z.number(), scope: z.enum(["full", "no_finance"]) }))
+      .mutation(async ({ ctx, input }) => {
+        requireFullAdmin(ctx);
+        if (input.userId === ctx.user.id) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "No puedes cambiar tu propio alcance" });
+        }
+        const dbInstance = await db.getDb();
+        if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const client = (dbInstance as any).$client;
+
+        // Solo tiene sentido sobre cuentas admin
+        const rows = await new Promise<any[]>((resolve, reject) => {
+          client.execute("SELECT role FROM users WHERE id = ?", [input.userId],
+            (err: any, r: any) => { if (err) reject(err); else resolve(Array.isArray(r) ? r : []); });
+        });
+        if (rows[0]?.role !== "admin") {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "El usuario debe tener rol admin primero" });
+        }
+
+        await new Promise<void>((resolve, reject) => {
+          client.execute(
+            "UPDATE users SET adminScope = ? WHERE id = ?",
+            [input.scope, input.userId],
             (err: any) => { if (err) reject(err); else resolve(); }
           );
         });
@@ -2302,12 +2360,7 @@ export const appRouter = router({
     create: protectedProcedure
       .input(subscriptionPlanSchema)
       .mutation(async ({ ctx, input }) => {
-        if (ctx.user.role !== "admin") {
-          throw new TRPCError({
-            code: "FORBIDDEN",
-            message: "Only admins can create subscription plans",
-          });
-        }
+        requireFullAdmin(ctx);
 
         await db.createSubscriptionPlan({
           ...input,
@@ -2327,7 +2380,7 @@ export const appRouter = router({
         description: z.string().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
-        if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+        requireFullAdmin(ctx);
         const dbInst = await db.getDb();
         if (!dbInst) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
         const client = (dbInst as any).$client;
@@ -2350,7 +2403,7 @@ export const appRouter = router({
     delete: protectedProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ ctx, input }) => {
-        if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+        requireFullAdmin(ctx);
         const dbInst = await db.getDb();
         if (!dbInst) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
         const client = (dbInst as any).$client;

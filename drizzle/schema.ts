@@ -23,6 +23,9 @@ export const users = mysqlTable("users", {
   email: varchar("email", { length: 320 }).notNull().unique(),
   loginMethod: varchar("loginMethod", { length: 64 }),
   role: mysqlEnum("role", ["user", "professional", "admin"]).default("user").notNull(),
+  // Alcance del rol admin. 'full' = admin total. 'no_finance' = colaboradora:
+  // entra al panel y opera todo salvo planes/precios y gestión de roles.
+  adminScope: mysqlEnum("adminScope", ["full", "no_finance"]).default("full").notNull(),
   phone: varchar("phone", { length: 20 }),
   profileImage: text("profileImage"),
   bio: longtext("bio"),

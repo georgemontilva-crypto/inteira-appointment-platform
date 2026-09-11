@@ -712,6 +712,13 @@ async function runStartupMigrations() {
     ).catch(() => {});
     console.log("[Migration] appointments attendance columns ready");
 
+    // Admin scope — permite designar colaboradoras con panel completo pero sin
+    // acceso a planes/precios ni a la gestión de roles.
+    await db.execute(
+      "ALTER TABLE `users` ADD COLUMN `adminScope` ENUM('full','no_finance') NOT NULL DEFAULT 'full'"
+    ).catch(() => {});
+    console.log("[Migration] users.adminScope ready");
+
     // Sanitize any source values not in the new enum before modifying the column
     await db.execute(
       "UPDATE `creditBatches` SET `source` = 'purchase' WHERE `source` NOT IN ('purchase','plan','plan_basic','plan_pro','individual_basic','individual_premium','admin_grant','test_20','bonus','referral')"
