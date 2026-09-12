@@ -1302,7 +1302,27 @@ setInterval(async () => {
 
       for (const row of staleAppointments) {
         const professionalAttended = !!row.professionalJoinedAt;
+        const userAttended = !!row.userJoinedAt;
         const sessionCost = row.durationMinutes > 60 ? 1500 : 350;
+
+        // GUARDA CONSERVADORA: hoy el correo lleva el URL crudo de Daily.co, así
+        // que un profesional puede entrar a la sala SIN pasar por la app y no
+        // quedar registrado. Si nadie quedó registrado no sabemos qué pasó, y
+        // asumir ausencia del profesional reembolsaría citas que sí ocurrieron.
+        // En ese caso dejamos la cita en revisión manual: ni se reembolsa ni se
+        // paga, y se avisa al admin.
+        if (!professionalAttended && !userAttended) {
+          await new Promise<void>((resolve) => {
+            client.execute(
+              `UPDATE appointments SET status = 'pending_review', updatedAt = NOW()
+               WHERE id = ? AND status IN ('scheduled', 'in_progress')`,
+              [row.id],
+              (err: any) => { if (err) console.error("[Cron] pending_review update:", err?.message); resolve(); }
+            );
+          });
+          console.warn(`[Cron] Appointment ${row.id}: no attendance data — flagged for manual review`);
+          continue;
+        }
 
         if (!professionalAttended) {
           // ── El profesional nunca entró: la cita no se prestó ──────────────
