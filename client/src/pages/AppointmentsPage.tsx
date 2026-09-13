@@ -82,7 +82,7 @@ function StarRating({ value, onChange }: { value: number; onChange: (v: number) 
 
 /* ─── Main ─── */
 export default function AppointmentsPage() {
-  const { isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const utils = trpc.useUtils();
   const [, navigate] = useLocation();
 
@@ -702,11 +702,11 @@ export default function AppointmentsPage() {
 
         {/* ── Video call panel (columna derecha, aparece 5 min antes) ── */}
         {activeCall && (
-          <div style={{ width: "420px", minWidth: "420px", height: "calc(100vh - 120px)", flexShrink: 0, position: "sticky", top: "24px" }}>
-            <VideoCallPanel
+          <VideoCallPanel
               roomUrl={activeCall.url}
               appointmentId={activeCall.appointmentId}
               professionalName={activeCall.professionalName}
+              selfName={user?.name ?? "Paciente"}
               startTime={activeCall.startTime}
               endTime={activeCall.endTime}
               onLeave={() => {
@@ -716,7 +716,6 @@ export default function AppointmentsPage() {
                 setActiveCall(null);
               }}
             />
-          </div>
         )}
       </div>
     </DashboardLayout>

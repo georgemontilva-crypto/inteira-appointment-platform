@@ -1922,16 +1922,15 @@ export default function ProfessionalDashboard() {
       </div>
 
       {activeCall && (
-        <div style={{ width: "420px", minWidth: "420px", height: "calc(100vh - 120px)", flexShrink: 0, position: "sticky", top: "24px" }}>
-          <VideoCallPanel
-            roomUrl={activeCall.url}
-            appointmentId={activeCall.appointmentId}
-            professionalName={activeCall.professionalName}
-            startTime={activeCall.startTime}
-            endTime={activeCall.endTime}
-            onLeave={() => setActiveCall(null)}
-          />
-        </div>
+        <VideoCallPanel
+          roomUrl={activeCall.url}
+          appointmentId={activeCall.appointmentId}
+          professionalName={activeCall.professionalName}
+          selfName={user?.name ?? "Profesional"}
+          startTime={activeCall.startTime}
+          endTime={activeCall.endTime}
+          onLeave={() => setActiveCall(null)}
+        />
       )}
       </div>
 

@@ -8,6 +8,8 @@ interface VideoCallPanelProps {
   startTime: Date;
   endTime: Date;
   onLeave?: () => void;
+  /** Nombre con el que este participante entra a la sala. */
+  selfName?: string;
 }
 
 function useCountdown(endTime: Date) {
@@ -32,29 +34,50 @@ export function VideoCallPanel({
   professionalName,
   endTime,
   onLeave,
+  selfName,
 }: VideoCallPanelProps) {
-  const [muted, setMuted] = useState(false);
-  const [camOff, setCamOff] = useState(false);
-  const [chatOpen, setChatOpen] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const timeLeft = useCountdown(endTime);
 
+  // Bloquear el scroll del fondo mientras la llamada está abierta
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+
   // Construir URL con parámetros para ocultar UI de Daily
-  const embedUrl = `${roomUrl}?embed&showLeaveButton=false&showFullscreenButton=false&userName=${encodeURIComponent(professionalName)}`;
+  const embedUrl = `${roomUrl}?embed&showLeaveButton=false&showFullscreenButton=false&userName=${encodeURIComponent(selfName ?? professionalName)}`;
 
   const handleLeave = () => {
     onLeave?.();
   };
 
   return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 100,
+        background: "rgba(0,0,0,0.75)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "clamp(0px, 2vw, 24px)",
+        // dvh evita que la barra del navegador en móvil recorte la sala
+        height: "100dvh",
+      }}
+    >
     <div style={{
       display: "flex",
       flexDirection: "column",
-      height: "100%",
+      width: "min(1200px, 100%)",
+      height: "min(860px, 100%)",
       background: "#1a1f1a",
       borderRadius: "16px",
       overflow: "hidden",
       fontFamily: "system-ui, sans-serif",
+      boxShadow: "0 24px 64px rgba(0,0,0,0.5)",
     }}>
       {/* Header */}
       <div style={{
@@ -111,6 +134,7 @@ export function VideoCallPanel({
         justifyContent: "center",
         gap: "12px",
         flexShrink: 0,
+        flexWrap: "wrap",
       }}>
         <span style={{ color: "#93a295", fontSize: "12px" }}>
           Los controles de audio/video están dentro de la sala
@@ -127,6 +151,7 @@ export function VideoCallPanel({
           Salir de la sesión
         </button>
       </div>
+    </div>
     </div>
   );
 }
