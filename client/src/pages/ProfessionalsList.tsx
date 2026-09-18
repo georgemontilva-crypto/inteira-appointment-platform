@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { formatLocation, getFlag } from "@shared/locations";
 import { PRICING } from "@/lib/pricing";
 import { Link, useRoute, useLocation } from "wouter";
 import { Star, Award, Calendar, Search, SlidersHorizontal, X, Coins, ArrowLeft } from "lucide-react";
@@ -316,6 +317,12 @@ export default function ProfessionalsList() {
                           <Coins className="w-3.5 h-3.5 text-gray-400" />
                           Desde ${PRICING.SESSION_BASIC_MXN}
                         </span>
+                        {formatLocation((pro as any).country, (pro as any).state) && (
+                          <span className="flex items-center gap-1 text-xs text-gray-500">
+                            <span>{getFlag((pro as any).country)}</span>
+                            {formatLocation((pro as any).country, (pro as any).state)}
+                          </span>
+                        )}
                       </div>
 
                       {/* Actions */}

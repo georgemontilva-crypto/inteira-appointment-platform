@@ -314,6 +314,7 @@ export async function getProfessionalsBySpecialty(specialtyId: number) {
   return new Promise<any[]>((resolve, reject) => {
     client.execute(
       `SELECT p.id, p.slug, p.userId, p.specialtyId, p.status, p.tier, p.bio, p.profilePhoto,
+              p.country, p.state,
               p.averageRating, p.totalReviews, p.isAvailable, p.yearsOfExperience, p.hourlyRate,
               u.name as professionalName, u.email as userEmail, u.profileImage as userProfileImage
        FROM professionals p
@@ -345,7 +346,7 @@ export async function getPendingProfessionals() {
     return await query(
       `SELECT p.id, p.userId, p.specialtyId, p.licenseNumber, p.licenseDocument,
         p.yearsOfExperience, p.education, p.certifications, p.bio,
-        p.profilePhoto, p.hourlyRate, p.status, p.tier, p.createdAt,
+        p.profilePhoto, p.hourlyRate, p.status, p.tier, p.createdAt, p.country, p.state,
         u.name as userName, u.email as userEmail, u.profileImage as userProfileImage,
         s.name as specialtyName
        FROM professionals p

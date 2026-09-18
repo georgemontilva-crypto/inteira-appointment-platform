@@ -781,6 +781,8 @@ export const appRouter = router({
         certifications: z.string().max(1000).optional(),
         yearsOfExperience: z.number().optional(),
         languages: z.string().max(500).optional(),
+        country: z.string().max(2).optional(),
+        state: z.string().max(120).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         if (ctx.user.role !== "professional") {
@@ -801,6 +803,8 @@ export const appRouter = router({
         if (input.education !== undefined) { setParts.push("`education` = ?"); params.push(input.education); }
         if (input.certifications !== undefined) { setParts.push("`certifications` = ?"); params.push(input.certifications); }
         if (input.yearsOfExperience !== undefined) { setParts.push("`yearsOfExperience` = ?"); params.push(Number(input.yearsOfExperience)); }
+        if (input.country !== undefined) { setParts.push("`country` = ?"); params.push(input.country || null); }
+        if (input.state !== undefined) { setParts.push("`state` = ?"); params.push(input.state || null); }
         setParts.push("`updatedAt` = NOW()");
 
         if (setParts.length > 1) {
@@ -1236,6 +1240,18 @@ export const appRouter = router({
              AND cb2.remaining > 0
              AND cb2.expiredEarly = 0
              AND cb2.expiresAt > NOW()), 0) AS creditBalance,
+          COALESCE((SELECT SUM(cb3.reservedAmount) FROM \`creditBatches\` cb3
+           WHERE cb3.userId = u.id AND cb3.remaining > 0 AND cb3.expiredEarly = 0
+             AND cb3.expiresAt > NOW()), 0) AS reservedCredits,
+          (SELECT pw.balance FROM \`professionalWallet\` pw
+           JOIN \`professionals\` pr ON pr.id = pw.professionalId
+           WHERE pr.userId = u.id LIMIT 1) AS professionalBalance,
+          (SELECT pw2.pendingWithdrawal FROM \`professionalWallet\` pw2
+           JOIN \`professionals\` pr2 ON pr2.id = pw2.professionalId
+           WHERE pr2.userId = u.id LIMIT 1) AS professionalPending,
+          (SELECT pw3.totalEarned FROM \`professionalWallet\` pw3
+           JOIN \`professionals\` pr3 ON pr3.id = pw3.professionalId
+           WHERE pr3.userId = u.id LIMIT 1) AS professionalTotalEarned,
           (SELECT COUNT(*) FROM \`appointments\` a WHERE a.userId = u.id) AS totalAppointments
         FROM \`users\` u
         WHERE u.role IN ('user', 'professional', 'admin')
@@ -1313,6 +1329,33 @@ export const appRouter = router({
             (err: any) => { if (err) reject(err); else resolve(); }
           );
         });
+        return { success: true };
+      }),
+
+    /**
+     * Cambia la foto de perfil de cualquier usuario. La URL viene de
+     * /api/upload/professional-photo. Si el usuario es profesional, se
+     * sincroniza también professionals.profilePhoto, que es la que ven los
+     * clientes en el directorio.
+     */
+    setUserProfileImage: protectedProcedure
+      .input(z.object({ userId: z.number(), url: z.string().max(1000).nullable() }))
+      .mutation(async ({ ctx, input }) => {
+        requireAdmin(ctx);
+        const dbInstance = await db.getDb();
+        if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const client = (dbInstance as any).$client;
+
+        const run = (sql: string, params: any[]) =>
+          new Promise<void>((resolve, reject) => {
+            client.execute(sql, params, (err: any) => { if (err) reject(err); else resolve(); });
+          });
+
+        await run("UPDATE `users` SET `profileImage` = ?, `updatedAt` = NOW() WHERE `id` = ?",
+          [input.url, input.userId]);
+        await run("UPDATE `professionals` SET `profilePhoto` = ?, `updatedAt` = NOW() WHERE `userId` = ?",
+          [input.url, input.userId]);
+
         return { success: true };
       }),
 

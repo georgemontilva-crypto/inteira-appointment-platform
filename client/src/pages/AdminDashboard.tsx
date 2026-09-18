@@ -489,6 +489,45 @@ export default function AdminDashboard() {
     onError: (err: any) => toast.error(err?.message ?? "Error al cambiar rol"),
   });
 
+  const setUserPhotoMutation = trpc.admin.setUserProfileImage.useMutation({
+    onSuccess: () => { refetchUsers(); toast.success("Foto actualizada"); },
+    onError: (err: any) => toast.error(err?.message ?? "Error al actualizar la foto"),
+  });
+  const [uploadingPhotoFor, setUploadingPhotoFor] = useState<number | null>(null);
+
+  /** Sube la imagen a R2 y luego la asocia al usuario. */
+  const handlePhotoPick = async (userId: number, file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("El archivo debe ser una imagen");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("La imagen debe pesar menos de 10 MB");
+      return;
+    }
+    setUploadingPhotoFor(userId);
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result).split(",")[1] ?? "");
+        reader.onerror = () => reject(new Error("No se pudo leer el archivo"));
+        reader.readAsDataURL(file);
+      });
+      const res = await fetch("/api/upload/professional-photo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ base64, mimeType: file.type, fileName: file.name }),
+      });
+      if (!res.ok) throw new Error("Falló la subida");
+      const { url } = await res.json();
+      await setUserPhotoMutation.mutateAsync({ userId, url });
+    } catch (err: any) {
+      toast.error(err?.message ?? "Error al subir la foto");
+    } finally {
+      setUploadingPhotoFor(null);
+    }
+  };
+
   const setAdminScopeMutation = trpc.admin.setAdminScope.useMutation({
     onSuccess: () => { refetchUsers(); toast.success("Permisos actualizados"); },
     onError: (err: any) => toast.error(err?.message ?? "Error al actualizar permisos"),
@@ -708,6 +747,7 @@ export default function AdminDashboard() {
                           <th className="px-4 py-3 font-medium">Rol</th>
                           <th className="px-4 py-3 font-medium">Plan</th>
                           <th className="px-4 py-3 font-medium text-right">Créditos</th>
+                          <th className="px-4 py-3 font-medium text-right">Wallet profesional</th>
                           <th className="px-4 py-3 font-medium text-right">Citas</th>
                           <th className="px-4 py-3 font-medium">Registro</th>
                           <th className="px-4 py-3 font-medium">Login</th>
@@ -733,13 +773,36 @@ export default function AdminDashboard() {
                             <tr key={u.id} className="hover:bg-muted/30 transition-colors">
                               <td className="px-4 py-3">
                                 <div className="flex items-center gap-3 min-w-0">
-                                  {u.profileImage ? (
-                                    <img src={u.profileImage} alt="" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
-                                  ) : (
-                                    <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-semibold flex-shrink-0">
-                                      {initials}
-                                    </div>
-                                  )}
+                                  <label
+                                    className="relative group cursor-pointer flex-shrink-0"
+                                    title="Cambiar foto de perfil"
+                                  >
+                                    <input
+                                      type="file"
+                                      accept="image/*"
+                                      className="hidden"
+                                      onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) handlePhotoPick(u.id, file);
+                                        e.target.value = "";
+                                      }}
+                                    />
+                                    {u.profileImage ? (
+                                      <img src={u.profileImage} alt="" className="w-8 h-8 rounded-full object-cover" />
+                                    ) : (
+                                      <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-semibold">
+                                        {initials}
+                                      </div>
+                                    )}
+                                    <span className="absolute inset-0 rounded-full bg-black/55 text-white text-[9px] font-medium flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                      {uploadingPhotoFor === u.id ? "…" : "Editar"}
+                                    </span>
+                                    {uploadingPhotoFor === u.id && (
+                                      <span className="absolute inset-0 rounded-full bg-black/60 flex items-center justify-center">
+                                        <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                      </span>
+                                    )}
+                                  </label>
                                   <div className="min-w-0">
                                     <p className="font-medium text-[13px] text-gray-900 truncate">{u.name ?? "—"}</p>
                                     <p className="text-[11px] text-muted-foreground truncate">{u.email}</p>
@@ -802,7 +865,31 @@ export default function AdminDashboard() {
                                 )}
                               </td>
                               <td className="px-4 py-3 text-right font-medium text-[13px]">
-                                {Number(u.creditBalance).toLocaleString()}
+                                <div>{Number(u.creditBalance).toLocaleString()}</div>
+                                {Number((u as any).reservedCredits) > 0 && (
+                                  <div className="text-[10px] font-normal text-amber-600">
+                                    {Number((u as any).reservedCredits).toLocaleString()} retenidos
+                                  </div>
+                                )}
+                              </td>
+                              <td className="px-4 py-3 text-right text-[13px] whitespace-nowrap">
+                                {(u as any).professionalBalance != null ? (
+                                  <>
+                                    <div className="font-medium">
+                                      ${Number((u as any).professionalBalance).toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+                                    </div>
+                                    {Number((u as any).professionalPending) > 0 && (
+                                      <div className="text-[10px] text-amber-600">
+                                        ${Number((u as any).professionalPending).toLocaleString("es-MX", { minimumFractionDigits: 2 })} en retiro
+                                      </div>
+                                    )}
+                                    <div className="text-[10px] text-muted-foreground">
+                                      ${Number((u as any).professionalTotalEarned ?? 0).toLocaleString("es-MX", { minimumFractionDigits: 2 })} ganado
+                                    </div>
+                                  </>
+                                ) : (
+                                  <span className="text-muted-foreground">—</span>
+                                )}
                               </td>
                               <td className="px-4 py-3 text-right text-[13px] text-muted-foreground">
                                 {Number(u.totalAppointments)}
@@ -842,7 +929,7 @@ export default function AdminDashboard() {
                         })}
                         {filtered.length === 0 && (
                           <tr>
-                            <td colSpan={8} className="px-4 py-10 text-center text-sm text-muted-foreground">
+                            <td colSpan={9} className="px-4 py-10 text-center text-sm text-muted-foreground">
                               No se encontraron usuarios
                             </td>
                           </tr>

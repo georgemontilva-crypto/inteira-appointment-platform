@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
+import { formatLocation, getFlag } from "@shared/locations";
 import { PRICING } from "@/lib/pricing";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -193,6 +194,12 @@ export default function ProfessionalProfile() {
                   <div className="flex items-center gap-1">
                     <Award className="w-4 h-4" />
                     <span>{professional.yearsOfExperience} años de experiencia</span>
+                  </div>
+                )}
+                {formatLocation((professional as any).country, (professional as any).state) && (
+                  <div className="flex items-center gap-1">
+                    <span>{getFlag((professional as any).country)}</span>
+                    <span>{formatLocation((professional as any).country, (professional as any).state)}</span>
                   </div>
                 )}
                 <div className="flex items-center gap-1">

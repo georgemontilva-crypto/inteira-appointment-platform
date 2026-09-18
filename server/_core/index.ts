@@ -750,6 +750,15 @@ async function runStartupMigrations() {
     ).catch(() => {});
     console.log("[Migration] callPresence table ready");
 
+    // Ubicación del profesional (país ISO-2 + estado/provincia)
+    await db.execute(
+      "ALTER TABLE `professionals` ADD COLUMN `country` VARCHAR(2) NULL"
+    ).catch(() => {});
+    await db.execute(
+      "ALTER TABLE `professionals` ADD COLUMN `state` VARCHAR(120) NULL"
+    ).catch(() => {});
+    console.log("[Migration] professionals location columns ready");
+
     // Sanitize any source values not in the new enum before modifying the column
     await db.execute(
       "UPDATE `creditBatches` SET `source` = 'purchase' WHERE `source` NOT IN ('purchase','plan','plan_basic','plan_pro','individual_basic','individual_premium','admin_grant','test_20','bonus','referral')"

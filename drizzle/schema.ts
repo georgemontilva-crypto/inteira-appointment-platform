@@ -81,6 +81,9 @@ export const professionals = mysqlTable("professionals", {
   tier: mysqlEnum("tier", ["basic", "pro"]).default("basic").notNull(),
   identityDocUrl: text("identityDocUrl"),
   documentNationality: varchar("documentNationality", { length: 100 }),
+  // Ubicación que ve el usuario al elegir especialista
+  country: varchar("country", { length: 2 }),
+  state: varchar("state", { length: 120 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
