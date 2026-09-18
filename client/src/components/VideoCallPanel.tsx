@@ -12,6 +12,9 @@ interface VideoCallPanelProps {
   selfName?: string;
 }
 
+/** Minutos de gracia tras la hora de fin antes de cerrar la sala sola. */
+const GRACE_MINUTES = 2;
+
 function useCountdown(endTime: Date) {
   const [timeLeft, setTimeLeft] = useState("");
   useEffect(() => {
@@ -38,6 +41,18 @@ export function VideoCallPanel({
 }: VideoCallPanelProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const timeLeft = useCountdown(endTime);
+
+  // Cerrar la sala sola al terminar. Antes el panel quedaba abierto
+  // indefinidamente después de que la sesión había finalizado.
+  useEffect(() => {
+    const closeAt = endTime.getTime() + GRACE_MINUTES * 60_000;
+    const check = () => {
+      if (Date.now() >= closeAt) onLeave?.();
+    };
+    check();
+    const id = setInterval(check, 5_000);
+    return () => clearInterval(id);
+  }, [endTime, onLeave]);
 
   // Bloquear el scroll del fondo mientras la llamada está abierta
   useEffect(() => {

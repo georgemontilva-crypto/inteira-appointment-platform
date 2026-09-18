@@ -719,6 +719,37 @@ async function runStartupMigrations() {
     ).catch(() => {});
     console.log("[Migration] users.adminScope ready");
 
+    // Enlaces de videollamada con token de identidad, uno por rol
+    await db.execute(
+      "ALTER TABLE `appointments` ADD COLUMN `videoCallUrlUser` TEXT NULL"
+    ).catch(() => {});
+    await db.execute(
+      "ALTER TABLE `appointments` ADD COLUMN `videoCallUrlProfessional` TEXT NULL"
+    ).catch(() => {});
+    console.log("[Migration] appointments per-role video links ready");
+
+    // Presencia real en la sala (webhooks de Daily + reconciliación)
+    await db.execute([
+      "CREATE TABLE IF NOT EXISTS `callPresence` (",
+      "  `id` int AUTO_INCREMENT NOT NULL,",
+      "  `appointmentId` int NOT NULL,",
+      "  `roomName` varchar(255) NOT NULL,",
+      "  `role` enum('user','professional','unknown') NOT NULL,",
+      "  `participantId` varchar(128),",
+      "  `sessionId` varchar(128) NOT NULL,",
+      "  `joinedAt` datetime NOT NULL,",
+      "  `leftAt` datetime,",
+      "  `source` enum('webhook','reconciliation') NOT NULL DEFAULT 'webhook',",
+      "  `createdAt` timestamp NOT NULL DEFAULT (now()),",
+      "  CONSTRAINT `callPresence_id` PRIMARY KEY(`id`),",
+      "  CONSTRAINT `callPresence_sessionId_unique` UNIQUE(`sessionId`)",
+      ");",
+    ].join("\n")).catch(() => {});
+    await db.execute(
+      "CREATE INDEX IF NOT EXISTS `callPresence_appointmentId_idx` ON `callPresence` (`appointmentId`)"
+    ).catch(() => {});
+    console.log("[Migration] callPresence table ready");
+
     // Sanitize any source values not in the new enum before modifying the column
     await db.execute(
       "UPDATE `creditBatches` SET `source` = 'purchase' WHERE `source` NOT IN ('purchase','plan','plan_basic','plan_pro','individual_basic','individual_premium','admin_grant','test_20','bonus','referral')"
@@ -1100,6 +1131,9 @@ async function startServer() {
   // ⚠️ Stripe webhook MUST be registered BEFORE express.json() so it receives the raw body
   // needed for signature verification. express.json() would parse it and break the HMAC check.
   registerStripeRoutes(app);
+  // El webhook de Daily también necesita el cuerpo crudo para verificar el HMAC
+  const { registerDailyWebhook } = await import("../dailyWebhook");
+  registerDailyWebhook(app);
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
@@ -1279,7 +1313,7 @@ setInterval(async () => {
     const staleAppointments = await new Promise<any[]>((resolve) => {
       client.execute(
         `SELECT a.id, a.professionalId, a.userId, a.appointmentDate, a.durationMinutes,
-                a.userJoinedAt, a.professionalJoinedAt,
+                a.userJoinedAt, a.professionalJoinedAt, a.videoCallId,
                 p.tier, p.userId AS profUserId, u.email AS userEmail, u.name AS userName
          FROM appointments a
          JOIN professionals p ON p.id = a.professionalId
@@ -1300,18 +1334,23 @@ setInterval(async () => {
       const { sendCreditsDebitedEmail } = await import("../email");
       const { createNotification } = await import("../notifications");
 
+      const { loadPresence, decideAttendance } = await import("../attendance");
+
       for (const row of staleAppointments) {
-        const professionalAttended = !!row.professionalJoinedAt;
-        const userAttended = !!row.userJoinedAt;
         const sessionCost = row.durationMinutes > 60 ? 1500 : 350;
 
-        // GUARDA CONSERVADORA: hoy el correo lleva el URL crudo de Daily.co, así
-        // que un profesional puede entrar a la sala SIN pasar por la app y no
-        // quedar registrado. Si nadie quedó registrado no sabemos qué pasó, y
-        // asumir ausencia del profesional reembolsaría citas que sí ocurrieron.
-        // En ese caso dejamos la cita en revisión manual: ni se reembolsa ni se
-        // paga, y se avisa al admin.
-        if (!professionalAttended && !userAttended) {
+        // Presencia REAL en la sala: webhooks de Daily, completados con una
+        // consulta directa a Daily si algun evento se perdio.
+        const sessionEnd = new Date(
+          new Date(row.appointmentDate).getTime() + (row.durationMinutes ?? 60) * 60000
+        );
+        const presence = await loadPresence(client, row.id, row.videoCallId ?? null);
+        const verdict = decideAttendance(presence, sessionEnd);
+
+        // Ni se reembolsa ni se paga sin evidencia clara. Cubre el webhook aun
+        // no configurado, la sala usada sin token, y el caso de que ambos
+        // entraran pero nunca coincidieran el minimo de minutos.
+        if (verdict.outcome === "inconclusive") {
           await new Promise<void>((resolve) => {
             client.execute(
               `UPDATE appointments SET status = 'pending_review', updatedAt = NOW()
@@ -1320,11 +1359,31 @@ setInterval(async () => {
               (err: any) => { if (err) console.error("[Cron] pending_review update:", err?.message); resolve(); }
             );
           });
-          console.warn(`[Cron] Appointment ${row.id}: no attendance data — flagged for manual review`);
+          console.warn(`[Cron] Cita ${row.id} a revision manual: ${verdict.reason}`);
           continue;
         }
 
-        if (!professionalAttended) {
+        // La cita ocurrio: se cierra, se consumen los creditos y se paga.
+        if (verdict.outcome === "held") {
+          await new Promise<void>((resolve) => {
+            client.execute(
+              `UPDATE appointments SET status = 'completed', updatedAt = NOW()
+               WHERE id = ? AND status IN ('scheduled', 'in_progress')`,
+              [row.id],
+              (err: any) => { if (err) console.error("[Cron] completed update:", err?.message); resolve(); }
+            );
+          });
+          await confirmCredits(row.id).catch(() => {});
+          await creditProfessionalEarning(
+            row.professionalId, row.id,
+            (row.tier ?? "basic") as "basic" | "pro",
+            row.durationMinutes > 60 ? "premium" : "basic"
+          ).catch(() => {});
+          console.log(`[Cron] Cita ${row.id} completada (${verdict.overlapMinutes.toFixed(1)} min juntos)`);
+          continue;
+        }
+
+        if (verdict.outcome === "professional_absent") {
           // ── El profesional nunca entró: la cita no se prestó ──────────────
           await new Promise<void>((resolve) => {
             client.execute(
@@ -1472,7 +1531,7 @@ setInterval(async () => {
 
     const upcoming = await new Promise<any[]>((resolve) => {
       client.execute(
-        `SELECT a.id, a.videoCallLink, a.appointmentDate, a.timezoneOffset,
+        `SELECT a.id, a.videoCallLink, a.videoCallUrlUser, a.videoCallUrlProfessional, a.appointmentDate, a.timezoneOffset,
                 u.email AS userEmail, u.name AS userName,
                 pu.name AS professionalName, pu.email AS professionalEmail
          FROM appointments a
@@ -1503,7 +1562,7 @@ setInterval(async () => {
             userName: row.userName ?? "Usuario",
             professionalName: row.professionalName ?? "Especialista",
             appointmentDate: new Date(row.appointmentDate),
-            videoCallLink: row.videoCallLink ?? "",
+            videoCallLink: row.videoCallUrlUser ?? row.videoCallLink ?? "",
             timezoneOffsetMinutes,
           }).catch(() => {});
         }
@@ -1513,7 +1572,7 @@ setInterval(async () => {
             professionalName: row.professionalName ?? "Especialista",
             clientName: row.userName ?? "Usuario",
             appointmentDate: new Date(row.appointmentDate),
-            videoCallLink: row.videoCallLink ?? "",
+            videoCallLink: row.videoCallUrlProfessional ?? row.videoCallLink ?? "",
             timezoneOffsetMinutes,
           }).catch(() => {});
         }

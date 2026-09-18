@@ -212,7 +212,13 @@ export const appointmentRouter = router({
       const videoCall = await generateVideoCallLink(
         newAppointmentId,
         appointmentDateObj,
-        appointmentEndDate
+        appointmentEndDate,
+        {
+          userId: ctx.user.id,
+          userName: userRecord?.name ?? "Paciente",
+          professionalId: professional.id,
+          professionalName: professionalUser?.name ?? "Profesional",
+        }
       );
 
       // Update appointment row with the video call link and pricingType
@@ -221,8 +227,8 @@ export const appointmentRouter = router({
       if (dbConn) {
         await new Promise<void>((resolve) => {
           (dbConn as any).$client.execute(
-            "UPDATE appointments SET videoCallLink = ?, videoCallId = ?, pricingType = ? WHERE id = ?",
-            [videoCall.url, videoCall.roomName, pricingType, newAppointmentId],
+            "UPDATE appointments SET videoCallLink = ?, videoCallId = ?, videoCallUrlUser = ?, videoCallUrlProfessional = ?, pricingType = ? WHERE id = ?",
+            [videoCall.url, videoCall.roomName, videoCall.userUrl, videoCall.professionalUrl, pricingType, newAppointmentId],
             (err: any) => { if (err) console.error("[createAppointment] update video call:", err); resolve(); }
           );
         });
@@ -246,7 +252,7 @@ export const appointmentRouter = router({
           appointmentDate: appointmentDateObj,
           durationMinutes,
           videoCallType: "daily",
-          videoCallLink: videoCall.url,
+          videoCallLink: videoCall.userUrl,
           timezoneOffsetMinutes: input.timezoneOffset,
         });
       }
@@ -260,7 +266,7 @@ export const appointmentRouter = router({
           appointmentDate: appointmentDateObj,
           durationMinutes,
           timezoneOffsetMinutes: input.timezoneOffset,
-          videoCallLink: videoCall.url,
+          videoCallLink: videoCall.professionalUrl,
         }).catch(() => {});
       }
 

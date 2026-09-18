@@ -124,7 +124,7 @@ export default function AppointmentsPage() {
         const end = new Date(start.getTime() + ((upcoming as any).durationMinutes ?? 60) * 60 * 1000);
         setActiveCall((prev) =>
           prev?.appointmentId === upcoming.id ? prev : {
-            url: (upcoming as any).videoCallLink,
+            url: (upcoming as any).videoCallUrlUser ?? (upcoming as any).videoCallLink,
             appointmentId: upcoming.id,
             professionalName: (upcoming as any).professionalName ?? `Especialista #${upcoming.professionalId}`,
             startTime: start,
@@ -271,7 +271,7 @@ export default function AppointmentsPage() {
                     if (!canJoin) return;
                     await joinAppointmentMutation.mutateAsync({ appointmentId: apt.id }).catch(() => {});
                     setActiveCall({
-                      url: (apt as any).videoCallLink,
+                      url: (apt as any).videoCallUrlUser ?? (apt as any).videoCallLink,
                       appointmentId: apt.id,
                       professionalName: (apt as any).professionalName ?? `Especialista #${apt.professionalId}`,
                       startTime: parseLocalDate(apt.appointmentDate),

@@ -607,7 +607,7 @@ export default function ProfessionalDashboard() {
                   disabled={!canJoin(nextWithVideo)}
                   className="gradient-brand text-white border-0 text-xs h-8 px-3 flex-shrink-0 font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
                   onClick={() => canJoin(nextWithVideo) && openCall({
-                    url: (nextWithVideo as any).videoCallLink,
+                    url: (nextWithVideo as any).videoCallUrlProfessional ?? (nextWithVideo as any).videoCallLink,
                     appointmentId: nextWithVideo.id,
                     professionalName: (nextWithVideo as any).userName ?? `Usuario #${nextWithVideo.userId}`,
                     startTime: parseLocalDate(nextWithVideo.appointmentDate),
@@ -716,7 +716,7 @@ export default function ProfessionalDashboard() {
                         className="w-full gradient-brand text-white border-0 h-10 text-sm font-semibold"
                         disabled={!canJoin(next)}
                         onClick={() => canJoin(next) && openCall({
-                          url: (next as any).videoCallLink,
+                          url: (next as any).videoCallUrlProfessional ?? (next as any).videoCallLink,
                           appointmentId: next.id,
                           professionalName: (next as any).userName ?? `Usuario #${next.userId}`,
                           startTime: parseLocalDate(next.appointmentDate),
@@ -843,7 +843,7 @@ export default function ProfessionalDashboard() {
                                     size="sm"
                                     className="gradient-brand text-white border-0 h-8 text-xs px-4 font-semibold shadow-md"
                                     onClick={() => openCall({
-                                      url: apt.videoCallLink!,
+                                      url: ((apt as any).videoCallUrlProfessional ?? apt.videoCallLink)!,
                                       appointmentId: apt.id,
                                       professionalName: (apt as any).userName ?? `Usuario #${apt.userId}`,
                                       startTime: parseLocalDate(apt.appointmentDate),
@@ -859,7 +859,7 @@ export default function ProfessionalDashboard() {
                                     disabled={!joinable}
                                     className="gradient-brand text-white border-0 h-7 text-xs px-3 disabled:opacity-50"
                                     onClick={() => joinable && openCall({
-                                      url: apt.videoCallLink!,
+                                      url: ((apt as any).videoCallUrlProfessional ?? apt.videoCallLink)!,
                                       appointmentId: apt.id,
                                       professionalName: (apt as any).userName ?? `Usuario #${apt.userId}`,
                                       startTime: parseLocalDate(apt.appointmentDate),

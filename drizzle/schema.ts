@@ -163,6 +163,9 @@ export const appointments = mysqlTable("appointments", {
   videoCallLink: text("videoCallLink"),
   videoCallId: varchar("videoCallId", { length: 255 }),
   notes: longtext("notes"),
+  // Enlaces con token de identidad, uno por rol (ver server/videocall.ts)
+  videoCallUrlUser: text("videoCallUrlUser"),
+  videoCallUrlProfessional: text("videoCallUrlProfessional"),
   // Attendance tracking — who actually entered the video room, and when.
   // Used to detect professional no-shows and refund the client automatically.
   userJoinedAt: datetime("userJoinedAt"),
@@ -435,3 +438,21 @@ export const homeCarouselItems = mysqlTable("homeCarouselItems", {
 
 export type HomeCarouselItem = typeof homeCarouselItems.$inferSelect;
 export type InsertHomeCarouselItem = typeof homeCarouselItems.$inferInsert;
+
+/**
+ * Presencia real en la sala de Daily, alimentada por los webhooks
+ * participant.joined / participant.left y por la reconciliación del cron.
+ * Una fila por sesión de participante.
+ */
+export const callPresence = mysqlTable("callPresence", {
+  id: int("id").autoincrement().primaryKey(),
+  appointmentId: int("appointmentId").notNull(),
+  roomName: varchar("roomName", { length: 255 }).notNull(),
+  role: mysqlEnum("role", ["user", "professional", "unknown"]).notNull(),
+  participantId: varchar("participantId", { length: 128 }),
+  sessionId: varchar("sessionId", { length: 128 }).notNull().unique(),
+  joinedAt: datetime("joinedAt").notNull(),
+  leftAt: datetime("leftAt"),
+  source: mysqlEnum("source", ["webhook", "reconciliation"]).default("webhook").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
