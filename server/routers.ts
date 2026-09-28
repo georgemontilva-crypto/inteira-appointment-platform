@@ -1349,11 +1349,15 @@ export const appRouter = router({
         if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
         const client = (dbInstance as any).$client;
 
-        const from = input?.from ?? null;
-        const to = input?.to ?? null;
-        // El filtro de fechas se aplica sobre la fecha de la cita
-        const dateFilter = "AND (? IS NULL OR a.appointmentDate >= ?) AND (? IS NULL OR a.appointmentDate <= ?)";
-        const dateParams = [from, from, to, to];
+        const from = input?.from || null;
+        const to = input?.to || null;
+        // El filtro se arma solo con las fechas presentes: nada de `? IS NULL`,
+        // que obliga a pasar placeholders de más y es donde se rompía antes.
+        const dateParts: string[] = [];
+        const dateParams: any[] = [];
+        if (from) { dateParts.push("AND a.appointmentDate >= ?"); dateParams.push(from); }
+        if (to)   { dateParts.push("AND a.appointmentDate <= ?"); dateParams.push(to); }
+        const dateFilter = dateParts.join(" ");
 
         const sql = `
           SELECT
@@ -1400,8 +1404,13 @@ export const appRouter = router({
           ORDER BY netTotal DESC, u.name ASC
         `;
 
-        // 11 subconsultas llevan el filtro de fechas, en el mismo orden del SQL
-        const params = Array(11).fill(dateParams).flat();
+        // El filtro aparece una vez por subconsulta; se cuentan las ocurrencias
+        // reales en lugar de fijar el número a mano.
+        const occurrences = dateFilter
+          ? sql.split(dateFilter).length - 1
+          : 0;
+        const params: any[] = [];
+        for (let i = 0; i < occurrences; i++) params.push(...dateParams);
 
         const rows = await new Promise<any[]>((resolve, reject) => {
           client.execute(sql, params, (err: any, results: any) => {
@@ -1466,8 +1475,13 @@ export const appRouter = router({
         if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
         const client = (dbInstance as any).$client;
 
-        const from = input.from ?? null;
-        const to = input.to ?? null;
+        const from = input.from || null;
+        const to = input.to || null;
+        const parts: string[] = [];
+        const dateParams: any[] = [];
+        if (from) { parts.push("AND a.appointmentDate >= ?"); dateParams.push(from); }
+        if (to)   { parts.push("AND a.appointmentDate <= ?"); dateParams.push(to); }
+        const dateFilter = parts.join(" ");
 
         const rows = await new Promise<any[]>((resolve, reject) => {
           client.execute(
@@ -1489,12 +1503,10 @@ export const appRouter = router({
              FROM \`appointments\` a
              LEFT JOIN \`users\` u ON u.id = a.userId
              LEFT JOIN \`professionalEarnings\` pe ON pe.appointmentId = a.id
-             WHERE a.professionalId = ?
-               AND (? IS NULL OR a.appointmentDate >= ?)
-               AND (? IS NULL OR a.appointmentDate <= ?)
+             WHERE a.professionalId = ? ${dateFilter}
              ORDER BY a.appointmentDate DESC
              LIMIT ?`,
-            [input.professionalId, from, from, to, to, input.limit],
+            [input.professionalId, ...dateParams, input.limit],
             (err: any, results: any) => {
               if (err) reject(err);
               else resolve(Array.isArray(results) ? results : []);

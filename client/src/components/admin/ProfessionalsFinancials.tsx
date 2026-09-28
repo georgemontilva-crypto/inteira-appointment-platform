@@ -433,3 +433,108 @@ export function ProfessionalsFinancials() {
     </div>
   );
 }
+
+
+/**
+ * Historial completo de un profesional, en modal. Se abre desde la tarjeta
+ * del profesional en la pestaña "Profesionales activos".
+ */
+export function ProfessionalHistoryModal({
+  professionalId,
+  name,
+  onClose,
+}: {
+  professionalId: number;
+  name: string;
+  onClose: () => void;
+}) {
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+
+  const { data: rows } = trpc.admin.getProfessionalBreakdown.useQuery({
+    professionalId,
+    from: from || undefined,
+    to: to || undefined,
+    limit: 500,
+  });
+
+  const summary = useMemo(() => {
+    if (!rows) return null;
+    const count = (st: string) => rows.filter((r: any) => r.status === st).length;
+    const sum = (field: string) =>
+      rows.reduce(
+        (acc: number, r: any) =>
+          acc + (r.earningStatus === "credited" ? Number(r[field] ?? 0) : 0),
+        0
+      );
+    return {
+      completed: count("completed"),
+      canceled: count("canceled"),
+      noShow: count("no-show"),
+      pendingReview: count("pending_review"),
+      scheduled: count("scheduled"),
+      gross: sum("grossAmount"),
+      commission: sum("commissionAmount"),
+      net: sum("netAmount"),
+    };
+  }, [rows]);
+
+  return (
+    <div
+      className="fixed inset-0 z-[70] bg-black/50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-2xl w-full max-w-5xl max-h-[88vh] flex flex-col overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-4 p-5 border-b border-border">
+          <div>
+            <h3 className="font-bold text-lg">{name}</h3>
+            <p className="text-sm text-muted-foreground">Historial de citas y ganancias</p>
+          </div>
+          <div className="flex items-end gap-2">
+            <div>
+              <Label className="text-[11px]">Desde</Label>
+              <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-9 w-[140px]" />
+            </div>
+            <div>
+              <Label className="text-[11px]">Hasta</Label>
+              <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="h-9 w-[140px]" />
+            </div>
+            <Button variant="ghost" size="sm" className="h-9" onClick={onClose}>Cerrar</Button>
+          </div>
+        </div>
+
+        {summary && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-border border-b border-border">
+            <div className="bg-white p-3">
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Completadas</p>
+              <p className="text-lg font-bold tabular-nums">{summary.completed}</p>
+            </div>
+            <div className="bg-white p-3">
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">No realizadas</p>
+              <p className="text-lg font-bold tabular-nums">{summary.canceled + summary.noShow}</p>
+              <p className="text-[10px] text-muted-foreground">
+                {summary.canceled} canc. · {summary.noShow} no asistió
+              </p>
+            </div>
+            <div className="bg-white p-3">
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Comisión Inteira</p>
+              <p className="text-lg font-bold tabular-nums text-primary">{money(summary.commission)}</p>
+            </div>
+            <div className="bg-white p-3">
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Ganó</p>
+              <p className="text-lg font-bold tabular-nums">{money(summary.net)}</p>
+              <p className="text-[10px] text-muted-foreground">de {money(summary.gross)} brutos</p>
+            </div>
+          </div>
+        )}
+
+        <div className="overflow-y-auto flex-1">
+          <ProfessionalDetail professionalId={professionalId} from={from} to={to} />
+        </div>
+      </div>
+    </div>
+  );
+}

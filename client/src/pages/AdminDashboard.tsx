@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { ProfessionalsFinancials } from "@/components/admin/ProfessionalsFinancials";
+import { ProfessionalsFinancials, ProfessionalHistoryModal } from "@/components/admin/ProfessionalsFinancials";
 import { getLoginUrl } from "@/const";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -495,6 +495,7 @@ export default function AdminDashboard() {
     onError: (err: any) => toast.error(err?.message ?? "Error al actualizar la foto"),
   });
   const [uploadingPhotoFor, setUploadingPhotoFor] = useState<number | null>(null);
+  const [historyModal, setHistoryModal] = useState<{ professionalId: number; name: string } | null>(null);
 
   /** Sube la imagen a R2 y luego la asocia al usuario. */
   const handlePhotoPick = async (userId: number, file: File) => {
@@ -2387,6 +2388,14 @@ export default function AdminDashboard() {
                       >Pro</button>
                     </div>
                     <button
+                      onClick={() => setHistoryModal({ professionalId: pro.id, name })}
+                      className="flex items-center gap-1 text-[11px] text-primary hover:text-primary/80 transition-colors"
+                      title="Ver historial de citas y ganancias"
+                    >
+                      <BarChart3 className="w-3.5 h-3.5" />
+                      Historial
+                    </button>
+                    <button
                       onClick={() => setDocsModal({ professionalId: pro.id, name })}
                       className="flex items-center gap-1 text-[11px] text-primary hover:text-primary/80 transition-colors"
                       title="Ver documentos"
@@ -2504,6 +2513,14 @@ export default function AdminDashboard() {
               </AlertDialog>
 
               {/* ── Documents modal ── */}
+            {historyModal && (
+              <ProfessionalHistoryModal
+                professionalId={historyModal.professionalId}
+                name={historyModal.name}
+                onClose={() => setHistoryModal(null)}
+              />
+            )}
+
             {docsModal && (
               <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setDocsModal(null)}>
                 <div className="bg-background rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
