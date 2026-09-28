@@ -1413,6 +1413,44 @@ export const appRouter = router({
       }),
 
     /**
+     * Serie mensual de ingresos para las gráficas del panel.
+     * Devuelve, por mes, el bruto facturado, la comisión de Inteira, lo pagado
+     * a profesionales y el número de sesiones.
+     */
+    getRevenueSeries: protectedProcedure
+      .input(z.object({ months: z.number().min(1).max(36).default(12) }).optional())
+      .query(async ({ ctx, input }) => {
+        requireAdmin(ctx);
+        const dbInstance = await db.getDb();
+        if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const client = (dbInstance as any).$client;
+        const months = input?.months ?? 12;
+
+        const rows = await new Promise<any[]>((resolve, reject) => {
+          client.execute(
+            `SELECT
+               DATE_FORMAT(a.appointmentDate, '%Y-%m') AS period,
+               COUNT(*)                     AS sessions,
+               SUM(pe.grossAmount)          AS gross,
+               SUM(pe.commissionAmount)     AS commission,
+               SUM(pe.netAmount)            AS net
+             FROM \`professionalEarnings\` pe
+             JOIN \`appointments\` a ON a.id = pe.appointmentId
+             WHERE pe.status = 'credited'
+               AND a.appointmentDate >= DATE_SUB(NOW(), INTERVAL ? MONTH)
+             GROUP BY period
+             ORDER BY period ASC`,
+            [months],
+            (err: any, results: any) => {
+              if (err) reject(err);
+              else resolve(Array.isArray(results) ? results : []);
+            }
+          );
+        });
+        return rows;
+      }),
+
+    /**
      * Detalle cita por cita de un profesional, con el desglose de cada una.
      */
     getProfessionalBreakdown: protectedProcedure

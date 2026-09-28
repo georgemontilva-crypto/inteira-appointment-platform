@@ -1,9 +1,18 @@
 import { getDb } from "./db";
 
-// Platform commission rates by tier (applied to individual/non-member sessions)
+/**
+ * Reparto único de la plataforma: 70% para el profesional, 30% para Inteira.
+ * Se aplica al acreditar la ganancia, sobre el bruto de la sesión, sin importar
+ * el tier ni si el precio fue individual o de miembro. El retiro sale completo:
+ * NO se vuelve a descontar nada al retirar.
+ */
+export const PLATFORM_COMMISSION_RATE = 0.30;
+export const PROFESSIONAL_SHARE_RATE = 1 - PLATFORM_COMMISSION_RATE;
+
+/** @deprecated Se mantiene solo para código que aún lo importe. Todos los tiers usan 30%. */
 export const PROFESSIONAL_COMMISSIONS: Record<"basic" | "pro", number> = {
-  basic: 0.20, // 20% platform fee — professional earns 80%
-  pro:   0.15, // 15% platform fee — professional earns 85%
+  basic: PLATFORM_COMMISSION_RATE,
+  pro:   PLATFORM_COMMISSION_RATE,
 };
 
 // Gross session amounts in MXN — individual (non-member) pricing
@@ -33,18 +42,15 @@ export async function creditProfessionalEarning(
   let netAmount: number;
   let commissionRate: number;
 
+  // Mismo reparto para todos: 70/30 sobre el bruto de la sesión.
+  commissionRate = PLATFORM_COMMISSION_RATE;
   if (pricingType === "member") {
-    // Fixed earning for member sessions — no tier % applied
     grossAmount = sessionType === "premium" ? GROSS_AMOUNT_PREMIUM_MEMBER : GROSS_AMOUNT_BASIC_MEMBER;
-    netAmount = sessionType === "premium" ? PROFESSIONAL_EARNING_PREMIUM_MEMBER : PROFESSIONAL_EARNING_BASIC_MEMBER;
-    commissionAmount = Math.round((grossAmount - netAmount) * 100) / 100;
-    commissionRate = Math.round((commissionAmount / grossAmount) * 10000) / 10000;
   } else {
-    commissionRate = PROFESSIONAL_COMMISSIONS[tier];
     grossAmount = sessionType === "premium" ? GROSS_AMOUNT_PREMIUM : GROSS_AMOUNT_BASIC;
-    commissionAmount = Math.round(grossAmount * commissionRate * 100) / 100;
-    netAmount = Math.round((grossAmount - commissionAmount) * 100) / 100;
   }
+  commissionAmount = Math.round(grossAmount * commissionRate * 100) / 100;
+  netAmount = Math.round((grossAmount - commissionAmount) * 100) / 100;
 
   const client = (db as any).$client;
 

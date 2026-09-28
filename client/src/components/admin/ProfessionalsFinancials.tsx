@@ -8,6 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronRight, Download } from "lucide-react";
+import {
+  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend,
+  CartesianGrid, PieChart, Pie, Cell,
+} from "recharts";
 import { formatLocation } from "@shared/locations";
 
 const money = (v: any) =>
@@ -105,6 +109,110 @@ function ProfessionalDetail({
           })}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+const MONTH_LABEL = (period: string) => {
+  const [y, m] = period.split("-");
+  const d = new Date(Number(y), Number(m) - 1, 1);
+  return format(d, "MMM yy", { locale: es });
+};
+
+function RevenueCharts({ topProfessionals }: { topProfessionals: any[] }) {
+  const { data: series, isLoading } = trpc.admin.getRevenueSeries.useQuery({ months: 12 });
+
+  const chartData = useMemo(
+    () =>
+      (series ?? []).map((r: any) => ({
+        mes: MONTH_LABEL(r.period),
+        "Comisión Inteira": Number(r.commission ?? 0),
+        "Pagado a profesionales": Number(r.net ?? 0),
+        sesiones: Number(r.sessions ?? 0),
+      })),
+    [series]
+  );
+
+  const pieData = useMemo(
+    () =>
+      topProfessionals
+        .slice(0, 6)
+        .map((p) => ({ name: p.professionalName ?? "—", value: Number(p.commissionTotal ?? 0) }))
+        .filter((d) => d.value > 0),
+    [topProfessionals]
+  );
+
+  const PIE_COLORS = ["#3d7a5e", "#5a9d7c", "#7cbf9c", "#a3d9bc", "#c9ead9", "#e4f4ec"];
+
+  if (isLoading) {
+    return <Card className="border-border"><CardContent className="p-6 h-[280px] animate-pulse" /></Card>;
+  }
+  if (chartData.length === 0) {
+    return (
+      <Card className="border-border border-dashed">
+        <CardContent className="p-10 text-center text-sm text-muted-foreground">
+          Todavía no hay sesiones completadas para graficar.
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="grid lg:grid-cols-3 gap-4">
+      <Card className="border-border lg:col-span-2">
+        <CardContent className="p-4">
+          <p className="text-sm font-semibold mb-3">Ingresos por mes</p>
+          <div className="h-[260px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} margin={{ top: 4, right: 8, left: -12, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                <XAxis dataKey="mes" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+                <YAxis
+                  tick={{ fontSize: 11 }}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
+                />
+                <Tooltip
+                  formatter={(v: any) => money(v)}
+                  contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid #e5e7eb" }}
+                />
+                <Legend wrapperStyle={{ fontSize: 11 }} />
+                <Bar dataKey="Comisión Inteira" stackId="a" fill="#3d7a5e" radius={[0, 0, 0, 0]} />
+                <Bar dataKey="Pagado a profesionales" stackId="a" fill="#c9ead9" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-border">
+        <CardContent className="p-4">
+          <p className="text-sm font-semibold mb-3">Comisión por profesional</p>
+          {pieData.length === 0 ? (
+            <div className="h-[260px] flex items-center justify-center text-sm text-muted-foreground">
+              Sin datos en el periodo
+            </div>
+          ) : (
+            <div className="h-[260px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={50} outerRadius={85} paddingAngle={2}>
+                    {pieData.map((_, i) => (
+                      <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(v: any) => money(v)}
+                    contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid #e5e7eb" }}
+                  />
+                  <Legend wrapperStyle={{ fontSize: 10 }} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -223,6 +331,8 @@ export function ProfessionalsFinancials() {
           </Card>
         </div>
       )}
+
+      <RevenueCharts topProfessionals={rows ?? []} />
 
       <Card className="border-border overflow-hidden">
         <div className="overflow-x-auto">
