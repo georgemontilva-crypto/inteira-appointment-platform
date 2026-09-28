@@ -1015,6 +1015,7 @@ export async function getRecentAppointments(limit: number = 10) {
   return new Promise<any[]>((resolve, reject) => {
     client.execute(
       `SELECT a.id, a.appointmentDate, a.status, a.videoCallType, a.userId, a.professionalId, a.specialtyId,
+        a.canceledBy, a.cancellationReason, a.userJoinedAt, a.professionalJoinedAt,
         u.name as userName, u.email as userEmail,
         pu.name as professionalName,
         s.name as specialtyName

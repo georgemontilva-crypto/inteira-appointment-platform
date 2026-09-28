@@ -188,11 +188,38 @@ function MiniBarChart({ data }: { data: { day: string; total: number; completed:
 }
 
 const STATUS_MAP: Record<string, { label: string; cls: string }> = {
-  scheduled:  { label: "Agendada",   cls: "bg-blue-100 text-blue-700" },
-  completed:  { label: "Completada", cls: "bg-emerald-100 text-emerald-700" },
-  canceled:   { label: "Cancelada",  cls: "bg-red-100 text-red-700" },
-  "no-show":  { label: "No asistió", cls: "bg-gray-100 text-gray-600" },
+  scheduled:      { label: "Agendada",    cls: "bg-blue-100 text-blue-700" },
+  in_progress:    { label: "En curso",    cls: "bg-blue-100 text-blue-700" },
+  completed:      { label: "Completada",  cls: "bg-emerald-100 text-emerald-700" },
+  canceled:       { label: "Cancelada",   cls: "bg-red-100 text-red-700" },
+  "no-show":      { label: "No asistió",  cls: "bg-gray-100 text-gray-600" },
+  pending_review: { label: "En revisión", cls: "bg-amber-100 text-amber-700" },
 };
+
+/**
+ * "No asistió" a secas no dice quién faltó, que es justo lo que importa para
+ * saber si hubo cobro o reembolso. Esto lo desambigua.
+ */
+function describeAttendance(apt: any): { label: string; cls: string } {
+  const base = STATUS_MAP[apt.status] ?? { label: apt.status, cls: "bg-muted text-muted-foreground" };
+
+  if (apt.status === "no-show") {
+    return { label: "Paciente no asistió", cls: "bg-orange-100 text-orange-700" };
+  }
+  if (apt.status === "canceled") {
+    if (apt.canceledBy === "professional") {
+      // Cancelada por el sistema tras detectar ausencia, o por el propio profesional
+      const wasAbsent = !apt.professionalJoinedAt;
+      return {
+        label: wasAbsent ? "Profesional no asistió" : "Cancelada por profesional",
+        cls: "bg-red-100 text-red-700",
+      };
+    }
+    if (apt.canceledBy === "user")  return { label: "Cancelada por paciente", cls: "bg-red-50 text-red-600" };
+    if (apt.canceledBy === "admin") return { label: "Cancelada por admin",    cls: "bg-red-50 text-red-600" };
+  }
+  return base;
+}
 
 export default function AdminDashboard() {
   const { user, isAuthenticated, loading } = useAuth();
@@ -2055,7 +2082,7 @@ export default function AdminDashboard() {
                 ) : (
                   <div className="space-y-2">
                     {(recentAppointments ?? []).map((apt) => {
-                      const s = STATUS_MAP[apt.status] ?? { label: apt.status, cls: "bg-muted text-muted-foreground" };
+                      const s = describeAttendance(apt);
                       return (
                         <div key={apt.id} className="flex items-center gap-3 py-2 border-b border-border last:border-0">
                           <div className="flex-1 min-w-0">
