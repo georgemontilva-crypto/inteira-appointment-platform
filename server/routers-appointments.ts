@@ -252,7 +252,7 @@ export const appointmentRouter = router({
           appointmentDate: appointmentDateObj,
           durationMinutes,
           videoCallType: "daily",
-          videoCallLink: videoCall.userUrl,
+          videoCallLink: `https://inteira.app/sala/${newAppointmentId}`,
           timezoneOffsetMinutes: input.timezoneOffset,
         });
       }
@@ -266,7 +266,7 @@ export const appointmentRouter = router({
           appointmentDate: appointmentDateObj,
           durationMinutes,
           timezoneOffsetMinutes: input.timezoneOffset,
-          videoCallLink: videoCall.professionalUrl,
+          videoCallLink: `https://inteira.app/sala/${newAppointmentId}`,
         }).catch(() => {});
       }
 
@@ -776,6 +776,128 @@ export const appointmentRouter = router({
       });
 
       return { success: true };
+    }),
+
+  /**
+   * Sala de entrada. Sustituye al enlace crudo de Daily en los correos:
+   * verifica que quien abre el enlace sea realmente una de las dos partes de
+   * la cita, y devuelve el estado de llegada de ambos.
+   */
+  getRoomAccess: protectedProcedure
+    .input(z.object({ appointmentId: z.number() }))
+    .query(async ({ ctx, input }) => {
+      const appointment: any = await db.getAppointmentById(input.appointmentId);
+      if (!appointment) throw new TRPCError({ code: "NOT_FOUND", message: "Cita no encontrada" });
+
+      const professional = await db.getProfessionalByUserId(ctx.user.id);
+      const isProfessional =
+        !!professional && Number(appointment.professionalId) === Number(professional.id);
+      const isClient = Number(appointment.userId) === Number(ctx.user.id);
+
+      if (!isProfessional && !isClient) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Esta cita no es tuya" });
+      }
+      const role: "user" | "professional" = isProfessional ? "professional" : "user";
+
+      const dbInstance = await db.getDb();
+      const client = dbInstance ? (dbInstance as any).$client : null;
+
+      // Nombre de la contraparte
+      let otherName = role === "professional" ? "el paciente" : "el especialista";
+      if (client) {
+        const otherUserId = role === "professional"
+          ? appointment.userId
+          : (await db.getProfessionalById(appointment.professionalId))?.userId;
+        if (otherUserId) {
+          const rows = await new Promise<any[]>((resolve) => {
+            client.execute("SELECT name FROM `users` WHERE id = ? LIMIT 1", [otherUserId],
+              (err: any, r: any) => resolve(err || !Array.isArray(r) ? [] : r));
+          });
+          if (rows[0]?.name) otherName = rows[0].name;
+        }
+      }
+
+      const start = new Date(appointment.appointmentDate);
+      const end = new Date(start.getTime() + (appointment.durationMinutes ?? 60) * 60000);
+      const now = Date.now();
+      // Se puede entrar desde 10 minutos antes y hasta 15 después del fin
+      const opensAt = start.getTime() - 10 * 60000;
+      const closesAt = end.getTime() + 15 * 60000;
+
+      const myArrivedAt = role === "professional"
+        ? appointment.professionalJoinedAt
+        : appointment.userJoinedAt;
+      const otherArrivedAt = role === "professional"
+        ? appointment.userJoinedAt
+        : appointment.professionalJoinedAt;
+
+      return {
+        role,
+        appointmentId: appointment.id,
+        status: appointment.status,
+        startsAt: start.toISOString(),
+        endsAt: end.toISOString(),
+        durationMinutes: appointment.durationMinutes ?? 60,
+        otherName,
+        myArrivedAt: myArrivedAt ? new Date(myArrivedAt).toISOString() : null,
+        otherArrivedAt: otherArrivedAt ? new Date(otherArrivedAt).toISOString() : null,
+        canEnter: now >= opensAt && now <= closesAt,
+        opensAt: new Date(opensAt).toISOString(),
+        isOver: now > closesAt,
+        isCanceled: ["canceled", "no-show"].includes(appointment.status),
+      };
+    }),
+
+  /**
+   * Registra la llegada y devuelve el enlace de la sala.
+   * Es el único camino a la videollamada: el enlace de Daily ya no viaja en
+   * los correos, así que nadie ajeno a la cita puede entrar.
+   */
+  confirmArrival: protectedProcedure
+    .input(z.object({ appointmentId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const appointment: any = await db.getAppointmentById(input.appointmentId);
+      if (!appointment) throw new TRPCError({ code: "NOT_FOUND", message: "Cita no encontrada" });
+
+      const professional = await db.getProfessionalByUserId(ctx.user.id);
+      const isProfessional =
+        !!professional && Number(appointment.professionalId) === Number(professional.id);
+      const isClient = Number(appointment.userId) === Number(ctx.user.id);
+      if (!isProfessional && !isClient) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Esta cita no es tuya" });
+      }
+      if (["canceled", "no-show"].includes(appointment.status)) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Esta cita ya fue cerrada" });
+      }
+
+      const dbInstance = await db.getDb();
+      if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      const client = (dbInstance as any).$client;
+
+      const column = isProfessional ? "professionalJoinedAt" : "userJoinedAt";
+      await new Promise<void>((resolve) => {
+        client.execute(
+          `UPDATE appointments SET ${column} = COALESCE(${column}, NOW()) WHERE id = ?`,
+          [input.appointmentId],
+          (err: any) => { if (err) console.error("[Sala] arrival:", err?.message); resolve(); }
+        );
+      });
+
+      // El cliente además confirma el consumo de créditos, igual que antes
+      if (isClient && appointment.status === "scheduled") {
+        await confirmCredits(input.appointmentId).catch((err: any) =>
+          console.error("[Credits] confirmCredits (sala):", err?.message));
+      }
+
+      const roomUrl = isProfessional
+        ? (appointment.videoCallUrlProfessional ?? appointment.videoCallLink)
+        : (appointment.videoCallUrlUser ?? appointment.videoCallLink);
+
+      if (!roomUrl) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "La sala no está lista todavía" });
+      }
+
+      return { roomUrl, role: isProfessional ? "professional" : "user" };
     }),
 
   // Called when the PROFESSIONAL opens the video room — records attendance so

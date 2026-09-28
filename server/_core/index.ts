@@ -1571,7 +1571,7 @@ setInterval(async () => {
             userName: row.userName ?? "Usuario",
             professionalName: row.professionalName ?? "Especialista",
             appointmentDate: new Date(row.appointmentDate),
-            videoCallLink: row.videoCallUrlUser ?? row.videoCallLink ?? "",
+            videoCallLink: `https://inteira.app/sala/${row.id}`,
             timezoneOffsetMinutes,
           }).catch(() => {});
         }
@@ -1581,7 +1581,7 @@ setInterval(async () => {
             professionalName: row.professionalName ?? "Especialista",
             clientName: row.userName ?? "Usuario",
             appointmentDate: new Date(row.appointmentDate),
-            videoCallLink: row.videoCallUrlProfessional ?? row.videoCallLink ?? "",
+            videoCallLink: `https://inteira.app/sala/${row.id}`,
             timezoneOffsetMinutes,
           }).catch(() => {});
         }

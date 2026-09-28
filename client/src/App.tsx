@@ -1,6 +1,7 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Spinner } from "@/components/ui/spinner";
+import WaitingRoom from "@/pages/WaitingRoom";
 import NotFound from "@/pages/NotFound";
 import { useEffect } from "react";
 import { Redirect, Route, Switch } from "wouter";
@@ -133,6 +134,7 @@ function Router() {
       </Route>
 
       {/* Auth */}
+      <Route path="/sala/:id" component={WaitingRoom} />
       <Route path="/login" component={Login} />
       <Route path="/registro" component={RegistroTipo} />
       <Route path="/registro/usuario" component={Registro} />
