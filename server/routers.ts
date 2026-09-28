@@ -1422,6 +1422,50 @@ export const appRouter = router({
       }),
 
     /**
+     * Historial de citas agrupado por mes: cuántas hubo de cada estado y
+     * cuánto dinero movieron. Alimenta el resumen de la pestaña Citas.
+     */
+    getAppointmentsByMonth: protectedProcedure
+      .input(z.object({ months: z.number().min(1).max(36).default(12) }).optional())
+      .query(async ({ ctx, input }) => {
+        requireAdmin(ctx);
+        const dbInstance = await db.getDb();
+        if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const client = (dbInstance as any).$client;
+        const months = input?.months ?? 12;
+
+        const rows = await new Promise<any[]>((resolve, reject) => {
+          client.execute(
+            `SELECT
+               DATE_FORMAT(a.appointmentDate, '%Y-%m') AS period,
+               COUNT(*)                                                       AS total,
+               SUM(a.status = 'completed')                                    AS completadas,
+               SUM(a.status = 'canceled')                                     AS canceladas,
+               SUM(a.status = 'no-show')                                      AS noShow,
+               SUM(a.status = 'pending_review')                               AS enRevision,
+               SUM(a.status IN ('scheduled','in_progress'))                   AS agendadas,
+               COUNT(DISTINCT a.userId)                                       AS usuariosUnicos,
+               COUNT(DISTINCT a.professionalId)                               AS profesionalesActivos,
+               COALESCE(SUM(pe.grossAmount), 0)                               AS bruto,
+               COALESCE(SUM(pe.commissionAmount), 0)                          AS comision,
+               COALESCE(SUM(pe.netAmount), 0)                                 AS pagado
+             FROM \`appointments\` a
+             LEFT JOIN \`professionalEarnings\` pe
+               ON pe.appointmentId = a.id AND pe.status = 'credited'
+             WHERE a.appointmentDate >= DATE_SUB(NOW(), INTERVAL ? MONTH)
+             GROUP BY period
+             ORDER BY period DESC`,
+            [months],
+            (err: any, results: any) => {
+              if (err) reject(err);
+              else resolve(Array.isArray(results) ? results : []);
+            }
+          );
+        });
+        return rows;
+      }),
+
+    /**
      * Serie mensual de ingresos para las gráficas del panel.
      * Devuelve, por mes, el bruto facturado, la comisión de Inteira, lo pagado
      * a profesionales y el número de sesiones.

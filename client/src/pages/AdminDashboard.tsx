@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { ProfessionalsFinancials, ProfessionalHistoryModal } from "@/components/admin/ProfessionalsFinancials";
+import { AppointmentsByMonth } from "@/components/admin/AppointmentsByMonth";
 import { getLoginUrl } from "@/const";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -1795,6 +1796,8 @@ export default function AdminDashboard() {
         {activeTab === "citas" && (
           <div className="space-y-4">
             <h2 className="text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>Citas</h2>
+
+            <AppointmentsByMonth />
 
             {/* Filters */}
             <div className="flex flex-wrap gap-2">
