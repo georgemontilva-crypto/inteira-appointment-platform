@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { ProfessionalsFinancials } from "@/components/admin/ProfessionalsFinancials";
 import { getLoginUrl } from "@/const";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -2096,7 +2097,9 @@ export default function AdminDashboard() {
 
         {/* ══ TAB: PROFESIONALES ═════════════════════════════════════════════ */}
         {activeTab === "profesionales" && (
-          <div className="space-y-4">
+          <div className="space-y-8">
+            <ProfessionalsFinancials />
+
             <h2 className="text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>
               Solicitudes de profesionales
             </h2>

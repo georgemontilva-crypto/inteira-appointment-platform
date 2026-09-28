@@ -1333,6 +1333,140 @@ export const appRouter = router({
       }),
 
     /**
+     * Resumen financiero por profesional: sesiones por estado, lo que factura
+     * la plataforma (comisión) y lo que gana el profesional (neto).
+     * Los montos salen de professionalEarnings, que guarda el desglose exacto
+     * aplicado en su momento — no se recalcula con las tarifas de hoy.
+     */
+    getProfessionalsFinancials: protectedProcedure
+      .input(z.object({
+        from: z.string().optional(),
+        to: z.string().optional(),
+      }).optional())
+      .query(async ({ ctx, input }) => {
+        requireAdmin(ctx);
+        const dbInstance = await db.getDb();
+        if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const client = (dbInstance as any).$client;
+
+        const from = input?.from ?? null;
+        const to = input?.to ?? null;
+        // El filtro de fechas se aplica sobre la fecha de la cita
+        const dateFilter = "AND (? IS NULL OR a.appointmentDate >= ?) AND (? IS NULL OR a.appointmentDate <= ?)";
+        const dateParams = [from, from, to, to];
+
+        const sql = `
+          SELECT
+            p.id AS professionalId,
+            p.tier,
+            p.status,
+            p.country,
+            p.state,
+            u.id AS userId,
+            u.name AS professionalName,
+            u.email AS professionalEmail,
+            u.profileImage,
+            s.name AS specialtyName,
+            COALESCE(pw.balance, 0)           AS walletBalance,
+            COALESCE(pw.pendingWithdrawal, 0) AS walletPending,
+            COALESCE(pw.totalWithdrawn, 0)    AS walletWithdrawn,
+            (SELECT COUNT(*) FROM \`appointments\` a
+              WHERE a.professionalId = p.id AND a.status = 'completed' ${dateFilter}) AS sessionsCompleted,
+            (SELECT COUNT(*) FROM \`appointments\` a
+              WHERE a.professionalId = p.id AND a.status = 'canceled' ${dateFilter}) AS sessionsCanceled,
+            (SELECT COUNT(*) FROM \`appointments\` a
+              WHERE a.professionalId = p.id AND a.status = 'no-show' ${dateFilter}) AS sessionsNoShow,
+            (SELECT COUNT(*) FROM \`appointments\` a
+              WHERE a.professionalId = p.id AND a.status = 'pending_review' ${dateFilter}) AS sessionsPendingReview,
+            (SELECT COUNT(*) FROM \`appointments\` a
+              WHERE a.professionalId = p.id AND a.status = 'scheduled' ${dateFilter}) AS sessionsScheduled,
+            COALESCE((SELECT SUM(pe.grossAmount) FROM \`professionalEarnings\` pe
+              JOIN \`appointments\` a ON a.id = pe.appointmentId
+              WHERE pe.professionalId = p.id AND pe.status = 'credited' ${dateFilter}), 0) AS grossTotal,
+            COALESCE((SELECT SUM(pe.commissionAmount) FROM \`professionalEarnings\` pe
+              JOIN \`appointments\` a ON a.id = pe.appointmentId
+              WHERE pe.professionalId = p.id AND pe.status = 'credited' ${dateFilter}), 0) AS commissionTotal,
+            COALESCE((SELECT SUM(pe.netAmount) FROM \`professionalEarnings\` pe
+              JOIN \`appointments\` a ON a.id = pe.appointmentId
+              WHERE pe.professionalId = p.id AND pe.status = 'credited' ${dateFilter}), 0) AS netTotal,
+            COALESCE((SELECT COUNT(*) FROM \`professionalEarnings\` pe
+              JOIN \`appointments\` a ON a.id = pe.appointmentId
+              WHERE pe.professionalId = p.id AND pe.status = 'reversed' ${dateFilter}), 0) AS earningsReversed
+          FROM \`professionals\` p
+          LEFT JOIN \`users\` u ON u.id = p.userId
+          LEFT JOIN \`specialties\` s ON s.id = p.specialtyId
+          LEFT JOIN \`professionalWallet\` pw ON pw.professionalId = p.id
+          WHERE p.status = 'approved'
+          ORDER BY netTotal DESC, u.name ASC
+        `;
+
+        // 11 subconsultas llevan el filtro de fechas, en el mismo orden del SQL
+        const params = Array(11).fill(dateParams).flat();
+
+        const rows = await new Promise<any[]>((resolve, reject) => {
+          client.execute(sql, params, (err: any, results: any) => {
+            if (err) reject(err);
+            else resolve(Array.isArray(results) ? results : []);
+          });
+        });
+        return rows;
+      }),
+
+    /**
+     * Detalle cita por cita de un profesional, con el desglose de cada una.
+     */
+    getProfessionalBreakdown: protectedProcedure
+      .input(z.object({
+        professionalId: z.number(),
+        from: z.string().optional(),
+        to: z.string().optional(),
+        limit: z.number().min(1).max(500).default(200),
+      }))
+      .query(async ({ ctx, input }) => {
+        requireAdmin(ctx);
+        const dbInstance = await db.getDb();
+        if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const client = (dbInstance as any).$client;
+
+        const from = input.from ?? null;
+        const to = input.to ?? null;
+
+        const rows = await new Promise<any[]>((resolve, reject) => {
+          client.execute(
+            `SELECT
+               a.id AS appointmentId,
+               a.appointmentDate,
+               a.durationMinutes,
+               a.status,
+               a.pricingType,
+               a.cancellationReason,
+               a.canceledBy,
+               u.name AS clientName,
+               u.email AS clientEmail,
+               pe.grossAmount,
+               pe.commissionRate,
+               pe.commissionAmount,
+               pe.netAmount,
+               pe.status AS earningStatus
+             FROM \`appointments\` a
+             LEFT JOIN \`users\` u ON u.id = a.userId
+             LEFT JOIN \`professionalEarnings\` pe ON pe.appointmentId = a.id
+             WHERE a.professionalId = ?
+               AND (? IS NULL OR a.appointmentDate >= ?)
+               AND (? IS NULL OR a.appointmentDate <= ?)
+             ORDER BY a.appointmentDate DESC
+             LIMIT ?`,
+            [input.professionalId, from, from, to, to, input.limit],
+            (err: any, results: any) => {
+              if (err) reject(err);
+              else resolve(Array.isArray(results) ? results : []);
+            }
+          );
+        });
+        return rows;
+      }),
+
+    /**
      * Cambia la foto de perfil de cualquier usuario. La URL viene de
      * /api/upload/professional-photo. Si el usuario es profesional, se
      * sincroniza también professionals.profilePhoto, que es la que ven los
