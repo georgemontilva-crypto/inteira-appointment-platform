@@ -526,7 +526,11 @@ export default function AdminDashboard() {
   const [historyModal, setHistoryModal] = useState<{ professionalId: number; name: string } | null>(null);
 
   /** Sube la imagen a R2 y luego la asocia al usuario. */
-  const handlePhotoPick = async (userId: number, file: File) => {
+  const handlePhotoPick = async (
+    userId: number,
+    file: File,
+    alsoRefetch?: () => void
+  ) => {
     if (!file.type.startsWith("image/")) {
       toast.error("El archivo debe ser una imagen");
       return;
@@ -551,6 +555,7 @@ export default function AdminDashboard() {
       if (!res.ok) throw new Error("Falló la subida");
       const { url } = await res.json();
       await setUserPhotoMutation.mutateAsync({ userId, url });
+      alsoRefetch?.();
     } catch (err: any) {
       toast.error(err?.message ?? "Error al subir la foto");
     } finally {
@@ -2380,13 +2385,38 @@ export default function AdminDashboard() {
               <Card key={pro.id} className="border-border">
                 <CardContent className="p-4 space-y-3">
                   <div className="flex items-start gap-3">
-                    {avatar ? (
-                      <img src={avatar} alt={name} className="w-11 h-11 rounded-xl object-cover flex-shrink-0" />
-                    ) : (
-                      <div className="w-11 h-11 rounded-xl gradient-brand flex items-center justify-center text-white font-bold flex-shrink-0">
-                        {name.charAt(0).toUpperCase()}
-                      </div>
-                    )}
+                    {/* La foto es un selector de archivo: el admin puede cambiarla
+                        aquí mismo y se sincroniza con la cuenta del asesor. */}
+                    <label
+                      className="relative group cursor-pointer flex-shrink-0"
+                      title="Cambiar foto de perfil"
+                    >
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handlePhotoPick(pro.userId, file, refetchActiveProfessionals);
+                          e.target.value = "";
+                        }}
+                      />
+                      {avatar ? (
+                        <img src={avatar} alt={name} className="w-11 h-11 rounded-xl object-cover" />
+                      ) : (
+                        <div className="w-11 h-11 rounded-xl gradient-brand flex items-center justify-center text-white font-bold">
+                          {name.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <span className="absolute inset-0 rounded-xl bg-black/55 text-white text-[10px] font-medium flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        Editar
+                      </span>
+                      {uploadingPhotoFor === pro.userId && (
+                        <span className="absolute inset-0 rounded-xl bg-black/60 flex items-center justify-center">
+                          <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        </span>
+                      )}
+                    </label>
                     <div className="min-w-0 flex-1">
                       <p className="font-semibold text-sm truncate">{name}</p>
                       {pro.specialtyName && (
