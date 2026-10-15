@@ -61,7 +61,64 @@ const professionalRegistrationSchema = z.object({
   fullName: z.string().max(100).optional(),           // nombre completo del profesional
   identityDocUrl: z.string().url().max(500).optional(),
   documentNationality: z.string().max(100).optional(),
+
+  // ── Ubicación de residencia ──
+  country: z.string().max(2).optional(),
+  state: z.string().max(120).optional(),
+  city: z.string().max(120).optional(),
+
+  // ── Experiencia y modalidad ──
+  practiceStatus: z.enum(["active", "past", "not_yet"]).optional(),
+  hasAdvisoryExperience: z.boolean().optional(),
+  advisoryExperienceDetail: z.string().max(2000).optional(),
+  sessionModality: z.enum(["online", "in_person", "both"]).optional(),
+  inPersonArea: z.string().max(255).optional(),
+
+  // ── Propósito y objetivos ──
+  motivation: z.string().max(2000).optional(),
+  personalPurpose: z.string().max(2000).optional(),
+  personalGoals: z.string().max(2000).optional(),
+  platformObjectives: z.string().max(2000).optional(),
+
+  /** El formulario exige las tres confirmaciones antes de enviar. */
+  acceptedTerms: z.boolean().optional(),
 });
+
+/**
+ * Campos del registro que se guardan tal cual en `professionals`.
+ * Compartido por register (usuario con sesión) y registerNew (cuenta nueva)
+ * para que ninguno de los dos se quede atrás cuando se agregue un campo.
+ */
+function professionalRegistrationFields(input: z.infer<typeof professionalRegistrationSchema>) {
+  return {
+    yearsOfExperience: input.yearsOfExperience,
+    education: input.education,
+    certifications: input.certifications,
+    bio: input.bio,
+    hourlyRate: input.hourlyRate ? input.hourlyRate : undefined,
+    profilePhoto: input.profilePhoto ?? null,
+    licenseDocument: input.licenseDocument ?? null,
+    identityDocUrl: input.identityDocUrl ?? null,
+    documentNationality: input.documentNationality ?? null,
+    country: input.country ?? null,
+    state: input.state ?? null,
+    city: input.city ?? null,
+    practiceStatus: input.practiceStatus ?? null,
+    hasAdvisoryExperience: input.hasAdvisoryExperience ?? null,
+    // Solo tiene sentido guardar el detalle si dijo que sí tiene experiencia
+    advisoryExperienceDetail: input.hasAdvisoryExperience ? (input.advisoryExperienceDetail ?? null) : null,
+    sessionModality: input.sessionModality ?? null,
+    // Igual con la zona presencial: solo si la modalidad la incluye
+    inPersonArea: (input.sessionModality === "in_person" || input.sessionModality === "both")
+      ? (input.inPersonArea ?? null)
+      : null,
+    motivation: input.motivation ?? null,
+    personalPurpose: input.personalPurpose ?? null,
+    personalGoals: input.personalGoals ?? null,
+    platformObjectives: input.platformObjectives ?? null,
+    acceptedTerms: input.acceptedTerms ?? false,
+  };
+}
 
 const userProfileUpdateSchema = z.object({
   name: z.string().max(100).optional(),
@@ -464,17 +521,7 @@ export const appRouter = router({
           ctx.user.id,
           input.specialtyId,
           licenseNum,
-          {
-            yearsOfExperience: input.yearsOfExperience,
-            education: input.education,
-            certifications: input.certifications,
-            bio: input.bio,
-            hourlyRate: input.hourlyRate ? input.hourlyRate : undefined,
-            profilePhoto: input.profilePhoto ?? null,
-            licenseDocument: input.licenseDocument ?? null,
-            identityDocUrl: input.identityDocUrl ?? null,
-            documentNationality: input.documentNationality ?? null,
-          }
+          professionalRegistrationFields(input)
         );
 
         // Actualizar el rol del usuario a 'pending_professional' y guardar el nombre
@@ -570,15 +617,14 @@ export const appRouter = router({
         const userId = newUser.id;
         const licenseNum = (input.licenseNumber ?? "").trim() || `NOLIC_${userId}_${Date.now()}`;
 
-        await db.createProfessional(userId, input.specialtyId, licenseNum, {
-          yearsOfExperience: input.yearsOfExperience,
-          education: input.education,
-          certifications: input.certifications,
-          bio: input.bio,
-          hourlyRate: input.hourlyRate ? input.hourlyRate : undefined,
-          profilePhoto: input.profilePhoto ?? null,
-          licenseDocument: input.licenseDocument ?? null,
-        });
+        // Antes este camino no guardaba identityDocUrl ni documentNationality:
+        // quien se registraba sin cuenta previa perdía su documento de identidad.
+        await db.createProfessional(
+          userId,
+          input.specialtyId,
+          licenseNum,
+          professionalRegistrationFields(input)
+        );
 
         // Notify admin + send confirmation to specialist (fire and forget)
         setImmediate(async () => {

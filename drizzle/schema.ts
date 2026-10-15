@@ -84,6 +84,28 @@ export const professionals = mysqlTable("professionals", {
   // Ubicación que ve el usuario al elegir especialista
   country: varchar("country", { length: 2 }),
   state: varchar("state", { length: 120 }),
+  city: varchar("city", { length: 120 }),
+
+  // ── Experiencia y modalidad (registro de asesor) ──────────────────────────
+  /** ¿Ejerce actualmente su profesión? */
+  practiceStatus: mysqlEnum("practiceStatus", ["active", "past", "not_yet"]),
+  /** ¿Tiene experiencia dando asesorías o acompañamiento? */
+  hasAdvisoryExperience: boolean("hasAdvisoryExperience"),
+  /** Detalle de esa experiencia — solo si hasAdvisoryExperience es true */
+  advisoryExperienceDetail: longtext("advisoryExperienceDetail"),
+  /** Modalidad en que puede atender */
+  sessionModality: mysqlEnum("sessionModality", ["online", "in_person", "both"]),
+  /** Ciudad y zona de atención presencial — solo si la modalidad la incluye */
+  inPersonArea: varchar("inPersonArea", { length: 255 }),
+
+  // ── Propósito y objetivos ─────────────────────────────────────────────────
+  motivation: longtext("motivation"),
+  personalPurpose: longtext("personalPurpose"),
+  personalGoals: longtext("personalGoals"),
+  platformObjectives: longtext("platformObjectives"),
+
+  /** Momento en que aceptó términos, privacidad y veracidad de los datos */
+  acceptedTermsAt: timestamp("acceptedTermsAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

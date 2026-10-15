@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { COUNTRIES, getStates } from "@shared/locations";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
@@ -24,6 +25,8 @@ import {
   Clock,
   Briefcase,
   Shield,
+  MapPin,
+  Compass,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 
@@ -111,6 +114,282 @@ function FileUploadField({ label, description, accept, file, onChange, required,
   );
 }
 
+// ── Bloques del registro ──────────────────────────────────────────────────────
+// Se renderizan igual en la versión embebida y en la página completa, para que
+// un campo nuevo no haya que escribirlo dos veces.
+
+type FormState = Record<string, string>;
+interface BlockProps {
+  form: FormState;
+  onChange: (field: string, value: string) => void;
+}
+
+const selectCls =
+  "w-full border border-border rounded-xl px-3 py-2.5 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary";
+
+function RadioRow({
+  name, value, options, onPick,
+}: {
+  name: string;
+  value: string;
+  options: { value: string; label: string }[];
+  onPick: (v: string) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {options.map((o) => {
+        const active = value === o.value;
+        return (
+          <label
+            key={o.value}
+            className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-sm cursor-pointer transition-colors ${
+              active
+                ? "border-primary bg-primary/5 text-foreground font-medium"
+                : "border-border hover:bg-muted/50 text-muted-foreground"
+            }`}
+          >
+            <input
+              type="radio"
+              name={name}
+              value={o.value}
+              checked={active}
+              onChange={() => onPick(o.value)}
+              className="accent-primary"
+            />
+            {o.label}
+          </label>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Dónde vive el asesor. Distinto del país que emitió su documento. */
+function LocationBlock({ form, onChange }: BlockProps) {
+  const states = getStates(form.country);
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label className="text-sm font-semibold">
+            País donde vives <span className="text-red-500">*</span>
+          </Label>
+          <select
+            className={selectCls}
+            value={form.country}
+            onChange={(e) => { onChange("country", e.target.value); onChange("state", ""); onChange("city", ""); }}
+          >
+            <option value="">Selecciona tu país de residencia</option>
+            {COUNTRIES.map((c) => (
+              <option key={c.code} value={c.code}>{c.flag} {c.name}</option>
+            ))}
+          </select>
+        </div>
+        <div className="space-y-2">
+          <Label className="text-sm font-semibold">
+            Estado, provincia o región <span className="text-red-500">*</span>
+          </Label>
+          {states.length > 0 ? (
+            <select
+              className={selectCls}
+              value={form.state}
+              onChange={(e) => onChange("state", e.target.value)}
+              disabled={!form.country}
+            >
+              <option value="">{form.country ? "Selecciona tu estado" : "Selecciona primero tu país"}</option>
+              {states.map((st) => <option key={st} value={st}>{st}</option>)}
+            </select>
+          ) : (
+            <Input
+              value={form.state}
+              onChange={(e) => onChange("state", e.target.value)}
+              placeholder={form.country ? "Escribe tu estado o provincia" : "Selecciona primero tu país"}
+              disabled={!form.country}
+            />
+          )}
+        </div>
+      </div>
+      <div className="space-y-2">
+        <Label className="text-sm font-semibold">Ciudad o municipio</Label>
+        <Input
+          value={form.city}
+          onChange={(e) => onChange("city", e.target.value)}
+          placeholder={form.state ? "Escribe tu ciudad o municipio" : "Selecciona primero tu estado"}
+          disabled={!form.state}
+        />
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Tu residencia puede ser distinta del país que emitió tu documento de identidad.
+      </p>
+    </div>
+  );
+}
+
+/** Si ejerce, si ha dado asesorías, y en qué modalidad puede atender. */
+function ExperienceBlock({ form, onChange }: BlockProps) {
+  const tieneExperiencia = form.hasAdvisoryExperience === "si";
+  const atiendePresencial =
+    form.sessionModality === "in_person" || form.sessionModality === "both";
+
+  return (
+    <div className="space-y-5">
+      <div className="space-y-2">
+        <Label className="text-sm font-semibold">
+          ¿Actualmente ejerces tu profesión o especialidad? <span className="text-red-500">*</span>
+        </Label>
+        <RadioRow
+          name="practiceStatus"
+          value={form.practiceStatus}
+          onPick={(v) => onChange("practiceStatus", v)}
+          options={[
+            { value: "active", label: "Sí, actualmente" },
+            { value: "past", label: "He ejercido, pero actualmente no" },
+            { value: "not_yet", label: "Aún no" },
+          ]}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label className="text-sm font-semibold">
+          ¿Tienes experiencia dando asesorías, consultas o acompañamiento en tu área?{" "}
+          <span className="text-red-500">*</span>
+        </Label>
+        <RadioRow
+          name="hasAdvisoryExperience"
+          value={form.hasAdvisoryExperience}
+          onPick={(v) => onChange("hasAdvisoryExperience", v)}
+          options={[{ value: "si", label: "Sí" }, { value: "no", label: "No" }]}
+        />
+      </div>
+
+      {tieneExperiencia && (
+        <div className="space-y-2">
+          <Label className="text-sm font-semibold">¿Qué tipo de asesoría has brindado?</Label>
+          <Textarea
+            rows={3}
+            value={form.advisoryExperienceDetail}
+            onChange={(e) => onChange("advisoryExperienceDetail", e.target.value)}
+            placeholder="Cuéntanos qué has hecho y a quiénes has acompañado..."
+          />
+        </div>
+      )}
+
+      <div className="space-y-2">
+        <Label className="text-sm font-semibold">
+          ¿Tus sesiones pueden ser presenciales y online? <span className="text-red-500">*</span>
+        </Label>
+        <RadioRow
+          name="sessionModality"
+          value={form.sessionModality}
+          onPick={(v) => onChange("sessionModality", v)}
+          options={[
+            { value: "online", label: "Solo online" },
+            { value: "in_person", label: "Solo presenciales" },
+            { value: "both", label: "Presenciales y online" },
+          ]}
+        />
+      </div>
+
+      {atiendePresencial && (
+        <div className="space-y-2">
+          <Label className="text-sm font-semibold">Ciudad y zona de atención presencial</Label>
+          <Input
+            value={form.inPersonArea}
+            onChange={(e) => onChange("inPersonArea", e.target.value)}
+            placeholder="Indica dónde puedes atender"
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Motivación, propósito y metas. */
+function PurposeBlock({ form, onChange }: BlockProps) {
+  const campos: { key: string; label: string; placeholder: string }[] = [
+    {
+      key: "motivation",
+      label: "¿Qué te interesa de entrar a Inteira?",
+      placeholder: "Cuéntanos qué te motiva, qué te gustaría aportar y qué esperas de Inteira...",
+    },
+    {
+      key: "personalPurpose",
+      label: "¿Cuál es tu propósito personal?",
+      placeholder: "Cuéntanos qué da sentido a lo que haces y cómo quieres ayudar a otras personas...",
+    },
+    {
+      key: "personalGoals",
+      label: "¿Cuáles son tus metas personales y profesionales?",
+      placeholder: "Comparte las metas que deseas alcanzar...",
+    },
+    {
+      key: "platformObjectives",
+      label: "¿Qué objetivos te gustaría lograr al formar parte de Inteira?",
+      placeholder: "Escribe tus objetivos concretos dentro de la comunidad...",
+    },
+  ];
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">Queremos conocer qué te motiva.</p>
+      {campos.map((c) => (
+        <div key={c.key} className="space-y-2">
+          <Label className="text-sm font-semibold">
+            {c.label} <span className="text-red-500">*</span>
+          </Label>
+          <Textarea
+            rows={3}
+            value={form[c.key] ?? ""}
+            onChange={(e) => onChange(c.key, e.target.value)}
+            placeholder={c.placeholder}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Las tres confirmaciones obligatorias antes de enviar. */
+function ConfirmationBlock({
+  acceptTerms, setAcceptTerms,
+  acceptPrivacy, setAcceptPrivacy,
+  confirmIdentity, setConfirmIdentity,
+}: {
+  acceptTerms: boolean; setAcceptTerms: (v: boolean) => void;
+  acceptPrivacy: boolean; setAcceptPrivacy: (v: boolean) => void;
+  confirmIdentity: boolean; setConfirmIdentity: (v: boolean) => void;
+}) {
+  const items: { checked: boolean; set: (v: boolean) => void; label: React.ReactNode }[] = [
+    {
+      checked: acceptTerms, set: setAcceptTerms,
+      label: <>Acepto los <a href="/terminos" target="_blank" className="text-primary underline">términos y condiciones</a> de inteira para asesores.</>,
+    },
+    {
+      checked: acceptPrivacy, set: setAcceptPrivacy,
+      label: <>He leído el <a href="/privacidad" target="_blank" className="text-primary underline">aviso de privacidad</a>.</>,
+    },
+    {
+      checked: confirmIdentity, set: setConfirmIdentity,
+      label: <>Confirmo que los datos, documentos y fotografía corresponden a mi persona.</>,
+    },
+  ];
+  return (
+    <div className="space-y-3 rounded-xl border border-border p-4 bg-muted/20">
+      <p className="text-sm font-semibold">Revisa y envía tu solicitud</p>
+      {items.map((it, i) => (
+        <label key={i} className="flex items-start gap-2.5 text-sm cursor-pointer">
+          <input
+            type="checkbox"
+            checked={it.checked}
+            onChange={(e) => it.set(e.target.checked)}
+            className="mt-0.5 accent-primary w-4 h-4 flex-shrink-0"
+          />
+          <span className="text-muted-foreground leading-snug">{it.label}</span>
+        </label>
+      ))}
+    </div>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 export default function RegisterProfessional({ embedded = false }: { embedded?: boolean } = {}) {
   const { isAuthenticated, loading } = useAuth();
@@ -130,7 +409,27 @@ export default function RegisterProfessional({ embedded = false }: { embedded?: 
     education: "",
     licenseNumber: "",
     documentNationality: "",
+    // Residencia
+    country: "",
+    state: "",
+    city: "",
+    // Experiencia y modalidad
+    practiceStatus: "",
+    hasAdvisoryExperience: "",
+    advisoryExperienceDetail: "",
+    sessionModality: "",
+    inPersonArea: "",
+    // Propósito
+    motivation: "",
+    personalPurpose: "",
+    personalGoals: "",
+    platformObjectives: "",
   });
+
+  // Confirmaciones del paso final
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [acceptPrivacy, setAcceptPrivacy] = useState(false);
+  const [confirmIdentity, setConfirmIdentity] = useState(false);
 
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
@@ -189,6 +488,18 @@ export default function RegisterProfessional({ embedded = false }: { embedded?: 
     if (!form.bio.trim()) return toast.error("La descripción profesional es obligatoria");
     if (!profilePhoto) return toast.error("La foto de perfil es obligatoria");
     if (!identityDoc) return toast.error("El documento de identidad ciudadana es obligatorio");
+    if (!form.country) return toast.error("Selecciona el país donde vives");
+    if (!form.state.trim()) return toast.error("Indica tu estado, provincia o región");
+    if (!form.practiceStatus) return toast.error("Indícanos si ejerces actualmente tu profesión");
+    if (!form.hasAdvisoryExperience) return toast.error("Indícanos si tienes experiencia dando asesorías");
+    if (!form.sessionModality) return toast.error("Indica en qué modalidad puedes atender");
+    if (!form.motivation.trim()) return toast.error("Cuéntanos qué te interesa de entrar a Inteira");
+    if (!form.personalPurpose.trim()) return toast.error("Cuéntanos cuál es tu propósito personal");
+    if (!form.personalGoals.trim()) return toast.error("Comparte tus metas personales y profesionales");
+    if (!form.platformObjectives.trim()) return toast.error("Escribe tus objetivos dentro de Inteira");
+    if (!acceptTerms || !acceptPrivacy || !confirmIdentity) {
+      return toast.error("Debes aceptar las tres confirmaciones antes de enviar");
+    }
 
     setUploading(true);
     const fullName = `${form.firstName.trim()} ${form.lastName.trim()}`.trim();
@@ -212,6 +523,25 @@ export default function RegisterProfessional({ embedded = false }: { embedded?: 
         yearsOfExperience: form.yearsOfExperience ? parseInt(form.yearsOfExperience) : undefined,
         profilePhoto: profilePhotoUrl,
         fullName: fullName || undefined,
+
+        country: form.country || undefined,
+        state: form.state.trim() || undefined,
+        city: form.city.trim() || undefined,
+
+        practiceStatus: (form.practiceStatus || undefined) as "active" | "past" | "not_yet" | undefined,
+        hasAdvisoryExperience: form.hasAdvisoryExperience
+          ? form.hasAdvisoryExperience === "si"
+          : undefined,
+        advisoryExperienceDetail: form.advisoryExperienceDetail.trim() || undefined,
+        sessionModality: (form.sessionModality || undefined) as "online" | "in_person" | "both" | undefined,
+        inPersonArea: form.inPersonArea.trim() || undefined,
+
+        motivation: form.motivation.trim() || undefined,
+        personalPurpose: form.personalPurpose.trim() || undefined,
+        personalGoals: form.personalGoals.trim() || undefined,
+        platformObjectives: form.platformObjectives.trim() || undefined,
+
+        acceptedTerms: acceptTerms && acceptPrivacy && confirmIdentity,
       };
 
       if (isAuthenticated) {
@@ -442,6 +772,30 @@ export default function RegisterProfessional({ embedded = false }: { embedded?: 
           description="PDF, JPG o PNG — máximo 10 MB (opcional)"
           accept="application/pdf,image/jpeg,image/png,image/webp"
           file={certifications} onChange={setCertifications} />
+
+        {/* Ubicación de residencia */}
+        <div className="pt-2 border-t border-border space-y-4">
+          <p className="text-sm font-semibold">Dónde vives</p>
+          <LocationBlock form={form} onChange={handleChange} />
+        </div>
+
+        {/* Experiencia y modalidad */}
+        <div className="pt-2 border-t border-border space-y-4">
+          <p className="text-sm font-semibold">Experiencia y modalidad</p>
+          <ExperienceBlock form={form} onChange={handleChange} />
+        </div>
+
+        {/* Propósito */}
+        <div className="pt-2 border-t border-border space-y-4">
+          <p className="text-sm font-semibold">Sobre ti y tu propósito</p>
+          <PurposeBlock form={form} onChange={handleChange} />
+        </div>
+
+        <ConfirmationBlock
+          acceptTerms={acceptTerms} setAcceptTerms={setAcceptTerms}
+          acceptPrivacy={acceptPrivacy} setAcceptPrivacy={setAcceptPrivacy}
+          confirmIdentity={confirmIdentity} setConfirmIdentity={setConfirmIdentity}
+        />
 
         {/* CTA */}
         <div className="flex justify-center pt-4">
@@ -850,6 +1204,62 @@ export default function RegisterProfessional({ embedded = false }: { embedded?: 
               </div>
             )}
 
+            {/* ── Ubicación de residencia ── */}
+            <Card className="border-border">
+              <CardContent className="p-6 space-y-5">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <MapPin className="w-5 h-5 text-primary" />
+                  </div>
+                  <h3 className="font-bold text-foreground" style={{ fontFamily: "Poppins, sans-serif" }}>
+                    Dónde vives
+                  </h3>
+                </div>
+                <LocationBlock form={form} onChange={handleChange} />
+              </CardContent>
+            </Card>
+
+            {/* ── Experiencia y modalidad ── */}
+            <Card className="border-border">
+              <CardContent className="p-6 space-y-5">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <Briefcase className="w-5 h-5 text-primary" />
+                  </div>
+                  <h3 className="font-bold text-foreground" style={{ fontFamily: "Poppins, sans-serif" }}>
+                    Experiencia y modalidad
+                  </h3>
+                </div>
+                <ExperienceBlock form={form} onChange={handleChange} />
+              </CardContent>
+            </Card>
+
+            {/* ── Propósito y objetivos ── */}
+            <Card className="border-border">
+              <CardContent className="p-6 space-y-5">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <Compass className="w-5 h-5 text-primary" />
+                  </div>
+                  <h3 className="font-bold text-foreground" style={{ fontFamily: "Poppins, sans-serif" }}>
+                    Sobre ti y tu propósito
+                  </h3>
+                </div>
+                <PurposeBlock form={form} onChange={handleChange} />
+              </CardContent>
+            </Card>
+
+            {/* ── Confirmaciones ── */}
+            <Card className="border-border">
+              <CardContent className="p-6">
+                <ConfirmationBlock
+                  acceptTerms={acceptTerms} setAcceptTerms={setAcceptTerms}
+                  acceptPrivacy={acceptPrivacy} setAcceptPrivacy={setAcceptPrivacy}
+                  confirmIdentity={confirmIdentity} setConfirmIdentity={setConfirmIdentity}
+                />
+              </CardContent>
+            </Card>
+
             {/* ── Submit ── */}
             <div className="pb-8">
               <Button type="submit" disabled={isSubmitting}
@@ -861,11 +1271,7 @@ export default function RegisterProfessional({ embedded = false }: { embedded?: 
                   </span>
                 ) : "Enviar solicitud"}
               </Button>
-              <p className="text-center text-xs text-muted-foreground mt-3">
-                Al enviar, aceptas los{" "}
-                <a href="#" className="text-primary hover:underline">términos y condiciones</a>{" "}
-                de inteira para asesores.
-              </p>
+
             </div>
           </form>
         </div>

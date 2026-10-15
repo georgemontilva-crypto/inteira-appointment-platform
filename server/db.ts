@@ -228,8 +228,12 @@ export async function createProfessional(
   await new Promise<void>((resolve, reject) => {
     client.execute(
       `INSERT INTO professionals
-       (userId, specialtyId, licenseNumber, status, bio, profilePhoto, licenseDocument, education, certifications, yearsOfExperience, hourlyRate, identityDocUrl, documentNationality)
-       VALUES (?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       (userId, specialtyId, licenseNumber, status, bio, profilePhoto, licenseDocument,
+        education, certifications, yearsOfExperience, hourlyRate, identityDocUrl, documentNationality,
+        country, state, city,
+        practiceStatus, hasAdvisoryExperience, advisoryExperienceDetail, sessionModality, inPersonArea,
+        motivation, personalPurpose, personalGoals, platformObjectives, acceptedTermsAt)
+       VALUES (?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         userId,
         specialtyId,
@@ -243,6 +247,19 @@ export async function createProfessional(
         data?.hourlyRate ?? null,
         data?.identityDocUrl ?? null,
         data?.documentNationality ?? null,
+        data?.country ?? null,
+        data?.state ?? null,
+        data?.city ?? null,
+        data?.practiceStatus ?? null,
+        data?.hasAdvisoryExperience ?? null,
+        data?.advisoryExperienceDetail ?? null,
+        data?.sessionModality ?? null,
+        data?.inPersonArea ?? null,
+        data?.motivation ?? null,
+        data?.personalPurpose ?? null,
+        data?.personalGoals ?? null,
+        data?.platformObjectives ?? null,
+        data?.acceptedTerms ? new Date() : null,
       ],
       (err: any) => { if (err) return reject(err); resolve(); }
     );
@@ -346,7 +363,12 @@ export async function getPendingProfessionals() {
     return await query(
       `SELECT p.id, p.userId, p.specialtyId, p.licenseNumber, p.licenseDocument,
         p.yearsOfExperience, p.education, p.certifications, p.bio,
-        p.profilePhoto, p.hourlyRate, p.status, p.tier, p.createdAt, p.country, p.state,
+        p.profilePhoto, p.hourlyRate, p.status, p.tier, p.createdAt,
+        p.country, p.state, p.city, p.identityDocUrl, p.documentNationality,
+        p.practiceStatus, p.hasAdvisoryExperience, p.advisoryExperienceDetail,
+        p.sessionModality, p.inPersonArea,
+        p.motivation, p.personalPurpose, p.personalGoals, p.platformObjectives,
+        p.acceptedTermsAt,
         u.name as userName, u.email as userEmail, u.profileImage as userProfileImage,
         s.name as specialtyName
        FROM professionals p

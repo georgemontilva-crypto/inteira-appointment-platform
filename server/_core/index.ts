@@ -761,6 +761,24 @@ async function runStartupMigrations() {
     ).catch(() => {});
     console.log("[Migration] professionals location columns ready");
 
+    // ── Registro de asesor ampliado ──────────────────────────────────────────
+    for (const ddl of [
+      "ALTER TABLE `professionals` ADD COLUMN `city` VARCHAR(120) NULL",
+      "ALTER TABLE `professionals` ADD COLUMN `practiceStatus` ENUM('active','past','not_yet') NULL",
+      "ALTER TABLE `professionals` ADD COLUMN `hasAdvisoryExperience` BOOLEAN NULL",
+      "ALTER TABLE `professionals` ADD COLUMN `advisoryExperienceDetail` LONGTEXT NULL",
+      "ALTER TABLE `professionals` ADD COLUMN `sessionModality` ENUM('online','in_person','both') NULL",
+      "ALTER TABLE `professionals` ADD COLUMN `inPersonArea` VARCHAR(255) NULL",
+      "ALTER TABLE `professionals` ADD COLUMN `motivation` LONGTEXT NULL",
+      "ALTER TABLE `professionals` ADD COLUMN `personalPurpose` LONGTEXT NULL",
+      "ALTER TABLE `professionals` ADD COLUMN `personalGoals` LONGTEXT NULL",
+      "ALTER TABLE `professionals` ADD COLUMN `platformObjectives` LONGTEXT NULL",
+      "ALTER TABLE `professionals` ADD COLUMN `acceptedTermsAt` TIMESTAMP NULL",
+    ]) {
+      await db.execute(ddl).catch(() => {});
+    }
+    console.log("[Migration] professionals registration columns ready");
+
     // Sanitize any source values not in the new enum before modifying the column
     await db.execute(
       "UPDATE `creditBatches` SET `source` = 'purchase' WHERE `source` NOT IN ('purchase','plan','plan_basic','plan_pro','individual_basic','individual_premium','admin_grant','test_20','bonus','referral')"

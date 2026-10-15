@@ -3,6 +3,7 @@ import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { ProfessionalsFinancials, ProfessionalHistoryModal } from "@/components/admin/ProfessionalsFinancials";
 import { AppointmentsByMonth } from "@/components/admin/AppointmentsByMonth";
+import { formatLocation, getFlag } from "@shared/locations";
 import { getLoginUrl } from "@/const";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -219,6 +220,95 @@ function describeAttendance(apt: any): { label: string; cls: string } {
     if (apt.canceledBy === "admin") return { label: "Cancelada por admin",    cls: "bg-red-50 text-red-600" };
   }
   return base;
+}
+
+const PRACTICE_LABEL: Record<string, string> = {
+  active:  "Ejerce actualmente",
+  past:    "Ejerció, actualmente no",
+  not_yet: "Aún no ejerce",
+};
+const MODALITY_LABEL: Record<string, string> = {
+  online:    "Solo online",
+  in_person: "Solo presencial",
+  both:      "Presencial y online",
+};
+
+/**
+ * Lo que el asesor declaró en el registro: ubicación, modalidad y propósito.
+ * Es el contexto que necesita quien aprueba la solicitud.
+ */
+function ApplicantProfile({ pro }: { pro: any }) {
+  const [open, setOpen] = useState(false);
+
+  const ubicacion = formatLocation(pro.country, pro.state);
+  const ciudad = pro.city ? `${pro.city}, ` : "";
+  const chips = [
+    ubicacion ? `${getFlag(pro.country)} ${ciudad}${ubicacion}` : null,
+    PRACTICE_LABEL[pro.practiceStatus] ?? null,
+    MODALITY_LABEL[pro.sessionModality] ?? null,
+    pro.hasAdvisoryExperience === 1 || pro.hasAdvisoryExperience === true
+      ? "Con experiencia en asesorías"
+      : pro.hasAdvisoryExperience === 0 || pro.hasAdvisoryExperience === false
+        ? "Sin experiencia en asesorías"
+        : null,
+  ].filter(Boolean) as string[];
+
+  const textos = [
+    { label: "Experiencia previa", value: pro.advisoryExperienceDetail },
+    { label: "Zona de atención presencial", value: pro.inPersonArea },
+    { label: "Qué le interesa de Inteira", value: pro.motivation },
+    { label: "Propósito personal", value: pro.personalPurpose },
+    { label: "Metas", value: pro.personalGoals },
+    { label: "Objetivos en la plataforma", value: pro.platformObjectives },
+  ].filter((t) => t.value);
+
+  if (chips.length === 0 && textos.length === 0) return null;
+
+  return (
+    <div className="pt-1 border-t border-border space-y-2">
+      {chips.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {chips.map((c, i) => (
+            <span key={i} className="text-[11px] text-muted-foreground border border-border rounded-lg px-2 py-1">
+              {c}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {textos.length > 0 && (
+        <>
+          <button
+            onClick={() => setOpen((v) => !v)}
+            className="text-xs text-primary flex items-center gap-0.5"
+          >
+            {open
+              ? <><ChevronUp className="w-3 h-3" /> Ocultar respuestas</>
+              : <><ChevronDown className="w-3 h-3" /> Ver respuestas del registro ({textos.length})</>}
+          </button>
+          {open && (
+            <div className="space-y-2.5 rounded-lg bg-muted/30 p-3">
+              {textos.map((t) => (
+                <div key={t.label}>
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                    {t.label}
+                  </p>
+                  <p className="text-[13px] whitespace-pre-wrap">{t.value}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {pro.acceptedTermsAt && (
+        <p className="text-[10px] text-muted-foreground">
+          Confirmó términos, privacidad y veracidad el{" "}
+          {format(new Date(pro.acceptedTermsAt), "d MMM yyyy, HH:mm", { locale: es })}
+        </p>
+      )}
+    </div>
+  );
 }
 
 export default function AdminDashboard() {
@@ -2308,6 +2398,9 @@ export default function AdminDashboard() {
                             )}
                           </div>
                         )}
+
+                        {/* ── Perfil declarado en el registro ── */}
+                        <ApplicantProfile pro={pro} />
 
                         {/* ── Documentos ── */}
                         {(pro.licenseDocument || pro.identityDocUrl || pro.certifications) && (
