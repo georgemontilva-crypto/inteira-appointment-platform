@@ -913,7 +913,7 @@ export default function AdminDashboard() {
                                       }}
                                     />
                                     {u.profileImage ? (
-                                      <img src={u.profileImage} alt="" className="w-8 h-8 rounded-full object-cover" />
+                                      <img src={u.profileImage} alt="" className="w-8 h-8 rounded-full object-cover object-top" />
                                     ) : (
                                       <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-semibold">
                                         {initials}
@@ -2267,7 +2267,7 @@ export default function AdminDashboard() {
                               <img
                                 src={avatar}
                                 alt={name}
-                                className="w-14 h-14 rounded-2xl object-cover flex-shrink-0"
+                                className="w-14 h-14 rounded-2xl object-cover object-top flex-shrink-0"
                               />
                             ) : (
                               <div className="w-14 h-14 rounded-2xl gradient-brand flex items-center justify-center text-white text-xl font-bold flex-shrink-0">
@@ -2495,7 +2495,7 @@ export default function AdminDashboard() {
                         }}
                       />
                       {avatar ? (
-                        <img src={avatar} alt={name} className="w-11 h-11 rounded-xl object-cover" />
+                        <img src={avatar} alt={name} className="w-11 h-11 rounded-xl object-cover object-top" />
                       ) : (
                         <div className="w-11 h-11 rounded-xl gradient-brand flex items-center justify-center text-white font-bold">
                           {name.charAt(0).toUpperCase()}

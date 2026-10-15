@@ -198,7 +198,7 @@ export default function ProfessionalsList() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {[1, 2, 3].map((i) => (
                 <div key={i} className="animate-pulse bg-white rounded-2xl border border-gray-100 overflow-hidden">
-                  <div className="h-[140px] bg-gray-100" />
+                  <div className="h-[200px] bg-gray-100" />
                   <div className="p-3.5 space-y-2">
                     <div className="h-3.5 bg-gray-100 rounded-full w-2/3" />
                     <div className="h-3 bg-gray-100 rounded-full w-1/2" />
@@ -249,12 +249,12 @@ export default function ProfessionalsList() {
                     className="bg-white border border-gray-100 rounded-2xl overflow-hidden"
                   >
                     {/* Foto como header */}
-                    <div className="h-[140px] relative bg-gray-100">
+                    <div className="h-[200px] relative bg-gray-100">
                       {photo ? (
                         <img
                           src={photo}
                           alt={proName}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover object-top"
                           onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                         />
                       ) : (

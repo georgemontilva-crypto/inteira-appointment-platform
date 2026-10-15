@@ -728,7 +728,7 @@ export default function RegisterProfessional({ embedded = false }: { embedded?: 
             <div className="flex items-center gap-3">
               <div className="w-14 h-14 rounded-full overflow-hidden bg-primary/10 border-2 border-dashed border-primary/30 flex items-center justify-center flex-shrink-0">
                 {photoPreview ? (
-                  <img src={photoPreview} alt="Vista previa" className="w-full h-full object-cover" />
+                  <img src={photoPreview} alt="Vista previa" className="w-full h-full object-cover object-top" />
                 ) : (
                   <Camera className="w-5 h-5 text-primary/50" />
                 )}
@@ -1080,7 +1080,7 @@ export default function RegisterProfessional({ embedded = false }: { embedded?: 
                     <div className="relative flex-shrink-0">
                       <div className="w-20 h-20 rounded-full overflow-hidden bg-primary/10 border-2 border-dashed border-primary/30 flex items-center justify-center">
                         {photoPreview ? (
-                          <img src={photoPreview} alt="Vista previa" className="w-full h-full object-cover" />
+                          <img src={photoPreview} alt="Vista previa" className="w-full h-full object-cover object-top" />
                         ) : (
                           <Camera className="w-7 h-7 text-primary/50" />
                         )}

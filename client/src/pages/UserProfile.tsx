@@ -142,7 +142,7 @@ export default function UserProfile() {
                   <img
                     src={profileImage}
                     alt={profile?.name ?? "Avatar"}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover object-top"
                     referrerPolicy="no-referrer"
                   />
                 ) : (

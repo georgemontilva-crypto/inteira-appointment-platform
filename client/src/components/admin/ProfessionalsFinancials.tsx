@@ -374,7 +374,7 @@ export function ProfessionalsFinancials() {
                             ? <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                             : <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />}
                           {r.profileImage ? (
-                            <img src={r.profileImage} alt="" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+                            <img src={r.profileImage} alt="" className="w-8 h-8 rounded-full object-cover object-top flex-shrink-0" />
                           ) : (
                             <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-semibold flex-shrink-0">
                               {(r.professionalName ?? "?").charAt(0).toUpperCase()}

@@ -196,7 +196,7 @@ export default function Home() {
                           <img
                             src={(user as any).avatarUrl ?? (user as any).profileImage}
                             alt={user?.name ?? "Avatar"}
-                            className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+                            className="w-8 h-8 rounded-full object-cover object-top flex-shrink-0"
                             onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
                           />
                         ) : (

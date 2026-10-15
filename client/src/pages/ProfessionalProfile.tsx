@@ -154,7 +154,7 @@ export default function ProfessionalProfile() {
                 <img
                   src={(professional.profilePhoto as string) ?? professional.user!.profileImage!}
                   alt={professional.user?.name ?? "Profesional"}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover object-top"
                 />
               ) : (
                 <div className="w-full h-full gradient-brand flex items-center justify-center text-white text-3xl font-bold">

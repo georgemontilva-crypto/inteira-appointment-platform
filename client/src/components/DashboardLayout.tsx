@@ -169,7 +169,7 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
     const sizeMap = { sm: "w-8 h-8 text-[12px]", md: "w-6 h-6 text-[10px]", lg: "w-14 h-14 text-lg" };
     const cls = sizeMap[size];
     return profileImage ? (
-      <img src={profileImage} alt={user?.name ?? "Avatar"} className={`${cls} rounded-full object-cover border-2 border-[rgba(96,117,98,0.3)]`} referrerPolicy="no-referrer" />
+      <img src={profileImage} alt={user?.name ?? "Avatar"} className={`${cls} rounded-full object-cover object-top border-2 border-[rgba(96,117,98,0.3)]`} referrerPolicy="no-referrer" />
     ) : (
       <div className={`${cls} rounded-full flex items-center justify-center font-medium text-white border-2 border-[rgba(96,117,98,0.3)]`} style={{ background: "linear-gradient(135deg,#3d4e3f,#607562)" }}>{initials}</div>
     );
@@ -314,7 +314,7 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
             )}
             <a href="/perfil" style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", textDecoration: "none" }}>
               {avatarUrl ? (
-                <img src={avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover border-2 border-[rgba(96,117,98,0.3)]" referrerPolicy="no-referrer" />
+                <img src={avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover object-top border-2 border-[rgba(96,117,98,0.3)]" referrerPolicy="no-referrer" />
               ) : (
                 <UserAvatar size="sm" />
               )}
@@ -560,7 +560,7 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
             <div style={{ background: "linear-gradient(145deg,#1e2f20,#2d4030)", padding: "24px 20px 20px", flexShrink: 0 }}>
               <div className="flex items-center gap-3">
                 {avatarUrl ? (
-                  <img src={avatarUrl} alt={user?.name ?? "Avatar"} className="w-14 h-14 rounded-full object-cover border-2 border-[rgba(255,255,255,0.25)]" referrerPolicy="no-referrer" />
+                  <img src={avatarUrl} alt={user?.name ?? "Avatar"} className="w-14 h-14 rounded-full object-cover object-top border-2 border-[rgba(255,255,255,0.25)]" referrerPolicy="no-referrer" />
                 ) : (
                   <div className="w-14 h-14 rounded-full flex items-center justify-center font-medium text-white border-2 border-[rgba(255,255,255,0.25)] text-lg" style={{ background: "linear-gradient(135deg,#3d4e3f,#607562)" }}>{initials}</div>
                 )}

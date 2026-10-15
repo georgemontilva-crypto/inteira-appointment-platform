@@ -526,7 +526,7 @@ export default function ProfessionalDashboard() {
                 <img
                   src={profile.profilePhoto ?? (user as any)?.profileImage}
                   alt={user?.name ?? "Profesional"}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover object-top"
                   onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
                 />
               ) : (
@@ -687,7 +687,7 @@ export default function ProfessionalDashboard() {
                   <div className="bg-white rounded-2xl border border-[rgba(96,117,98,0.12)] p-4">
                     <div className="flex items-center gap-3 mb-3">
                       {(next as any).userProfileImage ? (
-                        <img src={(next as any).userProfileImage} alt="" className="w-12 h-12 rounded-xl object-cover flex-shrink-0" />
+                        <img src={(next as any).userProfileImage} alt="" className="w-12 h-12 rounded-xl object-cover object-top flex-shrink-0" />
                       ) : (
                         <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold text-lg flex-shrink-0">
                           {(next as any).userName?.charAt(0)?.toUpperCase() ?? "U"}
@@ -804,7 +804,7 @@ export default function ProfessionalDashboard() {
                               <img
                                 src={(apt as any).userProfileImage}
                                 alt={(apt as any).userName ?? ""}
-                                className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                                className="w-10 h-10 rounded-full object-cover object-top flex-shrink-0"
                               />
                             ) : (
                               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold flex-shrink-0">
@@ -932,7 +932,7 @@ export default function ProfessionalDashboard() {
                             <img
                               src={(apt as any).userProfileImage}
                               alt={(apt as any).userName ?? ""}
-                              className="w-9 h-9 rounded-full object-cover flex-shrink-0"
+                              className="w-9 h-9 rounded-full object-cover object-top flex-shrink-0"
                             />
                           ) : (
                             <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-muted-foreground font-semibold text-sm flex-shrink-0">
