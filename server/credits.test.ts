@@ -177,15 +177,19 @@ describe("Inteira business scenarios", () => {
     // Plan Pro gives 2,500 credits = $2,500 MXN
     expect(CREDIT_COSTS.plan_pro).toBe(2500);
 
-    // Plan Pro covers 2 premium sessions exactly
-    const premiumSessions = Math.floor(CREDIT_COSTS.plan_pro / CREDIT_COSTS.individual_premium);
-    expect(premiumSessions).toBe(2);
+    // Quien tiene plan activo paga precio de miembro, que es con el que hay que
+    // medir la cobertura del plan. Antes esto se comparaba contra el precio
+    // individual y el test fallaba aunque la promesa de la página fuera correcta.
 
-    // Plan Básico covers 2 basic sessions with 280 credits remaining
-    const basicSessions = Math.floor(CREDIT_COSTS.plan_basic / CREDIT_COSTS.individual_basic);
-    expect(basicSessions).toBe(2);
-    const remainder = CREDIT_COSTS.plan_basic % CREDIT_COSTS.individual_basic;
-    expect(remainder).toBe(280);
+    // Plan Pro: 2,500 créditos = 2 asesorías premium exactas (1,250 c/u)
+    const premiumSessions = Math.floor(CREDIT_COSTS.plan_pro / CREDIT_COSTS.member_premium);
+    expect(premiumSessions).toBe(2);
+    expect(CREDIT_COSTS.plan_pro % CREDIT_COSTS.member_premium).toBe(0);
+
+    // Plan Básico: 980 créditos = 4 asesorías básicas exactas (245 c/u)
+    const basicSessions = Math.floor(CREDIT_COSTS.plan_basic / CREDIT_COSTS.member_basic);
+    expect(basicSessions).toBe(4);
+    expect(CREDIT_COSTS.plan_basic % CREDIT_COSTS.member_basic).toBe(0);
   });
 
   it("should expire credits immediately on subscription cancellation", () => {

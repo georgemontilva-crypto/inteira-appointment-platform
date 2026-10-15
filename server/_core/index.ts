@@ -621,8 +621,10 @@ async function runStartupMigrations() {
       if (noShowUnpaid.length > 0) {
         console.log(`[Migration] Backfilling ${noShowUnpaid.length} unpaid no-show appointment(s)`);
         const { creditProfessionalEarning } = await import("../professionalWallet");
+        const { getAppointmentBilling } = await import("../credits");
         for (const row of noShowUnpaid) {
-          await creditProfessionalEarning(row.professionalId, row.id, (row.tier ?? "basic") as "basic" | "pro", row.durationMinutes > 60 ? "premium" : "basic")
+          const billing = await getAppointmentBilling(row.id);
+          await creditProfessionalEarning(row.professionalId, row.id, (row.tier ?? "basic") as "basic" | "pro", billing.sessionType, billing.pricingType)
             .catch((e: any) => console.error(`[Migration] backfill credit apt ${row.id}:`, e?.message));
           console.log(`[Migration] Backfilled earning for professional ${row.professionalId}, appointment ${row.id}`);
         }
@@ -1339,14 +1341,17 @@ setInterval(async () => {
 
     if (staleAppointments.length > 0) {
       const { creditProfessionalEarning } = await import("../professionalWallet");
-      const { confirmCredits, refundCredits } = await import("../credits");
+      const { confirmCredits, refundCredits, getAppointmentBilling } = await import("../credits");
       const { sendCreditsDebitedEmail } = await import("../email");
       const { createNotification } = await import("../notifications");
 
       const { loadPresence, decideAttendance } = await import("../attendance");
 
       for (const row of staleAppointments) {
-        const sessionCost = row.durationMinutes > 60 ? 1500 : 350;
+        // Tipo de sesión y de precio según los créditos realmente cobrados.
+        // durationMinutes no sirve: básica y premium duran ambas 60 minutos.
+        const billing = await getAppointmentBilling(row.id);
+        const sessionCost = billing.credits;
 
         // Presencia REAL en la sala: webhooks de Daily, completados con una
         // consulta directa a Daily si algun evento se perdio.
@@ -1386,7 +1391,7 @@ setInterval(async () => {
           await creditProfessionalEarning(
             row.professionalId, row.id,
             (row.tier ?? "basic") as "basic" | "pro",
-            row.durationMinutes > 60 ? "premium" : "basic"
+            billing.sessionType, billing.pricingType
           ).catch(() => {});
           console.log(`[Cron] Cita ${row.id} completada (${verdict.overlapMinutes.toFixed(1)} min juntos)`);
           continue;
@@ -1446,7 +1451,7 @@ setInterval(async () => {
         await creditProfessionalEarning(
           row.professionalId, row.id,
           (row.tier ?? "basic") as "basic" | "pro",
-          row.durationMinutes > 60 ? "premium" : "basic"
+          billing.sessionType, billing.pricingType
         ).catch(() => {});
         console.log(`[Cron] User no-show: professional ${row.professionalId} credited for appointment ${row.id}`);
 
@@ -1489,7 +1494,7 @@ setInterval(async () => {
       console.log(`[Cron] auto-complete: ${pendingRows.length} pending_review → completing`);
       const { creditProfessionalEarning } = await import("../professionalWallet");
       const { createNotification } = await import("../notifications");
-      const { confirmCredits } = await import("../credits");
+      const { confirmCredits, getAppointmentBilling: getBilling } = await import("../credits");
 
       for (const row of pendingRows) {
         try {
@@ -1509,8 +1514,10 @@ setInterval(async () => {
               (err: any) => { if (err) console.error("[Cron] auto-complete update:", err?.message); resolve(); }
             );
           });
+          const billing = await getBilling(row.id);
           const { netAmount } = await creditProfessionalEarning(
-            row.professionalId, row.id, (row.tier ?? "basic") as "basic" | "pro", row.durationMinutes > 60 ? "premium" : "basic"
+            row.professionalId, row.id, (row.tier ?? "basic") as "basic" | "pro",
+            billing.sessionType, billing.pricingType
           );
           createNotification({
             userId: row.profUserId,

@@ -70,7 +70,7 @@ const INDIVIDUAL = [
   {
     name: "Sesión Premium",
     price: PRICING_DISPLAY.SESSION_PREMIUM,
-    description: "1 sesión · 90 min · Experto de alto nivel",
+    description: "1 sesión · 60 min · Experto de alto nivel",
   },
 ];
 

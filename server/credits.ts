@@ -468,6 +468,70 @@ export async function getNextExpirationDate(userId: number): Promise<Date | null
 }
 
 /**
+ * Deriva el tipo de sesión y de precio de una cita a partir de los créditos
+ * realmente cobrados.
+ *
+ * NO usar `durationMinutes > 60` para esto: básica y premium duran ambas 60
+ * minutos, así que esa comparación nunca es verdadera y toda sesión premium
+ * liquidada por el cron se pagaba como básica.
+ *
+ * Montos: individual_basic=350, individual_premium=1500,
+ *         member_basic=245,    member_premium=1250.
+ */
+export async function getAppointmentBilling(appointmentId: number): Promise<{
+  credits: number;
+  sessionType: "basic" | "premium";
+  pricingType: "individual" | "member";
+}> {
+  const fallback = {
+    credits: CREDIT_COSTS.individual_basic,
+    sessionType: "basic" as const,
+    pricingType: "individual" as const,
+  };
+
+  const db = await getDb();
+  if (!db) return fallback;
+  const client = (db as any).$client;
+
+  const exec = (sql: string, params: any[]) =>
+    new Promise<any[]>((resolve) => {
+      client.execute(sql, params, (err: any, results: any) => {
+        if (err) {
+          console.error("[getAppointmentBilling]", err?.message);
+          resolve([]);
+        } else resolve(Array.isArray(results) ? results : []);
+      });
+    });
+
+  const [creditRows, apptRows] = await Promise.all([
+    exec(
+      `SELECT COALESCE(SUM(ABS(delta)), 0) AS total
+       FROM creditTransactions
+       WHERE appointmentId = ? AND reason IN ('reserved', 'consumed', 'refunded')`,
+      [appointmentId]
+    ),
+    exec(`SELECT pricingType FROM appointments WHERE id = ? LIMIT 1`, [appointmentId]),
+  ]);
+
+  const credits = Number(creditRows[0]?.total ?? 0);
+  if (credits <= 0) return fallback;
+
+  // 1250 es el premium más barato (con precio de miembro); 350 el básico más caro.
+  const sessionType: "basic" | "premium" =
+    credits >= CREDIT_COSTS.member_premium ? "premium" : "basic";
+
+  const stored = apptRows[0]?.pricingType;
+  const pricingType: "individual" | "member" =
+    stored === "member" || stored === "individual"
+      ? stored
+      : credits === CREDIT_COSTS.member_basic || credits === CREDIT_COSTS.member_premium
+        ? "member"
+        : "individual";
+
+  return { credits, sessionType, pricingType };
+}
+
+/**
  * Get recent credit transactions for a user (last 50).
  */
 export async function getCreditTransactions(userId: number) {
