@@ -35,14 +35,41 @@ function flagOf(isoCode: string): string {
 
 const collator = new Intl.Collator("es");
 
-/** Se arma una sola vez: 250 países ordenados alfabéticamente en español. */
+/**
+ * Países donde la plataforma espera tener asesores y clientes: Hispanoamérica,
+ * España y los mercados vecinos. Se muestran agrupados arriba del selector
+ * para no tener que bajar por Afganistán, Albania y Alemania hasta México.
+ *
+ * El resto de países sigue disponible más abajo: quitar uno bloquearía a un
+ * asesor legítimo por vivir fuera de la lista.
+ */
+const PRIORITY_COUNTRIES = [
+  "MX", // mercado principal
+  "CO", "AR", "CL", "PE", "ES", "US",
+  "VE", "EC", "GT", "CR", "PA", "DO",
+  "UY", "PY", "BO", "HN", "SV", "NI",
+  "PR", "CU", "BR", "CA",
+];
+
+const priorityRank = new Map(PRIORITY_COUNTRIES.map((code, i) => [code, i]));
+
+/** Se arma una sola vez: los 250 países, con los principales marcados. */
 const COUNTRIES = Country.getAllCountries()
   .map((c) => ({
     code: c.isoCode,
     name: countryName(c.isoCode, c.name),
     flag: flagOf(c.isoCode),
+    priority: priorityRank.has(c.isoCode),
   }))
-  .sort((a, b) => collator.compare(a.name, b.name));
+  .sort((a, b) => {
+    const ra = priorityRank.get(a.code);
+    const rb = priorityRank.get(b.code);
+    // Los principales primero, en el orden de la lista de arriba
+    if (ra !== undefined && rb !== undefined) return ra - rb;
+    if (ra !== undefined) return -1;
+    if (rb !== undefined) return 1;
+    return collator.compare(a.name, b.name);
+  });
 
 export const locationRouter = router({
   getCountries: publicProcedure.query(() => COUNTRIES),

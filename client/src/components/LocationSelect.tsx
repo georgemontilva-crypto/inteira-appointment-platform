@@ -34,6 +34,10 @@ export function LocationSelect({
   const { data: countries, isLoading: loadingCountries } =
     trpc.location.getCountries.useQuery(undefined, { staleTime: Infinity });
 
+  // Los mercados de la plataforma arriba; el resto sigue disponible debajo.
+  const principales = useMemo(() => countries?.filter((c) => c.priority) ?? [], [countries]);
+  const resto = useMemo(() => countries?.filter((c) => !c.priority) ?? [], [countries]);
+
   const { data: states, isLoading: loadingStates } = trpc.location.getStates.useQuery(
     { countryCode: country },
     { enabled: country.length === 2, staleTime: Infinity }
@@ -83,11 +87,20 @@ export function LocationSelect({
             <option value="">
               {loadingCountries ? "Cargando países…" : "Selecciona tu país de residencia"}
             </option>
-            {countries?.map((c) => (
-              <option key={c.code} value={c.code}>
-                {c.flag} {c.name}
-              </option>
-            ))}
+            {principales.length > 0 && (
+              <optgroup label="Países principales">
+                {principales.map((c) => (
+                  <option key={c.code} value={c.code}>{c.flag} {c.name}</option>
+                ))}
+              </optgroup>
+            )}
+            {resto.length > 0 && (
+              <optgroup label="Todos los países">
+                {resto.map((c) => (
+                  <option key={c.code} value={c.code}>{c.flag} {c.name}</option>
+                ))}
+              </optgroup>
+            )}
           </select>
         </div>
 
