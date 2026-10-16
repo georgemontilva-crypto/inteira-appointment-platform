@@ -16,7 +16,11 @@ import { storagePut } from "../storage";
 import { registerStripeRoutes } from "../stripe";
 import { sdk } from "./sdk";
 
-// In-memory rate limit for anonymous uploads (10 per IP per hour)
+// Límite de subidas anónimas por IP y por hora.
+// El registro de asesor sube hasta 4 archivos de una vez (foto, identificación,
+// cédula y certificaciones), así que 10 daba para dos intentos escasos y un
+// envío fallido agotaba la cuota.
+const ANON_UPLOAD_MAX_PER_HOUR = 40;
 const anonUploadLimit = new Map<string, { count: number; resetAt: number }>();
 
 function isPortAvailable(port: number): Promise<boolean> {
@@ -1206,8 +1210,11 @@ async function startServer() {
         const ip = String(req.headers["x-forwarded-for"] ?? req.ip ?? "unknown");
         const now = Date.now();
         const limit = anonUploadLimit.get(ip);
-        if (limit && now < limit.resetAt && limit.count >= 10) {
-          return res.status(429).json({ error: "Demasiados intentos. Espera una hora." });
+        if (limit && now < limit.resetAt && limit.count >= ANON_UPLOAD_MAX_PER_HOUR) {
+          const minutos = Math.ceil((limit.resetAt - now) / 60000);
+          return res.status(429).json({
+            error: `Demasiadas subidas desde esta conexión. Vuelve a intentarlo en ${minutos} minuto${minutos === 1 ? "" : "s"}.`,
+          });
         }
         if (limit && now < limit.resetAt) limit.count++;
         else anonUploadLimit.set(ip, { count: 1, resetAt: now + 3_600_000 });
@@ -1239,9 +1246,21 @@ async function startServer() {
       const { url } = await storagePut(key, buffer, mimeType);
 
       return res.json({ url });
-    } catch (err) {
-      console.error("[Upload] Error uploading professional photo:", err);
-      return res.status(500).json({ error: "Upload failed" });
+    } catch (err: any) {
+      // Sin esto, cualquier fallo de almacenamiento llegaba al formulario como
+      // "Upload failed" y no habia forma de saber si era configuracion de R2,
+      // permisos o un archivo corrupto.
+      console.error("[Upload] Error uploading professional photo:", err?.name, err?.message, err);
+      const esConfig =
+        err?.name === "CredentialsProviderError" ||
+        err?.name === "InvalidAccessKeyId" ||
+        err?.name === "SignatureDoesNotMatch" ||
+        err?.$metadata?.httpStatusCode === 403;
+      return res.status(500).json({
+        error: esConfig
+          ? "El almacenamiento de archivos no está disponible. Avisa al equipo de inteira."
+          : "No se pudo guardar el archivo. Inténtalo de nuevo en unos minutos.",
+      });
     }
   });
   // ─── File upload: site assets (admin only — video thumbnails, hero banners) ──

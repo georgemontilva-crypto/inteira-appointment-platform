@@ -32,22 +32,53 @@ import {
 import { Link, useLocation } from "wouter";
 
 // ── File upload helper ────────────────────────────────────────────────────────
+/** Límites que aplica el servidor, repetidos aquí para avisar antes de subir. */
+export const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
+export const MAX_DOC_BYTES = 10 * 1024 * 1024;
+
+const prettySize = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+
 async function uploadFile(file: File): Promise<string> {
   const base64 = await new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => resolve((reader.result as string).split(",")[1]);
-    reader.onerror = reject;
+    reader.onload = () => {
+      const result = reader.result as string | null;
+      const payload = result?.split(",")[1];
+      if (!payload) {
+        reject(new Error(`No se pudo leer «${file.name}». Intenta con otro archivo.`));
+        return;
+      }
+      resolve(payload);
+    };
+    // onerror recibe un evento, no un Error: sin esto el fallo llegaba sin
+    // mensaje y el formulario mostraba un texto generico que no decia nada.
+    reader.onerror = () =>
+      reject(new Error(`No se pudo leer «${file.name}». Puede estar daniado o bloqueado.`));
     reader.readAsDataURL(file);
   });
-  const res = await fetch("/api/upload/professional-photo", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({ base64, mimeType: file.type, fileName: file.name }),
-  });
+
+  let res: Response;
+  try {
+    res = await fetch("/api/upload/professional-photo", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ base64, mimeType: file.type, fileName: file.name }),
+    });
+  } catch {
+    throw new Error(
+      `Se perdió la conexión al subir «${file.name}». Revisa tu internet e inténtalo de nuevo.`
+    );
+  }
+
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as any).error ?? "Error al subir archivo");
+    const err = await res.json().catch(() => ({} as any));
+    const detalle = (err as any).error;
+    if (detalle) throw new Error(`«${file.name}»: ${detalle}`);
+    if (res.status === 413) {
+      throw new Error(`«${file.name}» pesa demasiado (${prettySize(file.size)}).`);
+    }
+    throw new Error(`No se pudo subir «${file.name}» (error ${res.status}).`);
   }
   const data = await res.json();
   return data.url as string;
@@ -540,6 +571,17 @@ export default function RegisterProfessional({ embedded = false }: { embedded?: 
   const [professionalLicense, setProfessionalLicense] = useState<File | null>(null);
   const [identityDoc, setIdentityDoc] = useState<File | null>(null);
   const [certifications, setCertifications] = useState<File | null>(null);
+  // Si el envío falla después de subir, un reintento volvía a subir los mismos
+  // archivos y gastaba el límite de subidas. Se recuerda lo ya subido.
+  const uploadedUrls = useRef(new Map<File, string>());
+  const uploadOnce = async (file: File) => {
+    const cached = uploadedUrls.current.get(file);
+    if (cached) return cached;
+    const url = await uploadFile(file);
+    uploadedUrls.current.set(file, url);
+    return url;
+  };
+
   const [showLicenseConfirm, setShowLicenseConfirm] = useState(false);
   const [pendingLicenseFile, setPendingLicenseFile] = useState<File | null>(null);
 
@@ -603,15 +645,32 @@ export default function RegisterProfessional({ embedded = false }: { embedded?: 
       return toast.error("Debes aceptar las tres confirmaciones antes de enviar");
     }
 
+    // Avisar del tamaño ANTES de subir: el servidor rechaza igual, pero
+    // enterarse al final de una subida larga es peor.
+    const demasiadoGrande = (
+      [
+        { file: profilePhoto, max: MAX_PHOTO_BYTES, label: "La foto de perfil" },
+        { file: identityDoc, max: MAX_DOC_BYTES, label: "La identificación oficial" },
+        { file: professionalLicense, max: MAX_DOC_BYTES, label: "La cédula profesional" },
+        { file: certifications, max: MAX_DOC_BYTES, label: "Las certificaciones" },
+      ] as const
+    ).find((f) => f.file && f.file.size > f.max);
+    if (demasiadoGrande) {
+      return toast.error(
+        `${demasiadoGrande.label} pesa ${(demasiadoGrande.file!.size / 1024 / 1024).toFixed(1)} MB. ` +
+        `El máximo es ${demasiadoGrande.max / 1024 / 1024} MB.`
+      );
+    }
+
     setUploading(true);
     const fullName = `${form.firstName.trim()} ${form.lastName.trim()}`.trim();
     try {
-      const profilePhotoUrl = await uploadFile(profilePhoto);
+      const profilePhotoUrl = await uploadOnce(profilePhoto);
       let professionalLicenseUrl: string | undefined;
-      if (professionalLicense) professionalLicenseUrl = await uploadFile(professionalLicense);
-      const identityDocUrl = await uploadFile(identityDoc);
+      if (professionalLicense) professionalLicenseUrl = await uploadOnce(professionalLicense);
+      const identityDocUrl = await uploadOnce(identityDoc);
       let certificationsUrl: string | undefined;
-      if (certifications) certificationsUrl = await uploadFile(certifications);
+      if (certifications) certificationsUrl = await uploadOnce(certifications);
 
       const payload = {
         specialtyId: parseInt(form.specialtyId),
@@ -665,7 +724,11 @@ export default function RegisterProfessional({ embedded = false }: { embedded?: 
         registerNewMutation.mutate({ ...payload, email: form.email.trim(), fullName, password: password || undefined });
       }
     } catch (err: unknown) {
-      toast.error((err as Error).message ?? "Error al subir archivos");
+      const mensaje = err instanceof Error && err.message
+        ? err.message
+        : "No se pudieron subir los archivos. Inténtalo de nuevo.";
+      console.error("[Registro] fallo al subir archivos:", err);
+      toast.error(mensaje, { duration: 8000 });
     } finally {
       setUploading(false);
     }
