@@ -4,6 +4,7 @@ import { es } from "date-fns/locale";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Download, ChevronDown, ChevronUp } from "lucide-react";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid,
@@ -82,15 +83,14 @@ export function AppointmentsByMonth() {
           </button>
           {open && (
             <div className="flex items-center gap-2">
-              <select
-                className="h-9 rounded-md border border-input bg-background px-2 text-sm"
-                value={months}
-                onChange={(e) => setMonths(Number(e.target.value))}
-              >
-                <option value={6}>Últimos 6 meses</option>
-                <option value={12}>Últimos 12 meses</option>
-                <option value={24}>Últimos 24 meses</option>
-              </select>
+              <Select value={String(months)} onValueChange={(v) => setMonths(Number(v))}>
+                <SelectTrigger className="h-9 w-[170px] text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="6">Últimos 6 meses</SelectItem>
+                  <SelectItem value="12">Últimos 12 meses</SelectItem>
+                  <SelectItem value="24">Últimos 24 meses</SelectItem>
+                </SelectContent>
+              </Select>
               <Button variant="outline" size="sm" className="h-9" onClick={exportCsv} disabled={!rows?.length}>
                 <Download className="w-4 h-4 mr-1.5" />
                 CSV

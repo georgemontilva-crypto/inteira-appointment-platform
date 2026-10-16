@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SearchableSelect, type SearchableOption } from "@/components/SearchableSelect";
 
 /**
  * País → estado → ciudad, encadenados.
@@ -28,15 +29,8 @@ export function LocationSelect({
   required?: boolean;
   disabled?: boolean;
 }) {
-  const selectCls =
-    "w-full border border-border rounded-xl px-3 py-2.5 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary disabled:opacity-60 disabled:cursor-not-allowed";
-
   const { data: countries, isLoading: loadingCountries } =
     trpc.location.getCountries.useQuery(undefined, { staleTime: Infinity });
-
-  // Los mercados de la plataforma arriba; el resto sigue disponible debajo.
-  const principales = useMemo(() => countries?.filter((c) => c.priority) ?? [], [countries]);
-  const resto = useMemo(() => countries?.filter((c) => !c.priority) ?? [], [countries]);
 
   const { data: states, isLoading: loadingStates } = trpc.location.getStates.useQuery(
     { countryCode: country },
@@ -54,9 +48,31 @@ export function LocationSelect({
     { enabled: country.length === 2 && !!state, staleTime: Infinity }
   );
 
+  // Los mercados de la plataforma arriba; el resto sigue disponible debajo.
+  const countryOptions: SearchableOption[] = useMemo(
+    () =>
+      (countries ?? []).map((c) => ({
+        value: c.code,
+        label: c.name,
+        prefix: c.flag,
+        group: c.priority ? "Países principales" : "Todos los países",
+      })),
+    [countries]
+  );
+
+  const stateOptions: SearchableOption[] = useMemo(
+    () => (states ?? []).map((s) => ({ value: s.name, label: s.name })),
+    [states]
+  );
+
+  const cityOptions: SearchableOption[] = useMemo(
+    () => (cities ?? []).map((c) => ({ value: c.name, label: c.name })),
+    [cities]
+  );
+
   // Si el país elegido no tiene estados en el catálogo, se escriben a mano.
-  const statesAreFree = !!country && !loadingStates && (states?.length ?? 0) === 0;
-  const citiesAreFree = !!state && !loadingCities && (cities?.length ?? 0) === 0;
+  const statesAreFree = !!country && !loadingStates && stateOptions.length === 0;
+  const citiesAreFree = !!state && !loadingCities && cityOptions.length === 0;
 
   // Una ciudad que ya no pertenece al estado elegido deja de ser válida.
   const [touchedState, setTouchedState] = useState(false);
@@ -73,35 +89,21 @@ export function LocationSelect({
         {/* País */}
         <div className="space-y-2">
           <Label className="text-sm font-semibold">País donde vives {req}</Label>
-          <select
-            className={selectCls}
+          <SearchableSelect
             value={country}
-            disabled={disabled || loadingCountries}
-            onChange={(e) => {
-              onChange("country", e.target.value);
+            onChange={(v) => {
+              onChange("country", v);
               onChange("state", "");
               onChange("city", "");
               setTouchedState(true);
             }}
-          >
-            <option value="">
-              {loadingCountries ? "Cargando países…" : "Selecciona tu país de residencia"}
-            </option>
-            {principales.length > 0 && (
-              <optgroup label="Países principales">
-                {principales.map((c) => (
-                  <option key={c.code} value={c.code}>{c.flag} {c.name}</option>
-                ))}
-              </optgroup>
-            )}
-            {resto.length > 0 && (
-              <optgroup label="Todos los países">
-                {resto.map((c) => (
-                  <option key={c.code} value={c.code}>{c.flag} {c.name}</option>
-                ))}
-              </optgroup>
-            )}
-          </select>
+            options={countryOptions}
+            placeholder="Selecciona tu país de residencia"
+            searchPlaceholder="Busca tu país…"
+            emptyText="No encontramos ese país"
+            disabled={disabled}
+            loading={loadingCountries}
+          />
         </div>
 
         {/* Estado / provincia / región */}
@@ -115,27 +117,20 @@ export function LocationSelect({
               placeholder="Escribe tu estado, provincia o región"
             />
           ) : (
-            <select
-              className={selectCls}
+            <SearchableSelect
               value={state}
-              disabled={disabled || !country || loadingStates}
-              onChange={(e) => {
-                onChange("state", e.target.value);
+              onChange={(v) => {
+                onChange("state", v);
                 onChange("city", "");
                 setTouchedState(true);
               }}
-            >
-              <option value="">
-                {!country
-                  ? "Selecciona primero tu país"
-                  : loadingStates
-                    ? "Cargando…"
-                    : "Selecciona tu estado"}
-              </option>
-              {states?.map((s) => (
-                <option key={s.code} value={s.name}>{s.name}</option>
-              ))}
-            </select>
+              options={stateOptions}
+              placeholder={country ? "Selecciona tu estado" : "Selecciona primero tu país"}
+              searchPlaceholder="Busca tu estado…"
+              emptyText="No encontramos ese estado"
+              disabled={disabled || !country}
+              loading={loadingStates}
+            />
           )}
         </div>
       </div>
@@ -151,23 +146,16 @@ export function LocationSelect({
             placeholder={state ? "Escribe tu ciudad o municipio" : "Selecciona primero tu estado"}
           />
         ) : (
-          <select
-            className={selectCls}
+          <SearchableSelect
             value={city}
-            disabled={disabled || !state || loadingCities}
-            onChange={(e) => onChange("city", e.target.value)}
-          >
-            <option value="">
-              {!state
-                ? "Selecciona primero tu estado"
-                : loadingCities
-                  ? "Cargando ciudades…"
-                  : "Selecciona tu ciudad"}
-            </option>
-            {cities?.map((c) => (
-              <option key={c.name} value={c.name}>{c.name}</option>
-            ))}
-          </select>
+            onChange={(v) => onChange("city", v)}
+            options={cityOptions}
+            placeholder={state ? "Selecciona tu ciudad" : "Selecciona primero tu estado"}
+            searchPlaceholder="Busca tu ciudad…"
+            emptyText="No encontramos esa ciudad"
+            disabled={disabled || !state}
+            loading={loadingCities}
+          />
         )}
         <p className="text-xs text-muted-foreground">
           Las opciones se cargan según el país y el estado que selecciones.

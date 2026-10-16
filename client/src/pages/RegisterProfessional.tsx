@@ -125,9 +125,6 @@ interface BlockProps {
   onChange: (field: string, value: string) => void;
 }
 
-const selectCls =
-  "w-full border border-border rounded-xl px-3 py-2.5 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary";
-
 function RadioRow({
   name, value, options, onPick,
 }: {
@@ -345,14 +342,12 @@ function BeliefsBlock({
         <>
           <div className="space-y-2">
             <Label className="text-sm font-semibold">¿Cuál es tu religión?</Label>
-            <select
-              className={selectCls}
-              value={form.religion}
-              onChange={(e) => onChange("religion", e.target.value)}
-            >
-              <option value="">Selecciona una opción</option>
-              {RELIGION_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
-            </select>
+            <Select value={form.religion} onValueChange={(v) => onChange("religion", v)}>
+              <SelectTrigger><SelectValue placeholder="Selecciona una opción" /></SelectTrigger>
+              <SelectContent>
+                {RELIGION_OPTIONS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
@@ -373,14 +368,12 @@ function BeliefsBlock({
           {leeBiblia && (
             <div className="space-y-2">
               <Label className="text-sm font-semibold">¿Cuál Biblia lees?</Label>
-              <select
-                className={selectCls}
-                value={form.bibleVersion}
-                onChange={(e) => onChange("bibleVersion", e.target.value)}
-              >
-                <option value="">Selecciona la versión o traducción</option>
-                {BIBLE_VERSIONS.map((o) => <option key={o} value={o}>{o}</option>)}
-              </select>
+              <Select value={form.bibleVersion} onValueChange={(v) => onChange("bibleVersion", v)}>
+                <SelectTrigger><SelectValue placeholder="Selecciona la versión o traducción" /></SelectTrigger>
+                <SelectContent>
+                  {BIBLE_VERSIONS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                </SelectContent>
+              </Select>
               {versionOtra && (
                 <Input
                   value={form.bibleVersionOther}
@@ -960,16 +953,17 @@ export default function RegisterProfessional({ embedded = false }: { embedded?: 
           <Label className="text-sm font-semibold">
             País del documento de identidad <span className="text-red-500">*</span>
           </Label>
-          <select
+          <Select
             value={form.documentNationality}
-            onChange={(e) => handleChange("documentNationality", e.target.value)}
-            className={selectCls}
+            onValueChange={(v) => handleChange("documentNationality", v)}
           >
-            <option value="">Selecciona el país del documento</option>
-            {["México","Colombia","Argentina","Chile","Perú","Venezuela","Ecuador","Bolivia","Paraguay","Uruguay","Costa Rica","Guatemala","Honduras","El Salvador","Nicaragua","Panamá","Cuba","República Dominicana","España","Estados Unidos","Otro"].map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
+            <SelectTrigger><SelectValue placeholder="Selecciona el país del documento" /></SelectTrigger>
+            <SelectContent>
+              {["México","Colombia","Argentina","Chile","Perú","Venezuela","Ecuador","Bolivia","Paraguay","Uruguay","Costa Rica","Guatemala","Honduras","El Salvador","Nicaragua","Panamá","Cuba","República Dominicana","España","Estados Unidos","Otro"].map((c) => (
+                <SelectItem key={c} value={c}>{c}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Cédula profesional — con confirmación, es el error más común */}
