@@ -106,6 +106,18 @@ export const professionals = mysqlTable("professionals", {
 
   /** Momento en que aceptó términos, privacidad y veracidad de los datos */
   acceptedTermsAt: timestamp("acceptedTermsAt"),
+
+  // ── Creencias y comunidad ─────────────────────────────────────────────────
+  // Bloque opcional y privado. NO se muestra en el perfil público y, según la
+  // definición del formulario, no es criterio de aprobación.
+  // Sin consentimiento (beliefsConsentAt nulo) el resto queda vacío.
+  beliefsConsentAt: timestamp("beliefsConsentAt"),
+  religion: varchar("religion", { length: 60 }),
+  readsBible: varchar("readsBible", { length: 30 }),
+  bibleVersion: varchar("bibleVersion", { length: 120 }),
+  church: varchar("church", { length: 255 }),
+  /** 'member' | 'none' | 'prefer_not' */
+  churchStatus: varchar("churchStatus", { length: 20 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

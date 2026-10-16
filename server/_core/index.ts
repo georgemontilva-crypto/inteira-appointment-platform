@@ -779,6 +779,19 @@ async function runStartupMigrations() {
     }
     console.log("[Migration] professionals registration columns ready");
 
+    // Bloque opcional de creencias (consentido, privado, no público)
+    for (const ddl of [
+      "ALTER TABLE `professionals` ADD COLUMN `beliefsConsentAt` TIMESTAMP NULL",
+      "ALTER TABLE `professionals` ADD COLUMN `religion` VARCHAR(60) NULL",
+      "ALTER TABLE `professionals` ADD COLUMN `readsBible` VARCHAR(30) NULL",
+      "ALTER TABLE `professionals` ADD COLUMN `bibleVersion` VARCHAR(120) NULL",
+      "ALTER TABLE `professionals` ADD COLUMN `church` VARCHAR(255) NULL",
+      "ALTER TABLE `professionals` ADD COLUMN `churchStatus` VARCHAR(20) NULL",
+    ]) {
+      await db.execute(ddl).catch(() => {});
+    }
+    console.log("[Migration] professionals beliefs columns ready");
+
     // Sanitize any source values not in the new enum before modifying the column
     await db.execute(
       "UPDATE `creditBatches` SET `source` = 'purchase' WHERE `source` NOT IN ('purchase','plan','plan_basic','plan_pro','individual_basic','individual_premium','admin_grant','test_20','bonus','referral')"

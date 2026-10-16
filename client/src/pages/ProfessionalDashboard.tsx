@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { COUNTRIES, DEFAULT_COUNTRY, getStates } from "@shared/locations";
+import { DEFAULT_COUNTRY } from "@shared/locations";
+import { LocationSelect } from "@/components/LocationSelect";
 import { getLoginUrl } from "@/const";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -67,7 +68,7 @@ export default function ProfessionalDashboard() {
   const [profileForm, setProfileForm] = useState({
     name: "", bio: "", education: "", certifications: "",
     yearsOfExperience: "", languages: "Español",
-    country: DEFAULT_COUNTRY, state: "",
+    country: DEFAULT_COUNTRY, state: "", city: "",
   });
   const [newBlockedDate, setNewBlockedDate] = useState("");
   const [newBlockedReason, setNewBlockedReason] = useState("");
@@ -1747,6 +1748,7 @@ export default function ProfessionalDashboard() {
                       languages: (profile as any).languages ?? "Español",
                       country: (profile as any).country ?? DEFAULT_COUNTRY,
                       state: (profile as any).state ?? "",
+                      city: (profile as any).city ?? "",
                     });
                     setEditingProfile(true);
                   }}
@@ -1784,43 +1786,15 @@ export default function ProfessionalDashboard() {
                       placeholder="Español, Inglés"
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label className="text-xs">País</Label>
-                      <select
-                        className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
-                        value={profileForm.country}
-                        onChange={(e) =>
-                          setProfileForm({ ...profileForm, country: e.target.value, state: "" })
-                        }
-                      >
-                        {COUNTRIES.map((c) => (
-                          <option key={c.code} value={c.code}>{c.flag} {c.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <Label className="text-xs">Estado / Provincia</Label>
-                      {getStates(profileForm.country).length > 0 ? (
-                        <select
-                          className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
-                          value={profileForm.state}
-                          onChange={(e) => setProfileForm({ ...profileForm, state: e.target.value })}
-                        >
-                          <option value="">Selecciona…</option>
-                          {getStates(profileForm.country).map((st) => (
-                            <option key={st} value={st}>{st}</option>
-                          ))}
-                        </select>
-                      ) : (
-                        <Input
-                          value={profileForm.state}
-                          onChange={(e) => setProfileForm({ ...profileForm, state: e.target.value })}
-                          placeholder="Escribe tu estado o provincia"
-                        />
-                      )}
-                    </div>
-                  </div>
+                  <LocationSelect
+                    country={profileForm.country}
+                    state={profileForm.state}
+                    city={profileForm.city}
+                    onChange={(field, value) =>
+                      setProfileForm((prev) => ({ ...prev, [field]: value }))
+                    }
+                    required={false}
+                  />
                   <div>
                     <Label className="text-xs">Biografía</Label>
                     <Textarea

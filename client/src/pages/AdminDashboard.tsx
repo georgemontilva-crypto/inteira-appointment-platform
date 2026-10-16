@@ -233,6 +233,62 @@ const MODALITY_LABEL: Record<string, string> = {
   both:      "Presencial y online",
 };
 
+const READS_BIBLE_LABEL: Record<string, string> = {
+  si_regularmente:      "Sí, regularmente",
+  si_ocasionalmente:    "Sí, ocasionalmente",
+  no:                   "No",
+  prefiero_no_responder:"Prefiero no responder",
+};
+const CHURCH_STATUS_LABEL: Record<string, string> = {
+  none:       "No pertenece a una iglesia",
+  prefer_not: "Prefiere no responder",
+};
+
+/**
+ * Bloque de creencias: opcional, consentido y privado. Va aparte y plegado
+ * porque, según la definición del formulario, no es criterio de aprobación.
+ */
+function BeliefsPanel({ pro }: { pro: any }) {
+  const [open, setOpen] = useState(false);
+  const filas = [
+    { label: "Religión", value: pro.religion },
+    { label: "Lee la Biblia", value: READS_BIBLE_LABEL[pro.readsBible] ?? pro.readsBible },
+    { label: "Versión", value: pro.bibleVersion },
+    {
+      label: "Iglesia",
+      value: pro.churchStatus === "member"
+        ? pro.church
+        : CHURCH_STATUS_LABEL[pro.churchStatus] ?? null,
+    },
+  ].filter((f) => f.value);
+
+  if (filas.length === 0) return null;
+
+  return (
+    <div className="pt-1 border-t border-border">
+      <button onClick={() => setOpen((v) => !v)} className="text-xs text-muted-foreground flex items-center gap-0.5">
+        {open
+          ? <><ChevronUp className="w-3 h-3" /> Ocultar creencias</>
+          : <><ChevronDown className="w-3 h-3" /> Creencias y comunidad (no influye en la aprobación)</>}
+      </button>
+      {open && (
+        <div className="mt-2 space-y-1.5 rounded-lg bg-muted/30 p-3">
+          <p className="text-[10px] text-muted-foreground">
+            Respondido voluntariamente. No se muestra en el perfil público ni es
+            criterio de aprobación.
+          </p>
+          {filas.map((f) => (
+            <p key={f.label} className="text-[13px]">
+              <span className="text-muted-foreground">{f.label}: </span>
+              {f.value}
+            </p>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /**
  * Lo que el asesor declaró en el registro: ubicación, modalidad y propósito.
  * Es el contexto que necesita quien aprueba la solicitud.
@@ -240,10 +296,9 @@ const MODALITY_LABEL: Record<string, string> = {
 function ApplicantProfile({ pro }: { pro: any }) {
   const [open, setOpen] = useState(false);
 
-  const ubicacion = formatLocation(pro.country, pro.state);
-  const ciudad = pro.city ? `${pro.city}, ` : "";
+  const ubicacion = formatLocation(pro.country, pro.state, pro.city);
   const chips = [
-    ubicacion ? `${getFlag(pro.country)} ${ciudad}${ubicacion}` : null,
+    ubicacion ? `${getFlag(pro.country)} ${ubicacion}` : null,
     PRACTICE_LABEL[pro.practiceStatus] ?? null,
     MODALITY_LABEL[pro.sessionModality] ?? null,
     pro.hasAdvisoryExperience === 1 || pro.hasAdvisoryExperience === true
@@ -300,6 +355,8 @@ function ApplicantProfile({ pro }: { pro: any }) {
           )}
         </>
       )}
+
+      {pro.beliefsConsentAt && <BeliefsPanel pro={pro} />}
 
       {pro.acceptedTermsAt && (
         <p className="text-[10px] text-muted-foreground">

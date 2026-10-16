@@ -232,8 +232,9 @@ export async function createProfessional(
         education, certifications, yearsOfExperience, hourlyRate, identityDocUrl, documentNationality,
         country, state, city,
         practiceStatus, hasAdvisoryExperience, advisoryExperienceDetail, sessionModality, inPersonArea,
-        motivation, personalPurpose, personalGoals, platformObjectives, acceptedTermsAt)
-       VALUES (?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        motivation, personalPurpose, personalGoals, platformObjectives, acceptedTermsAt,
+        beliefsConsentAt, religion, readsBible, bibleVersion, church, churchStatus)
+       VALUES (?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         userId,
         specialtyId,
@@ -260,6 +261,12 @@ export async function createProfessional(
         data?.personalGoals ?? null,
         data?.platformObjectives ?? null,
         data?.acceptedTerms ? new Date() : null,
+        data?.beliefsConsent ? new Date() : null,
+        data?.religion ?? null,
+        data?.readsBible ?? null,
+        data?.bibleVersion ?? null,
+        data?.church ?? null,
+        data?.churchStatus ?? null,
       ],
       (err: any) => { if (err) return reject(err); resolve(); }
     );
@@ -369,6 +376,7 @@ export async function getPendingProfessionals() {
         p.sessionModality, p.inPersonArea,
         p.motivation, p.personalPurpose, p.personalGoals, p.platformObjectives,
         p.acceptedTermsAt,
+        p.beliefsConsentAt, p.religion, p.readsBible, p.bibleVersion, p.church, p.churchStatus,
         u.name as userName, u.email as userEmail, u.profileImage as userProfileImage,
         s.name as specialtyName
        FROM professionals p

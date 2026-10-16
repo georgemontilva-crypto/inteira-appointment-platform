@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { COUNTRIES, getStates } from "@shared/locations";
+import { LocationSelect } from "@/components/LocationSelect";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
@@ -27,6 +27,7 @@ import {
   Shield,
   MapPin,
   Compass,
+  Heart,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 
@@ -166,58 +167,14 @@ function RadioRow({
 
 /** Dónde vive el asesor. Distinto del país que emitió su documento. */
 function LocationBlock({ form, onChange }: BlockProps) {
-  const states = getStates(form.country);
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label className="text-sm font-semibold">
-            País donde vives <span className="text-red-500">*</span>
-          </Label>
-          <select
-            className={selectCls}
-            value={form.country}
-            onChange={(e) => { onChange("country", e.target.value); onChange("state", ""); onChange("city", ""); }}
-          >
-            <option value="">Selecciona tu país de residencia</option>
-            {COUNTRIES.map((c) => (
-              <option key={c.code} value={c.code}>{c.flag} {c.name}</option>
-            ))}
-          </select>
-        </div>
-        <div className="space-y-2">
-          <Label className="text-sm font-semibold">
-            Estado, provincia o región <span className="text-red-500">*</span>
-          </Label>
-          {states.length > 0 ? (
-            <select
-              className={selectCls}
-              value={form.state}
-              onChange={(e) => onChange("state", e.target.value)}
-              disabled={!form.country}
-            >
-              <option value="">{form.country ? "Selecciona tu estado" : "Selecciona primero tu país"}</option>
-              {states.map((st) => <option key={st} value={st}>{st}</option>)}
-            </select>
-          ) : (
-            <Input
-              value={form.state}
-              onChange={(e) => onChange("state", e.target.value)}
-              placeholder={form.country ? "Escribe tu estado o provincia" : "Selecciona primero tu país"}
-              disabled={!form.country}
-            />
-          )}
-        </div>
-      </div>
-      <div className="space-y-2">
-        <Label className="text-sm font-semibold">Ciudad o municipio</Label>
-        <Input
-          value={form.city}
-          onChange={(e) => onChange("city", e.target.value)}
-          placeholder={form.state ? "Escribe tu ciudad o municipio" : "Selecciona primero tu estado"}
-          disabled={!form.state}
-        />
-      </div>
+    <div className="space-y-3">
+      <LocationSelect
+        country={form.country}
+        state={form.state}
+        city={form.city}
+        onChange={(field, value) => onChange(field, value)}
+      />
       <p className="text-xs text-muted-foreground">
         Tu residencia puede ser distinta del país que emitió tu documento de identidad.
       </p>
@@ -348,6 +305,139 @@ function PurposeBlock({ form, onChange }: BlockProps) {
   );
 }
 
+const RELIGION_OPTIONS = [
+  "Cristiana católica",
+  "Cristiana evangélica o protestante",
+  "Otra",
+  "Ninguna",
+  "Prefiero no responder",
+];
+
+const BIBLE_VERSIONS = [
+  "Reina-Valera 1960",
+  "Nueva Versión Internacional",
+  "Biblia de Jerusalén",
+  "Nueva Biblia de las Américas",
+  "Otra",
+  "No conozco la versión",
+  "Prefiero no responder",
+];
+
+/**
+ * Creencias y comunidad. Bloque opcional y privado: sin el consentimiento
+ * explícito no se muestra ni se envía nada, no aparece en el perfil público y
+ * no es criterio de aprobación.
+ */
+function BeliefsBlock({
+  form, onChange, consent, setConsent,
+}: BlockProps & { consent: boolean; setConsent: (v: boolean) => void }) {
+  const leeBiblia = form.readsBible === "si_regularmente" || form.readsBible === "si_ocasionalmente";
+  const versionOtra = form.bibleVersion === "Otra";
+  const comparteIglesia = form.churchStatus === "member";
+
+  return (
+    <div className="space-y-5">
+      <p className="text-sm text-muted-foreground">Preguntas opcionales y privadas.</p>
+
+      <label className="flex items-start gap-2.5 text-sm cursor-pointer rounded-xl border border-border p-3 bg-muted/20">
+        <input
+          type="checkbox"
+          checked={consent}
+          onChange={(e) => setConsent(e.target.checked)}
+          className="mt-0.5 accent-primary w-4 h-4 flex-shrink-0"
+        />
+        <span className="text-muted-foreground leading-snug">
+          Deseo responder voluntariamente sobre mis creencias y autorizo su uso privado
+          para conocerme mejor, según el{" "}
+          <a href="/privacidad" target="_blank" className="text-primary underline">aviso de privacidad</a>.
+        </span>
+      </label>
+
+      {!consent ? (
+        <p className="text-xs text-muted-foreground">
+          Si no marcas esta opción, puedes omitir el bloque. Tus respuestas no se
+          mostrarán en el perfil público.
+        </p>
+      ) : (
+        <>
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold">¿Cuál es tu religión?</Label>
+            <select
+              className={selectCls}
+              value={form.religion}
+              onChange={(e) => onChange("religion", e.target.value)}
+            >
+              <option value="">Selecciona una opción</option>
+              {RELIGION_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold">¿Lees la Biblia?</Label>
+            <RadioRow
+              name="readsBible"
+              value={form.readsBible}
+              onPick={(v) => onChange("readsBible", v)}
+              options={[
+                { value: "si_regularmente", label: "Sí, regularmente" },
+                { value: "si_ocasionalmente", label: "Sí, ocasionalmente" },
+                { value: "no", label: "No" },
+                { value: "prefiero_no_responder", label: "Prefiero no responder" },
+              ]}
+            />
+          </div>
+
+          {leeBiblia && (
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold">¿Cuál Biblia lees?</Label>
+              <select
+                className={selectCls}
+                value={form.bibleVersion}
+                onChange={(e) => onChange("bibleVersion", e.target.value)}
+              >
+                <option value="">Selecciona la versión o traducción</option>
+                {BIBLE_VERSIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+              </select>
+              {versionOtra && (
+                <Input
+                  value={form.bibleVersionOther}
+                  onChange={(e) => onChange("bibleVersionOther", e.target.value)}
+                  placeholder="Escribe la versión que lees"
+                />
+              )}
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold">¿A qué iglesia perteneces?</Label>
+            <Textarea
+              rows={2}
+              value={form.church}
+              disabled={!comparteIglesia}
+              onChange={(e) => { onChange("church", e.target.value); onChange("churchStatus", "member"); }}
+              placeholder="Escribe el nombre de tu iglesia o comunidad de fe, si deseas compartirlo..."
+            />
+            <RadioRow
+              name="churchStatus"
+              value={form.churchStatus}
+              onPick={(v) => { onChange("churchStatus", v); if (v !== "member") onChange("church", ""); }}
+              options={[
+                { value: "member", label: "Comparto mi iglesia" },
+                { value: "none", label: "No pertenezco a una iglesia" },
+                { value: "prefer_not", label: "Prefiero no responder" },
+              ]}
+            />
+          </div>
+
+          <p className="text-xs text-muted-foreground">
+            Estas respuestas no son un requisito de aprobación.
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
+
 /** Las tres confirmaciones obligatorias antes de enviar. */
 function ConfirmationBlock({
   acceptTerms, setAcceptTerms,
@@ -424,7 +514,17 @@ export default function RegisterProfessional({ embedded = false }: { embedded?: 
     personalPurpose: "",
     personalGoals: "",
     platformObjectives: "",
+    // Creencias y comunidad (opcional)
+    religion: "",
+    readsBible: "",
+    bibleVersion: "",
+    bibleVersionOther: "",
+    church: "",
+    churchStatus: "",
   });
+
+  // Consentimiento del bloque de creencias
+  const [beliefsConsent, setBeliefsConsent] = useState(false);
 
   // Confirmaciones del paso final
   const [acceptTerms, setAcceptTerms] = useState(false);
@@ -490,6 +590,7 @@ export default function RegisterProfessional({ embedded = false }: { embedded?: 
     if (!identityDoc) return toast.error("El documento de identidad ciudadana es obligatorio");
     if (!form.country) return toast.error("Selecciona el país donde vives");
     if (!form.state.trim()) return toast.error("Indica tu estado, provincia o región");
+    if (!form.city.trim()) return toast.error("Selecciona tu ciudad o municipio");
     if (!form.practiceStatus) return toast.error("Indícanos si ejerces actualmente tu profesión");
     if (!form.hasAdvisoryExperience) return toast.error("Indícanos si tienes experiencia dando asesorías");
     if (!form.sessionModality) return toast.error("Indica en qué modalidad puedes atender");
@@ -542,6 +643,19 @@ export default function RegisterProfessional({ embedded = false }: { embedded?: 
         platformObjectives: form.platformObjectives.trim() || undefined,
 
         acceptedTerms: acceptTerms && acceptPrivacy && confirmIdentity,
+
+        beliefsConsent,
+        religion: beliefsConsent ? (form.religion || undefined) : undefined,
+        readsBible: beliefsConsent ? (form.readsBible || undefined) : undefined,
+        bibleVersion: beliefsConsent
+          ? (form.bibleVersion === "Otra"
+              ? (form.bibleVersionOther.trim() || "Otra")
+              : (form.bibleVersion || undefined))
+          : undefined,
+        church: beliefsConsent ? (form.church.trim() || undefined) : undefined,
+        churchStatus: beliefsConsent
+          ? ((form.churchStatus || undefined) as "member" | "none" | "prefer_not" | undefined)
+          : undefined,
       };
 
       if (isAuthenticated) {
@@ -789,6 +903,12 @@ export default function RegisterProfessional({ embedded = false }: { embedded?: 
         <div className="pt-2 border-t border-border space-y-4">
           <p className="text-sm font-semibold">Sobre ti y tu propósito</p>
           <PurposeBlock form={form} onChange={handleChange} />
+        </div>
+
+        {/* Creencias y comunidad */}
+        <div className="pt-2 border-t border-border space-y-4">
+          <p className="text-sm font-semibold">Creencias y comunidad</p>
+          <BeliefsBlock form={form} onChange={handleChange} consent={beliefsConsent} setConsent={setBeliefsConsent} />
         </div>
 
         <ConfirmationBlock
@@ -1246,6 +1366,21 @@ export default function RegisterProfessional({ embedded = false }: { embedded?: 
                   </h3>
                 </div>
                 <PurposeBlock form={form} onChange={handleChange} />
+              </CardContent>
+            </Card>
+
+            {/* ── Creencias y comunidad ── */}
+            <Card className="border-border">
+              <CardContent className="p-6 space-y-5">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <Heart className="w-5 h-5 text-primary" />
+                  </div>
+                  <h3 className="font-bold text-foreground" style={{ fontFamily: "Poppins, sans-serif" }}>
+                    Creencias y comunidad
+                  </h3>
+                </div>
+                <BeliefsBlock form={form} onChange={handleChange} consent={beliefsConsent} setConsent={setBeliefsConsent} />
               </CardContent>
             </Card>
 

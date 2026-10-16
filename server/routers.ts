@@ -10,6 +10,7 @@ import { users } from "../drizzle/schema";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { appointmentRouter } from "./routers-appointments";
+import { locationRouter } from "./routers-locations";
 import { sendProfessionalApproval, sendAdminNewProfessionalRequest, sendProfessionalApplicationReceived } from "./email";
 import {
   createNotification,
@@ -82,6 +83,15 @@ const professionalRegistrationSchema = z.object({
 
   /** El formulario exige las tres confirmaciones antes de enviar. */
   acceptedTerms: z.boolean().optional(),
+
+  // ── Creencias y comunidad (opcional, privado) ──
+  /** Sin este consentimiento el bloque entero se descarta. */
+  beliefsConsent: z.boolean().optional(),
+  religion: z.string().max(60).optional(),
+  readsBible: z.string().max(30).optional(),
+  bibleVersion: z.string().max(120).optional(),
+  church: z.string().max(255).optional(),
+  churchStatus: z.enum(["member", "none", "prefer_not"]).optional(),
 });
 
 /**
@@ -117,6 +127,23 @@ function professionalRegistrationFields(input: z.infer<typeof professionalRegist
     personalGoals: input.personalGoals ?? null,
     platformObjectives: input.platformObjectives ?? null,
     acceptedTerms: input.acceptedTerms ?? false,
+
+    // Sin consentimiento explícito no se guarda NADA de este bloque, aunque
+    // el cliente mande valores.
+    beliefsConsent: input.beliefsConsent ?? false,
+    religion: input.beliefsConsent ? (input.religion ?? null) : null,
+    readsBible: input.beliefsConsent ? (input.readsBible ?? null) : null,
+    // La versión solo tiene sentido si declara que lee la Biblia
+    bibleVersion:
+      input.beliefsConsent && input.readsBible?.startsWith("si")
+        ? (input.bibleVersion ?? null)
+        : null,
+    // El nombre de la iglesia solo si no eligió omitir
+    church:
+      input.beliefsConsent && input.churchStatus === "member"
+        ? (input.church ?? null)
+        : null,
+    churchStatus: input.beliefsConsent ? (input.churchStatus ?? null) : null,
   };
 }
 
@@ -829,6 +856,7 @@ export const appRouter = router({
         languages: z.string().max(500).optional(),
         country: z.string().max(2).optional(),
         state: z.string().max(120).optional(),
+        city: z.string().max(120).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         if (ctx.user.role !== "professional") {
@@ -851,6 +879,7 @@ export const appRouter = router({
         if (input.yearsOfExperience !== undefined) { setParts.push("`yearsOfExperience` = ?"); params.push(Number(input.yearsOfExperience)); }
         if (input.country !== undefined) { setParts.push("`country` = ?"); params.push(input.country || null); }
         if (input.state !== undefined) { setParts.push("`state` = ?"); params.push(input.state || null); }
+        if (input.city !== undefined) { setParts.push("`city` = ?"); params.push(input.city || null); }
         setParts.push("`updatedAt` = NOW()");
 
         if (setParts.length > 1) {
@@ -2661,6 +2690,7 @@ export const appRouter = router({
 
   // Appointment routes
   appointment: appointmentRouter,
+  location: locationRouter,
 
   // Subscription Plan routes
   subscriptionPlan: router({
