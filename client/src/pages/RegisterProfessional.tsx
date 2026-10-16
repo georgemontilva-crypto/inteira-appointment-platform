@@ -312,8 +312,14 @@ function BeliefsBlock({
   form, onChange, consent, setConsent,
 }: BlockProps & { consent: boolean; setConsent: (v: boolean) => void }) {
   const leeBiblia = form.readsBible === "si_regularmente" || form.readsBible === "si_ocasionalmente";
+  const respondioBiblia = form.readsBible !== "";
+  // Si ya dijo que no la lee, la pregunta por la versión sobra. Pero mientras
+  // no haya respondido se deja a la vista y desactivada: oculta del todo
+  // parecía que el formulario no la tenía.
+  const ocultarVersion = respondioBiblia && !leeBiblia;
   const versionOtra = form.bibleVersion === "Otra";
-  const comparteIglesia = form.churchStatus === "member";
+  const noComparteIglesia =
+    form.churchStatus === "none" || form.churchStatus === "prefer_not";
 
   return (
     <div className="space-y-5">
@@ -365,15 +371,24 @@ function BeliefsBlock({
             />
           </div>
 
-          {leeBiblia && (
+          {!ocultarVersion && (
             <div className="space-y-2">
               <Label className="text-sm font-semibold">¿Cuál Biblia lees?</Label>
-              <Select value={form.bibleVersion} onValueChange={(v) => onChange("bibleVersion", v)}>
+              <Select
+                value={form.bibleVersion}
+                onValueChange={(v) => onChange("bibleVersion", v)}
+                disabled={!leeBiblia}
+              >
                 <SelectTrigger><SelectValue placeholder="Selecciona la versión o traducción" /></SelectTrigger>
                 <SelectContent>
                   {BIBLE_VERSIONS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
                 </SelectContent>
               </Select>
+              {!leeBiblia && (
+                <p className="text-xs text-muted-foreground">
+                  Responde arriba si lees la Biblia para elegir la versión.
+                </p>
+              )}
               {versionOtra && (
                 <Input
                   value={form.bibleVersionOther}
@@ -389,20 +404,30 @@ function BeliefsBlock({
             <Textarea
               rows={2}
               value={form.church}
-              disabled={!comparteIglesia}
+              disabled={noComparteIglesia}
               onChange={(e) => { onChange("church", e.target.value); onChange("churchStatus", "member"); }}
               placeholder="Escribe el nombre de tu iglesia o comunidad de fe, si deseas compartirlo..."
             />
-            <RadioRow
-              name="churchStatus"
-              value={form.churchStatus}
-              onPick={(v) => { onChange("churchStatus", v); if (v !== "member") onChange("church", ""); }}
-              options={[
-                { value: "member", label: "Comparto mi iglesia" },
+            {/* Las dos opciones son alternativas a escribir el nombre */}
+            <div className="flex flex-wrap gap-4 pt-1">
+              {[
                 { value: "none", label: "No pertenezco a una iglesia" },
                 { value: "prefer_not", label: "Prefiero no responder" },
-              ]}
-            />
+              ].map((o) => (
+                <label key={o.value} className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="accent-primary w-4 h-4"
+                    checked={form.churchStatus === o.value}
+                    onChange={(e) => {
+                      if (e.target.checked) { onChange("churchStatus", o.value); onChange("church", ""); }
+                      else onChange("churchStatus", "");
+                    }}
+                  />
+                  <span className="text-muted-foreground">{o.label}</span>
+                </label>
+              ))}
+            </div>
           </div>
 
           <p className="text-xs text-muted-foreground">
