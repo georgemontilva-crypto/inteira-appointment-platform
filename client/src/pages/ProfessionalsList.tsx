@@ -6,6 +6,7 @@ import { PRICING } from "@/lib/pricing";
 import { Link, useRoute, useLocation } from "wouter";
 import { Star, Award, Calendar, Search, SlidersHorizontal, X, Coins, ArrowLeft } from "lucide-react";
 import DashboardLayout from "../components/DashboardLayout";
+import { SpecialtyAgenda } from "@/components/SpecialtyAgenda";
 import { motion } from "framer-motion";
 
 type SortOption = "rating" | "experience" | "price_asc" | "price_desc";
@@ -46,6 +47,9 @@ export default function ProfessionalsList() {
   const { isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
 
+  // La agenda del día es la entrada principal: la pregunta que trae aquí es
+  // "¿a qué hora puedo?". El listado de asesores queda a un toque.
+  const [vista, setVista] = useState<"agenda" | "asesores">("agenda");
   const [searchQuery, setSearchQuery] = useState("");
   const [onlyAvailable, setOnlyAvailable] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>("rating");
@@ -108,6 +112,31 @@ export default function ProfessionalsList() {
                 : `${filtered.length} ${filtered.length === 1 ? "especialista disponible" : "especialistas disponibles"}`}
             </p>
           </div>
+
+          {/* ── Vista ── */}
+          <div className="flex gap-1 p-1 rounded-xl bg-gray-100 w-full sm:w-fit">
+            {([
+              { value: "agenda", label: "Horarios" },
+              { value: "asesores", label: "Asesores" },
+            ] as const).map((t) => (
+              <button
+                key={t.value}
+                onClick={() => setVista(t.value)}
+                className={`flex-1 sm:flex-none px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  vista === t.value
+                    ? "bg-white text-gray-900 shadow-sm"
+                    : "text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          {vista === "agenda" ? (
+            <SpecialtyAgenda slug={slug} />
+          ) : (
+          <>
 
           {/* ── Toolbar isla ── */}
           <div className="bg-gray-50 rounded-2xl p-4 space-y-3">
@@ -351,6 +380,8 @@ export default function ProfessionalsList() {
                 );
               })}
             </motion.div>
+          )}
+          </>
           )}
 
         </div>

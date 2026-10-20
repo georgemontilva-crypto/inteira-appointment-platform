@@ -119,6 +119,89 @@ export const appointmentRouter = router({
       return slots.map((s) => s.startTime);
     }),
 
+  /**
+   * Agenda de una especialidad: todos los huecos libres de todos sus asesores
+   * aprobados para un día, ordenados por hora.
+   *
+   * Es lo que alimenta la vista de agenda: en vez de elegir asesor y luego ver
+   * su calendario, se ve directamente qué hay disponible ese día.
+   */
+  getSpecialtyAgenda: publicProcedure
+    .input(
+      z.object({
+        specialtySlug: z.string().max(120),
+        date: z.string(), // yyyy-MM-dd en hora del cliente
+        sessionType: z.enum(["basic", "premium"]).optional().default("basic"),
+        timezoneOffset: z.number().optional().default(-300),
+      })
+    )
+    .query(async ({ input }) => {
+      const specialty = await db.getSpecialtyBySlug(input.specialtySlug);
+      if (!specialty) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Especialidad no encontrada" });
+      }
+
+      const durationMinutes = SESSION_TYPES[input.sessionType].durationMinutes;
+      const professionals = await db.getProfessionalsBySpecialty(specialty.id);
+      const disponibles = professionals.filter((p: any) => p.isAvailable !== 0);
+
+      const offsetMs = (input.timezoneOffset ?? -300) * 60 * 1000;
+      const clientMidnight = new Date(
+        new Date(input.date + "T00:00:00Z").getTime() - offsetMs
+      );
+
+      // Un asesor por consulta, pero en paralelo: son pocos por especialidad.
+      const porAsesor = await Promise.all(
+        disponibles.map(async (pro: any) => {
+          const [availability, appointments] = await Promise.all([
+            db.getProfessionalAvailability(pro.id),
+            db.getProfessionalAppointments(pro.id),
+          ]);
+          const bookedTimes = appointments
+            .filter((apt: any) => apt.status === "scheduled")
+            .map((apt: any) => apt.appointmentDate);
+
+          const slots = getAvailableSlots(
+            clientMidnight,
+            availability,
+            durationMinutes,
+            bookedTimes,
+            offsetMs
+          );
+
+          return slots.map((slot) => ({
+            time: slot.startTime, // "09:00"
+            durationMinutes,
+            professionalId: pro.id as number,
+            professionalSlug: (pro.slug ?? null) as string | null,
+            professionalName: (pro.professionalName ?? "Especialista") as string,
+            photo: (pro.profilePhoto ?? pro.userProfileImage ?? null) as string | null,
+            tier: (pro.tier ?? "basic") as string,
+            yearsOfExperience: (pro.yearsOfExperience ?? null) as number | null,
+            averageRating: pro.averageRating != null ? Number(pro.averageRating) : null,
+            totalReviews: Number(pro.totalReviews ?? 0),
+            country: (pro.country ?? null) as string | null,
+            state: (pro.state ?? null) as string | null,
+          }));
+        })
+      );
+
+      const slots = porAsesor.flat().sort((a, b) => a.time.localeCompare(b.time));
+
+      return {
+        specialty: {
+          id: specialty.id as number,
+          name: specialty.name as string,
+          slug: specialty.slug as string,
+          description: (specialty.description ?? null) as string | null,
+        },
+        date: input.date,
+        sessionType: input.sessionType,
+        totalProfessionals: disponibles.length,
+        slots,
+      };
+    }),
+
   // Schedule an appointment
   scheduleAppointment: protectedProcedure
     .input(
