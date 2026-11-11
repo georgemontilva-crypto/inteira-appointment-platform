@@ -1487,6 +1487,17 @@ export default function ProfessionalDashboard() {
           const pendingWithdrawal = parseFloat((wallet as any)?.wallet?.pendingWithdrawal ?? "0");
           const withdrawals: any[] = (wallet as any)?.withdrawals ?? [];
           const hasPending = withdrawals.some((w) => w.status === "pending");
+
+          // Desglose 70/30 sumado sobre las sesiones que ya se acreditaron.
+          // Se calcula desde los montos reales de cada sesión, no desde el
+          // porcentaje teórico, para que cuadre con el historial de abajo.
+          const sesiones = (earningsHistory as any[]) ?? [];
+          const totalBruto = sesiones.reduce((t, e) => t + parseFloat(e.grossAmount ?? "0"), 0);
+          const totalMio = sesiones.reduce((t, e) => t + parseFloat(e.netAmount ?? "0"), 0);
+          const totalComision = sesiones.reduce((t, e) => t + parseFloat(e.commissionAmount ?? "0"), 0);
+          const pesos = (n: number) =>
+            `$${n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN`;
+
           return (
           <div className="space-y-4">
             <h2 className="text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>Mis ganancias</h2>
@@ -1562,6 +1573,38 @@ export default function ProfessionalDashboard() {
               </div>
             )}
 
+            {/* Desglose 70/30 */}
+            {sesiones.length > 0 && (
+              <div className="rounded-2xl border border-[rgba(96,117,98,0.15)] bg-white overflow-hidden">
+                <div className="px-4 py-3 border-b border-[rgba(96,117,98,0.1)]">
+                  <p className="text-sm font-semibold text-[#2d3a2e]">Cómo se reparte lo que cobras</p>
+                  <p className="text-xs text-[#93A295] mt-0.5">
+                    {sesiones.length >= 50
+                      ? "Sobre tus últimas 50 sesiones acreditadas"
+                      : `Sobre ${sesiones.length} ${sesiones.length === 1 ? "sesión acreditada" : "sesiones acreditadas"}`}
+                  </p>
+                </div>
+                <div className="divide-y divide-[rgba(96,117,98,0.08)] text-sm">
+                  <div className="flex items-center justify-between px-4 py-3">
+                    <span className="text-[#93A295]">Total de las sesiones</span>
+                    <span className="font-medium text-[#2d3a2e]">{pesos(totalBruto)}</span>
+                  </div>
+                  <div className="flex items-center justify-between px-4 py-3">
+                    <span className="text-[#93A295]">Comisión Inteira (30%)</span>
+                    <span className="font-medium text-[#2d3a2e]">−{pesos(totalComision)}</span>
+                  </div>
+                  <div className="flex items-center justify-between px-4 py-3 bg-[#f6f9f6]">
+                    <span className="font-semibold text-[#2d3a2e]">Tu parte (70%)</span>
+                    <span className="font-bold text-[#607562]">{pesos(totalMio)}</span>
+                  </div>
+                </div>
+                <p className="px-4 py-3 text-[11px] leading-snug text-[#93A295] border-t border-[rgba(96,117,98,0.08)]">
+                  La comisión ya está descontada: el balance que ves arriba es tu 70%, y los
+                  retiros salen completos de ese monto.
+                </p>
+              </div>
+            )}
+
             {/* Earnings history */}
             <div className="rounded-2xl border border-[rgba(96,117,98,0.15)] bg-white overflow-hidden">
               <div className="px-4 py-3 border-b border-[rgba(96,117,98,0.1)]">
@@ -1582,7 +1625,9 @@ export default function ProfessionalDashboard() {
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-bold text-[#607562]">+${parseFloat(e.netAmount).toFixed(2)} MXN</p>
-                        <p className="text-xs text-[#93A295]">Comisión: ${parseFloat(e.commissionAmount).toFixed(2)}</p>
+                        <p className="text-xs text-[#93A295]">
+                          Sesión ${parseFloat(e.grossAmount ?? "0").toFixed(2)} · comisión ${parseFloat(e.commissionAmount).toFixed(2)}
+                        </p>
                       </div>
                     </div>
                   ))}

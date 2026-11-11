@@ -1,6 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function Login() {
   const { user, isAuthenticated, loading } = useAuth();
@@ -21,6 +22,7 @@ export default function Login() {
   // ── Email + contraseña state ─────────────────────────────────────────────────
   const [pwEmail, setPwEmail] = useState("");
   const [pwPassword, setPwPassword] = useState("");
+  const [verPw, setVerPw] = useState(false);
   const [pwSubmitting, setPwSubmitting] = useState(false);
   const [pwError, setPwError] = useState("");
 
@@ -358,14 +360,26 @@ export default function Login() {
                   autoFocus
                   required
                 />
-                <input
-                  type="password"
-                  placeholder="Contraseña"
-                  value={pwPassword}
-                  onChange={(e) => { setPwPassword(e.target.value); setPwError(""); }}
-                  className={inputClass}
-                  required
-                />
+                <div className="relative">
+                  <input
+                    type={verPw ? "text" : "password"}
+                    placeholder="Contraseña"
+                    value={pwPassword}
+                    onChange={(e) => { setPwPassword(e.target.value); setPwError(""); }}
+                    className={`${inputClass} pr-12`}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setVerPw((v) => !v)}
+                    aria-label={verPw ? "Ocultar contraseña" : "Mostrar contraseña"}
+                    aria-pressed={verPw}
+                    tabIndex={-1}
+                    className="absolute right-0 top-0 h-full px-4 flex items-center text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {verPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
 
                 {pwError && (
                   <p className="text-xs text-red-500 text-center">{pwError}</p>

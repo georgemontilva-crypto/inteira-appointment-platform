@@ -6,6 +6,7 @@ import { getLoginUrl } from "@/const";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/PasswordInput";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -822,15 +823,15 @@ export default function RegisterProfessional({ embedded = false }: { embedded?: 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="r-password">Contraseña <span className="text-red-500">*</span></Label>
-              <Input
-                id="r-password" type="password" placeholder="Mínimo 8 caracteres"
+              <PasswordInput
+                id="r-password" placeholder="Mínimo 8 caracteres"
                 value={password} onChange={(e) => setPassword(e.target.value)}
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="r-password2">Confirmar contraseña <span className="text-red-500">*</span></Label>
-              <Input
-                id="r-password2" type="password" placeholder="Repite tu contraseña"
+              <PasswordInput
+                id="r-password2" placeholder="Repite tu contraseña"
                 value={passwordConfirm} onChange={(e) => setPasswordConfirm(e.target.value)}
               />
             </div>
