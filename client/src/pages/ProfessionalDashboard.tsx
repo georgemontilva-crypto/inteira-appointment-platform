@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { useLocation } from "wouter";
 import { DEFAULT_COUNTRY } from "@shared/locations";
 import { LocationSelect } from "@/components/LocationSelect";
 import { getLoginUrl } from "@/const";
@@ -45,6 +46,7 @@ const statusLabels: Record<string, string> = {
 
 export default function ProfessionalDashboard() {
   const { user, isAuthenticated, loading, refresh, logout } = useAuth();
+  const [, navigate] = useLocation();
   const utils = trpc.useUtils();
   const [activeTab, setActiveTab] = useState<"resumen" | "agenda" | "disponibilidad" | "resenas" | "ganancias" | "perfil">(() => {
     if (typeof window === "undefined") return "resumen";
@@ -284,8 +286,8 @@ export default function ProfessionalDashboard() {
   const isForbidden = (profileError as any)?.data?.code === "FORBIDDEN";
   useEffect(() => {
     if (!isForbidden) return;
-    window.location.href = "/dashboard";
-  }, [isForbidden]);
+    navigate("/dashboard");
+  }, [isForbidden, navigate]);
 
   useEffect(() => {
     const handleHash = () => {

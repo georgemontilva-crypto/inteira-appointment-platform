@@ -211,9 +211,11 @@ export default function ProfessionalProfile() {
             <Button
               className="gradient-brand text-white border-0 shadow-md font-semibold"
               onClick={() => {
-                window.location.href = isAuthenticated
-                  ? `/agendar/${professional.id}`
-                  : `/login?returnTo=${encodeURIComponent(`/agendar/${professional.id}`)}`;
+                navigate(
+                  isAuthenticated
+                    ? `/agendar/${professional.id}`
+                    : `/login?returnTo=${encodeURIComponent(`/agendar/${professional.id}`)}`
+                );
               }}
             >
               <Calendar className="w-4 h-4 mr-2" />
@@ -503,9 +505,11 @@ export default function ProfessionalProfile() {
                 <Button
                   className="w-full bg-primary hover:bg-primary/90 text-white shadow-md"
                   onClick={() => {
-                    window.location.href = isAuthenticated
-                      ? `/agendar/${professional.id}`
-                      : `/login?returnTo=${encodeURIComponent(`/agendar/${professional.id}`)}`;
+                    navigate(
+                      isAuthenticated
+                        ? `/agendar/${professional.id}`
+                        : `/login?returnTo=${encodeURIComponent(`/agendar/${professional.id}`)}`
+                    );
                   }}
                 >
                   <Calendar className="w-4 h-4 mr-2" />

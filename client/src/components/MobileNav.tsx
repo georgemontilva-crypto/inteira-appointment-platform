@@ -27,7 +27,7 @@ export default function MobileNav() {
 
   const handleNav = (item: { href: string; authRequired: boolean }) => {
     if (item.authRequired && !isAuthenticated) {
-      window.location.href = getLoginUrl();
+      navigate(getLoginUrl());
       return;
     }
     navigate(item.href);
@@ -66,7 +66,7 @@ export default function MobileNav() {
               if (isAuthenticated) {
                 navigate("/especialidades");
               } else {
-                window.location.href = getLoginUrl();
+                navigate(getLoginUrl());
               }
             }}
             className="w-14 h-14 -mt-5 rounded-full gradient-brand flex items-center justify-center shadow-lg shadow-primary/40 active:scale-95 transition-transform"

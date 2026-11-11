@@ -366,9 +366,11 @@ export default function ProfessionalsList() {
                           disabled={!pro.isAvailable}
                           onClick={() => {
                             if (!pro.isAvailable) return;
-                            window.location.href = isAuthenticated
-                              ? `/agendar/${pro.id}`
-                              : `/login?returnTo=${encodeURIComponent(`/agendar/${pro.id}`)}`;
+                            navigate(
+                              isAuthenticated
+                                ? `/agendar/${pro.id}`
+                                : `/login?returnTo=${encodeURIComponent(`/agendar/${pro.id}`)}`
+                            );
                           }}
                         >
                           <Calendar className="w-3.5 h-3.5" />

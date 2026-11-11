@@ -74,6 +74,23 @@ interface DashboardLayoutProps {
 export default function DashboardLayout({ children, title, subtitle, headerRight }: DashboardLayoutProps) {
   const { user, logout } = useAuth();
   const [location, navigate] = useLocation();
+
+  /**
+   * Navegación interna sin recarga. Cada window.location.href volvía a
+   * descargar el bundle entero: en móvil eso son segundos de pantalla blanca
+   * en cada cambio de sección.
+   */
+  const irA = (href: string, cerrarDrawer = false) => {
+    const [ruta, hash] = href.split("#");
+    if (ruta && ruta !== location) navigate(ruta);
+    if (hash) {
+      // El hash se aplica después de montar la ruta nueva
+      requestAnimationFrame(() => { window.location.hash = hash; });
+    } else if (!ruta) {
+      window.location.hash = "";
+    }
+    if (cerrarDrawer) setDrawerOpen(false);
+  };
   const isProMode = location.startsWith("/panel-profesional");
   const isProfessional = user?.role === "professional";
   const [notifOpen, setNotifOpen] = useState(false);
@@ -284,7 +301,7 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
                       notifications.slice(0, 10).map((n: any) => (
                         <div
                           key={n.id}
-                          onClick={() => { if (!n.isRead) markOneRead.mutate({ id: n.id }); if (n.link) { window.location.href = n.link; } setNotifOpen(false); }}
+                          onClick={() => { if (!n.isRead) markOneRead.mutate({ id: n.id }); if (n.link) { irA(n.link); } setNotifOpen(false); }}
                           className={`flex gap-3 px-4 py-3 border-b border-[rgba(96,117,98,0.07)] cursor-pointer transition-colors ${!n.isRead ? "bg-[#f5f8f5] hover:bg-[#eef3ee]" : "hover:bg-[#F7FAFC]"}`}
                         >
                           <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 text-[#607562]" style={{ background: "rgba(96,117,98,0.1)" }}>
@@ -304,7 +321,7 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
             </div>
             {/* CTA: clock for pro mode, + otherwise */}
             {user?.role === "professional" && isProMode ? (
-              <button onClick={() => { window.location.href = "/panel-profesional#disponibilidad"; }} style={{ background: "#607562", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", border: "none", cursor: "pointer" }}>
+              <button onClick={() => irA("/panel-profesional#disponibilidad")} style={{ background: "#607562", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", border: "none", cursor: "pointer" }}>
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
               </button>
             ) : (
@@ -354,7 +371,7 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
                       notifications.slice(0, 10).map((n: any) => (
                         <div
                           key={n.id}
-                          onClick={() => { if (!n.isRead) markOneRead.mutate({ id: n.id }); if (n.link) { window.location.href = n.link; } setNotifOpen(false); }}
+                          onClick={() => { if (!n.isRead) markOneRead.mutate({ id: n.id }); if (n.link) { irA(n.link); } setNotifOpen(false); }}
                           className={`flex gap-3 px-4 py-3 border-b border-[rgba(96,117,98,0.07)] cursor-pointer transition-colors ${!n.isRead ? "bg-[#f5f8f5] hover:bg-[#eef3ee]" : "hover:bg-[#F7FAFC]"}`}
                         >
                           <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 text-[#607562]" style={{ background: "rgba(96,117,98,0.1)" }}>
@@ -445,8 +462,7 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
                               isActive ? "bg-[rgba(96,117,98,0.12)] text-[#3d4e3f]" : "text-[#607562] hover:bg-[#f0f4f0]"
                             }`}
                             onClick={() => {
-                              if (item.hash) window.location.hash = item.hash;
-                              else window.location.href = item.href;
+                              irA(item.href);
                             }}
                           >
                             <span className="w-[16px] h-[16px] flex-shrink-0">{ICONS[item.icon]}</span>
@@ -601,7 +617,7 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
                         <a
                           key={item.label + item.href}
                           href={item.href}
-                          onClick={(e) => { e.preventDefault(); window.location.href = item.href; setDrawerOpen(false); }}
+                          onClick={(e) => { e.preventDefault(); irA(item.href, true); }}
                           style={{
                             background: isActive ? "rgba(96,117,98,0.12)" : "#f7faf7",
                             borderRadius: 12,
