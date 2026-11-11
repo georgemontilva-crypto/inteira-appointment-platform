@@ -1,52 +1,62 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Spinner } from "@/components/ui/spinner";
-import WaitingRoom from "@/pages/WaitingRoom";
-import NotFound from "@/pages/NotFound";
-import { useEffect } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { Redirect, Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { useAuth } from "./_core/hooks/useAuth";
-import Home from "./pages/Home";
-import UserDashboard from "./pages/UserDashboard";
-import ProfessionalDashboard from "./pages/ProfessionalDashboard";
-import AdminDashboard from "./pages/AdminDashboard";
-import ProfessionalsList from "./pages/ProfessionalsList";
-import ProfessionalProfile from "./pages/ProfessionalProfile";
-import BookAppointment from "./pages/BookAppointment";
-import RegisterProfessional from "./pages/RegisterProfessional";
-import Plans from "./pages/Plans";
-import WalletPage from "./pages/Wallet";
-import TermsOfService from "./pages/TermsOfService";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
-import UserProfile from "./pages/UserProfile";
-import Subscription from "./pages/Subscription";
-import Login from "./pages/Login";
-import Registro from "./pages/Registro";
-import RegistroTipo from "./pages/RegistroTipo";
-import SpecialtiesPage from "./pages/SpecialtiesPage";
-import AppointmentsPage from "./pages/AppointmentsPage";
-import ProfessionalsLanding from "./pages/ProfessionalsLanding";
 
-function EspecialidadesRoute() {
-  const { user, loading } = useAuth();
-  if (loading) return (
+/**
+ * Cada pantalla se carga cuando se entra a ella, no al abrir la app.
+ *
+ * Antes el navegador bajaba 1.25 MB de JavaScript antes de pintar la primera
+ * pantalla, aunque la persona solo fuera a ver sus citas. Con esto la carga
+ * inicial baja a lo mínimo y el resto llega por ruta, que es lo que hace que
+ * la app se sienta rápida en celular y con datos móviles.
+ */
+const Home = lazy(() => import("./pages/Home"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const WaitingRoom = lazy(() => import("./pages/WaitingRoom"));
+const UserDashboard = lazy(() => import("./pages/UserDashboard"));
+const ProfessionalDashboard = lazy(() => import("./pages/ProfessionalDashboard"));
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+const ProfessionalsList = lazy(() => import("./pages/ProfessionalsList"));
+const ProfessionalProfile = lazy(() => import("./pages/ProfessionalProfile"));
+const BookAppointment = lazy(() => import("./pages/BookAppointment"));
+const RegisterProfessional = lazy(() => import("./pages/RegisterProfessional"));
+const Plans = lazy(() => import("./pages/Plans"));
+const WalletPage = lazy(() => import("./pages/Wallet"));
+const TermsOfService = lazy(() => import("./pages/TermsOfService"));
+const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
+const UserProfile = lazy(() => import("./pages/UserProfile"));
+const Subscription = lazy(() => import("./pages/Subscription"));
+const Login = lazy(() => import("./pages/Login"));
+const Registro = lazy(() => import("./pages/Registro"));
+const RegistroTipo = lazy(() => import("./pages/RegistroTipo"));
+const SpecialtiesPage = lazy(() => import("./pages/SpecialtiesPage"));
+const AppointmentsPage = lazy(() => import("./pages/AppointmentsPage"));
+const ProfessionalsLanding = lazy(() => import("./pages/ProfessionalsLanding"));
+
+/** Lo que se ve mientras llega el código de la pantalla. */
+function PantallaCargando() {
+  return (
     <div className="min-h-screen flex items-center justify-center">
       <Spinner />
     </div>
   );
+}
+
+function EspecialidadesRoute() {
+  const { user, loading } = useAuth();
+  if (loading) return <PantallaCargando />;
   if (!user) return <ProfessionalsLanding />;
   return <SpecialtiesPage />;
 }
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center">
-      <Spinner />
-    </div>
-  );
+  if (loading) return <PantallaCargando />;
   if (!user) return <Redirect to="/login" />;
   return <>{children}</>;
 }
@@ -152,7 +162,9 @@ function App() {
       <ThemeProvider defaultTheme="light">
         <TooltipProvider>
           <Toaster richColors position="top-right" />
-          <Router />
+          <Suspense fallback={<PantallaCargando />}>
+            <Router />
+          </Suspense>
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>

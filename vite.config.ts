@@ -176,7 +176,9 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          "vendor-react": ["react", "react-dom"],
+          // react-dom se importa como "react-dom/client"; sin ese alias el
+          // bundle de React entero caía dentro del chunk de entrada.
+          "vendor-react": ["react", "react/jsx-runtime", "react-dom", "react-dom/client"],
           "vendor-ui": ["@radix-ui/react-dialog", "@radix-ui/react-dropdown-menu", "@radix-ui/react-tabs", "@radix-ui/react-select", "@radix-ui/react-tooltip"],
           "vendor-trpc": ["@trpc/client", "@trpc/react-query", "@trpc/server"],
           "vendor-query": ["@tanstack/react-query"],
