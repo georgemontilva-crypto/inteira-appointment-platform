@@ -6,6 +6,7 @@ import { Redirect, Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { useAuth } from "./_core/hooks/useAuth";
+import { getLoginUrl } from "./const";
 
 /**
  * Cada pantalla se carga cuando se entra a ella, no al abrir la app.
@@ -57,7 +58,9 @@ function EspecialidadesRoute() {
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   if (loading) return <PantallaCargando />;
-  if (!user) return <Redirect to="/login" />;
+  // Con getLoginUrl() el destino original (incluido el hash) vuelve después
+  // de iniciar sesión: los links de los correos apuntan a rutas privadas.
+  if (!user) return <Redirect to={getLoginUrl()} />;
   return <>{children}</>;
 }
 

@@ -251,7 +251,7 @@ export async function sendAppointmentCancellation(params: {
     </div>
     ${creditsLine}
     <p>Puedes agendar una nueva cita cuando lo desees.</p>
-    <a href="https://inteira.app" class="btn">Agendar nueva cita</a>
+    <a href="https://inteira.app/especialidades" class="btn">Agendar nueva cita</a>
   `;
 
   return sendEmail({
@@ -287,7 +287,7 @@ export async function sendAppointmentCancelledToProfessional(params: {
       <p><strong>Hora:</strong> ${timeStr} hrs</p>
     </div>
     <p>El horario quedó disponible nuevamente para nuevas reservas.</p>
-    <a href="https://inteira.app" class="btn">Ver mi panel</a>
+    <a href="https://inteira.app/panel-profesional" class="btn">Ver mi panel</a>
   `;
 
   return sendEmail({
@@ -312,7 +312,7 @@ export async function sendProfessionalEarningNotification(params: {
       <p><strong>Monto acreditado:</strong> $${params.netAmount.toFixed(2)} MXN</p>
     </div>
     <p>Puedes solicitar un retiro desde tu panel cuando tu saldo sea de al menos $500 MXN.</p>
-    <a href="https://inteira.app" class="btn">Ver mi wallet</a>
+    <a href="https://inteira.app/wallet" class="btn">Ver mi wallet</a>
   `;
 
   return sendEmail({
@@ -352,7 +352,7 @@ export async function sendSubscriptionUpdate(params: {
   const content = `
     <p>Hola <strong>${params.userName}</strong>,</p>
     <p>${msg.body}</p>
-    <a href="https://inteira.app" class="btn">Ir a mi dashboard</a>
+    <a href="https://inteira.app/dashboard" class="btn">Ir a mi dashboard</a>
   `;
 
   return sendEmail({
@@ -433,7 +433,7 @@ export async function sendWelcomeEmail(params: {
       <p><strong>3. Conéctate</strong> — Únete a tu sesión por videollamada integrada, sin apps externas.</p>
     </div>
     <p>Tus primeros créditos te esperan. Comienza explorando nuestros especialistas disponibles.</p>
-    <a href="https://inteira.app" class="btn">Explorar especialistas</a>
+    <a href="https://inteira.app/especialidades" class="btn">Explorar especialistas</a>
     <div class="divider"></div>
     <p style="font-size:13px; color:#6b7280;">¿Tienes preguntas? Escríbenos a <a href="mailto:soporte@inteira.mx" style="color:#607562;">soporte@inteira.mx</a></p>
   `;
@@ -492,7 +492,7 @@ export async function sendAdminNewUserRegistration(params: {
       <p><strong>Email:</strong> ${params.userEmail}</p>
       <p><strong>Fecha:</strong> ${new Date().toLocaleDateString("es-MX", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
     </div>
-    <a href="https://inteira.app" class="btn">Ver panel admin</a>
+    <a href="https://inteira.app/admin" class="btn">Ver panel admin</a>
   `;
 
   const results = await Promise.all(
@@ -574,7 +574,7 @@ export async function sendAdminNewProfessionalRequest(params: {
       <p><strong>Nombre:</strong> ${params.professionalName}</p>
       <p><strong>Email:</strong> ${params.professionalEmail}</p>
     </div>
-    <a href="https://inteira.app" class="btn">Revisar solicitud</a>
+    <a href="https://inteira.app/admin" class="btn">Revisar solicitud</a>
   `;
 
   return sendEmail({
@@ -602,7 +602,7 @@ export async function sendCreditsDebitedEmail(params: {
       <p><strong>Fecha de sesión:</strong> ${dateStr}</p>
     </div>
     <p>Gracias por usar Inteira. Recuerda calificar a tu especialista al finalizar la sesión.</p>
-    <a href="https://inteira.app" class="btn">Ver mis citas</a>
+    <a href="https://inteira.app/citas" class="btn">Ver mis citas</a>
   `;
   return sendEmail({
     to: params.userEmail,
