@@ -178,6 +178,16 @@ export default function SpecialtiesPage() {
     });
   }, [withCategory, search, activeCategory]);
 
+  // Al hacer scroll el título y la bajada se esconden y queda arriba solo la
+  // búsqueda con las pastillas: en celular ese bloque se comía media pantalla.
+  // La histéresis (24 para esconder, 8 para volver) evita que parpadee cuando
+  // el dedo queda justo en el límite.
+  const [compacto, setCompacto] = useState(false);
+  const alHacerScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const y = e.currentTarget.scrollTop;
+    setCompacto((antes) => (antes ? y > 8 : y > 24));
+  };
+
   const activeCategories = useMemo(() => {
     const present = new Set(withCategory.map((s) => s.category));
     return CATEGORIES.filter((c) => present.has(c.key));
@@ -189,10 +199,16 @@ export default function SpecialtiesPage() {
         <div className="max-w-7xl mx-auto w-full px-4 md:px-6 flex flex-col h-full">
 
           {/* ── Isla: header + búsqueda + chips ── */}
-          <div className="flex-shrink-0 pt-6 pb-4">
-          <div className="bg-gray-50 rounded-2xl p-5">
-            <h1 className="text-xl font-semibold text-gray-900 mb-1">Especialidades</h1>
-            <p className="text-sm text-gray-500 mb-4">Encuentra el especialista ideal para lo que necesitas</p>
+          <div className={`flex-shrink-0 transition-all duration-200 ${compacto ? "pt-2 pb-2" : "pt-6 pb-4"}`}>
+          <div className={`bg-gray-50 rounded-2xl transition-all duration-200 ${compacto ? "p-3" : "p-5"}`}>
+            <div
+              className={`overflow-hidden transition-all duration-200 ${
+                compacto ? "max-h-0 opacity-0" : "max-h-24 opacity-100 mb-4"
+              }`}
+            >
+              <h1 className="text-xl font-semibold text-gray-900 mb-1">Especialidades</h1>
+              <p className="text-sm text-gray-500">Encuentra el especialista ideal para lo que necesitas</p>
+            </div>
 
             {/* Barra de búsqueda */}
             <div className="relative mb-4">
@@ -251,6 +267,7 @@ export default function SpecialtiesPage() {
           <div
             className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden"
             style={{ scrollbarWidth: "none" }}
+            onScroll={alHacerScroll}
           >
 
           {/* ── Grid de cards ── */}

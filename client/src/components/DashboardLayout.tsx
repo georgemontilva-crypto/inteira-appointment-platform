@@ -284,7 +284,7 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
                 {count > 0 && <span style={{ position: "absolute", top: -4, right: -4, width: 8, height: 8, borderRadius: "50%", background: "#ef4444" }} />}
               </button>
               {notifOpen && (
-                <div className="absolute right-0 top-[calc(100%+8px)] w-[300px] bg-white rounded-[14px] shadow-[0_8px_32px_rgba(0,0,0,0.14)] border border-[rgba(96,117,98,0.12)] overflow-hidden z-50">
+                <div className="fixed left-3 right-3 top-[60px] ml-auto w-auto max-w-[360px] bg-white rounded-[14px] shadow-[0_8px_32px_rgba(0,0,0,0.14)] border border-[rgba(96,117,98,0.12)] overflow-hidden z-50">
                   <div className="flex items-center justify-between px-4 py-3 border-b border-[rgba(96,117,98,0.08)]">
                     <p className="text-[13px] font-semibold text-[#333]">Notificaciones</p>
                     {count > 0 && (
