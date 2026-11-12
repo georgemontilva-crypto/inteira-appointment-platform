@@ -220,6 +220,13 @@ export const appointmentRouter = router({
       const pricingType: "individual" | "member" = hasMembership ? "member" : "individual";
       const creditCost = hasMembership ? sessionConfig.memberCredits : sessionConfig.credits;
       const appointmentDateObj = new Date(input.appointmentDate);
+      // La columna appointmentDate no acepta un ISO con "T"/"Z": da
+      // "Incorrect datetime value". El flujo de agendar ya mandaba
+      // "YYYY-MM-DD HH:MM:SS" en UTC; aquí se normaliza cualquier otra forma
+      // para que un cliente nuevo no vuelva a romper el apartado.
+      const appointmentDateSql = /[TZ]/.test(input.appointmentDate)
+        ? appointmentDateObj.toISOString().slice(0, 19).replace("T", " ")
+        : input.appointmentDate;
 
       // Validate appointment can be scheduled
       if (!canScheduleAppointment(appointmentDateObj)) {
@@ -281,7 +288,7 @@ export const appointmentRouter = router({
         userId: ctx.user.id,
         professionalId: input.professionalId,
         specialtyId: professional.specialtyId,
-        appointmentDate: input.appointmentDate, // store the local-time string; mysql2 Date objects get UTC-shifted
+        appointmentDate: appointmentDateSql, // cadena, no Date: mysql2 desplaza los Date a UTC
         durationMinutes,
         videoCallType: "daily",
         videoCallLink: undefined,

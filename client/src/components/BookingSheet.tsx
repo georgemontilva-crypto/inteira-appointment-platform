@@ -23,6 +23,17 @@ export interface AgendaSlot {
   state: string | null;
 }
 
+/**
+ * Formato que acepta la columna `appointmentDate`: "YYYY-MM-DD HH:MM:SS" en UTC.
+ *
+ * Un ISO con la "Z" al final (lo que devuelve toISOString) hace que MySQL
+ * responda "Incorrect datetime value", así que se recorta igual que en el
+ * flujo de agendar anterior.
+ */
+export function aMysqlDatetime(fecha: Date): string {
+  return fecha.toISOString().slice(0, 19).replace("T", " ");
+}
+
 /** "09:00" sobre un día dado, en hora local. */
 export function slotToDate(day: Date, time: string): Date {
   const [h, m] = time.split(":").map(Number);
@@ -122,7 +133,7 @@ export function BookingSheet({
           <dl className="rounded-xl border border-border divide-y divide-border text-sm">
             <div className="flex justify-between gap-4 px-4 py-2.5">
               <dt className="text-muted-foreground">Fecha</dt>
-              <dd className="font-medium text-right capitalize">
+              <dd className="font-medium text-right first-letter:uppercase">
                 {format(inicio, "EEEE d 'de' MMMM", { locale: es })}
               </dd>
             </div>
@@ -187,7 +198,7 @@ export function BookingSheet({
             onClick={() =>
               agendar.mutate({
                 professionalId: slot.professionalId,
-                appointmentDate: inicio.toISOString(),
+                appointmentDate: aMysqlDatetime(inicio),
                 sessionType,
                 timezoneOffset: -new Date().getTimezoneOffset(),
               })
