@@ -89,6 +89,10 @@ export const appointmentRouter = router({
         });
       }
 
+      // Si el asesor bloqueó ese día, no hay huecos que ofrecer.
+      const bloqueados = await db.getBlockedDates(input.professionalId);
+      if (bloqueados.has(input.date)) return [];
+
       const availability = await db.getProfessionalAvailability(
         input.professionalId
       );
@@ -96,8 +100,10 @@ export const appointmentRouter = router({
         input.professionalId
       );
 
+      // Cualquier cita que no esté cancelada ocupa el horario: antes solo se
+      // miraban las "scheduled", así que una cita en curso volvía a ofrecerse.
       const bookedTimes = appointments
-        .filter((apt) => apt.status === "scheduled")
+        .filter((apt) => apt.status !== "canceled")
         .map((apt) => apt.appointmentDate);
 
       console.log("[DIAG slots v2] date:", input.date, "professionalId:", input.professionalId, "availability count:", availability.length, "availability:", JSON.stringify(availability));
@@ -153,12 +159,14 @@ export const appointmentRouter = router({
       // Un asesor por consulta, pero en paralelo: son pocos por especialidad.
       const porAsesor = await Promise.all(
         disponibles.map(async (pro: any) => {
-          const [availability, appointments] = await Promise.all([
+          const [availability, appointments, bloqueados] = await Promise.all([
             db.getProfessionalAvailability(pro.id),
             db.getProfessionalAppointments(pro.id),
+            db.getBlockedDates(pro.id),
           ]);
+          if (bloqueados.has(input.date)) return [];
           const bookedTimes = appointments
-            .filter((apt: any) => apt.status === "scheduled")
+            .filter((apt: any) => apt.status !== "canceled")
             .map((apt: any) => apt.appointmentDate);
 
           const slots = getAvailableSlots(
@@ -262,6 +270,61 @@ export const appointmentRouter = router({
           code: "BAD_REQUEST",
           message: "Selected time is not within professional's availability",
         });
+      }
+
+      // El asesor pudo bloquear el día después de que se cargó la agenda.
+      const diasBloqueados = await db.getBlockedDates(input.professionalId);
+      const diaLocal = new Date(appointmentDateObj.getTime() + tzOffsetMs)
+        .toISOString()
+        .slice(0, 10);
+      if (diasBloqueados.has(diaLocal)) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "El especialista bloqueó ese día. Elige otra fecha.",
+        });
+      }
+
+      // Dos personas pueden estar mirando la misma agenda: sin esto, las dos
+      // apartan el mismo hueco. Se comprueba contra cualquier cita que se
+      // solape, propia o del asesor, salvo las canceladas.
+      {
+        const dbCheck = await db.getDb();
+        if (dbCheck) {
+          const choque = await new Promise<any | null>((resolve) => {
+            (dbCheck as any).$client.execute(
+              `SELECT id, professionalId, userId FROM appointments
+               WHERE status <> 'canceled'
+                 AND (professionalId = ? OR userId = ?)
+                 AND appointmentDate < DATE_ADD(?, INTERVAL ? MINUTE)
+                 AND DATE_ADD(appointmentDate, INTERVAL durationMinutes MINUTE) > ?
+               LIMIT 1`,
+              [
+                input.professionalId,
+                ctx.user.id,
+                appointmentDateSql,
+                durationMinutes,
+                appointmentDateSql,
+              ],
+              (err: any, results: any) => {
+                if (err) {
+                  console.error("[scheduleAppointment] choque:", err?.message);
+                  resolve(null);
+                  return;
+                }
+                resolve(Array.isArray(results) && results.length > 0 ? results[0] : null);
+              }
+            );
+          });
+          if (choque) {
+            throw new TRPCError({
+              code: "CONFLICT",
+              message:
+                Number(choque.userId) === ctx.user.id
+                  ? "Ya tienes una cita a esa hora."
+                  : "Ese horario acaba de ocuparse. Elige otro.",
+            });
+          }
+        }
       }
 
       // ── Check credit balance (modelo basado en créditos, no suscripción obligatoria) ──

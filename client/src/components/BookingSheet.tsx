@@ -52,6 +52,7 @@ export function BookingSheet({
   day,
   sessionType,
   creditCost,
+  saldo,
   onClose,
   onBooked,
 }: {
@@ -59,11 +60,16 @@ export function BookingSheet({
   day: Date;
   sessionType: "basic" | "premium";
   creditCost: number;
+  /** Créditos disponibles de quien agenda. */
+  saldo: number;
   onClose: () => void;
   onBooked: () => void;
 }) {
   const [entendido, setEntendido] = useState(false);
   const inicio = slotToDate(day, slot.time);
+  // Antes el saldo insuficiente solo se descubría al pulsar "Apartar cita" y
+  // el error mandaba a /wallet por texto. Ahora se ve desde que se abre.
+  const faltan = Math.max(0, creditCost - saldo);
 
   const agendar = trpc.appointment.scheduleAppointment.useMutation({
     onSuccess: () => {
@@ -153,6 +159,12 @@ export function BookingSheet({
               <dt className="text-muted-foreground">Costo</dt>
               <dd className="font-semibold">{creditCost.toLocaleString("es-MX")} créditos</dd>
             </div>
+            <div className="flex justify-between gap-4 px-4 py-2.5">
+              <dt className="text-muted-foreground">Tu saldo</dt>
+              <dd className={faltan > 0 ? "font-medium text-amber-600" : "font-medium"}>
+                {saldo.toLocaleString("es-MX")} créditos
+              </dd>
+            </div>
           </dl>
 
           {slot.professionalSlug && (
@@ -192,6 +204,16 @@ export function BookingSheet({
             </label>
           </div>
 
+          {faltan > 0 ? (
+            <div className="space-y-2">
+              <p className="text-[13px] text-amber-700 leading-snug">
+                Te faltan {faltan.toLocaleString("es-MX")} créditos para esta sesión.
+              </p>
+              <Button asChild className="w-full h-12 text-base">
+                <Link href="/wallet">Recargar créditos</Link>
+              </Button>
+            </div>
+          ) : (
           <Button
             className="w-full h-12 text-base"
             disabled={!entendido || agendar.isPending}
@@ -213,6 +235,7 @@ export function BookingSheet({
               "Apartar cita"
             )}
           </Button>
+          )}
         </div>
       </div>
     </div>

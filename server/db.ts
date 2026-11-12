@@ -717,6 +717,44 @@ export async function getProfessionalAvailability(professionalId: number) {
   });
 }
 
+/**
+ * Días que el asesor marcó como no disponibles, en formato "YYYY-MM-DD".
+ *
+ * Hasta ahora esta tabla solo se leía desde el panel del asesor: los huecos
+ * se calculaban sin mirarla, así que un día bloqueado seguía apareciendo
+ * libre y se podía apartar cita en él.
+ */
+export async function getBlockedDates(professionalId: number): Promise<Set<string>> {
+  const db = await getDb();
+  if (!db) return new Set();
+  const client = (db as any).$client;
+  return new Promise<Set<string>>((resolve) => {
+    client.execute(
+      "SELECT blockedDate FROM blockedDays WHERE professionalId = ?",
+      [professionalId],
+      (err: any, results: any) => {
+        if (err) {
+          console.error("[getBlockedDates]", err?.message);
+          resolve(new Set());
+          return;
+        }
+        const filas = Array.isArray(results) ? results : [];
+        resolve(
+          new Set(
+            filas
+              .map((f: any) =>
+                typeof f.blockedDate === "string"
+                  ? f.blockedDate.slice(0, 10)
+                  : new Date(f.blockedDate).toISOString().slice(0, 10)
+              )
+              .filter(Boolean)
+          )
+        );
+      }
+    );
+  });
+}
+
 export async function createProfessionalAvailability(
   data: { professionalId: number; dayOfWeek: number; startTime: string; endTime: string; isAvailable?: boolean }
 ) {

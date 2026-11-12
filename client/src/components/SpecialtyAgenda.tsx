@@ -209,6 +209,7 @@ export function SpecialtyAgenda({ slug }: { slug: string }) {
           day={day}
           sessionType={sessionType}
           creditCost={costo}
+          saldo={Number((wallet as any)?.balance ?? 0)}
           onClose={() => setElegido(null)}
           onBooked={() => {
             setElegido(null);

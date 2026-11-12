@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import {
   Calendar, Clock, CheckCircle2, User, Video,
   Plus, Star, BarChart3, ArrowLeft, AlertCircle, XCircle,
-  Camera, Trash2, MessageSquare, CalendarX,
+  Camera, Trash2, MessageSquare, CalendarX, CalendarDays,
   ChevronLeft, ChevronRight, LayoutDashboard, DollarSign, Wallet, ExternalLink,
 } from "lucide-react";
 import { format } from "date-fns";
@@ -227,13 +227,23 @@ export default function ProfessionalDashboard() {
   });
 
   const addBlockedDayMutation = trpc.professional.addBlockedDay.useMutation({
-    onSuccess: () => {
-      toast.success("Día bloqueado correctamente");
+    onSuccess: (res: any) => {
+      const citas = Number(res?.citasEseDia ?? 0);
+      if (citas > 0) {
+        // Bloquear no cancela lo ya apartado: si no se dice, el asesor cree
+        // que el día quedó libre y deja a alguien plantado.
+        toast.warning(
+          `Día bloqueado, pero ya tenías ${citas} ${citas === 1 ? "cita apartada" : "citas apartadas"} ese día. Cancélalas desde "Citas" si no vas a atender.`,
+          { duration: 10000 }
+        );
+      } else {
+        toast.success("Día bloqueado. Ya no se puede apartar cita ese día.");
+      }
       setNewBlockedDate("");
       setNewBlockedReason("");
       refetchBlockedDays();
     },
-    onError: () => toast.error("Error al bloquear el día"),
+    onError: (err: any) => toast.error(err?.message ?? "Error al bloquear el día"),
   });
 
   const removeBlockedDayMutation = trpc.professional.removeBlockedDay.useMutation({
@@ -1036,181 +1046,215 @@ export default function ProfessionalDashboard() {
 
               // Days ordered Mon–Sun (1-6, 0) for display
               const dayOrder = [1, 2, 3, 4, 5, 6, 0];
-              const DAY_SHORT = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
               return (
                 <div className="space-y-4">
                   <p className="text-sm text-muted-foreground">
-                    Toca <span className="font-medium text-foreground">+</span> en cualquier día para agregar un horario. Los pacientes solo podrán agendar en los bloques activos.
+                    Agrega un bloque en cada día que atiendas. Las personas solo podrán apartar cita dentro de esos bloques.
                   </p>
 
-                  {/* One-click template */}
-                  <button
-                    onClick={async () => {
-                      for (const d of [1, 2, 3, 4, 5]) {
-                        await addAvailabilityMutation.mutateAsync({
-                          dayOfWeek: d,
-                          startTime: "09:00",
-                          endTime: "17:00",
-                        });
-                      }
-                    }}
-                    disabled={addAvailabilityMutation.isPending}
-                    className="flex items-center gap-2 px-3 py-2 rounded-xl border border-primary/30 bg-primary/5 text-primary text-xs font-semibold hover:bg-primary/10 transition-colors disabled:opacity-50"
-                  >
-                    <span className="text-base leading-none">📋</span>
-                    Plantilla Lun-Vie 9:00–17:00
-                  </button>
+                  {/* Plantilla rápida: solo rellena los días que están vacíos,
+                      para que pulsarla dos veces no duplique horarios. */}
+                  {(() => {
+                    const vacios = [1, 2, 3, 4, 5].filter((d) => (slotsByDay[d] ?? []).length === 0);
+                    if (vacios.length === 0) return null;
+                    return (
+                      <button
+                        onClick={async () => {
+                          for (const d of vacios) {
+                            await addAvailabilityMutation.mutateAsync({
+                              dayOfWeek: d,
+                              startTime: "09:00",
+                              endTime: "17:00",
+                            });
+                          }
+                        }}
+                        disabled={addAvailabilityMutation.isPending}
+                        className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-primary/30 bg-primary/5 text-primary text-sm font-semibold hover:bg-primary/10 transition-colors disabled:opacity-50"
+                      >
+                        <CalendarDays className="w-4 h-4" />
+                        Llenar lunes a viernes, 9:00–17:00
+                      </button>
+                    );
+                  })()}
 
-                  {/* Scrollable week grid */}
-                  <div className="overflow-x-auto pb-2 -mx-1 px-1">
-                    <div className="flex gap-2.5" style={{ minWidth: "560px" }}>
-                      {dayOrder.map((dayIdx) => {
-                        const slots = slotsByDay[dayIdx] ?? [];
-                        const hasSlots = slots.length > 0;
-                        const isAddingThis = addingSlotForDay === dayIdx;
+                  {/* Un día por fila: la rejilla de 7 columnas obligaba a
+                      desplazarse de lado en el teléfono y dejaba los campos de
+                      hora en columnas de 75px. */}
+                  <div className="space-y-2.5">
+                    {dayOrder.map((dayIdx) => {
+                      const slots = slotsByDay[dayIdx] ?? [];
+                      const hasSlots = slots.length > 0;
+                      const isAddingThis = addingSlotForDay === dayIdx;
 
-                        return (
-                          <div
-                            key={dayIdx}
-                            className={`flex-1 rounded-2xl border transition-all duration-200 ${
-                              hasSlots
-                                ? "border-primary/20 bg-primary/[0.03] shadow-sm"
-                                : "border-border bg-muted/20"
-                            }`}
-                          >
-                            {/* Day header */}
-                            <div className={`flex items-center justify-between px-3 pt-3 pb-2 rounded-t-2xl ${
-                              hasSlots ? "border-b border-primary/10" : "border-b border-border/40"
-                            }`}>
-                              <div>
-                                <p className={`text-xs font-bold uppercase tracking-wide ${
-                                  hasSlots ? "text-primary" : "text-muted-foreground"
-                                }`}>
-                                  {DAY_SHORT[dayIdx]}
-                                </p>
-                                <p className={`text-[10px] ${hasSlots ? "text-primary/60" : "text-muted-foreground/60"}`}>
-                                  {DAYS[dayIdx]}
-                                </p>
-                              </div>
-                              <button
-                                onClick={() => {
-                                  if (isAddingThis) {
-                                    setAddingSlotForDay(null);
-                                  } else {
-                                    setAddingSlotForDay(dayIdx);
-                                    setInlineSlot({ startTime: "09:00", endTime: "17:00" });
-                                    setApplyToDays([dayIdx]);
-                                  }
-                                }}
-                                className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors text-xs font-bold ${
-                                  isAddingThis
-                                    ? "bg-primary/10 text-primary rotate-45"
-                                    : hasSlots
-                                    ? "bg-primary/10 text-primary hover:bg-primary/20"
-                                    : "bg-border text-muted-foreground hover:bg-primary/10 hover:text-primary"
-                                }`}
-                                title={isAddingThis ? "Cancelar" : "Agregar horario"}
-                              >
-                                {isAddingThis ? "✕" : "+"}
-                              </button>
+                      return (
+                        <div
+                          key={dayIdx}
+                          className={`rounded-2xl border transition-colors ${
+                            hasSlots ? "border-primary/25 bg-primary/[0.03]" : "border-border bg-muted/20"
+                          }`}
+                        >
+                          <div className="flex items-center gap-3 px-4 py-3">
+                            <p
+                              className={`w-[78px] flex-shrink-0 text-sm font-semibold ${
+                                hasSlots ? "text-primary" : "text-muted-foreground"
+                              }`}
+                            >
+                              {DAYS[dayIdx]}
+                            </p>
+
+                            <div className="flex-1 flex flex-wrap gap-1.5 min-w-0">
+                              {slots.length === 0 ? (
+                                <span className="text-xs text-muted-foreground/60">Sin horario</span>
+                              ) : (
+                                slots.map((slot) => (
+                                  <span
+                                    key={slot.id}
+                                    className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-lg bg-primary/10 border border-primary/20"
+                                  >
+                                    <span className="text-xs font-medium text-primary tabular-nums whitespace-nowrap">
+                                      {slot.startTime.slice(0, 5)}–{slot.endTime.slice(0, 5)}
+                                    </span>
+                                    <button
+                                      onClick={() => removeAvailabilityMutation.mutate({ id: slot.id })}
+                                      disabled={removeAvailabilityMutation.isPending}
+                                      aria-label={`Quitar ${slot.startTime.slice(0, 5)} a ${slot.endTime.slice(0, 5)} de ${DAYS[dayIdx]}`}
+                                      className="text-primary/50 hover:text-red-500 transition-colors disabled:opacity-30"
+                                    >
+                                      <XCircle className="w-4 h-4" />
+                                    </button>
+                                  </span>
+                                ))
+                              )}
                             </div>
 
-                            {/* Slots */}
-                            <div className="px-2.5 py-2 space-y-1.5 min-h-[56px]">
-                              {slots.length === 0 && !isAddingThis && (
-                                <p className="text-[10px] text-muted-foreground/50 text-center pt-2">Sin horario</p>
-                              )}
-                              {slots.map((slot) => (
-                                <div
-                                  key={slot.id}
-                                  className="group flex items-center justify-between gap-1 px-2 py-1 rounded-lg bg-primary/10 border border-primary/20 transition-all hover:bg-primary/15"
-                                >
-                                  <span className="text-[11px] font-medium text-primary tabular-nums whitespace-nowrap">
-                                    {slot.startTime.slice(0, 5)}–{slot.endTime.slice(0, 5)}
-                                  </span>
-                                  <button
-                                    onClick={() => removeAvailabilityMutation.mutate({ id: slot.id })}
-                                    disabled={removeAvailabilityMutation.isPending}
-                                    className="opacity-0 group-hover:opacity-100 text-primary/40 hover:text-red-500 transition-all disabled:opacity-30 flex-shrink-0"
-                                    title="Eliminar"
-                                  >
-                                    <XCircle className="w-3.5 h-3.5" />
-                                  </button>
-                                </div>
-                              ))}
+                            <button
+                              onClick={() => {
+                                if (isAddingThis) {
+                                  setAddingSlotForDay(null);
+                                } else {
+                                  setAddingSlotForDay(dayIdx);
+                                  setInlineSlot({ startTime: "09:00", endTime: "17:00" });
+                                  setApplyToDays([dayIdx]);
+                                }
+                              }}
+                              className={`flex-shrink-0 h-9 px-3 rounded-xl text-xs font-semibold transition-colors ${
+                                isAddingThis
+                                  ? "bg-muted text-muted-foreground"
+                                  : "bg-primary/10 text-primary hover:bg-primary/20"
+                              }`}
+                            >
+                              {isAddingThis ? "Cancelar" : "Agregar"}
+                            </button>
+                          </div>
 
-                              {/* Inline add form */}
-                              {isAddingThis && (
-                                <div className="mt-1 space-y-1.5 pt-1 border-t border-primary/10">
-                                  <div className="flex flex-col gap-1">
+                          {/* Formulario del día, a lo ancho de la fila */}
+                          {isAddingThis && (() => {
+                            const aMin = (h: string) => {
+                              const [hh, mm] = h.split(":").map(Number);
+                              return hh * 60 + mm;
+                            };
+                            const duracion = aMin(inlineSlot.endTime) - aMin(inlineSlot.startTime);
+                            const invalido = duracion < 60;
+                            const dias = applyToDays.length > 0 ? applyToDays : [dayIdx];
+
+                            return (
+                              <div className="px-4 pb-4 pt-1 border-t border-primary/10 space-y-3">
+                                <div className="grid grid-cols-2 gap-2">
+                                  <label className="block">
+                                    <span className="block text-[11px] text-muted-foreground mb-1">Desde</span>
                                     <input
                                       type="time"
                                       value={inlineSlot.startTime}
                                       onChange={(e) => setInlineSlot((s) => ({ ...s, startTime: e.target.value }))}
-                                      className="w-full rounded-lg border border-border p-1.5 text-xs bg-background focus:outline-none focus:ring-1 focus:ring-primary/40"
+                                      className="w-full rounded-xl border border-border px-3 py-2.5 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
                                     />
+                                  </label>
+                                  <label className="block">
+                                    <span className="block text-[11px] text-muted-foreground mb-1">Hasta</span>
                                     <input
                                       type="time"
                                       value={inlineSlot.endTime}
                                       onChange={(e) => setInlineSlot((s) => ({ ...s, endTime: e.target.value }))}
-                                      className="w-full rounded-lg border border-border p-1.5 text-xs bg-background focus:outline-none focus:ring-1 focus:ring-primary/40"
+                                      className="w-full rounded-xl border border-border px-3 py-2.5 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
                                     />
-                                  </div>
+                                  </label>
+                                </div>
 
-                                  {/* Multi-day checkboxes */}
-                                  <div>
-                                    <p className="text-[9px] text-muted-foreground mb-1 font-medium uppercase tracking-wide">Aplicar a:</p>
-                                    <div className="flex gap-1 flex-wrap">
-                                      {[1, 2, 3, 4, 5, 6, 0].map((d) => {
-                                        const label = ["D","L","M","X","J","V","S"][d];
-                                        const checked = applyToDays.includes(d);
-                                        return (
-                                          <button
-                                            key={d}
-                                            type="button"
-                                            onClick={() =>
-                                              setApplyToDays((prev) =>
-                                                prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]
-                                              )
-                                            }
-                                            className={`w-6 h-6 rounded-full text-[10px] font-bold transition-colors ${
-                                              checked
-                                                ? "gradient-brand text-white"
-                                                : "bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary"
-                                            }`}
-                                          >
-                                            {label}
-                                          </button>
-                                        );
-                                      })}
-                                    </div>
+                                <div>
+                                  <p className="text-[11px] text-muted-foreground mb-1.5">
+                                    Repetir este bloque en:
+                                  </p>
+                                  <div className="flex gap-1.5 flex-wrap">
+                                    {[1, 2, 3, 4, 5, 6, 0].map((d) => {
+                                      const label = ["D", "L", "M", "X", "J", "V", "S"][d];
+                                      const checked = dias.includes(d);
+                                      return (
+                                        <button
+                                          key={d}
+                                          type="button"
+                                          aria-pressed={checked}
+                                          aria-label={DAYS[d]}
+                                          onClick={() =>
+                                            setApplyToDays((prev) =>
+                                              prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]
+                                            )
+                                          }
+                                          className={`w-9 h-9 rounded-full text-xs font-bold transition-colors ${
+                                            checked
+                                              ? "gradient-brand text-white"
+                                              : "bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary"
+                                          }`}
+                                        >
+                                          {label}
+                                        </button>
+                                      );
+                                    })}
                                   </div>
+                                </div>
 
-                                  <button
-                                    onClick={async () => {
-                                      const days = applyToDays.length > 0 ? applyToDays : [dayIdx];
-                                      for (const d of days) {
+                                <p className="text-[11px] text-muted-foreground">
+                                  {invalido
+                                    ? "El bloque debe durar al menos una hora: las sesiones son de 60 minutos."
+                                    : `${Math.floor(duracion / 60)} ${Math.floor(duracion / 60) === 1 ? "sesión posible" : "sesiones posibles"} por día.`}
+                                </p>
+
+                                <button
+                                  onClick={async () => {
+                                    const fallidos: string[] = [];
+                                    for (const d of dias) {
+                                      try {
                                         await addAvailabilityMutation.mutateAsync({
                                           dayOfWeek: d,
                                           startTime: inlineSlot.startTime,
                                           endTime: inlineSlot.endTime,
                                         });
+                                      } catch {
+                                        fallidos.push(DAYS[d]);
                                       }
-                                      setAddingSlotForDay(null);
-                                    }}
-                                    disabled={addAvailabilityMutation.isPending}
-                                    className="w-full py-1.5 rounded-lg text-[11px] font-semibold text-white gradient-brand disabled:opacity-50 transition-opacity"
-                                  >
-                                    {addAvailabilityMutation.isPending ? "..." : "Guardar"}
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                                    }
+                                    if (fallidos.length > 0) {
+                                      toast.error(
+                                        `No se agregó en ${fallidos.join(", ")}: ya hay un horario que se cruza.`
+                                      );
+                                    }
+                                    setAddingSlotForDay(null);
+                                  }}
+                                  disabled={invalido || addAvailabilityMutation.isPending}
+                                  className="w-full py-3 rounded-xl text-sm font-semibold text-white gradient-brand disabled:opacity-50 transition-opacity"
+                                >
+                                  {addAvailabilityMutation.isPending
+                                    ? "Guardando…"
+                                    : dias.length > 1
+                                      ? `Guardar en ${dias.length} días`
+                                      : "Guardar horario"}
+                                </button>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      );
+                    })}
                   </div>
 
                   {/* Summary badge */}

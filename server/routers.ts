@@ -802,18 +802,52 @@ export const appRouter = router({
       .input(
         z.object({
           dayOfWeek: z.number().min(0).max(6),
-          startTime: z.string(),
-          endTime: z.string(),
+          startTime: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/, "Hora inválida"),
+          endTime: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/, "Hora inválida"),
           isAvailable: z.boolean().default(true),
         })
       )
       .mutation(async ({ ctx, input }) => {
-        console.error("[DIAG setAvailability] called, ctx.user:", ctx.user?.id, ctx.user?.role);
         if (ctx.user.role !== "professional") {
           throw new TRPCError({ code: "FORBIDDEN", message: "User is not a professional" });
         }
         const professional = await db.getProfessionalByUserId(ctx.user.id);
         if (!professional) throw new TRPCError({ code: "NOT_FOUND", message: "Professional profile not found" });
+
+        // Un rango invertido (17:00–09:00) no genera ningún hueco y deja al
+        // asesor creyendo que publicó horario.
+        const aMinutos = (h: string) => {
+          const [hh, mm] = h.split(":").map(Number);
+          return hh * 60 + mm;
+        };
+        const inicio = aMinutos(input.startTime);
+        const fin = aMinutos(input.endTime);
+        if (fin <= inicio) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "La hora de fin debe ser posterior a la de inicio.",
+          });
+        }
+        if (fin - inicio < 60) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "El bloque debe durar al menos una hora: las sesiones son de 60 minutos.",
+          });
+        }
+
+        // Rangos que se pisan generan huecos duplicados en la agenda.
+        const existentes = await db.getProfessionalAvailability(professional.id);
+        const choque = existentes.some((r: any) => {
+          if (Number(r.dayOfWeek) !== input.dayOfWeek) return false;
+          return aMinutos(String(r.startTime).slice(0, 5)) < fin
+            && aMinutos(String(r.endTime).slice(0, 5)) > inicio;
+        });
+        if (choque) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "Ya tienes un horario que se cruza con ese en ese día.",
+          });
+        }
 
         await db.createProfessionalAvailability({
           professionalId: professional.id,
@@ -961,11 +995,20 @@ export const appRouter = router({
       }
       const professional = await db.getProfessionalByUserId(ctx.user.id);
       if (!professional) throw new TRPCError({ code: "NOT_FOUND", message: "Professional profile not found" });
+      // SQL crudo: el query builder de Drizzle no funciona contra TiDB.
       const dbInstance = await db.getDb();
       if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
-      const { blockedDays } = await import("../drizzle/schema");
-      const { eq } = await import("drizzle-orm");
-      return await dbInstance.select().from(blockedDays).where(eq(blockedDays.professionalId, professional.id));
+      const client = (dbInstance as any).$client;
+      return await new Promise<any[]>((resolve, reject) => {
+        client.execute(
+          "SELECT id, professionalId, blockedDate, reason, createdAt FROM blockedDays WHERE professionalId = ? ORDER BY blockedDate",
+          [professional.id],
+          (err: any, results: any) => {
+            if (err) reject(err);
+            else resolve(Array.isArray(results) ? results : []);
+          }
+        );
+      });
     }),
 
     addBlockedDay: protectedProcedure
@@ -981,13 +1024,36 @@ export const appRouter = router({
         if (!professional) throw new TRPCError({ code: "NOT_FOUND", message: "Professional profile not found" });
         const dbInstance = await db.getDb();
         if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
-        const { blockedDays } = await import("../drizzle/schema");
-        await dbInstance.insert(blockedDays).values({
-          professionalId: professional.id,
-          blockedDate: input.blockedDate,
-          reason: input.reason ?? null,
+        const client = (dbInstance as any).$client;
+        // INSERT IGNORE-style: bloquear dos veces el mismo día no es un error
+        // para quien lo pide, así que no se le muestra uno.
+        await new Promise<void>((resolve, reject) => {
+          client.execute(
+            `INSERT INTO blockedDays (professionalId, blockedDate, reason)
+             SELECT ?, ?, ? FROM DUAL
+             WHERE NOT EXISTS (
+               SELECT 1 FROM blockedDays WHERE professionalId = ? AND blockedDate = ?
+             )`,
+            [professional.id, input.blockedDate, input.reason ?? null, professional.id, input.blockedDate],
+            (err: any) => (err ? reject(err) : resolve())
+          );
         });
-        return { success: true };
+
+        // Bloquear el día no cancela lo que ya estaba apartado; el asesor
+        // tiene que saberlo para avisar o cancelar esas citas él mismo.
+        const citasEseDia = await new Promise<number>((resolve) => {
+          client.execute(
+            `SELECT COUNT(*) AS total FROM appointments
+             WHERE professionalId = ? AND status NOT IN ('canceled', 'completed')
+               AND DATE(appointmentDate) = ?`,
+            [professional.id, input.blockedDate],
+            (err: any, results: any) => {
+              if (err) { resolve(0); return; }
+              resolve(Number(Array.isArray(results) ? results[0]?.total : 0) || 0);
+            }
+          );
+        });
+        return { success: true, citasEseDia };
       }),
 
     removeBlockedDay: protectedProcedure
@@ -1000,14 +1066,14 @@ export const appRouter = router({
         if (!professional) throw new TRPCError({ code: "NOT_FOUND", message: "Professional profile not found" });
         const dbInstance = await db.getDb();
         if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
-        const { blockedDays } = await import("../drizzle/schema");
-        const { and, eq } = await import("drizzle-orm");
-        await dbInstance.delete(blockedDays).where(
-          and(
-            eq(blockedDays.id, input.id),
-            eq(blockedDays.professionalId, professional.id)
-          )
-        );
+        const client = (dbInstance as any).$client;
+        await new Promise<void>((resolve, reject) => {
+          client.execute(
+            "DELETE FROM blockedDays WHERE id = ? AND professionalId = ?",
+            [input.id, professional.id],
+            (err: any) => (err ? reject(err) : resolve())
+          );
+        });
         return { success: true };
       }),
 
