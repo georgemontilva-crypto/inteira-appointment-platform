@@ -1,7 +1,20 @@
 import { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
-import { sessionCostByDuration } from "@/lib/pricing";
+import { sessionCostByTier } from "@/lib/pricing";
 import { parseLocalDate } from "@/lib/utils";
+
+/**
+ * Lo que costó la cita en créditos.
+ *
+ * Se usa el movimiento real del wallet cuando existe; si no (citas viejas sin
+ * transacción registrada), se deduce de la clasificación del asesor. Por
+ * duración no se puede: básica y premium duran las dos 60 minutos.
+ */
+function costoDeCita(apt: any): number {
+  const real = Number(apt?.creditsUsed ?? 0);
+  if (real > 0) return real;
+  return sessionCostByTier(apt?.professionalTier);
+}
 import { useAuth } from "@/_core/hooks/useAuth";
 import { toast } from "sonner";
 import { format, isToday, isTomorrow, differenceInHours } from "date-fns";
@@ -384,7 +397,7 @@ export default function AppointmentsPage() {
                 {statusLabels[apt.status]}
               </span>
               <span className="text-[10px] text-gray-400">
-                {sessionCostByDuration(apt.durationMinutes)} créditos
+                {costoDeCita(apt)} créditos
               </span>
               {apt.status === "completed" && !(apt as any).hasReview && (
                 <button
@@ -617,7 +630,7 @@ export default function AppointmentsPage() {
           if (!apt) return null;
           const hoursUntil = (parseLocalDate(apt.appointmentDate).getTime() - Date.now()) / 3_600_000;
           const isFree = hoursUntil >= 4;
-          const sessionCost = sessionCostByDuration(apt.durationMinutes);
+          const sessionCost = costoDeCita(apt);
           return (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
               <div className="bg-white rounded-2xl border border-gray-100 w-full max-w-sm p-6 space-y-4">

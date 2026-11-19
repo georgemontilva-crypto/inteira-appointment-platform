@@ -840,6 +840,13 @@ export async function getUserAppointments(userId: number) {
          a.videoCallType, a.videoCallLink, a.notes, a.cancellationReason, a.createdAt,
          pu.name  AS professionalName,
          p.specialtyId AS professionalSpecialty,
+         p.tier AS professionalTier,
+         -- Lo que de verdad costó la cita. La duración no sirve para saberlo:
+         -- básica y premium duran las dos 60 minutos, así que calcularlo por
+         -- duración mostraba 350 en todas.
+         (SELECT ABS(ct.delta) FROM creditTransactions ct
+           WHERE ct.appointmentId = a.id AND ct.reason = 'reserved'
+           ORDER BY ct.id ASC LIMIT 1) AS creditsUsed,
          CASE WHEN r.id IS NOT NULL THEN 1 ELSE 0 END AS hasReview
        FROM appointments a
        LEFT JOIN professionals p  ON a.professionalId = p.id

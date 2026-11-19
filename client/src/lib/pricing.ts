@@ -22,6 +22,28 @@ export const PRICING_DISPLAY = {
   PLAN_PRO:               "$2,500",
 } as const;
 
+/**
+ * Precio de una sesión según la clasificación del asesor.
+ *
+ * La duración no sirve para distinguirlas: básica y premium duran las dos 60
+ * minutos. Lo que marca el precio es el tier del asesor — "pro" se cobra como
+ * premium y "basic" como básica.
+ */
+export function sessionCostByTier(
+  tier: string | null | undefined,
+  esMiembro = false
+): number {
+  if (tier === "pro") {
+    return esMiembro ? PRICING.SESSION_PREMIUM_MEMBER_MXN : PRICING.SESSION_PREMIUM_MXN;
+  }
+  return esMiembro ? PRICING.SESSION_BASIC_MEMBER_MXN : PRICING.SESSION_BASIC_MXN;
+}
+
+/** Etiqueta visible de la clasificación del asesor. */
+export function tierLabel(tier: string | null | undefined): "Pro" | "Básico" {
+  return tier === "pro" ? "Pro" : "Básico";
+}
+
 /** Returns the credit cost for a session based on its duration in minutes */
 export function sessionCostByDuration(durationMinutes: number | undefined): number {
   return (durationMinutes ?? 60) > 60

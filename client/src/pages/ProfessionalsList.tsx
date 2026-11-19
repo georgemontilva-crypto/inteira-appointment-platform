@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { formatLocation, getFlag } from "@shared/locations";
-import { PRICING } from "@/lib/pricing";
+import { PRICING, sessionCostByTier, tierLabel } from "@/lib/pricing";
 import { Link, useRoute, useLocation } from "wouter";
 import { Star, Award, Calendar, Search, SlidersHorizontal, X, Coins, ArrowLeft } from "lucide-react";
 import DashboardLayout from "../components/DashboardLayout";
@@ -344,7 +344,7 @@ export default function ProfessionalsList() {
                         ) : null}
                         <span className="flex items-center gap-1 text-xs text-gray-500">
                           <Coins className="w-3.5 h-3.5 text-gray-400" />
-                          Desde ${PRICING.SESSION_BASIC_MXN}
+                          ${sessionCostByTier((pro as any).tier).toLocaleString("es-MX")} · {tierLabel((pro as any).tier)}
                         </span>
                         {formatLocation((pro as any).country, (pro as any).state) && (
                           <span className="flex items-center gap-1 text-xs text-gray-500">

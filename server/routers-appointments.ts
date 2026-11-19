@@ -222,11 +222,12 @@ export const appointmentRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const sessionConfig = SESSION_TYPES[input.sessionType];
-      const durationMinutes = sessionConfig.durationMinutes;
+      // El precio lo decide la clasificación del asesor, no lo que mande el
+      // cliente: un asesor "basic" se cobra como sesión básica y uno "pro"
+      // como premium. Antes el tipo de sesión era una elección de quien
+      // agendaba, así que un asesor básico podía salir a precio de pro.
       const hasMembership = await userHasActiveMembership(ctx.user.id);
       const pricingType: "individual" | "member" = hasMembership ? "member" : "individual";
-      const creditCost = hasMembership ? sessionConfig.memberCredits : sessionConfig.credits;
       const appointmentDateObj = new Date(input.appointmentDate);
       // La columna appointmentDate no acepta un ISO con "T"/"Z": da
       // "Incorrect datetime value". El flujo de agendar ya mandaba
@@ -252,6 +253,12 @@ export const appointmentRouter = router({
           message: "Professional not found",
         });
       }
+
+      const sessionType: SessionType =
+        (professional as any).tier === "pro" ? "premium" : "basic";
+      const sessionConfig = SESSION_TYPES[sessionType];
+      const durationMinutes = sessionConfig.durationMinutes;
+      const creditCost = hasMembership ? sessionConfig.memberCredits : sessionConfig.credits;
 
       // Check professional availability
       const availability = await db.getProfessionalAvailability(

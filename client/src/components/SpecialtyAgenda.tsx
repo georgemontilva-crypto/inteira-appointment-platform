@@ -25,7 +25,6 @@ export function SpecialtyAgenda({ slug }: { slug: string }) {
   const [, navigate] = useLocation();
 
   const [day, setDay] = useState(() => new Date());
-  const [sessionType, setSessionType] = useState<SessionType>("basic");
   const [elegido, setElegido] = useState<AgendaSlot | null>(null);
 
   const fechaISO = format(day, "yyyy-MM-dd");
@@ -34,7 +33,6 @@ export function SpecialtyAgenda({ slug }: { slug: string }) {
     {
       specialtySlug: slug,
       date: fechaISO,
-      sessionType,
       timezoneOffset: -new Date().getTimezoneOffset(),
     },
     { enabled: slug.length > 0 }
@@ -55,12 +53,20 @@ export function SpecialtyAgenda({ slug }: { slug: string }) {
     )
   );
 
-  const costo = useMemo(() => {
-    if (sessionType === "premium") {
-      return esMiembro ? PRICING.SESSION_PREMIUM_MEMBER_MXN : PRICING.SESSION_PREMIUM_MXN;
-    }
-    return esMiembro ? PRICING.SESSION_BASIC_MEMBER_MXN : PRICING.SESSION_BASIC_MXN;
-  }, [sessionType, esMiembro]);
+  // El precio lo fija la clasificación del asesor, no una elección de quien
+  // agenda: "pro" se cobra como sesión premium y "basic" como básica.
+  const tipoDe = (tier: string): SessionType => (tier === "pro" ? "premium" : "basic");
+  const costoDe = useMemo(
+    () => (tier: string) =>
+      tipoDe(tier) === "premium"
+        ? esMiembro
+          ? PRICING.SESSION_PREMIUM_MEMBER_MXN
+          : PRICING.SESSION_PREMIUM_MXN
+        : esMiembro
+          ? PRICING.SESSION_BASIC_MEMBER_MXN
+          : PRICING.SESSION_BASIC_MXN,
+    [esMiembro]
+  );
 
   // Agrupar por hora conservando el orden que ya trae el servidor.
   const porHora = useMemo(() => {
@@ -89,32 +95,6 @@ export function SpecialtyAgenda({ slug }: { slug: string }) {
     <div className="space-y-4">
       {/* Día */}
       <DayStrip value={day} onChange={setDay} />
-
-      {/* Tipo de sesión */}
-      <div className="flex gap-2">
-        {([
-          { value: "basic", label: "Básica", precio: esMiembro ? PRICING.SESSION_BASIC_MEMBER_MXN : PRICING.SESSION_BASIC_MXN },
-          { value: "premium", label: "Premium", precio: esMiembro ? PRICING.SESSION_PREMIUM_MEMBER_MXN : PRICING.SESSION_PREMIUM_MXN },
-        ] as const).map((opt) => {
-          const activo = sessionType === opt.value;
-          return (
-            <button
-              key={opt.value}
-              onClick={() => setSessionType(opt.value)}
-              className={`flex-1 rounded-xl border px-3 py-2.5 text-left transition-colors ${
-                activo
-                  ? "border-primary bg-primary/5"
-                  : "border-border hover:border-primary/40"
-              }`}
-            >
-              <span className="block text-sm font-medium">{opt.label}</span>
-              <span className="block text-[11px] text-muted-foreground">
-                {opt.precio.toLocaleString("es-MX")} créditos · 60 min
-              </span>
-            </button>
-          );
-        })}
-      </div>
 
       {/* Resumen del día */}
       <p className="text-sm text-muted-foreground">
@@ -193,9 +173,18 @@ export function SpecialtyAgenda({ slug }: { slug: string }) {
                     </div>
                   </div>
 
-                  <span className="text-[12px] text-muted-foreground whitespace-nowrap flex-shrink-0">
-                    {costo.toLocaleString("es-MX")} cr.
-                  </span>
+                  <div className="text-right flex-shrink-0">
+                    <span className="block text-[12px] font-medium whitespace-nowrap">
+                      {costoDe(slot.tier).toLocaleString("es-MX")} cr.
+                    </span>
+                    <span
+                      className={`block text-[10px] font-semibold uppercase tracking-wide ${
+                        slot.tier === "pro" ? "text-primary" : "text-muted-foreground/70"
+                      }`}
+                    >
+                      {slot.tier === "pro" ? "Pro" : "Básico"}
+                    </span>
+                  </div>
                 </button>
               );
             })
@@ -207,8 +196,8 @@ export function SpecialtyAgenda({ slug }: { slug: string }) {
         <BookingSheet
           slot={elegido}
           day={day}
-          sessionType={sessionType}
-          creditCost={costo}
+          sessionType={tipoDe(elegido.tier)}
+          creditCost={costoDe(elegido.tier)}
           saldo={Number((wallet as any)?.balance ?? 0)}
           onClose={() => setElegido(null)}
           onBooked={() => {
