@@ -25,26 +25,46 @@ const SESSION_TYPES = {
 } as const;
 type SessionType = keyof typeof SESSION_TYPES;
 
-/** Returns true if the user has an active plan credit batch (plan_basic or plan_pro). */
-async function userHasActiveMembership(userId: number): Promise<boolean> {
+/**
+ * Plan vigente de la persona, o null si no tiene ninguno.
+ *
+ * Si tiene los dos lotes activos manda el pro, que es el que da más acceso.
+ */
+async function getActivePlan(userId: number): Promise<"plan_pro" | "plan_basic" | null> {
   const { getDb } = await import("./db");
   const dbConn = await getDb();
-  if (!dbConn) return false;
+  if (!dbConn) return null;
   const client = (dbConn as any).$client;
   const rows = await new Promise<any[]>((resolve) => {
     client.execute(
-      `SELECT id FROM creditBatches
+      `SELECT DISTINCT source FROM creditBatches
        WHERE userId = ? AND source IN ('plan_basic', 'plan_pro')
-         AND expiredEarly = 0 AND expiresAt > NOW() AND remaining > 0
-       LIMIT 1`,
+         AND expiredEarly = 0 AND expiresAt > NOW() AND remaining > 0`,
       [userId],
       (err: any, results: any) => {
-        if (err) { console.error("[userHasActiveMembership]", err?.message); resolve([]); }
+        if (err) { console.error("[getActivePlan]", err?.message); resolve([]); }
         else resolve(Array.isArray(results) ? results : []);
       }
     );
   });
-  return rows.length > 0;
+  const fuentes = rows.map((r) => String(r.source));
+  if (fuentes.includes("plan_pro")) return "plan_pro";
+  if (fuentes.includes("plan_basic")) return "plan_basic";
+  return null;
+}
+
+/** Returns true if the user has an active plan credit batch (plan_basic or plan_pro). */
+async function userHasActiveMembership(userId: number): Promise<boolean> {
+  return (await getActivePlan(userId)) !== null;
+}
+
+/**
+ * Un plan Básico no da acceso a los asesores Pro: esos son los del plan Pro.
+ * Quien no tiene plan sí puede agendar con un Pro pagando la sesión completa.
+ */
+function planCubreTier(plan: "plan_pro" | "plan_basic" | null, tier: string): boolean {
+  if (tier !== "pro") return true;
+  return plan !== "plan_basic";
 }
 
 // Since both session types are now 60 min, durationMinutes alone can't distinguish them.
@@ -141,15 +161,22 @@ export const appointmentRouter = router({
         timezoneOffset: z.number().optional().default(-300),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const specialty = await db.getSpecialtyBySlug(input.specialtySlug);
       if (!specialty) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Especialidad no encontrada" });
       }
 
       const durationMinutes = SESSION_TYPES[input.sessionType].durationMinutes;
+      // Con plan Básico los asesores Pro no se ofrecen: agendarlos se rechaza
+      // después, y es peor enterarse al confirmar que no verlos en la lista.
+      const planActivo = (ctx as any)?.user?.id
+        ? await getActivePlan((ctx as any).user.id)
+        : null;
       const professionals = await db.getProfessionalsBySpecialty(specialty.id);
-      const disponibles = professionals.filter((p: any) => p.isAvailable !== 0);
+      const disponibles = professionals.filter(
+        (p: any) => p.isAvailable !== 0 && planCubreTier(planActivo, String(p.tier ?? "basic"))
+      );
 
       const offsetMs = (input.timezoneOffset ?? -300) * 60 * 1000;
       const clientMidnight = new Date(
@@ -226,7 +253,8 @@ export const appointmentRouter = router({
       // cliente: un asesor "basic" se cobra como sesión básica y uno "pro"
       // como premium. Antes el tipo de sesión era una elección de quien
       // agendaba, así que un asesor básico podía salir a precio de pro.
-      const hasMembership = await userHasActiveMembership(ctx.user.id);
+      const planActivo = await getActivePlan(ctx.user.id);
+      const hasMembership = planActivo !== null;
       const pricingType: "individual" | "member" = hasMembership ? "member" : "individual";
       const appointmentDateObj = new Date(input.appointmentDate);
       // La columna appointmentDate no acepta un ISO con "T"/"Z": da
@@ -254,8 +282,15 @@ export const appointmentRouter = router({
         });
       }
 
-      const sessionType: SessionType =
-        (professional as any).tier === "pro" ? "premium" : "basic";
+      const tierAsesor = String((professional as any).tier ?? "basic");
+      if (!planCubreTier(planActivo, tierAsesor)) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message:
+            "Tu plan Básico no incluye asesores Pro. Cambia al plan Pro para agendar con este especialista.",
+        });
+      }
+      const sessionType: SessionType = tierAsesor === "pro" ? "premium" : "basic";
       const sessionConfig = SESSION_TYPES[sessionType];
       const durationMinutes = sessionConfig.durationMinutes;
       const creditCost = hasMembership ? sessionConfig.memberCredits : sessionConfig.credits;

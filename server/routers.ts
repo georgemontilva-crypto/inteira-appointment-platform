@@ -267,14 +267,13 @@ export const appRouter = router({
     // and the resulting credit batch is still active (not expired, not used up).
     hasActiveMembership: protectedProcedure.query(async ({ ctx }) => {
       const dbConn = await db.getDb();
-      if (!dbConn) return { active: false };
+      if (!dbConn) return { active: false, plan: null as "plan_basic" | "plan_pro" | null };
       const client = (dbConn as any).$client;
       const rows = await new Promise<any[]>((resolve) => {
         client.execute(
-          `SELECT id FROM creditBatches
+          `SELECT DISTINCT source FROM creditBatches
            WHERE userId = ? AND source IN ('plan_basic', 'plan_pro')
-             AND expiredEarly = 0 AND expiresAt > NOW() AND remaining > 0
-           LIMIT 1`,
+             AND expiredEarly = 0 AND expiresAt > NOW() AND remaining > 0`,
           [ctx.user.id],
           (err: any, results: any) => {
             if (err) { console.error("[hasActiveMembership]", err?.message); resolve([]); }
@@ -282,7 +281,14 @@ export const appRouter = router({
           }
         );
       });
-      return { active: rows.length > 0 };
+      const fuentes = rows.map((r) => String(r.source));
+      // Se devuelve también cuál plan: el Básico no da acceso a asesores Pro.
+      const plan = fuentes.includes("plan_pro")
+        ? ("plan_pro" as const)
+        : fuentes.includes("plan_basic")
+          ? ("plan_basic" as const)
+          : null;
+      return { active: plan !== null, plan };
     }),
 
     // ── Wallet ──────────────────────────────────────────────────────────

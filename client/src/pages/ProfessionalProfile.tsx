@@ -69,6 +69,10 @@ export default function ProfessionalProfile() {
   const [showReviewForm, setShowReviewForm] = useState(false);
 
   // Numeric fallback: old /profesional/:id links redirect to /profesional/:slug
+  const { data: membresia } = trpc.user.hasActiveMembership.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+
   const { data: proById } = trpc.professional.getById.useQuery(
     { id: parseInt(rawParam, 10) || 0 },
     { enabled: isNumeric && rawParam.length > 0 }
@@ -86,6 +90,11 @@ export default function ProfessionalProfile() {
   );
 
   const professional = isNumeric ? proById : proBySlug;
+
+  // Un plan Básico no da acceso a asesores Pro: se avisa aquí en vez de dejar
+  // que la persona llegue a la pantalla de agendar y la rechace el servidor.
+  const planNoAlcanza =
+    (professional as any)?.tier === "pro" && (membresia as any)?.plan === "plan_basic";
   const professionalId = professional?.id ?? 0;
 
   const { data: reviews, refetch: refetchReviews } = trpc.review.getByProfessional.useQuery(
@@ -212,6 +221,8 @@ export default function ProfessionalProfile() {
             </div>
             <Button
               className="gradient-brand text-white border-0 shadow-md font-semibold"
+              disabled={planNoAlcanza}
+              title={planNoAlcanza ? "Tu plan Básico no incluye asesores Pro" : undefined}
               onClick={() => {
                 navigate(
                   isAuthenticated
@@ -509,6 +520,16 @@ export default function ProfessionalProfile() {
                   </div>
                 </div>
 
+                {planNoAlcanza ? (
+                  <div className="space-y-2">
+                    <p className="text-sm text-amber-700 leading-snug">
+                      Este especialista es Pro y tu plan Básico no lo incluye.
+                    </p>
+                    <Button asChild className="w-full bg-primary hover:bg-primary/90 text-white shadow-md">
+                      <Link href="/planes">Ver plan Pro</Link>
+                    </Button>
+                  </div>
+                ) : (
                 <Button
                   className="w-full bg-primary hover:bg-primary/90 text-white shadow-md"
                   onClick={() => {
@@ -522,6 +543,7 @@ export default function ProfessionalProfile() {
                   <Calendar className="w-4 h-4 mr-2" />
                   Agendar cita
                 </Button>
+                )}
               </CardContent>
             </Card>
 
