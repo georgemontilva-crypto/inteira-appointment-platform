@@ -169,13 +169,22 @@ export default function SpecialtiesPage() {
     [visibleSpecialties]
   );
 
-  const filtered = useMemo(() => {
+  // Si la categoría elegida no tiene nada, se muestran igual todas las
+  // disponibles en vez de dejar la pantalla vacía: quien entró buscando una
+  // consulta prefiere ver qué hay a quedarse sin opciones.
+  const { filtered, cayoEnRespaldo } = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return withCategory.filter((s) => {
-      const matchesSearch = !q || s.name.toLowerCase().includes(q) || (s.description ?? "").toLowerCase().includes(q);
-      const matchesCategory = activeCategory === "all" || s.category === activeCategory;
-      return matchesSearch && matchesCategory;
-    });
+    const porBusqueda = withCategory.filter(
+      (s) =>
+        !q ||
+        s.name.toLowerCase().includes(q) ||
+        (s.description ?? "").toLowerCase().includes(q)
+    );
+    if (activeCategory === "all") return { filtered: porBusqueda, cayoEnRespaldo: false };
+
+    const porCategoria = porBusqueda.filter((s) => s.category === activeCategory);
+    if (porCategoria.length > 0) return { filtered: porCategoria, cayoEnRespaldo: false };
+    return { filtered: porBusqueda, cayoEnRespaldo: porBusqueda.length > 0 };
   }, [withCategory, search, activeCategory]);
 
   // Al hacer scroll el título y la bajada se esconden y queda arriba solo la
@@ -284,11 +293,21 @@ export default function SpecialtiesPage() {
             </div>
           ) : (
             <>
-              <p className="text-xs text-gray-400 mb-4">
-                {filtered.length}{" "}
-                {filtered.length === 1 ? "especialidad" : "especialidades"}
-                {search || activeCategory !== "all" ? " encontradas" : " disponibles"}
-              </p>
+              {cayoEnRespaldo ? (
+                <p className="text-xs text-gray-500 mb-4">
+                  No hay especialidades en{" "}
+                  <span className="font-medium">
+                    {CATEGORIES.find((c) => c.key === activeCategory)?.label ?? "esa categoría"}
+                  </span>
+                  . Estas son todas las disponibles:
+                </p>
+              ) : (
+                <p className="text-xs text-gray-400 mb-4">
+                  {filtered.length}{" "}
+                  {filtered.length === 1 ? "especialidad" : "especialidades"}
+                  {search || activeCategory !== "all" ? " encontradas" : " disponibles"}
+                </p>
+              )}
               <motion.div
                 key={`${search}-${activeCategory}`}
                 className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"

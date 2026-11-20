@@ -237,6 +237,82 @@ export const appointmentRouter = router({
       };
     }),
 
+  /**
+   * Próximos días con horarios libres en una especialidad.
+   *
+   * Sirve para que un día vacío no sea un callejón sin salida: en vez de
+   * "no hay horarios", se ofrecen los días que sí tienen. Los datos de cada
+   * asesor se cargan una sola vez y se recorren los días en memoria, así que
+   * cuesta lo mismo que la agenda de un día.
+   */
+  getSpecialtyNextDays: publicProcedure
+    .input(
+      z.object({
+        specialtySlug: z.string(),
+        from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        days: z.number().min(1).max(30).optional().default(14),
+        sessionType: z.enum(["basic", "premium"]).optional().default("basic"),
+        timezoneOffset: z.number().optional().default(-300),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const specialty = await db.getSpecialtyBySlug(input.specialtySlug);
+      if (!specialty) return { days: [] as { date: string; slots: number }[] };
+
+      const durationMinutes = SESSION_TYPES[input.sessionType].durationMinutes;
+      const planActivo = (ctx as any)?.user?.id
+        ? await getActivePlan((ctx as any).user.id)
+        : null;
+      const professionals = await db.getProfessionalsBySpecialty(specialty.id);
+      const disponibles = professionals.filter(
+        (p: any) => p.isAvailable !== 0 && planCubreTier(planActivo, String(p.tier ?? "basic"))
+      );
+      if (disponibles.length === 0) return { days: [] };
+
+      const offsetMs = (input.timezoneOffset ?? -300) * 60 * 1000;
+
+      const datos = await Promise.all(
+        disponibles.map(async (pro: any) => {
+          const [availability, appointments, bloqueados] = await Promise.all([
+            db.getProfessionalAvailability(pro.id),
+            db.getProfessionalAppointments(pro.id),
+            db.getBlockedDates(pro.id),
+          ]);
+          return {
+            availability,
+            bloqueados,
+            bookedTimes: appointments
+              .filter((apt: any) => apt.status !== "canceled")
+              .map((apt: any) => apt.appointmentDate),
+          };
+        })
+      );
+
+      const base = new Date(input.from + "T00:00:00Z").getTime();
+      const resultado: { date: string; slots: number }[] = [];
+
+      for (let i = 1; i <= input.days; i++) {
+        const diaUTC = new Date(base + i * 86_400_000);
+        const fecha = diaUTC.toISOString().slice(0, 10);
+        const clientMidnight = new Date(diaUTC.getTime() - offsetMs);
+
+        let total = 0;
+        for (const d of datos) {
+          if (d.bloqueados.has(fecha)) continue;
+          total += getAvailableSlots(
+            clientMidnight,
+            d.availability,
+            durationMinutes,
+            d.bookedTimes,
+            offsetMs
+          ).length;
+        }
+        if (total > 0) resultado.push({ date: fecha, slots: total });
+      }
+
+      return { days: resultado };
+    }),
+
   // Schedule an appointment
   scheduleAppointment: protectedProcedure
     .input(

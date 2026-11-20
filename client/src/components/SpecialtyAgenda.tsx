@@ -81,6 +81,20 @@ export function SpecialtyAgenda({ slug }: { slug: string }) {
 
   const totalSlots = data?.slots.length ?? 0;
 
+  // Un día sin horarios no debe ser un callejón sin salida: se buscan los
+  // próximos días que sí tienen y se ofrecen para saltar directo.
+  const sinHorarios = !isLoading && totalSlots === 0;
+  const { data: proximos } = trpc.appointment.getSpecialtyNextDays.useQuery(
+    {
+      specialtySlug: slug,
+      from: fechaISO,
+      days: 14,
+      timezoneOffset: -new Date().getTimezoneOffset(),
+    },
+    { enabled: slug.length > 0 && sinHorarios }
+  );
+  const diasConHueco = (proximos?.days ?? []).slice(0, 4);
+
   const abrirSlot = (slot: AgendaSlot) => {
     if (!isAuthenticated) {
       const volver = `/especialidades/${slug}`;
@@ -113,12 +127,41 @@ export function SpecialtyAgenda({ slug }: { slug: string }) {
           ))}
         </div>
       ) : totalSlots === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border py-14 text-center">
+        <div className="rounded-2xl border border-dashed border-border py-10 px-5 text-center">
           <CalendarX2 className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
           <p className="font-medium">No hay horarios para este día</p>
-          <p className="text-sm text-muted-foreground mt-1">
-            Prueba con otra fecha en la tira de arriba.
-          </p>
+          {diasConHueco.length > 0 ? (
+            <>
+              <p className="text-sm text-muted-foreground mt-1 mb-4">
+                Los próximos días con horarios libres:
+              </p>
+              <div className="flex flex-wrap justify-center gap-2">
+                {diasConHueco.map((d) => {
+                  const fecha = new Date(d.date + "T00:00:00");
+                  return (
+                    <button
+                      key={d.date}
+                      onClick={() => setDay(fecha)}
+                      className="rounded-xl border border-primary/30 bg-primary/5 px-3 py-2 text-left hover:bg-primary/10 transition-colors"
+                    >
+                      <span className="block text-sm font-medium capitalize">
+                        {format(fecha, "EEE d MMM", { locale: es })}
+                      </span>
+                      <span className="block text-[11px] text-muted-foreground">
+                        {d.slots} {d.slots === 1 ? "horario" : "horarios"}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground mt-1">
+              {proximos
+                ? "Tampoco hay en las próximas dos semanas. Prueba con otra especialidad."
+                : "Buscando los próximos días con horarios…"}
+            </p>
+          )}
         </div>
       ) : (
         <div className="rounded-2xl border border-border overflow-hidden divide-y divide-border">
