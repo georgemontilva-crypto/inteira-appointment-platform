@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import type { ReactElement } from "react";
 import { Link, useLocation } from "wouter";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useAuth } from "../_core/hooks/useAuth";
 import { trpc } from "../lib/trpc";
 import { toast } from "sonner";
@@ -96,6 +97,9 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileDropOpen, setProfileDropOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  // Quien tiene activado "reducir movimiento" en el teléfono ve el menú
+  // aparecer con un fundido corto en vez del deslizamiento.
+  const sinMovimiento = useReducedMotion();
   const notifRef = useRef<HTMLDivElement>(null);
   const mobileNotifRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
@@ -564,13 +568,54 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
       </div>
 
       {/* MOBILE DRAWER */}
+      {/* El menú entra deslizándose desde la izquierda con el fondo
+          oscureciéndose a la vez, y sale igual al cerrarlo: antes aparecía
+          y desaparecía de golpe. Las opciones entran escalonadas. */}
+      <AnimatePresence>
       {drawerOpen && (
-        <div className="md:hidden fixed inset-0 z-[60]" onClick={() => setDrawerOpen(false)}>
-          <div className="absolute inset-0 bg-black/40" style={{ backdropFilter: "blur(2px)" }} />
-          <div
+        <motion.div
+          key="drawer-movil"
+          className="md:hidden fixed inset-0 z-[60]"
+          onClick={() => setDrawerOpen(false)}
+          initial="cerrado"
+          animate="abierto"
+          exit="cerrado"
+          variants={{ cerrado: {}, abierto: {} }}
+        >
+          <motion.div
+            className="absolute inset-0 bg-black/40"
+            style={{ backdropFilter: "blur(2px)" }}
+            variants={{
+              cerrado: { opacity: 0, transition: { duration: 0.2 } },
+              abierto: { opacity: 1, transition: { duration: 0.28 } },
+            }}
+          />
+          <motion.div
             className="absolute top-0 left-0 bottom-0 w-[280px] bg-white flex flex-col overflow-hidden"
             style={{ boxShadow: "4px 0 24px rgba(0,0,0,0.15)" }}
             onClick={(e) => e.stopPropagation()}
+            variants={
+              sinMovimiento
+                ? {
+                    cerrado: { opacity: 0, transition: { duration: 0.15 } },
+                    abierto: { opacity: 1, transition: { duration: 0.2 } },
+                  }
+                : {
+                    cerrado: {
+                      x: "-100%",
+                      transition: { duration: 0.22, ease: [0.4, 0, 1, 1] },
+                    },
+                    abierto: {
+                      x: 0,
+                      transition: {
+                        duration: 0.36,
+                        ease: [0.32, 0.72, 0, 1],
+                        when: "beforeChildren",
+                        staggerChildren: 0.03,
+                      },
+                    },
+                  }
+            }
           >
             {/* Drawer header — mode-aware */}
             <div style={{ background: "linear-gradient(145deg,#1e2f20,#2d4030)", padding: "24px 20px 20px", flexShrink: 0 }}>
@@ -614,10 +659,19 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
                         ? currentHash === hrefHash
                         : location === hrefBase || location.startsWith(hrefBase + "/");
                       return (
-                        <a
+                        <motion.a
                           key={item.label + item.href}
                           href={item.href}
                           onClick={(e) => { e.preventDefault(); irA(item.href, true); }}
+                          variants={
+                            sinMovimiento
+                              ? undefined
+                              : {
+                                  cerrado: { opacity: 0, y: 6 },
+                                  abierto: { opacity: 1, y: 0, transition: { duration: 0.22 } },
+                                }
+                          }
+                          whileTap={{ scale: 0.97 }}
                           style={{
                             background: isActive ? "rgba(96,117,98,0.12)" : "#f7faf7",
                             borderRadius: 12,
@@ -635,7 +689,7 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
                             {ICONS[item.icon]}
                           </span>
                           <span style={{ fontSize: 12, fontWeight: 500, color: isActive ? "#3d4e3f" : "#333", textAlign: "center", lineHeight: 1.3 }}>{item.label}</span>
-                        </a>
+                        </motion.a>
                       );
                     })}
                   </div>
@@ -670,9 +724,10 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
                 <span className="text-[13px] font-medium text-red-500">Cerrar sesión</span>
               </button>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       )}
+      </AnimatePresence>
 
       {/* Changelog modal */}
       <ChangelogModal open={changelogOpen} onClose={() => setChangelogOpen(false)} />
