@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import "./crypto-polyfill";
 import "dotenv/config";
 import express from "express";
@@ -796,6 +797,49 @@ async function runStartupMigrations() {
     }
     console.log("[Migration] professionals beliefs columns ready");
 
+    // ── Atención presencial ─────────────────────────────────────────────────
+    // Un consultorio por asesor, con su propia revisión: un asesor ya
+    // aprobado para online puede agregar consultorio después, y las citas
+    // presenciales solo se ofrecen cuando el consultorio está aprobado.
+    await db.execute(
+      "CREATE TABLE IF NOT EXISTS `professionalClinics` (" +
+      "`id` INT AUTO_INCREMENT PRIMARY KEY," +
+      "`professionalId` INT NOT NULL UNIQUE," +
+      "`name` VARCHAR(255) NULL," +
+      "`address` TEXT NOT NULL," +
+      "`city` VARCHAR(120) NULL," +
+      "`state` VARCHAR(120) NULL," +
+      "`country` VARCHAR(2) NULL," +
+      "`photos` LONGTEXT NULL," +
+      "`addressProofUrl` TEXT NULL," +
+      "`sanitaryLicenseUrl` TEXT NULL," +
+      "`noLicenseRequired` BOOLEAN NOT NULL DEFAULT FALSE," +
+      "`mapsUrl` TEXT NULL," +
+      "`status` ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending'," +
+      "`rejectionReason` TEXT NULL," +
+      "`reviewedAt` TIMESTAMP NULL," +
+      "`createdAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP," +
+      "`updatedAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP" +
+      ")"
+    ).catch((e: any) => console.error("[Migration] professionalClinics:", e?.message));
+
+    for (const ddl of [
+      // Cada bloque de horario dice en qué modalidad se atiende. Los bloques
+      // que ya existían quedan como online, que es como funcionaban.
+      "ALTER TABLE `professionalAvailability` ADD COLUMN `modality` ENUM('online','in_person','both') NOT NULL DEFAULT 'online'",
+      // La cita guarda su modalidad, el código de llegada para presencial y
+      // una copia de la dirección (si el asesor la cambia después, la cita
+      // conserva a dónde se acordó ir).
+      "ALTER TABLE `appointments` ADD COLUMN `modality` ENUM('online','in_person') NOT NULL DEFAULT 'online'",
+      "ALTER TABLE `appointments` ADD COLUMN `checkinCode` VARCHAR(6) NULL",
+      "ALTER TABLE `appointments` ADD COLUMN `checkedInAt` DATETIME NULL",
+      "ALTER TABLE `appointments` ADD COLUMN `clinicAddress` TEXT NULL",
+      "ALTER TABLE `appointments` ADD COLUMN `clinicMapsUrl` TEXT NULL",
+    ]) {
+      await db.execute(ddl).catch(() => {});
+    }
+    console.log("[Migration] in-person (clinics, modality, check-in) ready");
+
     // Sanitize any source values not in the new enum before modifying the column
     await db.execute(
       "UPDATE `creditBatches` SET `source` = 'purchase' WHERE `source` NOT IN ('purchase','plan','plan_basic','plan_pro','individual_basic','individual_premium','admin_grant','test_20','bonus','referral')"
@@ -1242,7 +1286,10 @@ async function startServer() {
 
       const ext = mimeType.split("/")[1] ?? "jpg";
       const folder = user ? "professional-photos" : "register-temp";
-      const key = `${folder}/${user?.id ?? "anon"}-${Date.now()}.${ext}`;
+      // Por aquí suben documentos de identidad y comprobantes de domicilio,
+      // y la URL es pública: con solo la hora en el nombre se podía adivinar.
+      // El sufijo aleatorio la hace imposible de enumerar.
+      const key = `${folder}/${user?.id ?? "anon"}-${Date.now()}-${randomUUID()}.${ext}`;
       const { url } = await storagePut(key, buffer, mimeType);
 
       return res.json({ url });
@@ -1380,6 +1427,7 @@ setInterval(async () => {
          JOIN professionals p ON p.id = a.professionalId
          JOIN \`users\` u ON u.id = a.userId
          WHERE a.status IN ('scheduled', 'in_progress')
+         AND a.modality = 'online'
          AND DATE_ADD(a.appointmentDate, INTERVAL 3 HOUR) < NOW()`,
         [],
         (err: any, results: any) => {
@@ -1524,6 +1572,105 @@ setInterval(async () => {
       }
     }
 
+    // Check presencial. La videollamada no deja rastro de una cita en
+    // consultorio: la prueba es el código que el cliente le da al asesor.
+    //   · con llegada registrada → al terminar la sesión se completa y se paga
+    //   · sin llegada, 3 h después del inicio → revisión (sin pago automático;
+    //     el asesor aún puede registrar el código hasta 24 h después)
+    {
+      const { creditProfessionalEarning } = await import("../professionalWallet");
+      const { confirmCredits, getAppointmentBilling } = await import("../credits");
+      const { createNotification } = await import("../notifications");
+
+      const conLlegada = await new Promise<any[]>((resolve) => {
+        client.execute(
+          `SELECT a.id, a.professionalId, a.userId, p.tier, p.userId AS profUserId
+             FROM appointments a
+             JOIN professionals p ON p.id = a.professionalId
+            WHERE a.modality = 'in_person'
+              AND a.checkedInAt IS NOT NULL
+              AND a.status IN ('scheduled', 'in_progress', 'pending_review')
+              AND DATE_ADD(a.appointmentDate, INTERVAL a.durationMinutes MINUTE) < NOW()`,
+          [],
+          (err: any, r: any) => {
+            if (err) { console.error("[Cron] presencial con llegada:", err?.message); resolve([]); }
+            else resolve(Array.isArray(r) ? r : []);
+          }
+        );
+      });
+      for (const row of conLlegada) {
+        try {
+          const cambio = await new Promise<number>((resolve) => {
+            client.execute(
+              `UPDATE appointments SET status = 'completed', updatedAt = NOW()
+                WHERE id = ? AND status IN ('scheduled', 'in_progress', 'pending_review')`,
+              [row.id],
+              (err: any, r: any) => {
+                if (err) { console.error("[Cron] presencial completed:", err?.message); resolve(0); }
+                else resolve(Number(r?.affectedRows ?? 0));
+              }
+            );
+          });
+          // Si otro proceso ya la cerró, no se paga dos veces.
+          if (cambio === 0) continue;
+          await confirmCredits(row.id).catch(() => {});
+          const billing = await getAppointmentBilling(row.id);
+          await creditProfessionalEarning(
+            row.professionalId, row.id,
+            (row.tier ?? "basic") as "basic" | "pro",
+            billing.sessionType, billing.pricingType
+          ).catch(() => {});
+          createNotification({
+            userId: row.userId,
+            type: "info",
+            title: "¡Tu sesión terminó!",
+            message: "Cuéntanos cómo te fue con tu especialista.",
+            link: "/citas",
+            audience: "user",
+          }).catch(() => {});
+          console.log(`[Cron] Cita presencial ${row.id} completada (llegada registrada)`);
+        } catch (e: any) {
+          console.error(`[Cron] presencial ${row.id}:`, e?.message);
+        }
+      }
+
+      const sinLlegada = await new Promise<any[]>((resolve) => {
+        client.execute(
+          `SELECT a.id, a.userId, p.userId AS profUserId
+             FROM appointments a
+             JOIN professionals p ON p.id = a.professionalId
+            WHERE a.modality = 'in_person'
+              AND a.checkedInAt IS NULL
+              AND a.status IN ('scheduled', 'in_progress')
+              AND DATE_ADD(a.appointmentDate, INTERVAL 3 HOUR) < NOW()`,
+          [],
+          (err: any, r: any) => {
+            if (err) { console.error("[Cron] presencial sin llegada:", err?.message); resolve([]); }
+            else resolve(Array.isArray(r) ? r : []);
+          }
+        );
+      });
+      for (const row of sinLlegada) {
+        await new Promise<void>((resolve) => {
+          client.execute(
+            `UPDATE appointments SET status = 'pending_review', updatedAt = NOW()
+              WHERE id = ? AND status IN ('scheduled', 'in_progress')`,
+            [row.id],
+            (err: any) => { if (err) console.error("[Cron] presencial a revision:", err?.message); resolve(); }
+          );
+        });
+        createNotification({
+          userId: row.profUserId,
+          type: "info",
+          title: "📍 Falta registrar una llegada",
+          message: "No registraste el código de una cita presencial. Hazlo en las próximas 24 horas para que se libere tu pago.",
+          link: "/panel-profesional",
+          audience: "professional",
+        }).catch(() => {});
+        console.warn(`[Cron] Cita presencial ${row.id} sin llegada registrada → revisión`);
+      }
+    }
+
     // Check 2: auto-completar pending_review con más de 8 horas sin calificar
     const pendingRows = await new Promise<any[]>((resolve) => {
       client.execute(
@@ -1531,6 +1678,7 @@ setInterval(async () => {
          FROM appointments a
          JOIN professionals p ON p.id = a.professionalId
          WHERE a.status = 'pending_review'
+         AND NOT (a.modality = 'in_person' AND a.checkedInAt IS NULL)
          AND DATE_ADD(a.updatedAt, INTERVAL 8 HOUR) < NOW()`,
         [],
         (err: any, results: any) => {
@@ -1605,6 +1753,7 @@ setInterval(async () => {
          JOIN professionals p  ON p.id  = a.professionalId
          JOIN users pu ON pu.id = p.userId
          WHERE a.status = 'scheduled'
+           AND a.modality = 'online'
            AND a.reminder15sent = FALSE
            AND a.appointmentDate BETWEEN DATE_ADD(NOW(), INTERVAL 10 MINUTE)
                                      AND DATE_ADD(NOW(), INTERVAL 20 MINUTE)`,

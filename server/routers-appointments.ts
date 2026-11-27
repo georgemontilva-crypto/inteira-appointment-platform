@@ -2,11 +2,15 @@ import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import * as db from "./db";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
+import { randomInt } from "node:crypto";
+import { modalidadesEfectivas } from "./modalidad";
 import {
   canScheduleAppointment,
   getAvailableSlots,
   isTimeWithinAvailability,
   calculateEndTime,
+  bloquesDeModalidad,
+  huecosPorModalidad,
 } from "./appointment-utils";
 import { generateVideoCallLink } from "./videocall";
 import {
@@ -87,6 +91,18 @@ async function getAppointmentCreditCost(appointmentId: number): Promise<number> 
   });
 }
 
+/**
+ * Intentos fallidos de código por cita. En memoria basta: el límite existe
+ * para que no se puedan probar los 10.000 códigos, y un reinicio del
+ * servidor solo devuelve 5 intentos más.
+ */
+const intentosCheckin = new Map<number, number>();
+
+/** Código de 4 dígitos para registrar la llegada al consultorio. */
+function generarCodigoLlegada(): string {
+  return String(randomInt(0, 10_000)).padStart(4, "0");
+}
+
 export const appointmentRouter = router({
   // Get available slots for a professional on a specific date
   getAvailableSlots: publicProcedure
@@ -96,6 +112,9 @@ export const appointmentRouter = router({
         date: z.string(), // ISO date string yyyy-MM-dd
         sessionType: z.enum(["basic", "premium"]).optional().default("basic"),
         timezoneOffset: z.number().optional().default(-300),
+        // Por compatibilidad, sin modalidad se devuelven los huecos online,
+        // que es lo único que existía antes.
+        modality: z.enum(["online", "in_person"]).optional().default("online"),
       })
     )
     .query(async ({ input }) => {
@@ -126,21 +145,31 @@ export const appointmentRouter = router({
         .filter((apt) => apt.status !== "canceled")
         .map((apt) => apt.appointmentDate);
 
-      console.log("[DIAG slots v2] date:", input.date, "professionalId:", input.professionalId, "availability count:", availability.length, "availability:", JSON.stringify(availability));
-
       // Construir la fecha en hora local del cliente
       const offsetMs = (input.timezoneOffset ?? -300) * 60 * 1000;
       const dateObj = new Date(input.date + "T00:00:00Z"); // medianoche UTC
       // Ajustar al inicio del día en la zona del cliente
       const clientMidnight = new Date(dateObj.getTime() - offsetMs);
-      const slots = getAvailableSlots(
+
+      const consultorio =
+        input.modality === "in_person"
+          ? await db.getClinicByProfessionalId(input.professionalId)
+          : null;
+      const ofrece = modalidadesEfectivas(
+        (professional as any).sessionModality,
+        consultorio?.status === "approved"
+      );
+
+      const slots = huecosPorModalidad({
         clientMidnight,
         availability,
         durationMinutes,
         bookedTimes,
         offsetMs,
-      );
-      console.log("[Slots] offsetMs:", offsetMs, "date:", clientMidnight.toISOString(), "slots count:", slots.length, "slots:", slots.map(s => s.startTime));
+        permiteOnline: ofrece.online,
+        presencialAprobado: ofrece.presencial,
+        filtro: input.modality,
+      });
       // Return simple time strings like "09:00", "10:00"
       return slots.map((s) => s.startTime);
     }),
@@ -158,6 +187,7 @@ export const appointmentRouter = router({
         specialtySlug: z.string().max(120),
         date: z.string(), // yyyy-MM-dd en hora del cliente
         sessionType: z.enum(["basic", "premium"]).optional().default("basic"),
+        modality: z.enum(["any", "online", "in_person"]).optional().default("any"),
         timezoneOffset: z.number().optional().default(-300),
       })
     )
@@ -183,6 +213,10 @@ export const appointmentRouter = router({
         new Date(input.date + "T00:00:00Z").getTime() - offsetMs
       );
 
+      // Consultorios aprobados de todos los asesores de una vez: solo esos
+      // pueden ofrecer huecos presenciales.
+      const consultorios = await db.getApprovedClinicsFor(disponibles.map((p: any) => Number(p.id)));
+
       // Un asesor por consulta, pero en paralelo: son pocos por especialidad.
       const porAsesor = await Promise.all(
         disponibles.map(async (pro: any) => {
@@ -196,16 +230,23 @@ export const appointmentRouter = router({
             .filter((apt: any) => apt.status !== "canceled")
             .map((apt: any) => apt.appointmentDate);
 
-          const slots = getAvailableSlots(
+          const consultorio = consultorios.get(Number(pro.id)) ?? null;
+          const ofrece = modalidadesEfectivas(pro.sessionModality, consultorio !== null);
+          const slots = huecosPorModalidad({
             clientMidnight,
             availability,
             durationMinutes,
             bookedTimes,
-            offsetMs
-          );
+            offsetMs,
+            permiteOnline: ofrece.online,
+            presencialAprobado: ofrece.presencial,
+            filtro: input.modality,
+          });
 
           return slots.map((slot) => ({
             time: slot.startTime, // "09:00"
+            modalities: slot.modalities,
+            clinicCity: consultorio?.city ?? null,
             durationMinutes,
             professionalId: pro.id as number,
             professionalSlug: (pro.slug ?? null) as string | null,
@@ -232,7 +273,10 @@ export const appointmentRouter = router({
         },
         date: input.date,
         sessionType: input.sessionType,
+        modality: input.modality,
         totalProfessionals: disponibles.length,
+        /** Si hay algún consultorio aprobado en la especialidad, para mostrar el filtro */
+        hasInPerson: consultorios.size > 0,
         slots,
       };
     }),
@@ -252,6 +296,7 @@ export const appointmentRouter = router({
         from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
         days: z.number().min(1).max(30).optional().default(14),
         sessionType: z.enum(["basic", "premium"]).optional().default("basic"),
+        modality: z.enum(["any", "online", "in_person"]).optional().default("any"),
         timezoneOffset: z.number().optional().default(-300),
       })
     )
@@ -270,6 +315,7 @@ export const appointmentRouter = router({
       if (disponibles.length === 0) return { days: [] };
 
       const offsetMs = (input.timezoneOffset ?? -300) * 60 * 1000;
+      const consultorios = await db.getApprovedClinicsFor(disponibles.map((p: any) => Number(p.id)));
 
       const datos = await Promise.all(
         disponibles.map(async (pro: any) => {
@@ -278,8 +324,11 @@ export const appointmentRouter = router({
             db.getProfessionalAppointments(pro.id),
             db.getBlockedDates(pro.id),
           ]);
+          const ofrece = modalidadesEfectivas(pro.sessionModality, consultorios.has(Number(pro.id)));
           return {
             availability,
+            permiteOnline: ofrece.online,
+            presencialAprobado: ofrece.presencial,
             bloqueados,
             bookedTimes: appointments
               .filter((apt: any) => apt.status !== "canceled")
@@ -299,13 +348,16 @@ export const appointmentRouter = router({
         let total = 0;
         for (const d of datos) {
           if (d.bloqueados.has(fecha)) continue;
-          total += getAvailableSlots(
+          total += huecosPorModalidad({
             clientMidnight,
-            d.availability,
+            availability: d.availability,
             durationMinutes,
-            d.bookedTimes,
-            offsetMs
-          ).length;
+            bookedTimes: d.bookedTimes,
+            offsetMs,
+            permiteOnline: d.permiteOnline,
+            presencialAprobado: d.presencialAprobado,
+            filtro: input.modality,
+          }).length;
         }
         if (total > 0) resultado.push({ date: fecha, slots: total });
       }
@@ -322,6 +374,7 @@ export const appointmentRouter = router({
         sessionType: z.enum(["basic", "premium"]).optional().default("basic"),
         notes: z.string().max(2000).optional(),
         timezoneOffset: z.number().optional().default(0), // client's getTimezoneOffset() * -1
+        modality: z.enum(["online", "in_person"]).optional().default("online"),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -371,7 +424,30 @@ export const appointmentRouter = router({
       const durationMinutes = sessionConfig.durationMinutes;
       const creditCost = hasMembership ? sessionConfig.memberCredits : sessionConfig.credits;
 
-      // Check professional availability
+      // Presencial solo con consultorio aprobado: es lo que valida que el
+      // lugar existe y está en regla.
+      const esPresencial = input.modality === "in_person";
+      const consultorio = esPresencial
+        ? await db.getClinicByProfessionalId(input.professionalId)
+        : null;
+      const ofrece = modalidadesEfectivas(
+        (professional as any).sessionModality,
+        consultorio?.status === "approved"
+      );
+      if (esPresencial && !ofrece.presencial) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Este especialista no tiene consultorio aprobado para citas presenciales.",
+        });
+      }
+      if (!esPresencial && !ofrece.online) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Este especialista atiende solo de forma presencial.",
+        });
+      }
+
+      // Check professional availability — solo los bloques de esa modalidad
       const availability = await db.getProfessionalAvailability(
         input.professionalId
       );
@@ -380,13 +456,15 @@ export const appointmentRouter = router({
         !isTimeWithinAvailability(
           appointmentDateObj,
           durationMinutes,
-          availability,
+          bloquesDeModalidad(availability, input.modality),
           tzOffsetMs
         )
       ) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Selected time is not within professional's availability",
+          message: esPresencial
+            ? "Ese horario no es de atención presencial. Elige otro."
+            : "Ese horario no está dentro de la disponibilidad del especialista.",
         });
       }
 
@@ -464,6 +542,13 @@ export const appointmentRouter = router({
       const userRecord = await db.getUserById(ctx.user.id);
       const specialty = await db.getSpecialtyById(professional.specialtyId);
 
+      // Presencial: código de llegada y copia de la dirección (si el asesor
+      // la cambia después, la cita conserva a dónde se acordó ir).
+      const checkinCode = esPresencial ? generarCodigoLlegada() : null;
+      const direccionCita = consultorio
+        ? [consultorio.address, consultorio.city, consultorio.state].filter(Boolean).join(", ")
+        : null;
+
       // Create appointment first to get the real ID for Daily.co room name
       const newAppointmentId = await db.createAppointment({
         userId: ctx.user.id,
@@ -477,20 +562,26 @@ export const appointmentRouter = router({
         notes: input.notes,
         status: "scheduled",
         timezoneOffset: input.timezoneOffset,
+        modality: input.modality,
+        checkinCode,
+        clinicAddress: direccionCita,
+        clinicMapsUrl: consultorio?.mapsUrl ?? null,
       });
 
-      // Generate Daily.co room using the real appointment ID
-      const videoCall = await generateVideoCallLink(
-        newAppointmentId,
-        appointmentDateObj,
-        appointmentEndDate,
-        {
-          userId: ctx.user.id,
-          userName: userRecord?.name ?? "Paciente",
-          professionalId: professional.id,
-          professionalName: professionalUser?.name ?? "Profesional",
-        }
-      );
+      // Una cita presencial no lleva sala de video.
+      const videoCall = esPresencial
+        ? null
+        : await generateVideoCallLink(
+            newAppointmentId,
+            appointmentDateObj,
+            appointmentEndDate,
+            {
+              userId: ctx.user.id,
+              userName: userRecord?.name ?? "Paciente",
+              professionalId: professional.id,
+              professionalName: professionalUser?.name ?? "Profesional",
+            }
+          );
 
       // Update appointment row with the video call link and pricingType
       const { getDb } = await import("./db");
@@ -499,11 +590,23 @@ export const appointmentRouter = router({
         await new Promise<void>((resolve) => {
           (dbConn as any).$client.execute(
             "UPDATE appointments SET videoCallLink = ?, videoCallId = ?, videoCallUrlUser = ?, videoCallUrlProfessional = ?, pricingType = ? WHERE id = ?",
-            [videoCall.url, videoCall.roomName, videoCall.userUrl, videoCall.professionalUrl, pricingType, newAppointmentId],
+            [
+              videoCall?.url ?? null,
+              videoCall?.roomName ?? null,
+              videoCall?.userUrl ?? null,
+              videoCall?.professionalUrl ?? null,
+              pricingType,
+              newAppointmentId,
+            ],
             (err: any) => { if (err) console.error("[createAppointment] update video call:", err); resolve(); }
           );
         });
       }
+
+      const datosPresencial =
+        esPresencial && direccionCita
+          ? { clinicAddress: direccionCita, clinicMapsUrl: consultorio?.mapsUrl ?? null, checkinCode }
+          : null;
 
       // ── Reserve credits (FIFO) — confirmed on review/no-show ────────────
       await reserveCredits(
@@ -525,6 +628,7 @@ export const appointmentRouter = router({
           videoCallType: "daily",
           videoCallLink: `https://inteira.app/sala/${newAppointmentId}`,
           timezoneOffsetMinutes: input.timezoneOffset,
+          presencial: datosPresencial,
         });
       }
 
@@ -538,6 +642,8 @@ export const appointmentRouter = router({
           durationMinutes,
           timezoneOffsetMinutes: input.timezoneOffset,
           videoCallLink: `https://inteira.app/sala/${newAppointmentId}`,
+          // Al asesor no se le manda el código: lo recibe del cliente al llegar.
+          presencial: datosPresencial ? { ...datosPresencial, checkinCode: null } : null,
         }).catch(() => {});
       }
 
@@ -545,8 +651,10 @@ export const appointmentRouter = router({
       createNotification({
         userId: ctx.user.id,
         type: "appointment_confirmed",
-        title: "✅ Cita confirmada",
-        message: `Tu cita con ${professionalUser?.name ?? "el especialista"} quedó agendada para el ${appointmentDateObj.toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" })}`,
+        title: esPresencial ? "✅ Cita presencial confirmada" : "✅ Cita confirmada",
+        message: esPresencial
+          ? `Tu cita presencial con ${professionalUser?.name ?? "el especialista"} quedó agendada. Tu código de llegada es ${checkinCode}.`
+          : `Tu cita con ${professionalUser?.name ?? "el especialista"} quedó agendada para el ${appointmentDateObj.toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" })}`,
         link: "/citas",
         audience: "user",
       }).catch(() => {});
@@ -561,8 +669,10 @@ export const appointmentRouter = router({
 
       return {
         success: true,
-        videoCallLink: videoCall.url,
+        videoCallLink: videoCall?.url ?? null,
         creditsUsed: creditCost,
+        modality: input.modality,
+        checkinCode,
       };
     }),
 
@@ -799,8 +909,13 @@ export const appointmentRouter = router({
       );
       const user = await db.getUserById(appointment.userId);
 
+      // El código de llegada solo lo ve el cliente de la cita.
+      const esElCliente = Number(appointment.userId) === Number(ctx.user.id);
+      const { checkinCode, ...resto } = appointment as any;
+
       return {
-        ...appointment,
+        ...resto,
+        checkinCode: esElCliente ? checkinCode ?? null : null,
         professional,
         user: {
           name: user?.name,
@@ -836,6 +951,15 @@ export const appointmentRouter = router({
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "Not authorized to complete this appointment",
+        });
+      }
+
+      // En presencial, lo que prueba que la sesión ocurrió es el código del
+      // cliente; sin él, marcarla como terminada llevaría a pagarla sola.
+      if ((appointment as any).modality === "in_person" && !(appointment as any).checkedInAt) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Primero registra el código de llegada que te da el cliente.",
         });
       }
 
@@ -1050,6 +1174,87 @@ export const appointmentRouter = router({
     }),
 
   /**
+   * El asesor registra la llegada del cliente al consultorio con el código
+   * de 4 dígitos que el cliente le da en persona. Es la prueba de que la cita
+   * presencial ocurrió: con ella el cron la completa y libera el pago.
+   *
+   * Se acepta desde 30 minutos antes del inicio hasta 24 horas después, por
+   * si el asesor lo olvidó en el momento. Tras 5 intentos fallidos en una
+   * cita se bloquea para que nadie pueda probar los 10.000 códigos.
+   */
+  confirmCheckin: protectedProcedure
+    .input(z.object({ appointmentId: z.number(), code: z.string().regex(/^\d{4}$/, "El código tiene 4 dígitos") }))
+    .mutation(async ({ ctx, input }) => {
+      const professional = await db.getProfessionalByUserId(ctx.user.id);
+      const appointment: any = await db.getAppointmentById(input.appointmentId);
+      if (!appointment) throw new TRPCError({ code: "NOT_FOUND", message: "Cita no encontrada" });
+      if (!professional || Number(appointment.professionalId) !== Number(professional.id)) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Esta cita no es tuya" });
+      }
+      if (appointment.modality !== "in_person") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Esta cita es online; no lleva código." });
+      }
+      if (appointment.checkedInAt) {
+        return { success: true, alreadyCheckedIn: true };
+      }
+      if (!["scheduled", "in_progress", "pending_review"].includes(appointment.status)) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Esta cita ya no está activa." });
+      }
+
+      const inicio = new Date(appointment.appointmentDate).getTime();
+      const ahora = Date.now();
+      if (ahora < inicio - 30 * 60_000) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "El código se registra cuando el cliente llega, a partir de 30 minutos antes." });
+      }
+      if (ahora > inicio + 24 * 3_600_000) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Pasaron más de 24 horas; esta cita la revisa el equipo de Inteira." });
+      }
+
+      const intentos = intentosCheckin.get(input.appointmentId) ?? 0;
+      if (intentos >= 5) {
+        throw new TRPCError({
+          code: "TOO_MANY_REQUESTS",
+          message: "Demasiados intentos con código incorrecto. Escríbenos y lo revisamos.",
+        });
+      }
+      if (String(appointment.checkinCode ?? "") !== input.code) {
+        intentosCheckin.set(input.appointmentId, intentos + 1);
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Código incorrecto. Te quedan ${4 - intentos} intentos.`,
+        });
+      }
+      intentosCheckin.delete(input.appointmentId);
+
+      const dbInstance = await db.getDb();
+      if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      await new Promise<void>((resolve, reject) => {
+        (dbInstance as any).$client.execute(
+          `UPDATE appointments
+              SET checkedInAt = NOW(),
+                  professionalJoinedAt = COALESCE(professionalJoinedAt, NOW()),
+                  userJoinedAt = COALESCE(userJoinedAt, NOW()),
+                  status = IF(status = 'scheduled', 'in_progress', status),
+                  updatedAt = NOW()
+            WHERE id = ? AND checkedInAt IS NULL`,
+          [input.appointmentId],
+          (err: any) => (err ? reject(err) : resolve())
+        );
+      });
+
+      createNotification({
+        userId: appointment.userId,
+        type: "info",
+        title: "📍 Llegada registrada",
+        message: "Tu especialista registró tu llegada al consultorio.",
+        link: "/citas",
+        audience: "user",
+      }).catch(() => {});
+
+      return { success: true, alreadyCheckedIn: false };
+    }),
+
+  /**
    * Sala de entrada. Sustituye al enlace crudo de Daily en los correos:
    * verifica que quien abre el enlace sea realmente una de las dos partes de
    * la cita, y devuelve el estado de llegada de ambos.
@@ -1067,6 +1272,14 @@ export const appointmentRouter = router({
 
       if (!isProfessional && !isClient) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Esta cita no es tuya" });
+      }
+      // Una cita presencial no tiene sala: si alguien abre el enlace, se le
+      // dice a dónde ir en vez de mostrarle una sala vacía.
+      if (appointment.modality === "in_person") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Esta cita es presencial${appointment.clinicAddress ? `, en ${appointment.clinicAddress}` : ""}. No hay videollamada.`,
+        });
       }
       const role: "user" | "professional" = isProfessional ? "professional" : "user";
 

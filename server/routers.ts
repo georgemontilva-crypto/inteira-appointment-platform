@@ -1,3 +1,4 @@
+import { modalidadesEfectivas, etiquetaModalidad } from "./modalidad";
 import { randomBytes } from "crypto";
 import bcrypt from "bcryptjs";
 import { COOKIE_NAME } from "@shared/const";
@@ -74,6 +75,20 @@ const professionalRegistrationSchema = z.object({
   advisoryExperienceDetail: z.string().max(2000).optional(),
   sessionModality: z.enum(["online", "in_person", "both"]).optional(),
   inPersonArea: z.string().max(255).optional(),
+  /** Consultorio: obligatorio si la modalidad incluye presencial. */
+  clinic: z
+    .object({
+      name: z.string().max(255).optional(),
+      address: z.string().min(8).max(500),
+      city: z.string().max(120).optional(),
+      state: z.string().max(120).optional(),
+      country: z.string().length(2).optional(),
+      photos: z.array(z.string().url()).min(3).max(10),
+      addressProofUrl: z.string().url(),
+      sanitaryLicenseUrl: z.string().url().optional().nullable(),
+      noLicenseRequired: z.boolean().default(false),
+    })
+    .optional(),
 
   // ── Propósito y objetivos ──
   motivation: z.string().max(2000).optional(),
@@ -158,6 +173,49 @@ const userProfileUpdateSchema = z.object({
 const discountRateLimit = new Map<string, { count: number; resetAt: number }>();
 
 /**
+ * Presencial solo con consultorio: si la modalidad lo incluye, el registro
+ * tiene que traer dirección, fotos, comprobante y licencia (o "no aplica").
+ */
+function validarConsultorioDeRegistro(input: z.infer<typeof professionalRegistrationSchema>) {
+  const incluyePresencial = input.sessionModality === "in_person" || input.sessionModality === "both";
+  if (!incluyePresencial) return;
+  if (!input.clinic) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Para atender presencial registra tu consultorio: dirección, fotos y documentos.",
+    });
+  }
+  if (!input.clinic.noLicenseRequired && !input.clinic.sanitaryLicenseUrl) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Sube la licencia o aviso sanitario del consultorio, o marca que tu especialidad no lo requiere.",
+    });
+  }
+}
+
+/** Guarda el consultorio del registro, pendiente de revisión. */
+async function guardarConsultorioDeRegistro(
+  userId: number,
+  input: z.infer<typeof professionalRegistrationSchema>
+) {
+  const incluyePresencial = input.sessionModality === "in_person" || input.sessionModality === "both";
+  if (!incluyePresencial || !input.clinic) return;
+  const professional = await db.getProfessionalByUserId(userId);
+  if (!professional) return;
+  await db.upsertClinic(professional.id, {
+    name: input.clinic.name?.trim() || null,
+    address: input.clinic.address.trim(),
+    city: input.clinic.city?.trim() || input.city || null,
+    state: input.clinic.state?.trim() || input.state || null,
+    country: input.clinic.country ?? input.country ?? null,
+    photos: input.clinic.photos,
+    addressProofUrl: input.clinic.addressProofUrl,
+    sanitaryLicenseUrl: input.clinic.noLicenseRequired ? null : input.clinic.sanitaryLicenseUrl ?? null,
+    noLicenseRequired: input.clinic.noLicenseRequired,
+  });
+}
+
+/**
  * Cualquier admin (full o colaboradora con adminScope='no_finance').
  */
 function requireAdmin(ctx: any) {
@@ -179,6 +237,131 @@ function requireFullAdmin(ctx: any) {
       message: "Tu cuenta de colaboradora no tiene acceso a esta sección.",
     });
   }
+}
+
+async function setModalidadAsesor(professionalId: number, modalidad: "online" | "in_person" | "both") {
+  const dbInstance = await db.getDb();
+  if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+  await new Promise<void>((resolve, reject) => {
+    (dbInstance as any).$client.execute(
+      "UPDATE professionals SET sessionModality = ? WHERE id = ?",
+      [modalidad, professionalId],
+      (err: any) => (err ? reject(err) : resolve())
+    );
+  });
+}
+
+/**
+ * Acepta solo enlaces de Google Maps (incluidos los cortos maps.app.goo.gl).
+ * Cualquier otra cosa se rechaza: el enlace se muestra como botón "Cómo
+ * llegar" y no debe poder llevar a otro sitio.
+ */
+function normalizarEnlaceMaps(raw: string | null): string | null {
+  if (!raw || !raw.trim()) return null;
+  let url: URL;
+  try {
+    url = new URL(raw.trim());
+  } catch {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "Pega el enlace completo de Google Maps." });
+  }
+  const host = url.hostname.toLowerCase();
+  const esMaps =
+    url.protocol === "https:" &&
+    (host === "maps.app.goo.gl" ||
+      host === "goo.gl" ||
+      host === "maps.google.com" ||
+      ((host === "www.google.com" || host === "google.com" || /^www\.google\.[a-z.]+$/.test(host)) &&
+        url.pathname.startsWith("/maps")));
+  if (!esMaps) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Ese no es un enlace de Google Maps. En Maps toca Compartir → Copiar enlace.",
+    });
+  }
+  return url.toString();
+}
+
+/** Aviso a los admins de que hay un consultorio por revisar. */
+async function avisarAdminsConsultorio(professionalId: number) {
+  const dbInstance = await db.getDb();
+  if (!dbInstance) return;
+  const admins = await new Promise<any[]>((resolve) => {
+    (dbInstance as any).$client.execute(
+      "SELECT id FROM users WHERE role = 'admin'",
+      [],
+      (err: any, r: any) => resolve(err || !Array.isArray(r) ? [] : r)
+    );
+  });
+  const { createNotification } = await import("./notifications");
+  for (const a of admins) {
+    createNotification({
+      userId: a.id,
+      type: "info",
+      title: "🏥 Consultorio por revisar",
+      message: `Un asesor (#${professionalId}) envió su consultorio para atención presencial.`,
+      link: "/admin#consultorios",
+      audience: "all",
+    }).catch(() => {});
+  }
+}
+
+/**
+ * Lo que el perfil público de un asesor puede mostrar.
+ *
+ * Antes se devolvía la fila completa: eso incluía el enlace al documento de
+ * identidad, el bloque de creencias (que es privado por definición del
+ * formulario), el correo y el teléfono. Ahora solo sale lo que la página usa.
+ */
+async function perfilPublicoAsesor(professional: any) {
+  const [user, reviews, consultorio] = await Promise.all([
+    db.getUserById(professional.userId),
+    db.getProfessionalReviews(professional.id),
+    db.getClinicByProfessionalId(professional.id),
+  ]);
+  const aprobado = consultorio?.status === "approved";
+  const ofrece = modalidadesEfectivas(professional.sessionModality, aprobado);
+
+  return {
+    id: professional.id,
+    slug: professional.slug ?? null,
+    specialtyId: professional.specialtyId,
+    licenseNumber: professional.licenseNumber ?? null,
+    yearsOfExperience: professional.yearsOfExperience ?? null,
+    education: professional.education ?? null,
+    certifications: professional.certifications ?? null,
+    bio: professional.bio ?? null,
+    profilePhoto: professional.profilePhoto ?? null,
+    languages: professional.languages ?? null,
+    status: professional.status,
+    averageRating: professional.averageRating ?? null,
+    totalReviews: professional.totalReviews ?? 0,
+    isAvailable: professional.isAvailable,
+    tier: professional.tier,
+    country: professional.country ?? null,
+    state: professional.state ?? null,
+    city: professional.city ?? null,
+    offersOnline: ofrece.online,
+    offersInPerson: ofrece.presencial,
+    modalityLabel: etiquetaModalidad(ofrece),
+    // El consultorio solo se muestra cuando está aprobado y el asesor
+    // declaró que atiende presencial.
+    clinic: ofrece.presencial && consultorio
+      ? {
+          name: consultorio.name,
+          address: consultorio.address,
+          city: consultorio.city,
+          state: consultorio.state,
+          country: consultorio.country,
+          photos: consultorio.photos,
+          mapsUrl: consultorio.mapsUrl,
+        }
+      : null,
+    user: {
+      name: user?.name,
+      profileImage: user?.profileImage,
+    },
+    reviews,
+  };
 }
 
 export const appRouter = router({
@@ -543,6 +726,8 @@ export const appRouter = router({
           }
         }
 
+        validarConsultorioDeRegistro(input);
+
         // Generate unique placeholder when no cédula required for this specialty
         const licenseNum =
           (input.licenseNumber ?? "").trim() ||
@@ -555,6 +740,9 @@ export const appRouter = router({
           input.specialtyId,
           licenseNum,
           professionalRegistrationFields(input)
+        );
+        await guardarConsultorioDeRegistro(ctx.user.id, input).catch((e: any) =>
+          console.error("[Register] consultorio:", e?.message)
         );
 
         // Actualizar el rol del usuario a 'pending_professional' y guardar el nombre
@@ -611,6 +799,7 @@ export const appRouter = router({
         password: z.string().min(8).optional(),
       }))
       .mutation(async ({ input }) => {
+        validarConsultorioDeRegistro(input);
         const email = input.email.toLowerCase().trim();
 
         // Reject if user already exists — they should log in instead
@@ -657,6 +846,9 @@ export const appRouter = router({
           input.specialtyId,
           licenseNum,
           professionalRegistrationFields(input)
+        );
+        await guardarConsultorioDeRegistro(userId, input).catch((e: any) =>
+          console.error("[registerNew] consultorio:", e?.message)
         );
 
         // Notify admin + send confirmation to specialist (fire and forget)
@@ -717,19 +909,7 @@ export const appRouter = router({
           });
         }
 
-        const user = await db.getUserById(professional.userId);
-        const reviews = await db.getProfessionalReviews(professional.id);
-
-        return {
-          ...professional,
-          user: {
-            name: user?.name,
-            email: user?.email,
-            profileImage: user?.profileImage,
-            phone: user?.phone,
-          },
-          reviews,
-        };
+        return await perfilPublicoAsesor(professional);
       }),
 
     getBySpecialty: publicProcedure
@@ -752,18 +932,7 @@ export const appRouter = router({
         const professional = await db.getProfessionalBySlug(input.slug);
         if (!professional) throw new TRPCError({ code: "NOT_FOUND", message: "Profesional no encontrado" });
         if (professional.status !== "approved") throw new TRPCError({ code: "NOT_FOUND", message: "Profesional no disponible" });
-        const user = await db.getUserById(professional.userId);
-        const reviews = await db.getProfessionalReviews(professional.id);
-        return {
-          ...professional,
-          user: {
-            name: user?.name,
-            email: user?.email,
-            profileImage: user?.profileImage,
-            phone: user?.phone,
-          },
-          reviews,
-        };
+        return await perfilPublicoAsesor(professional);
       }),
 
     getAppointments: protectedProcedure.query(async ({ ctx }) => {
@@ -811,6 +980,7 @@ export const appRouter = router({
           startTime: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/, "Hora inválida"),
           endTime: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/, "Hora inválida"),
           isAvailable: z.boolean().default(true),
+          modality: z.enum(["online", "in_person", "both"]).optional().default("online"),
         })
       )
       .mutation(async ({ ctx, input }) => {
@@ -855,14 +1025,119 @@ export const appRouter = router({
           });
         }
 
+        // Un bloque presencial sin modalidad presencial declarada no
+        // serviría de nada: nunca se ofrecería. Se guarda como online.
+        const declarada = (professional as any).sessionModality ?? "online";
+        const modalidadBloque =
+          declarada === "online" ? "online"
+          : declarada === "in_person" ? "in_person"
+          : input.modality;
+
         await db.createProfessionalAvailability({
           professionalId: professional.id,
           dayOfWeek: input.dayOfWeek,
           startTime: input.startTime,
           endTime: input.endTime,
           isAvailable: input.isAvailable,
+          modality: modalidadBloque,
         });
         return { success: true };
+      }),
+
+    // ── Atención presencial: consultorio y modalidad ─────────────────────────
+
+    /** Consultorio del asesor que entra a su panel, con su estado de revisión. */
+    getMyClinic: protectedProcedure.query(async ({ ctx }) => {
+      const professional = await db.getProfessionalByUserId(ctx.user.id);
+      if (!professional) throw new TRPCError({ code: "NOT_FOUND", message: "Perfil profesional no encontrado" });
+      const consultorio = await db.getClinicByProfessionalId(professional.id);
+      return {
+        sessionModality: ((professional as any).sessionModality ?? "online") as "online" | "in_person" | "both",
+        clinic: consultorio,
+      };
+    }),
+
+    /**
+     * Guarda el consultorio. Queda pendiente de revisión; si ya estaba
+     * aprobado y cambia la dirección o los documentos, vuelve a revisión.
+     */
+    saveMyClinic: protectedProcedure
+      .input(
+        z.object({
+          name: z.string().max(255).optional(),
+          address: z.string().min(8, "Escribe la dirección completa").max(500),
+          city: z.string().max(120).optional(),
+          state: z.string().max(120).optional(),
+          country: z.string().length(2).optional(),
+          photos: z.array(z.string().url()).min(3, "Sube al menos 3 fotos del consultorio").max(10),
+          addressProofUrl: z.string().url({ message: "Falta el comprobante de domicilio" }),
+          sanitaryLicenseUrl: z.string().url().optional().nullable(),
+          noLicenseRequired: z.boolean().default(false),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const professional = await db.getProfessionalByUserId(ctx.user.id);
+        if (!professional) throw new TRPCError({ code: "NOT_FOUND", message: "Perfil profesional no encontrado" });
+        if (!input.noLicenseRequired && !input.sanitaryLicenseUrl) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Sube la licencia o aviso sanitario, o marca que tu especialidad no lo requiere.",
+          });
+        }
+        const resultado = await db.upsertClinic(professional.id, {
+          name: input.name?.trim() || null,
+          address: input.address.trim(),
+          city: input.city?.trim() || null,
+          state: input.state?.trim() || null,
+          country: input.country ?? null,
+          photos: input.photos,
+          addressProofUrl: input.addressProofUrl,
+          sanitaryLicenseUrl: input.noLicenseRequired ? null : input.sanitaryLicenseUrl ?? null,
+          noLicenseRequired: input.noLicenseRequired,
+        });
+
+        // Registrar un consultorio es decir "también atiendo presencial".
+        const declarada = (professional as any).sessionModality;
+        if (!declarada || declarada === "online") {
+          await setModalidadAsesor(professional.id, "both");
+        }
+
+        if (resultado.status === "pending") {
+          avisarAdminsConsultorio(professional.id).catch(() => {});
+        }
+        return resultado;
+      }),
+
+    /** Enlace de Google Maps del consultorio: solo una vez aprobado. */
+    setMyClinicMapsUrl: protectedProcedure
+      .input(z.object({ mapsUrl: z.string().max(1000).nullable() }))
+      .mutation(async ({ ctx, input }) => {
+        const professional = await db.getProfessionalByUserId(ctx.user.id);
+        if (!professional) throw new TRPCError({ code: "NOT_FOUND", message: "Perfil profesional no encontrado" });
+        const consultorio = await db.getClinicByProfessionalId(professional.id);
+        if (consultorio?.status !== "approved") {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "El enlace de Maps se agrega cuando el consultorio está aprobado.",
+          });
+        }
+        await db.setClinicMapsUrl(professional.id, normalizarEnlaceMaps(input.mapsUrl));
+        return { success: true };
+      }),
+
+    /** Modalidad en que atiende: solo online, solo presencial, o ambas. */
+    setMySessionModality: protectedProcedure
+      .input(z.object({ modality: z.enum(["online", "in_person", "both"]) }))
+      .mutation(async ({ ctx, input }) => {
+        const professional = await db.getProfessionalByUserId(ctx.user.id);
+        if (!professional) throw new TRPCError({ code: "NOT_FOUND", message: "Perfil profesional no encontrado" });
+        await setModalidadAsesor(professional.id, input.modality);
+        const consultorio = await db.getClinicByProfessionalId(professional.id);
+        return {
+          success: true,
+          // Para que el panel avise si eligió presencial sin consultorio.
+          needsClinic: input.modality !== "online" && !consultorio,
+        };
       }),
 
     removeAvailability: protectedProcedure
@@ -1338,6 +1613,167 @@ export const appRouter = router({
       }
       return await db.getAdminMetrics();
     }),
+
+    // ── Consultorios (atención presencial) ───────────────────────────────────
+
+    listClinics: protectedProcedure
+      .input(z.object({ status: z.enum(["pending", "approved", "rejected"]).optional() }).optional())
+      .query(async ({ ctx, input }) => {
+        requireAdmin(ctx);
+        return await db.listClinicsForAdmin(input?.status);
+      }),
+
+    reviewClinic: protectedProcedure
+      .input(
+        z.object({
+          professionalId: z.number(),
+          decision: z.enum(["approved", "rejected"]),
+          reason: z.string().max(1000).optional(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        requireAdmin(ctx);
+        if (input.decision === "rejected" && !input.reason?.trim()) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Escribe el motivo del rechazo: el asesor lo ve para corregirlo.",
+          });
+        }
+        const consultorio = await db.getClinicByProfessionalId(input.professionalId);
+        if (!consultorio) throw new TRPCError({ code: "NOT_FOUND", message: "Ese asesor no tiene consultorio registrado" });
+
+        await db.reviewClinic(input.professionalId, input.decision, input.reason?.trim() ?? null);
+
+        const professional = await db.getProfessionalById(input.professionalId);
+        if (professional) {
+          const { createNotification } = await import("./notifications");
+          createNotification({
+            userId: professional.userId,
+            type: "info",
+            title: input.decision === "approved" ? "🏥 Consultorio aprobado" : "🏥 Consultorio no aprobado",
+            message:
+              input.decision === "approved"
+                ? "Ya puedes recibir citas presenciales. Agrega el enlace de Google Maps y marca tus horarios de consultorio."
+                : `Revisa lo que hay que corregir: ${input.reason?.trim()}`,
+            link: "/panel-profesional#consultorio",
+            audience: "professional",
+          }).catch(() => {});
+        }
+        return { success: true };
+      }),
+
+    /** El admin también puede poner o corregir el enlace de Maps. */
+    setClinicMapsUrl: protectedProcedure
+      .input(z.object({ professionalId: z.number(), mapsUrl: z.string().max(1000).nullable() }))
+      .mutation(async ({ ctx, input }) => {
+        requireAdmin(ctx);
+        const consultorio = await db.getClinicByProfessionalId(input.professionalId);
+        if (!consultorio) throw new TRPCError({ code: "NOT_FOUND", message: "Ese asesor no tiene consultorio registrado" });
+        await db.setClinicMapsUrl(input.professionalId, normalizarEnlaceMaps(input.mapsUrl));
+        return { success: true };
+      }),
+
+    /**
+     * Citas presenciales que terminaron sin código de llegada. No se pagan
+     * solas: las resuelve una persona del equipo.
+     */
+    listInPersonReviews: protectedProcedure.query(async ({ ctx }) => {
+      requireAdmin(ctx);
+      const dbInstance = await db.getDb();
+      if (!dbInstance) return [];
+      return await new Promise<any[]>((resolve) => {
+        (dbInstance as any).$client.execute(
+          `SELECT a.id, a.appointmentDate, a.durationMinutes, a.status, a.clinicAddress, a.updatedAt,
+                  u.name AS userName, u.email AS userEmail,
+                  pu.name AS professionalName, pu.email AS professionalEmail
+             FROM appointments a
+             JOIN users u ON u.id = a.userId
+             JOIN professionals p ON p.id = a.professionalId
+             JOIN users pu ON pu.id = p.userId
+            WHERE a.modality = 'in_person' AND a.checkedInAt IS NULL AND a.status = 'pending_review'
+            ORDER BY a.appointmentDate ASC`,
+          [],
+          (err: any, r: any) => {
+            if (err) { console.error("[admin] listInPersonReviews:", err?.message); resolve([]); }
+            else resolve(Array.isArray(r) ? r : []);
+          }
+        );
+      });
+    }),
+
+    /**
+     * Resolver una cita presencial sin código: "held" la da por hecha (se
+     * cobra al cliente y se paga al asesor); "refund" la cancela y devuelve
+     * los créditos.
+     */
+    resolveInPersonAppointment: protectedProcedure
+      .input(z.object({ appointmentId: z.number(), decision: z.enum(["held", "refund"]), note: z.string().max(500).optional() }))
+      .mutation(async ({ ctx, input }) => {
+        requireAdmin(ctx);
+        const cita: any = await db.getAppointmentById(input.appointmentId);
+        if (!cita) throw new TRPCError({ code: "NOT_FOUND", message: "Cita no encontrada" });
+        if (cita.modality !== "in_person" || cita.status !== "pending_review") {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Esta cita no está esperando revisión presencial." });
+        }
+        const dbInstance = await db.getDb();
+        if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const client = (dbInstance as any).$client;
+        const { createNotification } = await import("./notifications");
+        const professional = await db.getProfessionalById(cita.professionalId);
+
+        if (input.decision === "held") {
+          const cambio = await new Promise<number>((resolve, reject) => {
+            client.execute(
+              "UPDATE appointments SET status = 'completed', updatedAt = NOW() WHERE id = ? AND status = 'pending_review'",
+              [cita.id],
+              (err: any, r: any) => (err ? reject(err) : resolve(Number(r?.affectedRows ?? 0)))
+            );
+          });
+          if (cambio === 0) return { success: true };
+          const { confirmCredits, getAppointmentBilling } = await import("./credits");
+          const { creditProfessionalEarning } = await import("./professionalWallet");
+          await confirmCredits(cita.id);
+          const billing = await getAppointmentBilling(cita.id);
+          await creditProfessionalEarning(
+            cita.professionalId, cita.id,
+            ((professional as any)?.tier ?? "basic") as "basic" | "pro",
+            billing.sessionType, billing.pricingType
+          );
+          if (professional) {
+            createNotification({
+              userId: professional.userId,
+              type: "new_earning",
+              title: "Cita presencial confirmada",
+              message: "Revisamos tu cita presencial y se liberó tu pago.",
+              link: "/panel-profesional#ganancias",
+              audience: "professional",
+            }).catch(() => {});
+          }
+          return { success: true };
+        }
+
+        const cambio = await new Promise<number>((resolve, reject) => {
+          client.execute(
+            `UPDATE appointments SET status = 'canceled', canceledBy = 'admin', canceledAt = NOW(),
+                    cancellationReason = ?, updatedAt = NOW()
+              WHERE id = ? AND status = 'pending_review'`,
+            [input.note?.trim() || "Cita presencial sin llegada registrada", cita.id],
+            (err: any, r: any) => (err ? reject(err) : resolve(Number(r?.affectedRows ?? 0)))
+          );
+        });
+        if (cambio === 0) return { success: true };
+        const { refundCredits } = await import("./credits");
+        const devueltos = await refundCredits(cita.userId, cita.id, "cita presencial sin llegada registrada");
+        createNotification({
+          userId: cita.userId,
+          type: "refund",
+          title: "💰 Créditos devueltos",
+          message: `Revisamos tu cita presencial y te devolvimos ${devueltos} créditos.`,
+          link: "/wallet",
+          audience: "user",
+        }).catch(() => {});
+        return { success: true };
+      }),
     getAppointmentsByDay: protectedProcedure
       .input(z.object({ days: z.number().optional().default(30) }))
       .query(async ({ ctx, input }) => {

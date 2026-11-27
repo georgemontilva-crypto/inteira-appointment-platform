@@ -178,6 +178,8 @@ export const professionalAvailability = mysqlTable("professionalAvailability", {
   startTime: varchar("startTime", { length: 5 }).notNull(), // HH:MM format
   endTime: varchar("endTime", { length: 5 }).notNull(), // HH:MM format
   isAvailable: boolean("isAvailable").default(true),
+  /** En qué modalidad se atiende en este bloque */
+  modality: mysqlEnum("modality", ["online", "in_person", "both"]).default("online").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -212,6 +214,15 @@ export const appointments = mysqlTable("appointments", {
   cancellationReason: longtext("cancellationReason"),
   penaltyAmount: int("penaltyAmount").default(0),
   penaltyType: mysqlEnum("penaltyType", ["none", "partial", "full", "credits_lost"]),
+  // ── Presencial ────────────────────────────────────────────────────────────
+  modality: mysqlEnum("modality", ["online", "in_person"]).default("online").notNull(),
+  /** Código que el cliente le da al asesor al llegar al consultorio */
+  checkinCode: varchar("checkinCode", { length: 6 }),
+  /** Cuándo el asesor registró la llegada con ese código */
+  checkedInAt: datetime("checkedInAt"),
+  /** Copia de la dirección al momento de agendar */
+  clinicAddress: text("clinicAddress"),
+  clinicMapsUrl: text("clinicMapsUrl"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -493,3 +504,34 @@ export const callPresence = mysqlTable("callPresence", {
   source: mysqlEnum("source", ["webhook", "reconciliation"]).default("webhook").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
+
+
+/**
+ * Consultorio del asesor para atención presencial.
+ *
+ * Tiene su propia revisión (independiente de la aprobación del asesor): las
+ * citas presenciales solo se ofrecen cuando status = 'approved'.
+ */
+export const professionalClinics = mysqlTable("professionalClinics", {
+  id: int("id").autoincrement().primaryKey(),
+  professionalId: int("professionalId").notNull().unique(),
+  name: varchar("name", { length: 255 }),
+  address: text("address").notNull(),
+  city: varchar("city", { length: 120 }),
+  state: varchar("state", { length: 120 }),
+  country: varchar("country", { length: 2 }),
+  /** JSON con la lista de URLs de fotos del consultorio */
+  photos: longtext("photos"),
+  addressProofUrl: text("addressProofUrl"),
+  sanitaryLicenseUrl: text("sanitaryLicenseUrl"),
+  noLicenseRequired: boolean("noLicenseRequired").default(false).notNull(),
+  /** Enlace de Google Maps; se agrega una vez aprobado */
+  mapsUrl: text("mapsUrl"),
+  status: mysqlEnum("status", ["pending", "approved", "rejected"]).default("pending").notNull(),
+  rejectionReason: text("rejectionReason"),
+  reviewedAt: timestamp("reviewedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ProfessionalClinic = typeof professionalClinics.$inferSelect;

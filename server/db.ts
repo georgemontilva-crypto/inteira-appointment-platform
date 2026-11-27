@@ -1,3 +1,4 @@
+import { modalidadesEfectivas, etiquetaModalidad } from "./modalidad";
 import { eq, and, sql, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
@@ -337,18 +338,35 @@ export async function getProfessionalsBySpecialty(specialtyId: number) {
   const client = (db as any).$client;
   return new Promise<any[]>((resolve, reject) => {
     client.execute(
+      // Este listado es público (directorio de una especialidad): no lleva el
+      // correo del asesor. Sí lleva la modalidad y si tiene consultorio
+      // aprobado, para la etiqueta y el filtro de presencial.
       `SELECT p.id, p.slug, p.userId, p.specialtyId, p.status, p.tier, p.bio, p.profilePhoto,
-              p.country, p.state,
+              p.country, p.state, p.city, p.sessionModality,
               p.averageRating, p.totalReviews, p.isAvailable, p.yearsOfExperience, p.hourlyRate,
-              u.name as professionalName, u.email as userEmail, u.profileImage as userProfileImage
+              u.name as professionalName, u.profileImage as userProfileImage,
+              c.city AS clinicCity,
+              CASE WHEN c.status = 'approved' THEN 1 ELSE 0 END AS clinicApproved
        FROM professionals p
        LEFT JOIN users u ON p.userId = u.id
+       LEFT JOIN professionalClinics c ON c.professionalId = p.id
        WHERE p.specialtyId = ? AND p.status = 'approved'
        ORDER BY u.name ASC`,
       [specialtyId],
       (err: any, results: any) => {
         if (err) { console.error("[DB] getProfessionalsBySpecialty error:", err?.message); resolve([]); }
-        else resolve(Array.isArray(results) ? results : []);
+        else resolve(
+          (Array.isArray(results) ? results : []).map((r: any) => {
+            const ofrece = modalidadesEfectivas(r.sessionModality, Boolean(Number(r.clinicApproved)));
+            return {
+              ...r,
+              clinicApproved: Boolean(Number(r.clinicApproved)),
+              offersOnline: ofrece.online,
+              offersInPerson: ofrece.presencial,
+              modalityLabel: etiquetaModalidad(ofrece),
+            };
+          })
+        );
       }
     );
   });
@@ -756,18 +774,246 @@ export async function getBlockedDates(professionalId: number): Promise<Set<strin
 }
 
 export async function createProfessionalAvailability(
-  data: { professionalId: number; dayOfWeek: number; startTime: string; endTime: string; isAvailable?: boolean }
+  data: {
+    professionalId: number;
+    dayOfWeek: number;
+    startTime: string;
+    endTime: string;
+    isAvailable?: boolean;
+    modality?: "online" | "in_person" | "both";
+  }
 ) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const client = (db as any).$client;
   return new Promise<void>((resolve, reject) => {
     client.execute(
-      "INSERT INTO professionalAvailability (professionalId, dayOfWeek, startTime, endTime, isAvailable) VALUES (?, ?, ?, ?, ?)",
-      [data.professionalId, data.dayOfWeek, data.startTime, data.endTime, data.isAvailable ?? true],
+      "INSERT INTO professionalAvailability (professionalId, dayOfWeek, startTime, endTime, isAvailable, modality) VALUES (?, ?, ?, ?, ?, ?)",
+      [
+        data.professionalId,
+        data.dayOfWeek,
+        data.startTime,
+        data.endTime,
+        data.isAvailable ?? true,
+        data.modality ?? "online",
+      ],
       (err: any) => { if (err) reject(err); else resolve(); }
     );
   });
+}
+
+// ── Consultorios (atención presencial) ─────────────────────────────────────
+
+export type ClinicRow = {
+  id: number;
+  professionalId: number;
+  name: string | null;
+  address: string;
+  city: string | null;
+  state: string | null;
+  country: string | null;
+  photos: string[];
+  addressProofUrl: string | null;
+  sanitaryLicenseUrl: string | null;
+  noLicenseRequired: boolean;
+  mapsUrl: string | null;
+  status: "pending" | "approved" | "rejected";
+  rejectionReason: string | null;
+  reviewedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+function parseFotos(raw: any): string[] {
+  if (!raw) return [];
+  try {
+    const v = typeof raw === "string" ? JSON.parse(raw) : raw;
+    return Array.isArray(v) ? v.filter((x) => typeof x === "string" && x) : [];
+  } catch {
+    return [];
+  }
+}
+
+function filaAConsultorio(r: any): ClinicRow {
+  return {
+    ...r,
+    photos: parseFotos(r.photos),
+    noLicenseRequired: Boolean(Number(r.noLicenseRequired)),
+  };
+}
+
+function ejecutar<T = any>(sql: string, params: any[]): Promise<T> {
+  return getDb().then((db) => {
+    if (!db) throw new Error("Database not available");
+    const client = (db as any).$client;
+    return new Promise<T>((resolve, reject) => {
+      client.execute(sql, params, (err: any, results: any) =>
+        err ? reject(err) : resolve(results)
+      );
+    });
+  });
+}
+
+export async function getClinicByProfessionalId(professionalId: number): Promise<ClinicRow | null> {
+  const rows = await ejecutar<any[]>(
+    "SELECT * FROM professionalClinics WHERE professionalId = ? LIMIT 1",
+    [professionalId]
+  ).catch((e) => {
+    console.error("[getClinicByProfessionalId]", e?.message);
+    return [];
+  });
+  return Array.isArray(rows) && rows[0] ? filaAConsultorio(rows[0]) : null;
+}
+
+/** Consultorios aprobados de varios asesores a la vez, por professionalId. */
+export async function getApprovedClinicsFor(professionalIds: number[]): Promise<Map<number, ClinicRow>> {
+  const mapa = new Map<number, ClinicRow>();
+  if (professionalIds.length === 0) return mapa;
+  const marcas = professionalIds.map(() => "?").join(",");
+  const rows = await ejecutar<any[]>(
+    `SELECT * FROM professionalClinics WHERE status = 'approved' AND professionalId IN (${marcas})`,
+    professionalIds
+  ).catch((e) => {
+    console.error("[getApprovedClinicsFor]", e?.message);
+    return [];
+  });
+  for (const r of Array.isArray(rows) ? rows : []) {
+    mapa.set(Number(r.professionalId), filaAConsultorio(r));
+  }
+  return mapa;
+}
+
+/**
+ * Crea o actualiza el consultorio del asesor.
+ *
+ * Cambiar la dirección o los documentos lo devuelve a revisión: lo que se
+ * aprobó fue ese lugar con esos papeles. Las fotos y el nombre se pueden
+ * cambiar sin perder la aprobación.
+ */
+export async function upsertClinic(
+  professionalId: number,
+  data: {
+    name?: string | null;
+    address: string;
+    city?: string | null;
+    state?: string | null;
+    country?: string | null;
+    photos: string[];
+    addressProofUrl?: string | null;
+    sanitaryLicenseUrl?: string | null;
+    noLicenseRequired: boolean;
+  }
+): Promise<{ status: ClinicRow["status"]; volvioARevision: boolean }> {
+  const actual = await getClinicByProfessionalId(professionalId);
+  const fotos = JSON.stringify(data.photos.slice(0, 10));
+
+  if (!actual) {
+    await ejecutar(
+      `INSERT INTO professionalClinics
+         (professionalId, name, address, city, state, country, photos,
+          addressProofUrl, sanitaryLicenseUrl, noLicenseRequired, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+      [
+        professionalId,
+        data.name ?? null,
+        data.address,
+        data.city ?? null,
+        data.state ?? null,
+        data.country ?? null,
+        fotos,
+        data.addressProofUrl ?? null,
+        data.sanitaryLicenseUrl ?? null,
+        data.noLicenseRequired ? 1 : 0,
+      ]
+    );
+    return { status: "pending", volvioARevision: false };
+  }
+
+  const cambioSensible =
+    actual.address.trim() !== data.address.trim() ||
+    (actual.city ?? "") !== (data.city ?? "") ||
+    (actual.state ?? "") !== (data.state ?? "") ||
+    (actual.country ?? "") !== (data.country ?? "") ||
+    (actual.addressProofUrl ?? "") !== (data.addressProofUrl ?? "") ||
+    (actual.sanitaryLicenseUrl ?? "") !== (data.sanitaryLicenseUrl ?? "") ||
+    actual.noLicenseRequired !== data.noLicenseRequired;
+
+  // Un rechazo se corrige reenviando: vuelve a pendiente.
+  const nuevoEstado: ClinicRow["status"] =
+    cambioSensible || actual.status === "rejected" ? "pending" : actual.status;
+
+  await ejecutar(
+    `UPDATE professionalClinics SET
+       name = ?, address = ?, city = ?, state = ?, country = ?, photos = ?,
+       addressProofUrl = ?, sanitaryLicenseUrl = ?, noLicenseRequired = ?,
+       status = ?,
+       rejectionReason = IF(? = 'pending', NULL, rejectionReason),
+       reviewedAt = IF(? = 'pending', NULL, reviewedAt)
+     WHERE professionalId = ?`,
+    [
+      data.name ?? null,
+      data.address,
+      data.city ?? null,
+      data.state ?? null,
+      data.country ?? null,
+      fotos,
+      data.addressProofUrl ?? null,
+      data.sanitaryLicenseUrl ?? null,
+      data.noLicenseRequired ? 1 : 0,
+      nuevoEstado,
+      nuevoEstado,
+      nuevoEstado,
+      professionalId,
+    ]
+  );
+  return {
+    status: nuevoEstado,
+    volvioARevision: actual.status === "approved" && nuevoEstado === "pending",
+  };
+}
+
+export async function setClinicMapsUrl(professionalId: number, mapsUrl: string | null) {
+  await ejecutar(
+    "UPDATE professionalClinics SET mapsUrl = ? WHERE professionalId = ?",
+    [mapsUrl, professionalId]
+  );
+}
+
+export async function reviewClinic(
+  professionalId: number,
+  decision: "approved" | "rejected",
+  reason?: string | null
+) {
+  await ejecutar(
+    `UPDATE professionalClinics
+       SET status = ?, rejectionReason = ?, reviewedAt = NOW()
+     WHERE professionalId = ?`,
+    [decision, decision === "rejected" ? (reason ?? null) : null, professionalId]
+  );
+}
+
+/** Consultorios para el panel de admin, con datos del asesor. */
+export async function listClinicsForAdmin(status?: "pending" | "approved" | "rejected") {
+  const rows = await ejecutar<any[]>(
+    `SELECT c.*, u.name AS professionalName, u.email AS professionalEmail,
+            p.slug AS professionalSlug, p.sessionModality, p.status AS professionalStatus
+       FROM professionalClinics c
+       JOIN professionals p ON p.id = c.professionalId
+       JOIN users u ON u.id = p.userId
+      ${status ? "WHERE c.status = ?" : ""}
+      ORDER BY FIELD(c.status, 'pending', 'rejected', 'approved'), c.updatedAt DESC`,
+    status ? [status] : []
+  ).catch((e) => {
+    console.error("[listClinicsForAdmin]", e?.message);
+    return [];
+  });
+  return (Array.isArray(rows) ? rows : []).map(filaAConsultorio) as (ClinicRow & {
+    professionalName: string | null;
+    professionalEmail: string | null;
+    professionalSlug: string | null;
+    sessionModality: string | null;
+    professionalStatus: string;
+  })[];
 }
 
 // Appointment functions
@@ -783,14 +1029,18 @@ export async function createAppointment(data: {
   notes?: string;
   status?: string;
   timezoneOffset?: number | null;
+  modality?: "online" | "in_person";
+  checkinCode?: string | null;
+  clinicAddress?: string | null;
+  clinicMapsUrl?: string | null;
 }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const client = (db as any).$client;
   return new Promise<number>((resolve, reject) => {
     client.execute(
-      `INSERT INTO appointments (userId, professionalId, specialtyId, appointmentDate, durationMinutes, videoCallType, videoCallLink, videoCallId, notes, status, timezoneOffset)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO appointments (userId, professionalId, specialtyId, appointmentDate, durationMinutes, videoCallType, videoCallLink, videoCallId, notes, status, timezoneOffset, modality, checkinCode, clinicAddress, clinicMapsUrl)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         data.userId,
         data.professionalId,
@@ -802,7 +1052,11 @@ export async function createAppointment(data: {
         data.videoCallId ?? null,
         data.notes ?? null,
         data.status ?? 'scheduled',
-        data.timezoneOffset ?? null
+        data.timezoneOffset ?? null,
+        data.modality ?? 'online',
+        data.checkinCode ?? null,
+        data.clinicAddress ?? null,
+        data.clinicMapsUrl ?? null,
       ],
       (err: any, results: any) => {
         if (err) reject(err);
@@ -838,6 +1092,7 @@ export async function getUserAppointments(userId: number) {
          a.id, a.userId, a.professionalId, a.specialtyId,
          a.appointmentDate, a.durationMinutes, a.status,
          a.videoCallType, a.videoCallLink, a.notes, a.cancellationReason, a.createdAt,
+         a.modality, a.checkinCode, a.checkedInAt, a.clinicAddress, a.clinicMapsUrl,
          pu.name  AS professionalName,
          p.specialtyId AS professionalSpecialty,
          p.tier AS professionalTier,
@@ -886,7 +1141,14 @@ export async function getProfessionalAppointments(professionalId: number) {
       [professionalId],
       (err: any, results: any) => {
         if (err) { console.error("[DB] getProfessionalAppointments error:", err?.message); resolve([]); }
-        else resolve(Array.isArray(results) ? results : []);
+        else resolve(
+          // El código de llegada nunca sale hacia el asesor: si lo viera,
+          // podría registrar una llegada que no ocurrió.
+          (Array.isArray(results) ? results : []).map(({ checkinCode, ...row }: any) => ({
+            ...row,
+            hasCheckinCode: Boolean(checkinCode),
+          }))
+        );
       }
     );
   });

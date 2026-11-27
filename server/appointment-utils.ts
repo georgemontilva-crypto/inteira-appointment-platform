@@ -12,6 +12,7 @@ export interface AvailabilitySlot {
   dayOfWeek: number;
   startTime: string;
   endTime: string;
+  modality?: string | null;
 }
 
 /**
@@ -25,6 +26,24 @@ export function canScheduleAppointment(appointmentDate: Date): boolean {
 /**
  * Get available time slots for a professional on a specific date
  */
+export type Modalidad = "online" | "in_person";
+
+/**
+ * Bloques de horario que sirven para una modalidad.
+ *
+ * Un bloque marcado "both" sirve para las dos; los bloques sin modalidad
+ * (anteriores a la atención presencial) cuentan como online.
+ */
+export function bloquesDeModalidad<T extends { modality?: string | null }>(
+  bloques: T[],
+  modalidad: Modalidad
+): T[] {
+  return bloques.filter((b) => {
+    const m = b.modality ?? "online";
+    return m === "both" || m === modalidad;
+  });
+}
+
 export function getAvailableSlots(
   date: Date,
   availabilitySchedule: AvailabilitySlot[],
@@ -51,8 +70,6 @@ export function getAvailableSlots(
     // e.g. for UTC-6 (clientOffsetMinutes=-360): 9 - (-6) = 15 UTC = 9am Mexico ✅
     const clientOffsetMinutes = offsetMs / (60 * 1000);
 
-    console.log("[Slots] dateObj:", date.toISOString(), "first slot would be:", startHour + ":" + startMinute, "offsetMs:", offsetMs, "clientOffsetMinutes:", clientOffsetMinutes);
-
     let currentTime = new Date(date);
     currentTime.setUTCHours(startHour - (clientOffsetMinutes / 60), startMinute, 0, 0);
 
@@ -66,8 +83,6 @@ export function getAvailableSlots(
       const isBooked = isSlotBooked(currentTime, slotEnd, bookedAppointments, durationMinutes + 10);
       const canSchedule = canScheduleAppointment(currentTime);
       const isAvailable = !isBooked && canSchedule;
-
-      console.log("[SlotCheck]", formatTime(currentTime), "passes canSchedule:", canSchedule, "isBooked:", isBooked);
 
       if (isAvailable) {
         slots.push({
@@ -179,4 +194,53 @@ export function isTimeWithinAvailability(
     });
 
   return fitsInAnyBlock && canScheduleAppointment(appointmentTime);
+}
+
+export type FiltroModalidad = "any" | Modalidad;
+
+/**
+ * Huecos libres de un asesor en un día, con la modalidad en que se puede
+ * atender cada uno.
+ *
+ * Se calculan por separado los huecos de los bloques online y los de los
+ * bloques presenciales (solo si el consultorio está aprobado) y se juntan por
+ * hora: un mismo horario puede ofrecerse en las dos modalidades.
+ */
+export function huecosPorModalidad(params: {
+  clientMidnight: Date;
+  availability: any[];
+  durationMinutes: number;
+  bookedTimes: any[];
+  offsetMs: number;
+  /** Puede atender online (según la modalidad que declaró) */
+  permiteOnline?: boolean;
+  /** Declaró presencial y tiene consultorio aprobado */
+  presencialAprobado: boolean;
+  filtro: FiltroModalidad;
+}): { startTime: string; endTime: string; date: Date; modalities: Modalidad[] }[] {
+  const { clientMidnight, availability, durationMinutes, bookedTimes, offsetMs } = params;
+  const porHora = new Map<string, { startTime: string; endTime: string; date: Date; modalities: Modalidad[] }>();
+
+  const agregar = (modalidad: Modalidad) => {
+    const huecos = getAvailableSlots(
+      clientMidnight,
+      bloquesDeModalidad(availability, modalidad),
+      durationMinutes,
+      bookedTimes,
+      offsetMs
+    );
+    for (const h of huecos) {
+      const previo = porHora.get(h.startTime);
+      if (previo) {
+        if (!previo.modalities.includes(modalidad)) previo.modalities.push(modalidad);
+      } else {
+        porHora.set(h.startTime, { ...h, modalities: [modalidad] });
+      }
+    }
+  };
+
+  if (params.filtro !== "in_person" && params.permiteOnline !== false) agregar("online");
+  if (params.filtro !== "online" && params.presencialAprobado) agregar("in_person");
+
+  return Array.from(porHora.values()).sort((a, b) => a.startTime.localeCompare(b.startTime));
 }

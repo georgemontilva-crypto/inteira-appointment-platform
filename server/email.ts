@@ -112,6 +112,48 @@ function formatDateTimeForEmail(date: Date, timezoneOffsetMinutes: number) {
 }
 
 // 1. Appointment confirmation
+/** Escapa texto que escribe una persona antes de meterlo en el HTML del correo. */
+function esc(v: unknown): string {
+  return String(v ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+/** Solo se enlazan URLs http(s); cualquier otra cosa se descarta. */
+function urlSegura(v: string | null | undefined): string | null {
+  if (!v) return null;
+  try {
+    const u = new URL(v);
+    return u.protocol === "https:" || u.protocol === "http:" ? u.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Datos de una cita presencial para los correos. */
+export type DatosPresencial = {
+  clinicAddress: string;
+  clinicMapsUrl?: string | null;
+  checkinCode?: string | null;
+};
+
+function bloquePresencialCliente(d: DatosPresencial): string {
+  const maps = urlSegura(d.clinicMapsUrl);
+  return `
+    <p><strong>Dirección del consultorio:</strong><br>${esc(d.clinicAddress)}</p>
+    ${maps ? `<a href="${esc(maps)}" class="btn">Cómo llegar</a>` : ""}
+    ${d.checkinCode ? `
+    <div class="info-box" style="text-align:center;">
+      <p style="margin:0 0 6px;">Tu código de llegada</p>
+      <p style="font-size:30px; letter-spacing:8px; font-weight:700; margin:0;">${esc(d.checkinCode)}</p>
+      <p style="font-size:13px; color:#6b7280; margin:8px 0 0;">Dáselo a tu especialista al llegar. Así se registra que la sesión se hizo.</p>
+    </div>` : ""}
+  `;
+}
+
 export async function sendAppointmentConfirmation(params: {
   userEmail: string;
   userName: string;
@@ -122,10 +164,28 @@ export async function sendAppointmentConfirmation(params: {
   videoCallType: string;
   videoCallLink: string;
   timezoneOffsetMinutes: number;
+  /** Si viene, la cita es presencial: se muestra dirección y código en vez de la sala. */
+  presencial?: DatosPresencial | null;
 }): Promise<boolean> {
   const { dateStr, timeStr } = formatDateTimeForEmail(params.appointmentDate, params.timezoneOffsetMinutes);
 
-  const content = `
+  const content = params.presencial
+    ? `
+    <p>Hola <strong>${esc(params.userName)}</strong>,</p>
+    <p>Tu cita <strong>presencial</strong> ha sido confirmada. Aquí están los detalles:</p>
+    <div class="info-box">
+      <p><strong>Especialista:</strong> ${esc(params.professionalName)}</p>
+      <p><strong>Especialidad:</strong> ${esc(params.specialty)}</p>
+      <p><strong>Fecha:</strong> ${dateStr}</p>
+      <p><strong>Hora:</strong> ${timeStr}</p>
+      <p><strong>Duración:</strong> ${params.durationMinutes} minutos</p>
+      <p><strong>Modalidad:</strong> Presencial, en consultorio</p>
+    </div>
+    ${bloquePresencialCliente(params.presencial)}
+    <div class="divider"></div>
+    <p style="font-size:13px; color:#6b7280;">Llega 10 minutos antes. Si necesitas cancelar, hazlo con al menos 4 horas de anticipación desde tu panel de usuario.</p>
+  `
+    : `
     <p>Hola <strong>${params.userName}</strong>,</p>
     <p>Tu cita ha sido confirmada exitosamente. Aquí están los detalles:</p>
     <div class="info-box">
@@ -393,19 +453,24 @@ export async function sendProfessionalAppointmentConfirmation(params: {
   durationMinutes: number;
   videoCallLink: string;
   timezoneOffsetMinutes: number;
+  /** Si viene, la cita es presencial en su consultorio. */
+  presencial?: DatosPresencial | null;
 }): Promise<boolean> {
   const { dateStr, timeStr } = formatDateTimeForEmail(params.appointmentDate, params.timezoneOffsetMinutes);
 
   const content = `
-    <p>Hola <strong>${params.professionalName}</strong>,</p>
-    <p>Tienes una <strong>nueva cita reservada</strong>. Un cliente ha agendado una sesión contigo.</p>
+    <p>Hola <strong>${esc(params.professionalName)}</strong>,</p>
+    <p>Tienes una <strong>nueva cita ${params.presencial ? "presencial " : ""}reservada</strong>. Un cliente ha agendado una sesión contigo.</p>
     <div class="info-box">
-      <p><strong>Cliente:</strong> ${params.patientName}</p>
+      <p><strong>Cliente:</strong> ${esc(params.patientName)}</p>
       <p><strong>Fecha:</strong> ${dateStr}</p>
       <p><strong>Hora:</strong> ${timeStr} hrs</p>
       <p><strong>Duración:</strong> ${params.durationMinutes} minutos</p>
+      ${params.presencial ? `<p><strong>Lugar:</strong> ${esc(params.presencial.clinicAddress)}</p>` : ""}
     </div>
-    <p>Recuerda estar disponible 5 minutos antes del inicio de la sesión.</p>
+    ${params.presencial
+      ? `<p>Al llegar, el cliente te dará un <strong>código de 4 dígitos</strong>. Regístralo en tu panel, en la cita: es lo que confirma que la sesión se hizo y libera tu pago.</p>`
+      : `<p>Recuerda estar disponible 5 minutos antes del inicio de la sesión.</p>`}
     <a href="https://inteira.app/panel-profesional" class="btn">Ver mi panel</a>
     <div class="divider"></div>
     <p style="font-size:13px; color:#6b7280;">Si necesitas cancelar, hazlo con al menos 12 horas de anticipación para evitar penalizaciones.</p>
