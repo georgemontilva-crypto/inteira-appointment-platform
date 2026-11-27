@@ -21,6 +21,7 @@ export function LocationSelect({
   onChange,
   required = true,
   disabled = false,
+  contexto = "residencia",
 }: {
   country: string;
   state: string;
@@ -28,7 +29,10 @@ export function LocationSelect({
   onChange: (field: "country" | "state" | "city", value: string) => void;
   required?: boolean;
   disabled?: boolean;
+  /** "consultorio" cambia los textos que hablan de "donde vives" */
+  contexto?: "residencia" | "consultorio";
 }) {
+  const esConsultorio = contexto === "consultorio";
   const { data: countries, isLoading: loadingCountries } =
     trpc.location.getCountries.useQuery(undefined, { staleTime: Infinity });
 
@@ -88,7 +92,7 @@ export function LocationSelect({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* País */}
         <div className="space-y-2">
-          <Label className="text-sm font-semibold">País donde vives {req}</Label>
+          <Label className="text-sm font-semibold">{esConsultorio ? "País" : "País donde vives"} {req}</Label>
           <SearchableSelect
             value={country}
             onChange={(v) => {
@@ -98,7 +102,7 @@ export function LocationSelect({
               setTouchedState(true);
             }}
             options={countryOptions}
-            placeholder="Selecciona tu país de residencia"
+            placeholder={esConsultorio ? "Selecciona el país" : "Selecciona tu país de residencia"}
             searchPlaceholder="Busca tu país…"
             emptyText="No encontramos ese país"
             disabled={disabled}
@@ -125,7 +129,7 @@ export function LocationSelect({
                 setTouchedState(true);
               }}
               options={stateOptions}
-              placeholder={country ? "Selecciona tu estado" : "Selecciona primero tu país"}
+              placeholder={country ? (esConsultorio ? "Selecciona el estado" : "Selecciona tu estado") : "Selecciona primero el país"}
               searchPlaceholder="Busca tu estado…"
               emptyText="No encontramos ese estado"
               disabled={disabled || !country}
@@ -143,14 +147,14 @@ export function LocationSelect({
             value={city}
             disabled={disabled || !state}
             onChange={(e) => onChange("city", e.target.value)}
-            placeholder={state ? "Escribe tu ciudad o municipio" : "Selecciona primero tu estado"}
+            placeholder={state ? "Escribe la ciudad o municipio" : "Selecciona primero el estado"}
           />
         ) : (
           <SearchableSelect
             value={city}
             onChange={(v) => onChange("city", v)}
             options={cityOptions}
-            placeholder={state ? "Selecciona tu ciudad" : "Selecciona primero tu estado"}
+            placeholder={state ? "Selecciona la ciudad" : "Selecciona primero el estado"}
             searchPlaceholder="Busca tu ciudad…"
             emptyText="No encontramos esa ciudad"
             disabled={disabled || !state}

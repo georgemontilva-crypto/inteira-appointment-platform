@@ -247,10 +247,8 @@ export function ClinicForm({
       </div>
 
       <div className="space-y-1.5">
-        <Label className="text-sm font-semibold">
-          Ubicación <span className="text-red-500">*</span>
-        </Label>
         <LocationSelect
+          contexto="consultorio"
           country={value.country}
           state={value.state}
           city={value.city}

@@ -1,3 +1,4 @@
+import { AdminClinics } from "@/components/AdminClinics";
 import { useState, useEffect, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -44,7 +45,7 @@ import {
   Trophy, Lightbulb, Puzzle, BrainCircuit, Syringe, Zap,
   Sunset, HeartCrack, Bandage, Droplets, ShieldPlus,
   Footprints, Bike, Wheat, Carrot, Grape, Citrus,
-  Feather, Flower, Flower2, TestTube, Copy, CreditCard as CardIcon,
+  Feather, Flower, Flower2, TestTube, Copy, CreditCard as CardIcon, MapPin,
 } from "lucide-react";
 import type React from "react";
 
@@ -373,7 +374,14 @@ export default function AdminDashboard() {
   // Colaboradora: admin con panel completo salvo planes/precios y gestión de roles.
   const isLimitedAdmin = (user as any)?.adminScope === "no_finance";
   const isFullAdmin = user?.role === "admin" && !isLimitedAdmin;
-  const [activeTab, setActiveTab] = useState<"overview" | "usuarios" | "profesionales" | "activos" | "citas" | "contenido" | "planes" | "codigos" | "retiros" | "herramientas">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "usuarios" | "profesionales" | "activos" | "consultorios" | "citas" | "contenido" | "planes" | "codigos" | "retiros" | "herramientas">(
+    // Las notificaciones de consultorio llevan a /admin#consultorios.
+    () => (typeof window !== "undefined" && window.location.hash === "#consultorios" ? "consultorios" : "overview")
+  );
+  const esAdmin = user?.role === "admin";
+  const { data: consultoriosPendientes } = trpc.admin.listClinics.useQuery({ status: "pending" }, { enabled: esAdmin });
+  const { data: presencialesSinCodigo } = trpc.admin.listInPersonReviews.useQuery(undefined, { enabled: esAdmin });
+  const pendientesConsultorio = (consultoriosPendientes?.length ?? 0) + (presencialesSinCodigo?.length ?? 0);
   const [bannerForm, setBannerForm] = useState({ imageUrl: "", title: "", linkUrl: "" });
   const [bannerUploading, setBannerUploading] = useState(false);
   const [rejectReason, setRejectReason] = useState<Record<number, string>>({});
@@ -819,6 +827,7 @@ export default function AdminDashboard() {
               { key: "usuarios",      label: "Usuarios",              icon: <User className="w-4 h-4" /> },
               { key: "profesionales", label: "Solicitudes",           icon: <Users className="w-4 h-4" /> },
               { key: "activos",       label: "Profesionales activos", icon: <UserCheck className="w-4 h-4" /> },
+              { key: "consultorios",  label: "Consultorios",          icon: <MapPin className="w-4 h-4" /> },
               { key: "citas",         label: "Citas",                 icon: <Calendar className="w-4 h-4" /> },
               { key: "contenido",     label: "Contenido",             icon: <Image className="w-4 h-4" /> },
               ...(isFullAdmin ? [{ key: "planes" as const, label: "Planes", icon: <Settings className="w-4 h-4" /> }] : []),
@@ -840,6 +849,11 @@ export default function AdminDashboard() {
                 {tab.key === "profesionales" && (pendingProfessionals?.length ?? 0) > 0 && (
                   <Badge className="bg-yellow-500 text-white border-0 text-[10px] h-4 px-1 ml-0.5">
                     {pendingProfessionals!.length}
+                  </Badge>
+                )}
+                {tab.key === "consultorios" && pendientesConsultorio > 0 && (
+                  <Badge className="bg-yellow-500 text-white border-0 text-[10px] h-4 px-1 ml-0.5">
+                    {pendientesConsultorio}
                   </Badge>
                 )}
                 {tab.key === "retiros" && ((allWithdrawals ?? []).filter((w: any) => w.status === "pending").length > 0) && (
@@ -1972,6 +1986,8 @@ export default function AdminDashboard() {
         )}
 
         {/* ══ TAB: CITAS ════════════════════════════════════════════════════ */}
+        {activeTab === "consultorios" && <AdminClinics />}
+
         {activeTab === "citas" && (
           <div className="space-y-4">
             <h2 className="text-xl font-bold" style={{ fontFamily: "Poppins, sans-serif" }}>Citas</h2>

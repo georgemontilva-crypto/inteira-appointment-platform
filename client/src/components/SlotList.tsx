@@ -79,7 +79,9 @@ export function SlotList({
                   {online && (
                     <span className="flex items-center gap-0.5 flex-shrink-0" title="Online">
                       <Video className="w-3 h-3" />
-                      Online
+                      {/* Con las dos modalidades basta el ícono: el espacio es
+                          para la ciudad del consultorio. */}
+                      {!presencial && "Online"}
                     </span>
                   )}
                   {presencial && (
