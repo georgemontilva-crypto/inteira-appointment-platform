@@ -114,7 +114,13 @@ export async function getAllBatches(userId: number) {
 export async function addCreditBatch(
   userId: number,
   source: CreditSource,
-  customAmount?: number
+  customAmount?: number,
+  /**
+   * Sesión de Stripe que paga este lote. Es la llave de idempotencia de una
+   * compra: si ya existe un lote con esa sesión, no se crea otro y se devuelve
+   * el existente.
+   */
+  stripeSessionId?: string | null
 ): Promise<number> {
   const amount = customAmount ?? CREDIT_COSTS[source];
   const expires = expiresAt60();
@@ -124,17 +130,44 @@ export async function addCreditBatch(
   if (!db) throw new Error("Database unavailable");
   const client = (db as any).$client;
 
+  if (stripeSessionId) {
+    const previo = await new Promise<any[]>((resolve, reject) => {
+      client.execute(
+        "SELECT id FROM creditBatches WHERE stripeSessionId = ? LIMIT 1",
+        [stripeSessionId],
+        (err: any, r: any) => (err ? reject(err) : resolve(Array.isArray(r) ? r : []))
+      );
+    });
+    if (previo[0]) return Number(previo[0].id);
+  }
+
   const batchId = await new Promise<number>((resolve, reject) => {
     client.execute(
-      `INSERT INTO creditBatches (userId, amount, remaining, reservedAmount, source, expiresAt, expiredEarly)
-       VALUES (?, ?, ?, 0, ?, ?, 0)`,
-      [userId, amount, amount, source, expiresStr],
+      `INSERT INTO creditBatches (userId, amount, remaining, reservedAmount, source, expiresAt, expiredEarly, stripeSessionId)
+       VALUES (?, ?, ?, 0, ?, ?, 0, ?)`,
+      [userId, amount, amount, source, expiresStr, stripeSessionId ?? null],
       (err: any, result: any) => {
         if (err) reject(err);
         else resolve(Number(result?.insertId ?? 0));
       }
     );
+  }).catch(async (err: any) => {
+    // Dos procesos acreditando la misma sesión a la vez: el índice único
+    // deja pasar solo a uno; el otro devuelve el lote ya creado.
+    if (stripeSessionId && /Duplicate entry/i.test(err?.message ?? "")) {
+      const existente = await new Promise<any[]>((resolve) => {
+        client.execute(
+          "SELECT id FROM creditBatches WHERE stripeSessionId = ? LIMIT 1",
+          [stripeSessionId],
+          (_e: any, r: any) => resolve(Array.isArray(r) ? r : [])
+        );
+      });
+      if (existente[0]) return -Number(existente[0].id);
+    }
+    throw err;
   });
+  // Un id negativo significa "ya existía": no se registra otra compra.
+  if (batchId < 0) return -batchId;
 
   await new Promise<void>((resolve, reject) => {
     client.execute(

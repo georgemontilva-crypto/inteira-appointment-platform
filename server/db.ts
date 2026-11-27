@@ -825,6 +825,35 @@ export async function createProfessionalAvailability(
   });
 }
 
+/**
+ * Libera la fila cancelada que ocupa (asesor, fecha) en el índice único, para
+ * que el horario se pueda volver a apartar. Se marca con su propio id en
+ * slotLiberado: así cada cancelación queda con un valor distinto y la cita
+ * activa (slotLiberado = 0) sigue siendo única.
+ */
+export async function liberarHorarioCancelado(professionalId: number, appointmentDate: string) {
+  await ejecutar(
+    `UPDATE appointments SET slotLiberado = id
+      WHERE professionalId = ? AND appointmentDate = ? AND status = 'canceled' AND slotLiberado = 0`,
+    [professionalId, appointmentDate]
+  ).catch((e) => console.error("[liberarHorarioCancelado]", e?.message));
+}
+
+/**
+ * Deshace una cita que no se pudo terminar de apartar: devuelve lo que se
+ * haya alcanzado a retener y borra la fila (nunca llegó a existir para nadie).
+ */
+export async function deshacerCitaFallida(userId: number, appointmentId: number) {
+  try {
+    const { refundCredits } = await import("./credits");
+    await refundCredits(userId, appointmentId, "no se pudo apartar la cita").catch(() => 0);
+    await ejecutar("DELETE FROM creditTransactions WHERE appointmentId = ? AND reason IN ('reserved', 'refunded', 'refund')", [appointmentId]).catch(() => {});
+    await ejecutar("DELETE FROM appointments WHERE id = ? AND userId = ?", [appointmentId, userId]);
+  } catch (e: any) {
+    console.error(`[deshacerCitaFallida] cita ${appointmentId}:`, e?.message);
+  }
+}
+
 // ── Consultorios (atención presencial) ─────────────────────────────────────
 
 export type ClinicRow = {

@@ -605,6 +605,11 @@ export const appointmentRouter = router({
         ? [consultorio.address, consultorio.city, consultorio.state].filter(Boolean).join(", ")
         : null;
 
+      // Un horario que alguien canceló vuelve a estar libre, pero su fila
+      // sigue ocupando el índice único (asesor, fecha). Se "libera" marcándola
+      // con su propio id en slotLiberado, que forma parte de ese índice.
+      await db.liberarHorarioCancelado(input.professionalId, appointmentDateSql);
+
       // Create appointment first to get the real ID for Daily.co room name
       const newAppointmentId = await db.createAppointment({
         userId: ctx.user.id,
@@ -624,8 +629,15 @@ export const appointmentRouter = router({
         clinicMapsUrl: consultorio?.mapsUrl ?? null,
       });
 
+      // Desde aquí, si algo falla (Daily caído, saldo que cambió entre la
+      // comprobación y la reserva), se deshace la cita: antes quedaba una fila
+      // "scheduled" sin créditos retenidos que bloqueaba el horario, impedía
+      // reintentar y que el cron acababa cobrando y pagando al asesor.
+      let datosPresencial: { clinicAddress: string; clinicMapsUrl: string | null; checkinCode: string | null } | null = null;
+      let videoCall: Awaited<ReturnType<typeof generateVideoCallLink>> | null = null;
+      try {
       // Una cita presencial no lleva sala de video.
-      const videoCall = esPresencial
+      videoCall = esPresencial
         ? null
         : await generateVideoCallLink(
             newAppointmentId,
@@ -659,7 +671,7 @@ export const appointmentRouter = router({
         });
       }
 
-      const datosPresencial =
+      datosPresencial =
         esPresencial && direccionCita
           ? { clinicAddress: direccionCita, clinicMapsUrl: consultorio?.mapsUrl ?? null, checkinCode }
           : null;
@@ -671,6 +683,15 @@ export const appointmentRouter = router({
         newAppointmentId,
         `${sessionConfig.label} con ${professionalUser?.name ?? "especialista"}`
       );
+      } catch (err: any) {
+        console.error(`[scheduleAppointment] se deshace la cita ${newAppointmentId}:`, err?.message);
+        await db.deshacerCitaFallida(ctx.user.id, newAppointmentId);
+        if (err instanceof TRPCError) throw err;
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "No se pudo apartar la cita. No se te cobró nada; intenta de nuevo en un momento.",
+        });
+      }
 
       // Send confirmation email to user
       if (userRecord?.email) {

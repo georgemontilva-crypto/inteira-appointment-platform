@@ -43,22 +43,13 @@ export async function processPayment(stripeSessionId: string, data?: {
       if (data) {
         console.warn("[PaymentProcessor] Item no encontrado en DB, procesando con data directa:", stripeSessionId);
 
-        // Idempotencia: verificar que no se haya acreditado en las últimas 24h
-        const existingBatch = await new Promise<any[]>((resolve) => {
-          client.execute(
-            `SELECT id FROM creditBatches WHERE userId = ? AND source = ? AND createdAt >= DATE_SUB(NOW(), INTERVAL 24 HOUR)`,
-            [data.userId, data.productType],
-            (err: any, results: any) => resolve(Array.isArray(results) ? results : [])
-          );
-        });
-
-        if (existingBatch.length > 0) {
-          console.log(`[PaymentProcessor] Fallback skipped — creditBatch reciente encontrado para userId=${data.userId} source=${data.productType}`);
-        } else {
-          const { addCreditBatch } = await import("./credits");
-          await addCreditBatch(data.userId, data.productType as CreditSource);
-          console.log(`[PaymentProcessor] ✅ ${data.credits} créditos acreditados directamente — userId=${data.userId}`);
-        }
+        // Idempotencia por la sesión de Stripe: addCreditBatch no crea un
+        // segundo lote para la misma sesión. (Antes se miraba si el usuario
+        // había comprado ese tipo de paquete en las últimas 24 h, y una
+        // segunda compra legítima del mismo paquete se cobraba sin acreditar.)
+        const { addCreditBatch } = await import("./credits");
+        await addCreditBatch(data.userId, data.productType as CreditSource, undefined, stripeSessionId);
+        console.log(`[PaymentProcessor] ✅ ${data.credits} créditos acreditados directamente — userId=${data.userId}`);
 
         // best-effort: insertar como completado para idempotencia futura
         try {
@@ -92,11 +83,12 @@ export async function processPayment(stripeSessionId: string, data?: {
       );
     });
 
-    // Verificar idempotencia — ¿ya tiene creditBatch reciente?
+    // Idempotencia: ¿esta misma sesión de Stripe ya tiene lote? (No "un lote
+    // del mismo tipo en 24 h": eso dejaba sin créditos la segunda compra.)
     const batchArr = await new Promise<any[]>((resolve, reject) => {
       client.execute(
-        "SELECT id FROM creditBatches WHERE userId=? AND source=? AND createdAt >= DATE_SUB(NOW(), INTERVAL 24 HOUR) LIMIT 1",
-        [item.userId, item.productType],
+        "SELECT id FROM creditBatches WHERE stripeSessionId = ? LIMIT 1",
+        [stripeSessionId],
         (err: any, results: any) => {
           if (err) return reject(err);
           resolve(Array.isArray(results) ? results : []);
@@ -118,7 +110,7 @@ export async function processPayment(stripeSessionId: string, data?: {
 
     // Acreditar créditos
     const { addCreditBatch, CREDIT_COSTS } = await import("./credits");
-    await addCreditBatch(item.userId, item.productType as CreditSource);
+    await addCreditBatch(item.userId, item.productType as CreditSource, undefined, stripeSessionId);
 
     // Marcar como completado
     await new Promise<void>((resolve, reject) => {
