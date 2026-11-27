@@ -36,6 +36,7 @@ const Login = lazy(() => import("./pages/Login"));
 const Registro = lazy(() => import("./pages/Registro"));
 const RegistroTipo = lazy(() => import("./pages/RegistroTipo"));
 const SpecialtiesPage = lazy(() => import("./pages/SpecialtiesPage"));
+const SearchSessions = lazy(() => import("./pages/SearchSessions"));
 const AppointmentsPage = lazy(() => import("./pages/AppointmentsPage"));
 const ProfessionalsLanding = lazy(() => import("./pages/ProfessionalsLanding"));
 
@@ -95,6 +96,7 @@ function Router() {
       {/* Landing profesionales */}
       <Route path="/profesionales" component={ProfessionalsLanding} />
       <Route path="/especialidades" component={EspecialidadesRoute} />
+      <Route path="/sesiones" component={SearchSessions} />
       <Route path="/especialidades/:slug" component={ProfessionalsList} />
       <Route path="/profesional/:slug" component={ProfessionalProfile} />
 

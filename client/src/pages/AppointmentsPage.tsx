@@ -34,6 +34,8 @@ import {
   ArrowRight,
   Lock,
   CreditCard,
+  MapPin,
+  Navigation,
 } from "lucide-react";
 import DashboardLayout from "../components/DashboardLayout";
 import { VideoCallPanel } from "../components/VideoCallPanel";
@@ -266,6 +268,12 @@ export default function AppointmentsPage() {
                     {format(date, "HH:mm")}
                     {apt.durationMinutes ? ` · ${apt.durationMinutes} min` : ""}
                   </span>
+                  {(apt as any).modality === "in_person" && (
+                    <span className="flex items-center gap-1 text-xs font-medium text-[#5B6A57]">
+                      <MapPin className="w-3 h-3" />
+                      Presencial
+                    </span>
+                  )}
                 </div>
               </div>
               {/* Status badge */}
@@ -275,9 +283,48 @@ export default function AppointmentsPage() {
               </span>
             </div>
 
+            {/* Presencial: a dónde ir y el código que se da al llegar */}
+            {(apt as any).modality === "in_person" && (
+              <div className="mt-3 rounded-xl bg-[#5B6A57]/5 border border-[#5B6A57]/15 p-3 space-y-2.5">
+                {(apt as any).clinicAddress && (
+                  <p className="flex items-start gap-1.5 text-xs text-gray-600 leading-snug">
+                    <MapPin className="w-3.5 h-3.5 text-[#5B6A57] flex-shrink-0 mt-px" />
+                    {(apt as any).clinicAddress}
+                  </p>
+                )}
+                {(apt as any).checkinCode && !(apt as any).checkedInAt && (
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-[11px] text-gray-500">Código de llegada</p>
+                      <p className="text-xl font-bold tracking-[0.35em] tabular-nums text-gray-900">
+                        {(apt as any).checkinCode}
+                      </p>
+                    </div>
+                    <p className="text-[11px] text-gray-500 text-right leading-snug max-w-[150px]">
+                      Dáselo a tu especialista al llegar
+                    </p>
+                  </div>
+                )}
+                {(apt as any).checkedInAt && (
+                  <p className="text-xs font-medium text-green-700">Llegada registrada ✓</p>
+                )}
+                {(apt as any).clinicMapsUrl && (
+                  <a
+                    href={(apt as any).clinicMapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-1.5 h-8 rounded-lg bg-white border border-[#5B6A57]/25 text-xs font-semibold text-[#5B6A57] hover:bg-[#5B6A57]/5"
+                  >
+                    <Navigation className="w-3.5 h-3.5" />
+                    Cómo llegar
+                  </a>
+                )}
+              </div>
+            )}
+
             {/* Actions */}
             <div className="flex items-center gap-2 mt-3">
-              {(apt as any).videoCallLink && (
+              {(apt as any).videoCallLink && (apt as any).modality !== "in_person" && (
                 <button
                   disabled={!canJoin}
                   onClick={async () => {

@@ -12,7 +12,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { toast } from "sonner";
 import {
   Clock, Video, CheckCircle2, Calendar as CalendarIcon,
-  AlertCircle, Star, Wallet, Sparkles,
+  AlertCircle, Star, Wallet, Sparkles, MapPin,
 } from "lucide-react";
 import { format, addMinutes, isBefore, startOfDay } from "date-fns";
 import { es } from "date-fns/locale";
@@ -32,6 +32,8 @@ export default function BookAppointment() {
   const [policyAccepted, setPolicyAccepted] = useState(false);
   const [step, setStep] = useState<"date" | "time" | "confirm" | "done">("date");
   const [confirmedVideoLink, setConfirmedVideoLink] = useState<string | null>(null);
+  const [modalidad, setModalidad] = useState<"online" | "in_person">("online");
+  const [codigoLlegada, setCodigoLlegada] = useState<string | null>(null);
 
   const SESSION_INFO = {
     basic:   { label: "Sesión Básica",   duration: "60 min", credits: PRICING.SESSION_BASIC_MXN,   memberCredits: PRICING.SESSION_BASIC_MEMBER_MXN  },
@@ -50,6 +52,20 @@ export default function BookAppointment() {
     { id: professionalId },
     { enabled: professionalId > 0 }
   );
+
+  // Modalidades que ofrece de verdad este asesor (presencial solo con
+  // consultorio aprobado). Si ofrece una sola, se elige sola.
+  const modalidades = useMemo(() => {
+    const p: any = professional;
+    if (!p) return ["online"] as ("online" | "in_person")[];
+    const m: ("online" | "in_person")[] = [];
+    if (p.offersOnline !== false) m.push("online");
+    if (p.offersInPerson) m.push("in_person");
+    return m.length ? m : (["online"] as ("online" | "in_person")[]);
+  }, [professional]);
+  useEffect(() => {
+    if (!modalidades.includes(modalidad)) setModalidad(modalidades[0]);
+  }, [modalidades]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Filter session types based on professional tier
   const availableSessionTypes = useMemo(() => {
@@ -72,6 +88,7 @@ export default function BookAppointment() {
       date: selectedDate ? format(selectedDate, "yyyy-MM-dd") : "",
       sessionType,
       timezoneOffset: new Date().getTimezoneOffset() * -1,
+      modality: modalidad,
     },
     { enabled: !!selectedDate && professionalId > 0 }
   );
@@ -79,6 +96,7 @@ export default function BookAppointment() {
   const bookMutation = trpc.appointment.scheduleAppointment.useMutation({
     onSuccess: (data) => {
       setConfirmedVideoLink((data as any)?.videoCallLink ?? null);
+      setCodigoLlegada((data as any)?.checkinCode ?? null);
       setStep("done");
       toast.success("¡Cita agendada exitosamente!");
     },
@@ -126,6 +144,7 @@ export default function BookAppointment() {
       sessionType,
       notes: notes || undefined,
       timezoneOffset: new Date().getTimezoneOffset() * -1,
+      modality: modalidad,
     });
   };
 
@@ -173,7 +192,9 @@ export default function BookAppointment() {
                 ¡Cita confirmada!
               </h2>
               <p className="text-muted-foreground">
-                Tu cita ha sido agendada exitosamente. Recibirás un email de confirmación con el enlace de videollamada.
+                {modalidad === "in_person"
+                  ? "Tu cita presencial quedó agendada. Te enviamos la dirección y tu código por correo."
+                  : "Tu cita ha sido agendada exitosamente. Recibirás un email de confirmación con el enlace de videollamada."}
               </p>
             </div>
             {selectedDate && selectedSlot && (
@@ -186,10 +207,24 @@ export default function BookAppointment() {
                   <Clock className="w-4 h-4 text-primary" />
                   <span>{to12Hour(selectedSlot)} hrs</span>
                 </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <Video className="w-4 h-4 text-primary" />
-                  <span>Videollamada integrada</span>
-                </div>
+                {modalidad === "in_person" ? (
+                  <div className="flex items-start gap-2 text-sm">
+                    <MapPin className="w-4 h-4 text-primary mt-0.5" />
+                    <span>{(professional as any)?.clinic?.address ?? "En consultorio"}</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Video className="w-4 h-4 text-primary" />
+                    <span>Videollamada integrada</span>
+                  </div>
+                )}
+              </div>
+            )}
+            {modalidad === "in_person" && codigoLlegada && (
+              <div className="rounded-xl border border-primary/25 p-4">
+                <p className="text-sm text-muted-foreground">Tu código de llegada</p>
+                <p className="text-3xl font-bold tracking-[0.4em] tabular-nums mt-1">{codigoLlegada}</p>
+                <p className="text-xs text-muted-foreground mt-2">Dáselo a tu especialista al llegar al consultorio.</p>
               </div>
             )}
             <div className="flex gap-3">
@@ -247,6 +282,51 @@ export default function BookAppointment() {
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Main flow */}
           <div className="lg:col-span-2 order-2 lg:order-1">
+            {/* Modalidad, solo si el asesor ofrece las dos */}
+            {modalidades.length > 1 && (
+              <Card className="border-border mb-6">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <MapPin className="w-5 h-5 text-primary" />
+                    ¿Cómo quieres tu sesión?
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-3">
+                    {([
+                      { v: "online", label: "Online", detalle: "Videollamada desde la app", Icon: Video },
+                      { v: "in_person", label: "Presencial", detalle: (professional as any)?.clinic?.city ?? "En consultorio", Icon: MapPin },
+                    ] as const).map(({ v, label, detalle, Icon }) => (
+                      <button
+                        key={v}
+                        type="button"
+                        aria-pressed={modalidad === v}
+                        onClick={() => {
+                          setModalidad(v);
+                          setSelectedSlot(null);
+                        }}
+                        className={`flex items-center gap-3 rounded-xl border-2 p-4 text-left transition-colors ${
+                          modalidad === v ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"
+                        }`}
+                      >
+                        <Icon className={`w-5 h-5 ${modalidad === v ? "text-primary" : "text-muted-foreground"}`} />
+                        <span>
+                          <span className="block font-semibold text-sm">{label}</span>
+                          <span className="block text-xs text-muted-foreground">{detalle}</span>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                  {modalidad === "in_person" && (professional as any)?.clinic?.address && (
+                    <p className="text-xs text-muted-foreground mt-3 leading-snug">
+                      <MapPin className="w-3 h-3 inline mr-1 -mt-0.5" />
+                      {(professional as any).clinic.address}
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
             {/* Session type selector */}
             <Card className="border-border mb-6">
               <CardHeader>

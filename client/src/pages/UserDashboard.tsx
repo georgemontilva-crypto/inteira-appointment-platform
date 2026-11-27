@@ -40,6 +40,7 @@ import {
   CheckCircle2,
   AlertCircle,
   User,
+  MapPin,
 } from "lucide-react";
 import { format, isToday, isTomorrow, formatDistanceToNow, endOfWeek } from "date-fns";
 import { es } from "date-fns/locale";
@@ -350,14 +351,32 @@ export default function UserDashboard() {
           {activeSessionApt && (
             <div className="flex items-center justify-between gap-3 bg-[#5B6A57] rounded-2xl px-4 py-3.5">
               <div className="flex items-center gap-3 min-w-0">
-                <Video className="w-5 h-5 text-white flex-shrink-0" />
+                {(activeSessionApt as any).modality === "in_person" ? (
+                  <MapPin className="w-5 h-5 text-white flex-shrink-0" />
+                ) : (
+                  <Video className="w-5 h-5 text-white flex-shrink-0" />
+                )}
                 <p className="text-white text-sm font-medium truncate">
                   {activeSessionApt.minutesUntil === 0
                     ? `Tu sesión con ${(activeSessionApt as any).professionalName ?? "tu especialista"} está en curso`
                     : `Tu sesión con ${(activeSessionApt as any).professionalName ?? "tu especialista"} comienza en ${activeSessionApt.minutesUntil} min`}
                 </p>
               </div>
-              {activeSessionApt.videoCallLink ? (
+              {/* Presencial: el código a la vista, que es lo que necesita al llegar */}
+              {(activeSessionApt as any).modality === "in_person" ? (
+                (activeSessionApt as any).checkinCode && !(activeSessionApt as any).checkedInAt ? (
+                  <span className="flex-shrink-0 bg-white text-[#5B6A57] rounded-xl px-3 py-1.5 text-center">
+                    <span className="block text-[9px] font-semibold uppercase tracking-wide">Código</span>
+                    <span className="block text-base font-bold tracking-[0.25em] tabular-nums leading-tight">
+                      {(activeSessionApt as any).checkinCode}
+                    </span>
+                  </span>
+                ) : (
+                  <span className="inline-block bg-white/30 text-white text-xs font-semibold px-3.5 py-2 rounded-xl whitespace-nowrap">
+                    En consultorio
+                  </span>
+                )
+              ) : activeSessionApt.videoCallLink ? (
                 <a
                   href={activeSessionApt.videoCallLink}
                   target="_blank"

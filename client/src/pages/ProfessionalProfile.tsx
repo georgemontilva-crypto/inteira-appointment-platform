@@ -1,3 +1,4 @@
+import { ClinicGallery } from "@/components/ClinicGallery";
 import { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { formatLocation, getFlag } from "@shared/locations";
@@ -11,7 +12,7 @@ import { Link, useRoute, useLocation } from "wouter";
 import DashboardLayout from "../components/DashboardLayout";
 import {
   Star, Award, Clock, CheckCircle2, Calendar,
-  Shield, GraduationCap, MessageSquare, User, FileText, Info, ArrowLeft,
+  Shield, GraduationCap, MessageSquare, User, FileText, Info, ArrowLeft, MapPin, Video,
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -182,6 +183,16 @@ export default function ProfessionalProfile() {
                     Verificado
                   </Badge>
                 )}
+                {(professional as any).modalityLabel && (
+                  <Badge variant="outline" className="text-xs border-border">
+                    {(professional as any).offersInPerson ? (
+                      <MapPin className="w-3 h-3 mr-1" />
+                    ) : (
+                      <Video className="w-3 h-3 mr-1" />
+                    )}
+                    {(professional as any).modalityLabel}
+                  </Badge>
+                )}
               </div>
               <div className="flex flex-wrap items-center gap-4 text-muted-foreground text-sm">
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
@@ -240,6 +251,14 @@ export default function ProfessionalProfile() {
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Main content */}
           <div className="lg:col-span-2 space-y-6">
+            {/* Consultorio: solo si atiende presencial con consultorio aprobado */}
+            {(professional as any).clinic && (
+              <ClinicGallery
+                clinic={(professional as any).clinic}
+                modalityLabel={(professional as any).modalityLabel ?? "Presencial"}
+              />
+            )}
+
             {/* Bio */}
             {professional.bio && (
               <Card className="border-border">

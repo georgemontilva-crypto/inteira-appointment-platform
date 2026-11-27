@@ -5,93 +5,60 @@ import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
-import { PRICING } from "@/lib/pricing";
-import { formatLocation } from "@shared/locations";
 import { DayStrip } from "@/components/DayStrip";
 import { BookingSheet, type AgendaSlot } from "@/components/BookingSheet";
-import { CalendarX2, Loader2, Star } from "lucide-react";
-
-type SessionType = "basic" | "premium";
+import { SlotList } from "@/components/SlotList";
+import {
+  BotonFiltrar,
+  FILTROS_INICIALES,
+  FiltrosActivos,
+  FiltrosSheet,
+  enFranja,
+  type Filtros,
+} from "@/components/SessionFilters";
+import { useCostoSesion } from "@/hooks/useCostoSesion";
+import { CalendarX2 } from "lucide-react";
 
 /**
  * Agenda del día para una especialidad: en vez de elegir asesor y después mirar
  * su calendario, se ven de una vez todos los huecos libres de ese día.
  *
  * Las filas se agrupan por hora porque la pregunta que trae a esta pantalla es
- * "¿a qué hora puedo?", no "¿quién hay?".
+ * "¿a qué hora puedo?", no "¿quién hay?". El filtro deja elegir modalidad
+ * (online o presencial) y franja del día.
  */
 export function SpecialtyAgenda({ slug }: { slug: string }) {
   const { isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
+  const { tipoDe, costoDe, saldo } = useCostoSesion();
 
   const [day, setDay] = useState(() => new Date());
   const [elegido, setElegido] = useState<AgendaSlot | null>(null);
+  const [filtros, setFiltros] = useState<Filtros>({ ...FILTROS_INICIALES });
+  const [filtrosAbiertos, setFiltrosAbiertos] = useState(false);
 
   const fechaISO = format(day, "yyyy-MM-dd");
+  const tz = -new Date().getTimezoneOffset();
 
   const { data, isLoading, refetch } = trpc.appointment.getSpecialtyAgenda.useQuery(
-    {
-      specialtySlug: slug,
-      date: fechaISO,
-      timezoneOffset: -new Date().getTimezoneOffset(),
-    },
+    { specialtySlug: slug, date: fechaISO, timezoneOffset: tz, modality: filtros.modalidad },
     { enabled: slug.length > 0 }
   );
 
-  const { data: wallet } = trpc.user.getWallet.useQuery(undefined, {
-    enabled: isAuthenticated,
-  });
-  // Mismo criterio que el servidor en userHasActiveMembership: un lote de plan
-  // vigente y con saldo. El wallet no expone un indicador de plan listo.
-  const esMiembro = Boolean(
-    (wallet as any)?.batches?.some(
-      (b: any) =>
-        (b.source === "plan_basic" || b.source === "plan_pro") &&
-        Number(b.remaining) > 0 &&
-        !b.expiredEarly &&
-        (!b.expiresAt || new Date(b.expiresAt) > new Date())
-    )
+  // La franja se aplica aquí: el servidor ya devuelve el día completo.
+  const slots = useMemo(
+    () => ((data?.slots ?? []) as AgendaSlot[]).filter((s) => enFranja(s.time, filtros.franja)),
+    [data, filtros.franja]
   );
-
-  // El precio lo fija la clasificación del asesor, no una elección de quien
-  // agenda: "pro" se cobra como sesión premium y "basic" como básica.
-  const tipoDe = (tier: string): SessionType => (tier === "pro" ? "premium" : "basic");
-  const costoDe = useMemo(
-    () => (tier: string) =>
-      tipoDe(tier) === "premium"
-        ? esMiembro
-          ? PRICING.SESSION_PREMIUM_MEMBER_MXN
-          : PRICING.SESSION_PREMIUM_MXN
-        : esMiembro
-          ? PRICING.SESSION_BASIC_MEMBER_MXN
-          : PRICING.SESSION_BASIC_MXN,
-    [esMiembro]
-  );
-
-  // Agrupar por hora conservando el orden que ya trae el servidor.
-  const porHora = useMemo(() => {
-    const grupos: { hora: string; slots: AgendaSlot[] }[] = [];
-    for (const slot of (data?.slots ?? []) as AgendaSlot[]) {
-      const ultimo = grupos[grupos.length - 1];
-      if (ultimo && ultimo.hora === slot.time) ultimo.slots.push(slot);
-      else grupos.push({ hora: slot.time, slots: [slot] });
-    }
-    return grupos;
-  }, [data]);
-
-  const totalSlots = data?.slots.length ?? 0;
+  const totalSlots = slots.length;
+  const hayFiltros = filtros.modalidad !== "any" || filtros.franja !== "todo";
 
   // Un día sin horarios no debe ser un callejón sin salida: se buscan los
-  // próximos días que sí tienen y se ofrecen para saltar directo.
+  // próximos días que sí tienen (con la misma modalidad) y se ofrecen.
   const sinHorarios = !isLoading && totalSlots === 0;
   const { data: proximos } = trpc.appointment.getSpecialtyNextDays.useQuery(
-    {
-      specialtySlug: slug,
-      from: fechaISO,
-      days: 14,
-      timezoneOffset: -new Date().getTimezoneOffset(),
-    },
-    { enabled: slug.length > 0 && sinHorarios }
+    { specialtySlug: slug, from: fechaISO, days: 14, timezoneOffset: tz, modality: filtros.modalidad },
+    { enabled: slug.length > 0 && sinHorarios && filtros.franja === "todo" }
   );
   const diasConHueco = (proximos?.days ?? []).slice(0, 4);
 
@@ -110,14 +77,18 @@ export function SpecialtyAgenda({ slug }: { slug: string }) {
       {/* Día */}
       <DayStrip value={day} onChange={setDay} />
 
-      {/* Resumen del día */}
-      <p className="text-sm text-muted-foreground">
-        {isLoading
-          ? "Buscando horarios…"
-          : totalSlots === 0
-            ? "Sin horarios libres"
-            : `${totalSlots} ${totalSlots === 1 ? "horario libre" : "horarios libres"} · ${format(day, "EEEE d 'de' MMMM", { locale: es })}`}
-      </p>
+      {/* Resumen del día + filtro */}
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm text-muted-foreground min-w-0">
+          {isLoading
+            ? "Buscando horarios…"
+            : totalSlots === 0
+              ? "Sin horarios libres"
+              : `${totalSlots} ${totalSlots === 1 ? "horario" : "horarios"} · ${format(day, "EEE d MMM", { locale: es })}`}
+        </p>
+        <BotonFiltrar filtros={filtros} onClick={() => setFiltrosAbiertos(true)} />
+      </div>
+      <FiltrosActivos filtros={filtros} onChange={setFiltros} />
 
       {/* Agenda */}
       {isLoading ? (
@@ -129,12 +100,19 @@ export function SpecialtyAgenda({ slug }: { slug: string }) {
       ) : totalSlots === 0 ? (
         <div className="rounded-2xl border border-dashed border-border py-10 px-5 text-center">
           <CalendarX2 className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
-          <p className="font-medium">No hay horarios para este día</p>
-          {diasConHueco.length > 0 ? (
+          <p className="font-medium">
+            {hayFiltros ? "No hay horarios con esos filtros" : "No hay horarios para este día"}
+          </p>
+          {filtros.franja !== "todo" ? (
+            <button
+              onClick={() => setFiltros({ ...filtros, franja: "todo" })}
+              className="mt-3 text-sm text-primary font-medium hover:underline"
+            >
+              Ver todo el día
+            </button>
+          ) : diasConHueco.length > 0 ? (
             <>
-              <p className="text-sm text-muted-foreground mt-1 mb-4">
-                Los próximos días con horarios libres:
-              </p>
+              <p className="text-sm text-muted-foreground mt-1 mb-4">Los próximos días con horarios libres:</p>
               <div className="flex flex-wrap justify-center gap-2">
                 {diasConHueco.map((d) => {
                   const fecha = new Date(d.date + "T00:00:00");
@@ -158,82 +136,32 @@ export function SpecialtyAgenda({ slug }: { slug: string }) {
           ) : (
             <p className="text-sm text-muted-foreground mt-1">
               {proximos
-                ? "Tampoco hay en las próximas dos semanas. Prueba con otra especialidad."
+                ? filtros.modalidad === "in_person"
+                  ? "No hay citas presenciales en las próximas dos semanas."
+                  : "Tampoco hay en las próximas dos semanas. Prueba con otra especialidad."
                 : "Buscando los próximos días con horarios…"}
             </p>
           )}
-        </div>
-      ) : (
-        <div className="rounded-2xl border border-border overflow-hidden divide-y divide-border">
-          {porHora.map((grupo) =>
-            grupo.slots.map((slot, i) => {
-              const ubicacion = formatLocation(slot.country, slot.state);
-              return (
-                <button
-                  key={`${grupo.hora}-${slot.professionalId}`}
-                  onClick={() => abrirSlot(slot)}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-muted/40 transition-colors"
-                >
-                  {/* Hora: solo en la primera fila de cada grupo */}
-                  <div className="w-[62px] flex-shrink-0">
-                    {i === 0 ? (
-                      <>
-                        <span className="block font-semibold tabular-nums">{grupo.hora}</span>
-                        <span className="block text-[11px] text-muted-foreground">
-                          {slot.durationMinutes} min
-                        </span>
-                      </>
-                    ) : (
-                      <span className="block text-[11px] text-muted-foreground/60">—</span>
-                    )}
-                  </div>
-
-                  {slot.photo ? (
-                    <img
-                      src={slot.photo}
-                      alt=""
-                      className="w-10 h-10 rounded-full object-cover object-top flex-shrink-0"
-                    />
-                  ) : (
-                    <div className="w-10 h-10 rounded-full gradient-brand flex items-center justify-center text-white text-sm font-semibold flex-shrink-0">
-                      {slot.professionalName.charAt(0).toUpperCase()}
-                    </div>
-                  )}
-
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium text-primary truncate">
-                      {slot.professionalName}
-                    </p>
-                    <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                      {slot.averageRating != null && slot.totalReviews > 0 && (
-                        <span className="flex items-center gap-0.5">
-                          <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                          {slot.averageRating.toFixed(1)}
-                        </span>
-                      )}
-                      {slot.yearsOfExperience ? <span>{slot.yearsOfExperience} años</span> : null}
-                      {ubicacion && <span className="truncate">{ubicacion}</span>}
-                    </div>
-                  </div>
-
-                  <div className="text-right flex-shrink-0">
-                    <span className="block text-[12px] font-medium whitespace-nowrap">
-                      {costoDe(slot.tier).toLocaleString("es-MX")} cr.
-                    </span>
-                    <span
-                      className={`block text-[10px] font-semibold uppercase tracking-wide ${
-                        slot.tier === "pro" ? "text-primary" : "text-muted-foreground/70"
-                      }`}
-                    >
-                      {slot.tier === "pro" ? "Pro" : "Básico"}
-                    </span>
-                  </div>
-                </button>
-              );
-            })
+          {filtros.modalidad !== "any" && (
+            <button
+              onClick={() => setFiltros({ ...filtros, modalidad: "any" })}
+              className="mt-3 block mx-auto text-sm text-primary font-medium hover:underline"
+            >
+              Ver todas las modalidades
+            </button>
           )}
         </div>
+      ) : (
+        <SlotList slots={slots} costoDe={costoDe} onElegir={abrirSlot} />
       )}
+
+      <FiltrosSheet
+        abierto={filtrosAbiertos}
+        filtros={filtros}
+        onAplicar={setFiltros}
+        onCerrar={() => setFiltrosAbiertos(false)}
+        mostrarPresencial={data?.hasInPerson ?? true}
+      />
 
       {elegido && (
         <BookingSheet
@@ -241,7 +169,7 @@ export function SpecialtyAgenda({ slug }: { slug: string }) {
           day={day}
           sessionType={tipoDe(elegido.tier)}
           creditCost={costoDe(elegido.tier)}
-          saldo={Number((wallet as any)?.balance ?? 0)}
+          saldo={saldo}
           onClose={() => setElegido(null)}
           onBooked={() => {
             setElegido(null);

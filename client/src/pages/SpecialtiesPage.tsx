@@ -15,7 +15,7 @@ import {
   Sunset, HeartCrack, Bandage, Droplets, ShieldPlus,
   Footprints, Bike, Wheat, Carrot, Grape, Citrus,
   Feather, Flower, Flower2, TestTube, Award, Star, Search,
-  Target, X,
+  Target, X, CalendarSearch, MapPin,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type React from "react";
@@ -219,24 +219,49 @@ export default function SpecialtiesPage() {
               <p className="text-sm text-gray-500">Encuentra el especialista ideal para lo que necesitas</p>
             </div>
 
-            {/* Barra de búsqueda */}
-            <div className="relative mb-4">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Buscar especialidad..."
-                className="w-full pl-9 pr-9 py-2.5 rounded-xl text-sm bg-white border border-gray-200 outline-none focus:ring-2 focus:ring-[#5B6A57]/20 focus:border-[#5B6A57]/40 transition-all"
-              />
-              {search && (
-                <button
-                  onClick={() => setSearch("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
+            {/* Barra de búsqueda + acceso directo a buscar sesiones */}
+            <div className="flex gap-2 mb-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Buscar especialidad..."
+                  className="w-full pl-9 pr-9 py-2.5 rounded-xl text-sm bg-white border border-gray-200 outline-none focus:ring-2 focus:ring-[#5B6A57]/20 focus:border-[#5B6A57]/40 transition-all"
+                />
+                {search && (
+                  <button
+                    onClick={() => setSearch("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Quien sabe cuándo puede, pero no con quién, va directo a los
+                horarios; quien busca consultorio, a los presenciales. */}
+            <div
+              className={`grid grid-cols-2 gap-2 overflow-hidden transition-all duration-200 ${
+                compacto ? "max-h-0 opacity-0 mb-0" : "max-h-12 opacity-100 mb-4"
+              }`}
+            >
+              <button
+                onClick={() => navigate("/sesiones")}
+                className="flex items-center justify-center gap-2 h-10 rounded-xl bg-[#5B6A57] text-white text-sm font-semibold hover:bg-[#4d5a4a] transition-colors"
+              >
+                <CalendarSearch className="w-4 h-4" />
+                Buscar sesiones
+              </button>
+              <button
+                onClick={() => navigate("/sesiones?modalidad=presencial")}
+                className="flex items-center justify-center gap-2 h-10 rounded-xl bg-white border border-gray-200 text-sm font-semibold text-[#5B6A57] hover:border-[#5B6A57]/50 transition-colors"
+              >
+                <MapPin className="w-4 h-4" />
+                Presencial
+              </button>
             </div>
 
             {/* Chips de categoría — scroll horizontal */}

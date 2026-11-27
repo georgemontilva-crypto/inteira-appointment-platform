@@ -92,6 +92,88 @@ async function getAppointmentCreditCost(appointmentId: number): Promise<number> 
 }
 
 /**
+ * Huecos libres de un día para un grupo de asesores, listos para la agenda.
+ *
+ * La usan la agenda de una especialidad y la búsqueda general de sesiones.
+ * Con plan Básico los asesores Pro no se ofrecen (agendarlos se rechazaría
+ * al confirmar); un día bloqueado no ofrece nada; lo presencial solo sale
+ * con consultorio aprobado.
+ */
+async function construirAgenda(params: {
+  professionals: any[];
+  userId: number | null;
+  date: string;
+  timezoneOffset: number;
+  modality: "any" | "online" | "in_person";
+  durationMinutes: number;
+}) {
+  const { date, durationMinutes } = params;
+  const planActivo = params.userId ? await getActivePlan(params.userId) : null;
+  const disponibles = params.professionals.filter(
+    (p: any) => p.isAvailable !== 0 && planCubreTier(planActivo, String(p.tier ?? "basic"))
+  );
+
+  const offsetMs = (params.timezoneOffset ?? -300) * 60 * 1000;
+  const clientMidnight = new Date(new Date(date + "T00:00:00Z").getTime() - offsetMs);
+  const consultorios = await db.getApprovedClinicsFor(disponibles.map((p: any) => Number(p.id)));
+
+  const porAsesor = await Promise.all(
+    disponibles.map(async (pro: any) => {
+      const [availability, appointments, bloqueados] = await Promise.all([
+        db.getProfessionalAvailability(pro.id),
+        db.getProfessionalAppointments(pro.id),
+        db.getBlockedDates(pro.id),
+      ]);
+      if (bloqueados.has(date)) return [];
+      const bookedTimes = appointments
+        .filter((apt: any) => apt.status !== "canceled")
+        .map((apt: any) => apt.appointmentDate);
+
+      const consultorio = consultorios.get(Number(pro.id)) ?? null;
+      const ofrece = modalidadesEfectivas(pro.sessionModality, consultorio !== null);
+      const slots = huecosPorModalidad({
+        clientMidnight,
+        availability,
+        durationMinutes,
+        bookedTimes,
+        offsetMs,
+        permiteOnline: ofrece.online,
+        presencialAprobado: ofrece.presencial,
+        filtro: params.modality,
+      });
+
+      return slots.map((slot) => ({
+        time: slot.startTime, // "09:00"
+        modalities: slot.modalities,
+        clinicCity: ofrece.presencial ? consultorio?.city ?? null : null,
+        clinicAddress: ofrece.presencial && consultorio
+          ? [consultorio.address, consultorio.city, consultorio.state].filter(Boolean).join(", ")
+          : null,
+        durationMinutes,
+        professionalId: pro.id as number,
+        professionalSlug: (pro.slug ?? null) as string | null,
+        professionalName: (pro.professionalName ?? "Especialista") as string,
+        photo: (pro.profilePhoto ?? pro.userProfileImage ?? null) as string | null,
+        tier: (pro.tier ?? "basic") as string,
+        yearsOfExperience: (pro.yearsOfExperience ?? null) as number | null,
+        averageRating: pro.averageRating != null ? Number(pro.averageRating) : null,
+        totalReviews: Number(pro.totalReviews ?? 0),
+        country: (pro.country ?? null) as string | null,
+        state: (pro.state ?? null) as string | null,
+        specialtyName: (pro.specialtyName ?? null) as string | null,
+        specialtySlug: (pro.specialtySlug ?? null) as string | null,
+      }));
+    })
+  );
+
+  return {
+    slots: porAsesor.flat().sort((a, b) => a.time.localeCompare(b.time)),
+    totalProfessionals: disponibles.length,
+    hasInPerson: consultorios.size > 0,
+  };
+}
+
+/**
  * Intentos fallidos de código por cita. En memoria basta: el límite existe
  * para que no se puedan probar los 10.000 códigos, y un reinicio del
  * servidor solo devuelve 5 intentos más.
@@ -196,73 +278,15 @@ export const appointmentRouter = router({
       if (!specialty) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Especialidad no encontrada" });
       }
-
-      const durationMinutes = SESSION_TYPES[input.sessionType].durationMinutes;
-      // Con plan Básico los asesores Pro no se ofrecen: agendarlos se rechaza
-      // después, y es peor enterarse al confirmar que no verlos en la lista.
-      const planActivo = (ctx as any)?.user?.id
-        ? await getActivePlan((ctx as any).user.id)
-        : null;
       const professionals = await db.getProfessionalsBySpecialty(specialty.id);
-      const disponibles = professionals.filter(
-        (p: any) => p.isAvailable !== 0 && planCubreTier(planActivo, String(p.tier ?? "basic"))
-      );
-
-      const offsetMs = (input.timezoneOffset ?? -300) * 60 * 1000;
-      const clientMidnight = new Date(
-        new Date(input.date + "T00:00:00Z").getTime() - offsetMs
-      );
-
-      // Consultorios aprobados de todos los asesores de una vez: solo esos
-      // pueden ofrecer huecos presenciales.
-      const consultorios = await db.getApprovedClinicsFor(disponibles.map((p: any) => Number(p.id)));
-
-      // Un asesor por consulta, pero en paralelo: son pocos por especialidad.
-      const porAsesor = await Promise.all(
-        disponibles.map(async (pro: any) => {
-          const [availability, appointments, bloqueados] = await Promise.all([
-            db.getProfessionalAvailability(pro.id),
-            db.getProfessionalAppointments(pro.id),
-            db.getBlockedDates(pro.id),
-          ]);
-          if (bloqueados.has(input.date)) return [];
-          const bookedTimes = appointments
-            .filter((apt: any) => apt.status !== "canceled")
-            .map((apt: any) => apt.appointmentDate);
-
-          const consultorio = consultorios.get(Number(pro.id)) ?? null;
-          const ofrece = modalidadesEfectivas(pro.sessionModality, consultorio !== null);
-          const slots = huecosPorModalidad({
-            clientMidnight,
-            availability,
-            durationMinutes,
-            bookedTimes,
-            offsetMs,
-            permiteOnline: ofrece.online,
-            presencialAprobado: ofrece.presencial,
-            filtro: input.modality,
-          });
-
-          return slots.map((slot) => ({
-            time: slot.startTime, // "09:00"
-            modalities: slot.modalities,
-            clinicCity: consultorio?.city ?? null,
-            durationMinutes,
-            professionalId: pro.id as number,
-            professionalSlug: (pro.slug ?? null) as string | null,
-            professionalName: (pro.professionalName ?? "Especialista") as string,
-            photo: (pro.profilePhoto ?? pro.userProfileImage ?? null) as string | null,
-            tier: (pro.tier ?? "basic") as string,
-            yearsOfExperience: (pro.yearsOfExperience ?? null) as number | null,
-            averageRating: pro.averageRating != null ? Number(pro.averageRating) : null,
-            totalReviews: Number(pro.totalReviews ?? 0),
-            country: (pro.country ?? null) as string | null,
-            state: (pro.state ?? null) as string | null,
-          }));
-        })
-      );
-
-      const slots = porAsesor.flat().sort((a, b) => a.time.localeCompare(b.time));
+      const agenda = await construirAgenda({
+        professionals,
+        userId: (ctx as any)?.user?.id ?? null,
+        date: input.date,
+        timezoneOffset: input.timezoneOffset,
+        modality: input.modality,
+        durationMinutes: SESSION_TYPES[input.sessionType].durationMinutes,
+      });
 
       return {
         specialty: {
@@ -274,10 +298,42 @@ export const appointmentRouter = router({
         date: input.date,
         sessionType: input.sessionType,
         modality: input.modality,
-        totalProfessionals: disponibles.length,
+        totalProfessionals: agenda.totalProfessionals,
         /** Si hay algún consultorio aprobado en la especialidad, para mostrar el filtro */
-        hasInPerson: consultorios.size > 0,
-        slots,
+        hasInPerson: agenda.hasInPerson,
+        slots: agenda.slots,
+      };
+    }),
+
+  /**
+   * Buscar sesiones: horarios libres de todas las especialidades en un día,
+   * o de una sola si se elige. Es la búsqueda general de la app.
+   */
+  searchSessions: publicProcedure
+    .input(
+      z.object({
+        date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        specialtyId: z.number().optional(),
+        modality: z.enum(["any", "online", "in_person"]).optional().default("any"),
+        timezoneOffset: z.number().optional().default(-300),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const professionals = await db.getApprovedProfessionalsForAgenda(input.specialtyId);
+      const agenda = await construirAgenda({
+        professionals,
+        userId: (ctx as any)?.user?.id ?? null,
+        date: input.date,
+        timezoneOffset: input.timezoneOffset,
+        modality: input.modality,
+        durationMinutes: SESSION_TYPES.basic.durationMinutes,
+      });
+      return {
+        date: input.date,
+        modality: input.modality,
+        totalProfessionals: agenda.totalProfessionals,
+        hasInPerson: agenda.hasInPerson,
+        slots: agenda.slots,
       };
     }),
 

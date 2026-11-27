@@ -4,7 +4,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { formatLocation, getFlag } from "@shared/locations";
 import { PRICING, sessionCostByTier, tierLabel } from "@/lib/pricing";
 import { Link, useRoute, useLocation } from "wouter";
-import { Star, Award, Calendar, Search, SlidersHorizontal, X, Coins, ArrowLeft } from "lucide-react";
+import { Star, Award, Calendar, Search, SlidersHorizontal, X, Coins, ArrowLeft, MapPin } from "lucide-react";
 import DashboardLayout from "../components/DashboardLayout";
 import { SpecialtyAgenda } from "@/components/SpecialtyAgenda";
 import { motion } from "framer-motion";
@@ -346,6 +346,13 @@ export default function ProfessionalsList() {
                           <Coins className="w-3.5 h-3.5 text-gray-400" />
                           ${sessionCostByTier((pro as any).tier).toLocaleString("es-MX")} · {tierLabel((pro as any).tier)}
                         </span>
+                        {(pro as any).offersInPerson && (
+                          <span className="flex items-center gap-1 text-xs font-medium text-[#5B6A57]">
+                            <MapPin className="w-3.5 h-3.5" />
+                            {(pro as any).modalityLabel}
+                            {(pro as any).clinicCity ? ` · ${(pro as any).clinicCity}` : ""}
+                          </span>
+                        )}
                         {formatLocation((pro as any).country, (pro as any).state) && (
                           <span className="flex items-center gap-1 text-xs text-gray-500">
                             <span>{getFlag((pro as any).country)}</span>

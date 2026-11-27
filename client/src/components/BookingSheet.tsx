@@ -4,7 +4,7 @@ import { es } from "date-fns/locale";
 import { Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
-import { Check, ChevronRight, Loader2, Star, X } from "lucide-react";
+import { Check, ChevronRight, Loader2, MapPin, Star, Video, X } from "lucide-react";
 import { formatLocation } from "@shared/locations";
 import { toast } from "sonner";
 
@@ -21,6 +21,12 @@ export interface AgendaSlot {
   totalReviews: number;
   country: string | null;
   state: string | null;
+  /** Modalidades en que se ofrece este horario */
+  modalities?: ("online" | "in_person")[];
+  clinicCity?: string | null;
+  clinicAddress?: string | null;
+  specialtyName?: string | null;
+  specialtySlug?: string | null;
 }
 
 /**
@@ -67,13 +73,24 @@ export function BookingSheet({
 }) {
   const [entendido, setEntendido] = useState(false);
   const inicio = slotToDate(day, slot.time);
+  // Si el horario se ofrece de las dos formas, la persona elige; si no, la
+  // modalidad es la única que hay. Sin dato (versión vieja) es online.
+  const opciones = slot.modalities?.length ? slot.modalities : (["online"] as const);
+  const [modalidad, setModalidad] = useState<"online" | "in_person">(
+    opciones.length === 1 ? opciones[0] : "online"
+  );
   // Antes el saldo insuficiente solo se descubría al pulsar "Apartar cita" y
   // el error mandaba a /wallet por texto. Ahora se ve desde que se abre.
   const faltan = Math.max(0, creditCost - saldo);
 
   const agendar = trpc.appointment.scheduleAppointment.useMutation({
-    onSuccess: () => {
-      toast.success("Cita apartada. Te enviamos los detalles por correo.");
+    onSuccess: (r: any) => {
+      toast.success(
+        r?.modality === "in_person"
+          ? `Cita apartada. Tu código de llegada es ${r.checkinCode}; también está en Mis citas y en tu correo.`
+          : "Cita apartada. Te enviamos los detalles por correo.",
+        { duration: r?.modality === "in_person" ? 10000 : 4000 }
+      );
       onBooked();
     },
     onError: (err: any) =>
@@ -134,6 +151,51 @@ export function BookingSheet({
               )}
             </div>
           </div>
+
+          {/* Modalidad: se elige solo si el horario se ofrece de las dos formas */}
+          {opciones.length > 1 ? (
+            <div className="space-y-2">
+              <p className="text-sm font-medium">¿Cómo quieres tu sesión?</p>
+              <div className="grid grid-cols-2 gap-2">
+                {([
+                  { v: "online", label: "Online", detalle: "Videollamada", Icon: Video },
+                  { v: "in_person", label: "Presencial", detalle: slot.clinicCity ?? "En consultorio", Icon: MapPin },
+                ] as const).map(({ v, label, detalle, Icon }) => {
+                  const activa = modalidad === v;
+                  return (
+                    <button
+                      key={v}
+                      type="button"
+                      aria-pressed={activa}
+                      onClick={() => setModalidad(v)}
+                      className={`flex items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left transition-colors ${
+                        activa ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"
+                      }`}
+                    >
+                      <Icon className={`w-4 h-4 flex-shrink-0 ${activa ? "text-primary" : "text-muted-foreground"}`} />
+                      <span className="min-w-0">
+                        <span className="block text-sm font-medium">{label}</span>
+                        <span className="block text-[11px] text-muted-foreground truncate">{detalle}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+
+          {modalidad === "in_person" && slot.clinicAddress && (
+            <div className="flex gap-2.5 rounded-xl bg-primary/5 border border-primary/15 px-4 py-3">
+              <MapPin className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+              <div className="text-sm leading-snug">
+                <p className="font-medium">Sesión en consultorio</p>
+                <p className="text-muted-foreground">{slot.clinicAddress}</p>
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Al apartar recibes un código de 4 dígitos: dáselo a tu especialista al llegar.
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Detalle de la cita */}
           <dl className="rounded-xl border border-border divide-y divide-border text-sm">
@@ -223,6 +285,7 @@ export function BookingSheet({
                 appointmentDate: aMysqlDatetime(inicio),
                 sessionType,
                 timezoneOffset: -new Date().getTimezoneOffset(),
+                modality: modalidad,
               })
             }
           >

@@ -332,6 +332,29 @@ export async function getProfessionalBySlug(slug: string): Promise<any | null> {
   });
 }
 
+/**
+ * Asesores aprobados con lo que necesita la búsqueda de sesiones: los mismos
+ * campos públicos que el directorio por especialidad más la especialidad.
+ */
+export async function getApprovedProfessionalsForAgenda(specialtyId?: number) {
+  const rows = await ejecutar<any[]>(
+    `SELECT p.id, p.slug, p.userId, p.specialtyId, p.status, p.tier, p.profilePhoto,
+            p.country, p.state, p.city, p.sessionModality,
+            p.averageRating, p.totalReviews, p.isAvailable, p.yearsOfExperience,
+            u.name AS professionalName, u.profileImage AS userProfileImage,
+            s.name AS specialtyName, s.slug AS specialtySlug
+       FROM professionals p
+       LEFT JOIN users u ON p.userId = u.id
+       LEFT JOIN specialties s ON s.id = p.specialtyId
+      WHERE p.status = 'approved' ${specialtyId ? "AND p.specialtyId = ?" : ""}`,
+    specialtyId ? [specialtyId] : []
+  ).catch((e) => {
+    console.error("[getApprovedProfessionalsForAgenda]", e?.message);
+    return [];
+  });
+  return Array.isArray(rows) ? rows : [];
+}
+
 export async function getProfessionalsBySpecialty(specialtyId: number) {
   const db = await getDb();
   if (!db) return [];
