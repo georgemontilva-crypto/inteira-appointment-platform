@@ -1484,7 +1484,9 @@ export const appointmentRouter = router({
       if ((appointment as any).professionalJoinedAt) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "El profesional sí ingresó a la sesión. Si hubo un problema, contacta a soporte.",
+          message: (appointment as any).modality === "in_person"
+            ? "Tu especialista ya registró tu llegada al consultorio. Si hubo un problema, contacta a soporte."
+            : "El profesional sí ingresó a la sesión. Si hubo un problema, contacta a soporte.",
         });
       }
 
@@ -1495,6 +1497,31 @@ export const appointmentRouter = router({
           code: "BAD_REQUEST",
           message: "Espera al menos 15 minutos después de la hora de inicio antes de reportar.",
         });
+      }
+
+      // En presencial no hay registro de la sala que confirme el reporte: la
+      // única prueba es el código, y que falte no dice quién faltó. Se manda
+      // a revisión (sin pago automático) en vez de reembolsar solo.
+      if ((appointment as any).modality === "in_person") {
+        const dbRev = await db.getDb();
+        if (!dbRev) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        await new Promise<void>((resolve, reject) => {
+          (dbRev as any).$client.execute(
+            `UPDATE appointments SET status = 'pending_review', updatedAt = NOW()
+              WHERE id = ? AND status IN ('scheduled', 'in_progress') AND checkedInAt IS NULL`,
+            [input.appointmentId],
+            (err: any) => (err ? reject(err) : resolve())
+          );
+        });
+        createNotification({
+          userId: ctx.user.id,
+          type: "info",
+          title: "Reporte recibido",
+          message: "Revisamos tu cita presencial y te avisamos. Si el especialista no se presentó, te devolvemos tus créditos.",
+          link: "/citas",
+          audience: "user",
+        }).catch(() => {});
+        return { success: true, refunded: 0, enRevision: true };
       }
 
       const dbInstance = await db.getDb();

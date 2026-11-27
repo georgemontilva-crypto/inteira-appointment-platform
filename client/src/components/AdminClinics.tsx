@@ -37,7 +37,7 @@ export function AdminClinics() {
 
   const resolver = trpc.admin.resolveInPersonAppointment.useMutation({
     onSuccess: (_r, v) => {
-      toast.success(v.decision === "held" ? "Cita confirmada y pago liberado" : "Créditos devueltos al cliente");
+      toast.success(v.decision === "held" ? "Cita cobrada y pago liberado al asesor" : "Créditos devueltos al cliente");
       utils.admin.listInPersonReviews.invalidate();
     },
     onError: (e) => toast.error(e.message),
@@ -51,8 +51,9 @@ export function AdminClinics() {
           <div>
             <h2 className="text-lg font-semibold">Citas presenciales sin llegada registrada</h2>
             <p className="text-sm text-muted-foreground">
-              El asesor no ingresó el código del cliente. No se pagan solas: confirma si la sesión se dio o
-              devuelve los créditos.
+              No se registró el código de llegada (o el cliente reportó que el especialista no llegó). No
+              se pagan solas. Cobra si la sesión se dio o si el cliente fue quien faltó; reembolsa si el
+              especialista no atendió.
             </p>
           </div>
           <div className="space-y-2">
@@ -74,7 +75,7 @@ export function AdminClinics() {
                     onClick={() => resolver.mutate({ appointmentId: c.id, decision: "refund" })}
                   >
                     <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
-                    Reembolsar
+                    Reembolsar al cliente
                   </Button>
                   <Button
                     size="sm"
@@ -82,7 +83,7 @@ export function AdminClinics() {
                     onClick={() => resolver.mutate({ appointmentId: c.id, decision: "held" })}
                   >
                     <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
-                    Sí se dio
+                    Cobrar y pagar al asesor
                   </Button>
                 </div>
               </div>
