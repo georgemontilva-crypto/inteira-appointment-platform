@@ -25,6 +25,7 @@ const PRO_NAV_SECTIONS = [
       { label: "Resumen",        icon: "grid",     href: "/panel-profesional#resumen",         hash: "#resumen" },
       { label: "Agenda",         icon: "calendar", href: "/panel-profesional#agenda",          hash: "#agenda" },
       { label: "Disponibilidad", icon: "clock",    href: "/panel-profesional#disponibilidad",  hash: "#disponibilidad" },
+      { label: "Consultorio",    icon: "map",      href: "/panel-profesional#consultorio",     hash: "#consultorio" },
       { label: "Reseñas",        icon: "star",     href: "/panel-profesional#resenas",         hash: "#resenas" },
       { label: "Ganancias",      icon: "wallet",   href: "/panel-profesional#ganancias",       hash: "#ganancias" },
       { label: "Perfil",         icon: "user",     href: "/panel-profesional#perfil",          hash: "#perfil" },
@@ -55,6 +56,7 @@ const ICONS: Record<string, ReactElement> = {
   layers: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>,
   mail: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>,
   clock: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+  map: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>,
 };
 
 function Icon({ name, className = "w-4 h-4" }: { name: string; className?: string }) {
@@ -216,6 +218,7 @@ export default function DashboardLayout({ children, title, subtitle, headerRight
         { label: "Agenda",         icon: "calendar", href: "/panel-profesional#agenda" },
         { label: "Ganancias",      icon: "wallet",   href: "/panel-profesional#ganancias" },
         { label: "Disponibilidad", icon: "clock",    href: "/panel-profesional#disponibilidad" },
+        { label: "Consultorio",    icon: "map",      href: "/panel-profesional#consultorio" },
         { label: "Reseñas",        icon: "star",     href: "/panel-profesional#resenas" },
         { label: "Perfil",         icon: "user",     href: "/panel-profesional#perfil" },
       ],

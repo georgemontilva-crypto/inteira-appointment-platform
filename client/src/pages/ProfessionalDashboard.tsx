@@ -1,3 +1,5 @@
+import { ClinicPanel } from "@/components/ClinicPanel";
+import { CheckinDialog } from "@/components/CheckinDialog";
 import { useState, useRef, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -15,7 +17,7 @@ import { toast } from "sonner";
 import {
   Calendar, Clock, CheckCircle2, User, Video,
   Plus, Star, BarChart3, ArrowLeft, AlertCircle, XCircle,
-  Camera, Trash2, MessageSquare, CalendarX, CalendarDays,
+  Camera, Trash2, MessageSquare, CalendarX, CalendarDays, Building2, MapPin,
   ChevronLeft, ChevronRight, LayoutDashboard, DollarSign, Wallet, ExternalLink,
 } from "lucide-react";
 import { format } from "date-fns";
@@ -48,20 +50,26 @@ export default function ProfessionalDashboard() {
   const { user, isAuthenticated, loading, refresh, logout } = useAuth();
   const [, navigate] = useLocation();
   const utils = trpc.useUtils();
-  const [activeTab, setActiveTab] = useState<"resumen" | "agenda" | "disponibilidad" | "resenas" | "ganancias" | "perfil">(() => {
+  const [activeTab, setActiveTab] = useState<"resumen" | "agenda" | "disponibilidad" | "consultorio" | "resenas" | "ganancias" | "perfil">(() => {
     if (typeof window === "undefined") return "resumen";
     const hash = window.location.hash.slice(1);
     const hashMap: Record<string, string> = { citas: "agenda", "dias-libres": "disponibilidad" };
     const mapped = hashMap[hash] ?? hash;
-    const valid = ["resumen", "agenda", "disponibilidad", "resenas", "ganancias", "perfil"];
-    return (valid.includes(mapped) ? mapped : "resumen") as "resumen" | "agenda" | "disponibilidad" | "resenas" | "ganancias" | "perfil";
+    const valid = ["resumen", "agenda", "disponibilidad", "consultorio", "resenas", "ganancias", "perfil"];
+    return (valid.includes(mapped) ? mapped : "resumen") as "resumen" | "agenda" | "disponibilidad" | "consultorio" | "resenas" | "ganancias" | "perfil";
   });
   const [availSubTab, setAvailSubTab] = useState<"horarios" | "dias-libres">("horarios");
   const [newSlot, setNewSlot] = useState({ dayOfWeek: 1, startTime: "09:00", endTime: "17:00" });
   // Which day card has the inline add-form open (0-6 = day index, null = closed)
   const [addingSlotForDay, setAddingSlotForDay] = useState<number | null>(null);
-  const [inlineSlot, setInlineSlot] = useState({ startTime: "09:00", endTime: "17:00" });
+  const [inlineSlot, setInlineSlot] = useState<{
+    startTime: string;
+    endTime: string;
+    modality: "online" | "in_person" | "both";
+  }>({ startTime: "09:00", endTime: "17:00", modality: "online" });
   const [applyToDays, setApplyToDays] = useState<number[]>([]);
+  // Cita presencial a la que se le está registrando la llegada
+  const [citaCodigo, setCitaCodigo] = useState<any | null>(null);
   // Blocked-days calendar state
   const [blockedCalMonth, setBlockedCalMonth] = useState(() => {
     const d = new Date(); d.setDate(1); return d;
@@ -304,7 +312,7 @@ export default function ProfessionalDashboard() {
       const hash = window.location.hash.replace('#', '');
       const hashMap: Record<string, string> = { citas: "agenda", "dias-libres": "disponibilidad" };
       const mapped = hashMap[hash] ?? hash;
-      const valid = ['resumen', 'agenda', 'disponibilidad', 'resenas', 'ganancias', 'perfil'];
+      const valid = ['resumen', 'agenda', 'disponibilidad', 'consultorio', 'resenas', 'ganancias', 'perfil'];
       if (valid.includes(mapped)) setActiveTab(mapped as any);
     };
     handleHash();
@@ -509,8 +517,18 @@ export default function ProfessionalDashboard() {
     );
   }
 
-  const upcomingAppointments = appointments?.filter((a) => a.status === "scheduled" || a.status === "in_progress") ?? [];
-  const pastAppointments = appointments?.filter((a) => a.status !== "scheduled" && a.status !== "in_progress") ?? [];
+  // Una cita presencial terminada sin código sigue en "próximas" mientras
+  // se pueda registrar la llegada (24 h): si se fuera al historial, el asesor
+  // no encontraría dónde poner el código y no cobraría.
+  const esperandoCodigo = (a: any) =>
+    a.modality === "in_person" &&
+    !a.checkedInAt &&
+    a.status === "pending_review" &&
+    Date.now() - parseLocalDate(a.appointmentDate).getTime() < 24 * 3_600_000;
+  const upcomingAppointments =
+    appointments?.filter((a) => a.status === "scheduled" || a.status === "in_progress" || esperandoCodigo(a)) ?? [];
+  const pastAppointments =
+    appointments?.filter((a) => a.status !== "scheduled" && a.status !== "in_progress" && !esperandoCodigo(a)) ?? [];
 
   // Card width: 3 on desktop (≥1024), 2 on tablet (≥640), 1.2 on mobile
   const cardMinWidth: React.CSSProperties =
@@ -644,6 +662,7 @@ export default function ProfessionalDashboard() {
           { id: "resumen",        label: "Resumen",        Icon: LayoutDashboard },
           { id: "agenda",         label: "Agenda",         Icon: Calendar },
           { id: "disponibilidad", label: "Disponibilidad", Icon: Clock },
+          { id: "consultorio",    label: "Consultorio",    Icon: Building2 },
           { id: "resenas",        label: "Reseñas",        Icon: Star },
           { id: "ganancias",      label: "Ganancias",      Icon: DollarSign },
           { id: "perfil",         label: "Perfil",         Icon: User },
@@ -846,11 +865,43 @@ export default function ProfessionalDashboard() {
                                 </span>
                                 <span className="text-xs text-muted-foreground">· {apt.durationMinutes}m</span>
                               </div>
+                              {(apt as any).modality === "in_person" && (
+                                <div className="flex items-center gap-1.5 mt-0.5">
+                                  <MapPin className="w-3 h-3 text-primary flex-shrink-0" />
+                                  <span className="text-xs font-medium text-primary">Presencial</span>
+                                  {(apt as any).checkedInAt && (
+                                    <span className="text-[10px] font-semibold rounded-full px-1.5 py-0.5 bg-green-100 text-green-700">
+                                      Llegada registrada
+                                    </span>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </div>
 
+                          {/* Presencial: registrar la llegada con el código del cliente */}
+                          {(apt as any).modality === "in_person" && !(apt as any).checkedInAt &&
+                            Date.now() >= startDate.getTime() - 30 * 60_000 && (
+                            <div className="mt-3 pl-[52px] space-y-1.5">
+                              {esperandoCodigo(apt) && (
+                                <p className="text-[11px] text-amber-700 leading-snug">
+                                  Falta el código de llegada. Regístralo antes de 24 h del inicio para que se libere tu pago.
+                                </p>
+                              )}
+                              <Button
+                                size="sm"
+                                className="gradient-brand text-white border-0 h-8 text-xs px-4 font-semibold"
+                                onClick={() => setCitaCodigo(apt)}
+                              >
+                                <MapPin className="w-3.5 h-3.5 mr-1.5" />
+                                Registrar llegada
+                              </Button>
+                            </div>
+                          )}
+
                           {/* Action buttons */}
-                          {(apt.videoCallLink || parseLocalDate(apt.appointmentDate).getTime() + 55 * 60 * 1000 < Date.now()) && (
+                          {(apt as any).modality !== "in_person" &&
+                            (apt.videoCallLink || parseLocalDate(apt.appointmentDate).getTime() + 55 * 60 * 1000 < Date.now()) && (
                             <div className="flex gap-2 mt-3 pl-[52px]">
                               {apt.videoCallLink && (
                                 apt.status === "in_progress" ? (
@@ -1115,6 +1166,15 @@ export default function ProfessionalDashboard() {
                                     <span className="text-xs font-medium text-primary tabular-nums whitespace-nowrap">
                                       {slot.startTime.slice(0, 5)}–{slot.endTime.slice(0, 5)}
                                     </span>
+                                    {(profile as any)?.sessionModality && (profile as any).sessionModality !== "online" && (
+                                      <span className="text-[10px] font-semibold uppercase tracking-wide text-primary/70">
+                                        {(slot as any).modality === "in_person"
+                                          ? "Consultorio"
+                                          : (slot as any).modality === "both"
+                                            ? "Ambos"
+                                            : "Online"}
+                                      </span>
+                                    )}
                                     <button
                                       onClick={() => removeAvailabilityMutation.mutate({ id: slot.id })}
                                       disabled={removeAvailabilityMutation.isPending}
@@ -1134,7 +1194,11 @@ export default function ProfessionalDashboard() {
                                   setAddingSlotForDay(null);
                                 } else {
                                   setAddingSlotForDay(dayIdx);
-                                  setInlineSlot({ startTime: "09:00", endTime: "17:00" });
+                                  setInlineSlot({
+                                    startTime: "09:00",
+                                    endTime: "17:00",
+                                    modality: (profile as any)?.sessionModality === "in_person" ? "in_person" : "online",
+                                  });
                                   setApplyToDays([dayIdx]);
                                 }
                               }}
@@ -1180,6 +1244,35 @@ export default function ProfessionalDashboard() {
                                     />
                                   </label>
                                 </div>
+
+                                {(profile as any)?.sessionModality === "both" && (
+                                  <div>
+                                    <p className="text-[11px] text-muted-foreground mb-1.5">
+                                      ¿Dónde atiendes en este horario?
+                                    </p>
+                                    <div className="grid grid-cols-3 gap-1.5">
+                                      {([
+                                        { v: "online", l: "Online" },
+                                        { v: "in_person", l: "Consultorio" },
+                                        { v: "both", l: "Ambos" },
+                                      ] as const).map((o) => (
+                                        <button
+                                          key={o.v}
+                                          type="button"
+                                          aria-pressed={inlineSlot.modality === o.v}
+                                          onClick={() => setInlineSlot((x) => ({ ...x, modality: o.v }))}
+                                          className={`py-2 rounded-xl text-xs font-semibold border transition-colors ${
+                                            inlineSlot.modality === o.v
+                                              ? "border-primary bg-primary/10 text-primary"
+                                              : "border-border text-muted-foreground hover:border-primary/40"
+                                          }`}
+                                        >
+                                          {o.l}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
 
                                 <div>
                                   <p className="text-[11px] text-muted-foreground mb-1.5">
@@ -1228,6 +1321,7 @@ export default function ProfessionalDashboard() {
                                           dayOfWeek: d,
                                           startTime: inlineSlot.startTime,
                                           endTime: inlineSlot.endTime,
+                                          modality: inlineSlot.modality,
                                         });
                                       } catch {
                                         fallidos.push(DAYS[d]);
@@ -1422,6 +1516,19 @@ export default function ProfessionalDashboard() {
         )}
 
         {/* Tab: Reseñas */}
+        {activeTab === "consultorio" && <ClinicPanel />}
+
+        {citaCodigo && (
+          <CheckinDialog
+            cita={citaCodigo}
+            onClose={() => setCitaCodigo(null)}
+            onDone={() => {
+              setCitaCodigo(null);
+              utils.professional.getAppointments.invalidate();
+            }}
+          />
+        )}
+
         {activeTab === "resenas" && (
           <div className="space-y-6">
             <div className="flex items-center justify-between">

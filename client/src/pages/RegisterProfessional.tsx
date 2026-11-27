@@ -32,58 +32,15 @@ import {
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 
-// ── File upload helper ────────────────────────────────────────────────────────
-/** Límites que aplica el servidor, repetidos aquí para avisar antes de subir. */
-export const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
-export const MAX_DOC_BYTES = 10 * 1024 * 1024;
-
-const prettySize = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(1)} MB`;
-
-async function uploadFile(file: File): Promise<string> {
-  const base64 = await new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string | null;
-      const payload = result?.split(",")[1];
-      if (!payload) {
-        reject(new Error(`No se pudo leer «${file.name}». Intenta con otro archivo.`));
-        return;
-      }
-      resolve(payload);
-    };
-    // onerror recibe un evento, no un Error: sin esto el fallo llegaba sin
-    // mensaje y el formulario mostraba un texto generico que no decia nada.
-    reader.onerror = () =>
-      reject(new Error(`No se pudo leer «${file.name}». Puede estar daniado o bloqueado.`));
-    reader.readAsDataURL(file);
-  });
-
-  let res: Response;
-  try {
-    res = await fetch("/api/upload/professional-photo", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ base64, mimeType: file.type, fileName: file.name }),
-    });
-  } catch {
-    throw new Error(
-      `Se perdió la conexión al subir «${file.name}». Revisa tu internet e inténtalo de nuevo.`
-    );
-  }
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({} as any));
-    const detalle = (err as any).error;
-    if (detalle) throw new Error(`«${file.name}»: ${detalle}`);
-    if (res.status === 413) {
-      throw new Error(`«${file.name}» pesa demasiado (${prettySize(file.size)}).`);
-    }
-    throw new Error(`No se pudo subir «${file.name}» (error ${res.status}).`);
-  }
-  const data = await res.json();
-  return data.url as string;
-}
+import { uploadFile, MAX_PHOTO_BYTES, MAX_DOC_BYTES } from "@/lib/upload";
+import {
+  ClinicForm,
+  borradorConsultorioVacio,
+  subirConsultorio,
+  validarConsultorio,
+  type ClinicDraft,
+} from "@/components/ClinicForm";
+export { MAX_PHOTO_BYTES, MAX_DOC_BYTES };
 
 // ── FileUploadField ───────────────────────────────────────────────────────────
 interface FileUploadFieldProps {
@@ -195,7 +152,12 @@ function RadioRow({
 }
 
 /** Si ejerce, si ha dado asesorías, y en qué modalidad puede atender. */
-function ExperienceBlock({ form, onChange }: BlockProps) {
+function ExperienceBlock({
+  form,
+  onChange,
+  consultorio,
+  onConsultorio,
+}: BlockProps & { consultorio: ClinicDraft; onConsultorio: (d: ClinicDraft) => void }) {
   const tieneExperiencia = form.hasAdvisoryExperience === "si";
   const atiendePresencial =
     form.sessionModality === "in_person" || form.sessionModality === "both";
@@ -259,14 +221,19 @@ function ExperienceBlock({ form, onChange }: BlockProps) {
         />
       </div>
 
+      {/* Presencial solo con consultorio: lo revisamos antes de ofrecer
+          citas presenciales, aparte de la aprobación del perfil. */}
       {atiendePresencial && (
-        <div className="space-y-2">
-          <Label className="text-sm font-semibold">Ciudad y zona de atención presencial</Label>
-          <Input
-            value={form.inPersonArea}
-            onChange={(e) => onChange("inPersonArea", e.target.value)}
-            placeholder="Indica dónde puedes atender"
-          />
+        <div className="rounded-2xl border border-primary/20 bg-primary/[0.03] p-4 sm:p-5 space-y-4">
+          <div>
+            <p className="text-sm font-semibold">Tu consultorio</p>
+            <p className="text-xs text-muted-foreground mt-1 leading-snug">
+              Para atender presencial necesitas un consultorio. Lo revisamos por separado: tu perfil
+              puede aprobarse para online mientras validamos el lugar. Cuando lo aprobemos podrás
+              agregar el enlace de Google Maps desde tu panel.
+            </p>
+          </div>
+          <ClinicForm value={consultorio} onChange={onConsultorio} />
         </div>
       )}
     </div>
@@ -556,6 +523,10 @@ export default function RegisterProfessional({ embedded = false }: { embedded?: 
     churchStatus: "",
   });
 
+  // Consultorio (solo si atiende presencial). Arranca con la ubicación de
+  // residencia, que suele coincidir.
+  const [consultorio, setConsultorio] = useState<ClinicDraft>(() => borradorConsultorioVacio());
+
   // Consentimiento del bloque de creencias
   const [beliefsConsent, setBeliefsConsent] = useState(false);
 
@@ -638,6 +609,11 @@ export default function RegisterProfessional({ embedded = false }: { embedded?: 
     if (!form.practiceStatus) return toast.error("Indícanos si ejerces actualmente tu profesión");
     if (!form.hasAdvisoryExperience) return toast.error("Indícanos si tienes experiencia dando asesorías");
     if (!form.sessionModality) return toast.error("Indica en qué modalidad puedes atender");
+    const atiendePresencial = form.sessionModality === "in_person" || form.sessionModality === "both";
+    if (atiendePresencial) {
+      const problema = validarConsultorio(consultorio);
+      if (problema) return toast.error(problema);
+    }
     if (!form.motivation.trim()) return toast.error("Cuéntanos qué te interesa de entrar a Inteira");
     if (!form.personalPurpose.trim()) return toast.error("Cuéntanos cuál es tu propósito personal");
     if (!form.personalGoals.trim()) return toast.error("Comparte tus metas personales y profesionales");
@@ -672,6 +648,7 @@ export default function RegisterProfessional({ embedded = false }: { embedded?: 
       const identityDocUrl = await uploadOnce(identityDoc);
       let certificationsUrl: string | undefined;
       if (certifications) certificationsUrl = await uploadOnce(certifications);
+      const clinic = atiendePresencial ? await subirConsultorio(consultorio, uploadOnce) : undefined;
 
       const payload = {
         specialtyId: parseInt(form.specialtyId),
@@ -697,6 +674,7 @@ export default function RegisterProfessional({ embedded = false }: { embedded?: 
         advisoryExperienceDetail: form.advisoryExperienceDetail.trim() || undefined,
         sessionModality: (form.sessionModality || undefined) as "online" | "in_person" | "both" | undefined,
         inPersonArea: form.inPersonArea.trim() || undefined,
+        clinic,
 
         motivation: form.motivation.trim() || undefined,
         personalPurpose: form.personalPurpose.trim() || undefined,
@@ -977,7 +955,18 @@ export default function RegisterProfessional({ embedded = false }: { embedded?: 
     id: "experiencia",
     icon: <Clock className="w-5 h-5 text-primary" />,
     title: "Experiencia y modalidad",
-    content: <ExperienceBlock form={form} onChange={handleChange} />,
+    content: (
+      <ExperienceBlock
+        form={form}
+        onChange={handleChange}
+        consultorio={consultorio}
+        onConsultorio={(d) => {
+          setConsultorio(d);
+          // La ciudad del consultorio sirve también como zona presencial.
+          handleChange("inPersonArea", [d.city, d.state].filter(Boolean).join(", "));
+        }}
+      />
+    ),
   });
 
   // 5 · Interés, propósito y objetivos
